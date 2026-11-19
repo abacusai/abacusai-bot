@@ -215,7 +215,7 @@ export const CAPABILITIES: readonly Capability[] = [
   },
   {
     id: "publish",
-    ask: "a live, public link for something built here",
+    ask: "a live link that stays up for a site of several pages or an app built here",
     topic: "capabilities",
     desktop: {
       does: "this app builds it and runs it on this computer",

@@ -314,6 +314,10 @@ html:not([data-palette="default"]):is([data-palette]) :is(:is([data-slot="alert-
 [data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]) :is([data-slot="topbar-identity"], [data-slot="topbar-app-name"]) {
   display: none;
 }
+/* With the identity gone, the chat's actions (Share) still sit at its right end, before the tabs, not by the logo. */
+[data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]) [data-slot="topbar-actions"] {
+  margin-inline-start: auto;
+}
 [data-slot="topbar-panel-tabs"][data-rail-rows="2"] > :not([data-slot="tabs"]) {
   align-self: flex-start;
   margin-top: 6px;

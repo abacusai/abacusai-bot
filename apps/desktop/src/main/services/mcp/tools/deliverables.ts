@@ -22,18 +22,13 @@ const LOCAL_URL_CHECK = [
 ].join("\n");
 
 /**
- * Asked how a friend can see a page, the model listed outside hosts, and gave
- * a 127.0.0.1 link as if it could be sent. The app's Share makes a public
- * link to one file.
+ * Share works on a file's row of the files card, so a page served here needs
+ * its file listed too. What to tell someone asking how others can see it is
+ * the system prompt's (plan-asks.ts).
  */
-const SHARE_RULE = [
-  "A URL on this computer (127.0.0.1, localhost) opens only here: never offer it as a link",
-  "to send. When the user wants someone else to see a page, image, PDF or document, tell",
-  "them to press Share, on the file's row of the files card or at the top of the chat, for",
-  "a public link, and list a page's html file here as well as its URL, so it has that row.",
-  "That is the answer for one file, before any plan. Share sends the one file: a site of",
-  "several pages, or one that needs its own images, scripts or a server, cannot go that",
-  "way; then the answer for a live link applies.",
+const SHARE_ROW = [
+  "For a page served on this computer, list its html file here as well as its URL, so the",
+  "file's row has Share, the public link to send.",
 ].join("\n");
 
 /** What `present_deliverable` does with a file before it presents one. */
@@ -185,7 +180,7 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             "",
             FILE_CHECK,
             "",
-            SHARE_RULE,
+            SHARE_ROW,
           ].join("\n"),
     inputSchema: (channel) => ({
       type: "object",

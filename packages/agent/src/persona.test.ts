@@ -131,8 +131,13 @@ describe("questions about the app itself", () => {
   it("send 'keep working with the computer off' and 'put it online' to billing_plan, free part first, never another company's service", () => {
     expect(PLAN_ASKS_PROMPT).toMatch(/computer is off or asleep/);
     expect(PLAN_ASKS_PROMPT).toMatch(
-      /a live, public or shareable link for something they built/
+      /a live link that stays up for a site of several pages/
     );
+    // One file needs no plan: Share, without a billing_plan call.
+    expect(PLAN_ASKS_PROMPT).toMatch(
+      /that needs no plan: do not call billing_plan/
+    );
+    expect(PLAN_ASKS_PROMPT).toMatch(/press Share/);
     expect(PLAN_ASKS_PROMPT).toMatch(
       /call billing_plan with upgrade: true before you answer/
     );
