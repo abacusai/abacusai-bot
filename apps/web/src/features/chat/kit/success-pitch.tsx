@@ -33,13 +33,15 @@ import {
   type SuccessPitchMoment,
   type SuccessPitchOffer,
   successPitchAllowed,
+  successPitchPlace,
+  type SuccessPitchPlace,
   type SuccessPitchTrigger,
   underHalfOfFreeCredits,
 } from "@abacus-ai/contract/success-pitch";
 import type { UIMessage } from "@tanstack/ai-client";
 import { eq, useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
-import { Layers, Moon, Sparkles, X } from "lucide-react";
+import { ArrowRight, Layers, Moon, Sparkles, X } from "lucide-react";
 import { type ReactNode, useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -50,6 +52,7 @@ import { cn } from "#renderer/lib/cn";
 import { creditsTier } from "#renderer/lib/credits";
 import { payingAccount, upgradeSeen } from "#renderer/lib/upgrade";
 import {
+  requestPlanDialog,
   startPlanCheckout,
   useUpgradeDialogRequest,
 } from "#renderer/lib/upgrade-dialog";
@@ -400,18 +403,20 @@ const cardsKey = (
   trigger === "keep_running" ? "keepRunningCards" : "successPitchCards";
 
 /**
- * The card for this chat's offer, under its latest reply while nothing runs.
- * Only for a free account under half its free grant, under the caps, and
- * never over another card: the upgrade dialog, a credit milestone card owed,
- * or the payment screen. A read-only view never shows it. Without the plan
- * it is not shown at all, rather than half a pitch.
+ * This chat's offer where `place` shows it, under its latest reply while
+ * nothing runs: the offer, the plan, and its answers. Only for a free
+ * account under half its free grant, under the caps, and never over
+ * another card: the upgrade dialog, a credit milestone card owed, or the
+ * payment screen. A read-only view never shows it. Without the plan it is
+ * not shown at all, rather than half a pitch. Called only where `place` is
+ * on screen, so an offer is counted shown only when it is.
  */
-export const SuccessPitchRow = ({
-  messages,
+const useSuccessPitch = ({
   active,
+  place,
 }: {
-  messages: readonly UIMessage[];
   active: boolean;
+  place: SuccessPitchPlace;
 }) => {
   const { session, composer, slots } = useChatView();
   const { transport } = useAppContext();
@@ -443,6 +448,7 @@ export const SuccessPitchRow = ({
   const eligible =
     offer != null &&
     key != null &&
+    successPitchPlace(offer) === place &&
     offer.sessionId === session.threadId &&
     card?.answered !== offer.id &&
     composer.readOnly == null &&
@@ -464,6 +470,90 @@ export const SuccessPitchRow = ({
   });
   const showing =
     visible && billing != null && wallOffer(billing) != null ? offer : null;
+  const events = TRIGGER_EVENTS[trigger];
+
+  const write = (next: SuccessPitchCardState): void => {
+    if (preview) return;
+    void db
+      .updatePrefs({
+        dismissals: { [cardsAt]: { ...cards, [key!]: next } },
+      })
+      .catch(() => undefined);
+  };
+  const base = (): SuccessPitchCardState => ({
+    shown: card?.shown ?? 0,
+    lastShownAt: card?.lastShownAt ?? null,
+    notNow: card?.notNow ?? 0,
+    shownOffer: card?.shownOffer ?? null,
+    answered: card?.answered ?? null,
+  });
+  // The funnel's detail names the next step's row apart from the card.
+  const detail = (seen: SuccessPitchOffer): string =>
+    place === "next_step" ? place : triggerDetail(seen);
+  const funnel = (step: FunnelStep, seen: SuccessPitchOffer): void => {
+    if (preview) return;
+    void transport.client.system
+      .funnelStep({ step, detail: detail(seen) })
+      .catch(() => undefined);
+  };
+  const shown = useEffectEvent((seen: SuccessPitchOffer) => {
+    if (card?.shownOffer === seen.id) return;
+    funnel(TRIGGER_EVENTS[seen.trigger].shown, seen);
+    if (!preview)
+      upgradeSeen(transport.client, TRIGGER_EVENTS[seen.trigger].src);
+    const previous = base();
+    write({
+      ...previous,
+      shown: previous.shown + 1,
+      lastShownAt: Date.now(),
+      shownOffer: seen.id,
+    });
+  });
+  useEffect(() => {
+    if (showing != null) shown(showing);
+  }, [showing]);
+
+  return {
+    account,
+    offer: showing,
+    billing: showing != null ? (billing ?? null) : null,
+    /**
+     * Upgrade: a card that shows the whole pitch opens checkout (inside the
+     * click: the web build opens its tab there); a row that shows less
+     * opens the upgrade dialog, which shows it.
+     */
+    upgrade: (how: "checkout" | "dialog"): void => {
+      if (showing == null) return;
+      if (how === "checkout") startPlanCheckout(transport.client, events.src);
+      else requestPlanDialog(events.src);
+      funnel(events.upgrade, showing);
+      write({ ...base(), answered: showing.id });
+    },
+    notNow: (): void => {
+      if (showing == null) return;
+      funnel(events.notNow, showing);
+      const previous = base();
+      write({
+        ...previous,
+        notNow: previous.notNow + 1,
+        answered: showing.id,
+      });
+    },
+  };
+};
+
+/** The card for this chat's offer, under its latest reply (useSuccessPitch). */
+export const SuccessPitchRow = ({
+  messages,
+  active,
+}: {
+  messages: readonly UIMessage[];
+  active: boolean;
+}) => {
+  const { session } = useChatView();
+  const { transport } = useAppContext();
+  const pitch = useSuccessPitch({ active, place: "card" });
+  const { offer: showing, billing, account } = pitch;
   const bigTask = showing?.trigger === "big_task";
   // The big build's title: the chat's own title, which is the task in its words.
   const collections = useCollections();
@@ -485,45 +575,6 @@ export const SuccessPitchRow = ({
       ? (retryOfferModel(catalog, "locked", planTopModelIds(billing))?.label ??
         null)
       : null;
-  const events = TRIGGER_EVENTS[trigger];
-
-  const write = (next: SuccessPitchCardState): void => {
-    if (preview) return;
-    void db
-      .updatePrefs({
-        dismissals: { [cardsAt]: { ...cards, [key!]: next } },
-      })
-      .catch(() => undefined);
-  };
-  const base = (): SuccessPitchCardState => ({
-    shown: card?.shown ?? 0,
-    lastShownAt: card?.lastShownAt ?? null,
-    notNow: card?.notNow ?? 0,
-    shownOffer: card?.shownOffer ?? null,
-    answered: card?.answered ?? null,
-  });
-  const funnel = (step: FunnelStep, detail: string): void => {
-    if (preview) return;
-    void transport.client.system
-      .funnelStep({ step, detail })
-      .catch(() => undefined);
-  };
-  const shown = useEffectEvent((seen: SuccessPitchOffer) => {
-    if (card?.shownOffer === seen.id) return;
-    funnel(TRIGGER_EVENTS[seen.trigger].shown, triggerDetail(seen));
-    if (!preview)
-      upgradeSeen(transport.client, TRIGGER_EVENTS[seen.trigger].src);
-    const previous = base();
-    write({
-      ...previous,
-      shown: previous.shown + 1,
-      lastShownAt: Date.now(),
-      shownOffer: seen.id,
-    });
-  });
-  useEffect(() => {
-    if (showing != null) shown(showing);
-  }, [showing]);
 
   // The offer is for the session's latest reply.
   const latestReply = messages.findLast((each) => each.role === "assistant");
@@ -538,21 +589,8 @@ export const SuccessPitchRow = ({
   if (showing == null || billing == null) return null;
   const answers = {
     billing,
-    onUpgrade: () => {
-      // Inside the click: the web build opens its checkout tab here.
-      startPlanCheckout(transport.client, events.src);
-      funnel(events.upgrade, triggerDetail(showing));
-      write({ ...base(), answered: showing.id });
-    },
-    onNotNow: () => {
-      funnel(events.notNow, triggerDetail(showing));
-      const previous = base();
-      write({
-        ...previous,
-        notNow: previous.notNow + 1,
-        answered: showing.id,
-      });
-    },
+    onUpgrade: () => pitch.upgrade("checkout"),
+    onNotNow: pitch.notNow,
   };
   if (showing.trigger === "big_task") {
     const title = chat?.label?.trim() ?? "";
@@ -578,5 +616,45 @@ export const SuccessPitchRow = ({
       lead={showing.lead}
       {...answers}
     />
+  );
+};
+
+/**
+ * The plan's row in the next step's card, under its tasks, when a result
+ * ended on a next step (contract success-pitch.ts `place: "next_step"`):
+ * the plan by name, its price, and a tap that opens the upgrade dialog with
+ * the plan's whole pitch. Nothing when no such offer is owed.
+ */
+export const NextStepPlanRow = ({ active }: { active: boolean }) => {
+  const { t, i18n } = useTranslation();
+  const pitch = useSuccessPitch({ active, place: "next_step" });
+  const offer = wallOffer(pitch.billing);
+  if (pitch.offer == null || offer == null) return null;
+  return (
+    <button
+      type="button"
+      data-task="plan"
+      className="group/task flex w-full items-center gap-3 bg-violet-50/70 px-3.5 py-2.5 text-left outline-none hover:bg-violet-100/70 focus-visible:ring-2 focus-visible:ring-violet-500/50 focus-visible:ring-inset dark:bg-violet-950/30 dark:hover:bg-violet-950/50"
+      onClick={() => pitch.upgrade("dialog")}
+    >
+      <span
+        aria-hidden
+        className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white"
+      >
+        <Sparkles className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-sm font-medium [overflow-wrap:anywhere]">
+          {t("successPitch.nextStep.title", { plan: offer.planName })}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          {planPrice(t, offer, i18n.language)}
+        </span>
+      </span>
+      <ArrowRight
+        aria-hidden
+        className="text-muted-foreground group-hover/task:text-foreground size-4 shrink-0 transition-colors"
+      />
+    </button>
   );
 };

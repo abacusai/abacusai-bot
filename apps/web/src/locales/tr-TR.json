@@ -5328,6 +5328,9 @@
       "reaction": "İşine yaradığına sevindim."
     },
     "line": "Böyle projeler {{plan}} ile durmadan devam etsin.",
+    "nextStep": {
+      "title": "{{plan}} ile daha fazlasını yapın"
+    },
     "chat": {
       "once": "Bunu burada bir daha açmayacağım."
     }

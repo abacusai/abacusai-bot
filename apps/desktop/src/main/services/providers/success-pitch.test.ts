@@ -164,6 +164,53 @@ describe("SuccessPitchWatch: a deliverable on a clean turn", () => {
     expect(t.mark()?.appTurns).toBe(1);
   });
 
+  it("with the next step on, a result that ends on one offers the plan in its card", async () => {
+    const t = setup({ deps: { nextStep: () => true } });
+    await t.run("Build a one-page site for my bakery", [
+      presentSite,
+      text(LONG_REPLY),
+      tool("agent-tools_suggest_tasks", {
+        after_result: true,
+        tasks: [{ text: "Add my opening hours" }],
+      }),
+    ]);
+    expect(t.offer()).toMatchObject({
+      id: "turn-1",
+      trigger: "deliverable",
+      moment: "site",
+      place: "next_step",
+    });
+    // A form for what only the user knows is a next step too.
+    await t.run("Make my CV a PDF", [
+      presentFile,
+      text(LONG_REPLY),
+      tool("agent-tools_suggest_tasks", {
+        after_result: true,
+        task: "Put my name in",
+        fields: [{ label: "Your name" }],
+      }),
+    ]);
+    expect(t.offer()).toMatchObject({ id: "turn-2", place: "next_step" });
+  });
+
+  it("with the next step on, a result that does not end on one offers nothing", async () => {
+    const t = setup({ deps: { nextStep: () => true } });
+    await t.run("Build a one-page site for my bakery", [
+      presentSite,
+      text(LONG_REPLY),
+      tool("agent-tools_suggest_tasks", { tasks: [{ text: "Something" }] }),
+    ]);
+    expect(t.offer()).toBeNull();
+    await t.run("Make my CV a PDF", [presentFile, text(LONG_REPLY)]);
+    expect(t.offer()).toBeNull();
+  });
+
+  it("without the next step, the offer is a card of its own", async () => {
+    const t = setup();
+    await t.run("Make my CV a PDF", [presentFile, text(LONG_REPLY)]);
+    expect(t.offer()?.place).toBeUndefined();
+  });
+
   it("offers it for a file, and for a started server", async () => {
     const file = setup();
     await file.run("Write the report", [presentFile, text(LONG_REPLY)]);

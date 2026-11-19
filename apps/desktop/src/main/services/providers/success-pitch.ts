@@ -11,8 +11,10 @@
  * - a user who works mainly from their own chat app hears it there once ever,
  *   after a positive reaction, never in a contact's chat.
  *
- * On an install with the next step (next-step.ts), a result ends on that
- * instead, and the card comes only with praise.
+ * On an install with the next step (next-step.ts), a result that ends on
+ * it offers the plan as a row in the next step's card instead of a card of
+ * its own (`place: "next_step"`); one that does not end on it offers
+ * nothing, and the card comes only with praise.
  *
  * Two more offers come from the same clean turn, in the app only, ahead of
  * the others: a turn that left something meant to stay on (a server or bot
@@ -59,6 +61,7 @@ import {
   type SuccessPitchMark,
   type SuccessPitchMoment,
   type SuccessPitchOffer,
+  type SuccessPitchPlace,
   successPitchAllowed,
   type SuccessPitchTrigger,
   underHalfOfFreeCredits,
@@ -95,6 +98,8 @@ interface TurnFacts {
   reply: string;
   /** The first task of the next step the turn ended on (`after_result`), if any. */
   nextTask: string | null;
+  /** The turn ended on a next step (`after_result`): tasks or a form. */
+  endedOnNextStep: boolean;
   /** Files it wrote or edited, by full path. */
   files: Set<string>;
   /** Something it left on that is not a site: a server or a routine. */
@@ -119,6 +124,8 @@ interface Signal {
   lead: SuccessPitchLead | null;
   name?: string | null;
   detail?: string | null;
+  /** In the next step's card rather than a card of its own. */
+  place?: SuccessPitchPlace;
   /** Remembered as offered, so it comes once: the chat, or the thing. */
   once?: { list: "bigTaskChats" | "keepOffered"; item: string };
 }
@@ -227,6 +234,7 @@ export class SuccessPitchWatch {
         failed: false,
         reply: "",
         nextTask: null,
+        endedOnNextStep: false,
         files: new Set(),
         keep: null,
       };
@@ -299,8 +307,10 @@ export class SuccessPitchWatch {
     const name = event.tool.name;
     // The reply stands: suggest_tasks comes after it and can end the turn.
     if (!isSuggestTasksTool(name)) facts.reply = "";
-    else if (event.tool.input.after_result === true)
+    else if (event.tool.input.after_result === true) {
       facts.nextTask = firstWorkTask(event.tool.input.tasks);
+      facts.endedOnNextStep = true;
+    }
     if (event.result.rejected === true) {
       facts.failed = true;
       return;
@@ -441,8 +451,18 @@ export class SuccessPitchWatch {
           once: { list: "bigTaskChats", item: record.sessionId },
         });
     }
-    if (clean && facts.delivered != null && !nextStep)
-      signals.push({ trigger: "deliverable", moment: facts.delivered, lead });
+    // With the next step on, a result's offer rides in its card, or waits.
+    if (
+      clean &&
+      facts.delivered != null &&
+      (!nextStep || facts.endedOnNextStep)
+    )
+      signals.push({
+        trigger: "deliverable",
+        moment: facts.delivered,
+        lead,
+        ...(nextStep ? { place: "next_step" as const } : {}),
+      });
     else if (facts.praise && previous?.clean === true)
       signals.push({
         trigger: "positive_reaction",

@@ -5492,6 +5492,9 @@
       "reaction": "Cieszę się, że się udało."
     },
     "line": "Rozwijaj takie projekty dalej z planem {{plan}}.",
+    "nextStep": {
+      "title": "Zrób więcej z planem {{plan}}"
+    },
     "chat": {
       "once": "Nie będę już tu do tego wracać."
     }

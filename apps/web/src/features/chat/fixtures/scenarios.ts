@@ -36,7 +36,7 @@ export interface Scenario {
     /** The success pitch offered under the latest reply. */
     successPitch?: Pick<
       SuccessPitchOffer,
-      "trigger" | "moment" | "lead" | "name" | "detail"
+      "trigger" | "moment" | "lead" | "name" | "detail" | "place"
     >;
     /** The deliverable offer judged without its caps. */
     deliverableOffer?: boolean;
@@ -1604,6 +1604,20 @@ export const SCENARIOS: Scenario[] = [
     canvas: ["NextStep", "session"],
     skin: "session",
     events: nextStepStore,
+  },
+  {
+    id: "next-step-plan",
+    canvas: ["NextStep", "free plan"],
+    skin: "session",
+    events: nextStepStore,
+    view: {
+      successPitch: {
+        trigger: "deliverable",
+        moment: "site",
+        lead: "apps",
+        place: "next_step",
+      },
+    },
   },
   {
     id: "next-step-bot",

@@ -27,7 +27,7 @@ import {
 import { createHarness, defaultSeed } from "#renderer/test-support/app-harness";
 
 import { ChatViewProvider, type ChatViewContextValue } from "./context";
-import { SuccessPitchRow } from "./success-pitch";
+import { NextStepPlanRow, SuccessPitchRow } from "./success-pitch";
 
 const BILLING: BillingPlan = {
   current: {
@@ -105,6 +105,7 @@ const mount = async ({
   threadId = "thread-1",
   active = false,
   readOnly = false,
+  view = "card" as "card" | "next_step",
 } = {}) => {
   const os = implement(contract);
   const seed = defaultSeed();
@@ -162,7 +163,11 @@ const mount = async ({
         <RouterContextProvider router={harness.router}>
           <DbProvider value={harness.appDb}>
             <ChatViewProvider value={chat}>
-              <SuccessPitchRow messages={[]} active={active} />
+              {view === "card" ? (
+                <SuccessPitchRow messages={[]} active={active} />
+              ) : (
+                <NextStepPlanRow active={active} />
+              )}
             </ChatViewProvider>
           </DbProvider>
         </RouterContextProvider>
@@ -495,6 +500,82 @@ describe("SuccessPitchRow: keep it running", () => {
       const h = await mount({ offer: KEEP, keepCard: spent });
       await settled();
       expect(document.querySelector('[data-slot="keep-running"]')).toBeNull();
+      expect(h.steps()).toEqual([]);
+      await cleanup?.();
+      cleanup = undefined;
+    }
+  });
+});
+
+describe("NextStepPlanRow: the plan in the next step's card", () => {
+  const NEXT: SuccessPitchOffer = { ...OFFER, place: "next_step" };
+
+  it("names the plan and its price, and is counted shown as the next step's row", async () => {
+    const h = await mount({ offer: NEXT, view: "next_step" });
+    const row = await screen.findByRole("button", {
+      name: /Do more with Basic/,
+    });
+    expect(row.getAttribute("data-task")).toBe("plan");
+    expect(row.textContent).toContain("$7 your first month, then $10/month");
+    await waitFor(() =>
+      expect(h.steps()).toEqual([
+        { step: "success_pitch_shown", detail: "next_step" },
+        { step: "upgrade_shown", detail: "success_pitch" },
+      ])
+    );
+    await waitFor(() =>
+      expect(h.cards()?.["o1:u1"]).toMatchObject({
+        shown: 1,
+        shownOffer: "turn-1",
+      })
+    );
+  });
+
+  it("a tap opens the upgrade dialog with the plan's whole pitch, not checkout", async () => {
+    const h = await mount({ offer: NEXT, view: "next_step" });
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Do more with Basic/ })
+    );
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "plan",
+      src: "success_pitch",
+    });
+    expect(upgradeDialogStore.state.request?.checkout).toBeUndefined();
+    await waitFor(() =>
+      expect(h.cards()?.["o1:u1"]).toMatchObject({ answered: "turn-1" })
+    );
+    expect(h.opened).toHaveLength(0);
+    expect(h.steps()).toContainEqual({
+      step: "success_pitch_upgrade",
+      detail: "next_step",
+    });
+  });
+
+  it("the card under the reply leaves it to the next step, and the row leaves a card's offer alone", async () => {
+    const card1 = await mount({ offer: NEXT });
+    await settled();
+    expect(document.querySelector('[data-slot="success-pitch"]')).toBeNull();
+    expect(card1.steps()).toEqual([]);
+    await cleanup?.();
+    cleanup = undefined;
+    const row = await mount({ view: "next_step" });
+    await settled();
+    expect(document.querySelector('[data-task="plan"]')).toBeNull();
+    expect(row.steps()).toEqual([]);
+  });
+
+  it("shares the success pitch's caps and gates", async () => {
+    for (const options of [
+      { card: card({ shown: 3, lastShownAt: 1 }) },
+      { card: card({ answered: "turn-1" }) },
+      { account: { ...ACCOUNT, subscription_tier: "basic" } },
+      { account: { ...ACCOUNT, credits_used: 1500 } },
+      { active: true },
+      { readOnly: true },
+    ]) {
+      const h = await mount({ offer: NEXT, view: "next_step", ...options });
+      await settled();
+      expect(document.querySelector('[data-task="plan"]')).toBeNull();
       expect(h.steps()).toEqual([]);
       await cleanup?.();
       cleanup = undefined;
