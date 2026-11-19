@@ -101,7 +101,7 @@ const applySgr = (state: State, params: readonly number[]): State => {
 
 const ESCAPE =
   // oxlint-disable-next-line no-control-regex
-  /\u001b(?:\[([0-9;:?<=>!]*)([ -/]*)([@-~])|\][^\u0007\u001b]*(?:\u0007|\u001b\\)?|[@-_])/g;
+  /\u001b(?:\[([0-?]*)([ -/]*)([@-~])|\][^\u0007\u001b]*(?:\u0007|\u001b\\)?|[@-_])/g;
 
 export const parseAnsi = (input: string): AnsiRun[] => {
   const text = screenText(input);

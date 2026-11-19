@@ -31,7 +31,7 @@ export const collapseProgress = (text: string): string => {
 
 const ESCAPE =
   // oxlint-disable-next-line no-control-regex -- an escape sequence starts with ESC
-  /\u001b(?:\[[0-9;:?<=>!]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)?|[@-_])/g;
+  /\u001b(?:\[[0-?]*[ -/]*[@-~]|\][^\u0007\u001b]*(?:\u0007|\u001b\\)?|[@-_])/g;
 // oxlint-disable-next-line no-control-regex -- erase in line: to its end (K, 0K) or all of it (2K)
 const ERASE_LINE = /^\u001b\[([02]?)K$/;
 
