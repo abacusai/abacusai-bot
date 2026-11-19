@@ -115,6 +115,10 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "UNAVAILABLE",
     message: "The agent is not running",
   },
+  "ai.stopTask": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
   "ai.queue.enqueue": {
     code: "UNAVAILABLE",
     message: "The agent is not running",
