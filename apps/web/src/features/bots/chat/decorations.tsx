@@ -32,6 +32,7 @@ import {
  * Features do not import each other, so the slot's types are declared here
  * structurally (identical to the kit's).
  */
+import { LookRowButton } from "#renderer/components/file-preview/look-row-button";
 import { ShareRowButton } from "#renderer/components/share/share-row-button";
 import type { Transport } from "#renderer/data/transport";
 import { stampLabel } from "#renderer/lib/bot-turns/gap-stamp";
@@ -598,7 +599,12 @@ export const botMessageDecorations = (
       }
       onOpenUrl={(item) => options.onOpenExternal(item.path)}
       rowAction={(item) =>
-        item.isUrl ? null : <ShareRowButton path={resolve(item.path)} />
+        item.isUrl ? null : (
+          <>
+            <LookRowButton path={resolve(item.path)} />
+            <ShareRowButton path={resolve(item.path)} />
+          </>
+        )
       }
     />
   );

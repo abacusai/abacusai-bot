@@ -748,6 +748,9 @@ export type HostService =
   | "deck_templates"
   | "deck_slots"
   | "render_deck"
+  /** Experiment (docs-quality-e): the design system's guide, and its print. */
+  | "docs_guide"
+  | "render_docs"
   /** Re-read the Abacus account; answers with its credit snapshot or null. */
   | "credit_balance"
   /** Set up the app's own Python environment if it is not there yet. */

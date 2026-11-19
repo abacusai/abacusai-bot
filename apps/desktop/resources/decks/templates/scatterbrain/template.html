@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scatterbrain — Post-it Inspired Presentation Template</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Zilla+Slab:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
     <style>
         :root {
             --yellow: #ffe066;
@@ -268,7 +266,8 @@
 
         .label {
             font-family: 'Caveat', cursive;
-            font-size: 0.9rem;
+            display: block;
+            font-size: 1.2rem;
             text-transform: uppercase;
             letter-spacing: 0.15em;
             color: var(--ink-light);
@@ -335,8 +334,10 @@
             z-index: 0;
         }
 
+        .title-accent-3::before { content: "!"; }
+
         .subtitle-text {
-            margin-top: 3rem;
+            margin: 3rem auto 0;
             font-family: 'Zilla Slab', serif;
             font-size: 1.3rem;
             
@@ -405,7 +406,7 @@
 
         .col-postit li {
             font-family: 'Zilla Slab', serif;
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             padding: 0.5rem 0;
             padding-left: 1.5rem;
             position: relative;
@@ -504,6 +505,12 @@
             justify-content: center;
             font-family: 'Shrikhand', cursive;
             font-size: 1.5rem;
+        }
+
+        .three-col-layout { counter-reset: feature; }
+        .feature-icon::before {
+            counter-increment: feature;
+            content: counter(feature, upper-alpha);
         }
 
         .feature-postit h3 {
@@ -737,7 +744,7 @@
 
         .compare-list li {
             font-family: 'Zilla Slab', serif;
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             padding: 0.8rem 0;
             line-height: 1.5;
             border-bottom: 1px solid rgba(45, 42, 38, 0.1);
@@ -751,11 +758,31 @@
         .closing-cluster {
             position: relative;
             text-align: center;
+            display: table;
+            margin: 0 auto;
+        }
+
+        .closing-accent-3::before,
+        .closing-accent-4::before {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(1.2rem, 2vw, 1.6rem);
+            line-height: 1.4;
+        }
+        .closing-accent-3::before { content: "OK"; }
+        .closing-accent-4::before { content: ":)"; }
+
+        .closing-sub {
+            margin-top: 4rem;
+            font-family: 'Zilla Slab', serif;
+            color: var(--ink-light);
+            font-size: 1.4rem;
+            text-align: center;
         }
 
         .closing-main {
             display: inline-block;
             padding: 3rem 5rem;
+            max-width: 760px;
             transform: rotate(-1deg);
         }
 
@@ -875,7 +902,7 @@
     <div class="presentation">
 
         <!-- SLIDE 1: Title -->
-        <section class="slide bg-cork slide-title active">
+        <section class="slide bg-cork slide-title active" data-label="title: a title, a short tagline, two small sticky notes of two or three words and a one-sentence subtitle">
             <div class="slide-content">
                 <div class="title-cluster">
                     <div class="post-it post-it-yellow main-title-postit pin">
@@ -884,7 +911,7 @@
                     </div>
                     <div class="post-it post-it-blue title-accent-1 pin-blue">Remember this!</div>
                     <div class="post-it post-it-pink title-accent-2 pin">Notes & Ideas</div>
-                    <div class="post-it post-it-green title-accent-3">!</div>
+                    <div class="post-it post-it-green title-accent-3" aria-hidden="true"></div>
                 </div>
                 <p class="subtitle-text">Collect your thoughts, pin your ideas, and watch the big picture emerge from the chaos of creativity.</p>
             </div>
@@ -897,7 +924,7 @@
         </section>
 
         <!-- SLIDE 2: Big Statement -->
-        <section class="slide bg-paper">
+        <section class="slide bg-paper" data-label="big statement: a quoted statement, a supporting sentence, a handwritten attribution and a side note of a few words">
             <div class="slide-content">
                 <div class="statement-layout">
                     <div class="post-it post-it-yellow statement-postit pin tape">
@@ -916,7 +943,7 @@
         </section>
 
         <!-- SLIDE 3: Two Column -->
-        <section class="slide bg-warm">
+        <section class="slide bg-warm" data-label="two columns: each a small label, a heading, a paragraph and four short checklist items">
             <div class="slide-content">
                 <div class="two-col-layout">
                     <div class="post-it post-it-blue col-postit pin-blue" style="transform: rotate(-2deg);">
@@ -951,7 +978,7 @@
         </section>
 
         <!-- SLIDE 4: Chart/Data -->
-        <section class="slide bg-cork">
+        <section class="slide bg-cork" data-label="bar chart" data-deck-skip>
             <div class="slide-content">
                 <div class="chart-layout">
                     <div class="chart-container pin tape">
@@ -1011,21 +1038,21 @@
         </section>
 
         <!-- SLIDE 5: Three Features -->
-        <section class="slide bg-paper">
+        <section class="slide bg-paper" data-label="three features, lettered A to C: a one-word title and one or two sentences each">
             <div class="slide-content">
                 <div class="three-col-layout">
                     <div class="post-it post-it-yellow feature-postit pin">
-                        <div class="feature-icon">A</div>
+                        <div class="feature-icon" aria-hidden="true"></div>
                         <h3>Strategy</h3>
                         <p>Map out your vision with clarity and purpose. Define objectives, set milestones, and align your team.</p>
                     </div>
                     <div class="post-it post-it-blue feature-postit pin-blue">
-                        <div class="feature-icon">B</div>
+                        <div class="feature-icon" aria-hidden="true"></div>
                         <h3>Design</h3>
                         <p>Craft experiences that resonate. From wireframes to polished interfaces, every pixel serves a function.</p>
                     </div>
                     <div class="post-it post-it-pink feature-postit pin">
-                        <div class="feature-icon">C</div>
+                        <div class="feature-icon" aria-hidden="true"></div>
                         <h3>Launch</h3>
                         <p>Ship with confidence. Test, iterate, and release products that users genuinely love and remember.</p>
                     </div>
@@ -1040,7 +1067,7 @@
         </section>
 
         <!-- SLIDE 6: Timeline -->
-        <section class="slide bg-warm">
+        <section class="slide bg-warm" data-label="three-phase timeline: each phase a name, a one-word tag and one sentence">
             <div class="slide-content">
                 <div class="timeline-layout">
                     <div class="timeline-row">
@@ -1093,7 +1120,7 @@
         </section>
 
         <!-- SLIDE 7: Image + Text -->
-        <section class="slide bg-cork">
+        <section class="slide bg-cork" data-label="image and text" data-deck-skip>
             <div class="slide-content">
                 <div class="imgtext-layout">
                     <div class="photo-frame pin tape">
@@ -1120,7 +1147,7 @@
         </section>
 
         <!-- SLIDE 8: Data Diagram -->
-        <section class="slide bg-paper">
+        <section class="slide bg-paper" data-label="donut chart and four figures" data-deck-skip>
             <div class="slide-content">
                 <div class="diagram-layout">
                     <div class="diagram-canvas pin tape">
@@ -1182,7 +1209,7 @@
         </section>
 
         <!-- SLIDE 9: Comparison -->
-        <section class="slide bg-warm">
+        <section class="slide bg-warm" data-label="before and after: two notes, each a heading and five short items">
             <div class="slide-content">
                 <div class="compare-layout">
                     <div class="post-it post-it-blue compare-postit left pin-blue">
@@ -1214,7 +1241,7 @@
         </section>
 
         <!-- SLIDE 10: Closing -->
-        <section class="slide bg-cork slide-title">
+        <section class="slide bg-cork slide-title" data-label="closing: a thank-you heading, a handwritten line, two small notes of a few words and a closing sentence">
             <div class="slide-content">
                 <div class="closing-cluster">
                     <div class="post-it post-it-yellow closing-main pin">
@@ -1227,14 +1254,10 @@
                     <div class="post-it post-it-pink closing-accent-2 pin">
                         <p class="handwritten">Pin this somewhere safe.</p>
                     </div>
-                    <div class="post-it post-it-green closing-accent-3 pin-green">
-                        <p class="handwritten">OK</p>
-                    </div>
-                    <div class="post-it post-it-orange closing-accent-4 pin-gold">
-                        <p class="handwritten">:)</p>
-                    </div>
+                    <div class="post-it post-it-green closing-accent-3 pin-green" aria-hidden="true"></div>
+                    <div class="post-it post-it-orange closing-accent-4 pin-gold" aria-hidden="true"></div>
                 </div>
-                <p style="margin-top: 3rem; font-family: 'Zilla Slab', serif; color: var(--ink-light); font-size: 1.1rem;">Questions, thoughts, or just want to say hello?</p>
+                <p class="closing-sub">Questions, thoughts, or just want to say hello?</p>
             </div>
             <svg class="doodle" style="top: 8%; right: 8%; width: 80px; height: 80px;" viewBox="0 0 80 80">
                 <polygon points="40,10 70,70 10,70" stroke="#2d2a26" stroke-width="3" fill="none" opacity="0.15"/>

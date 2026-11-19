@@ -1,0 +1,5 @@
+[
+  {"id": "proposal-agency", "name": "Agency", "blurb": "a black header with an orange hem, numbered section heads in a heavy grotesque, timeline cards and the total on an orange bar; agencies, creative pitches and bold bids"},
+  {"id": "proposal-consult", "name": "Consult", "blurb": "a navy top rule, Baskerville headings, the client details in a side panel, the approach as cards and the timeline as chevrons; consulting, B2B and corporate proposals"},
+  {"id": "proposal-studio", "name": "Studio", "blurb": "a cream header card with a leaf, Fraunces headings, outlined terracotta steps and the timeline as dots on a line; small studios, makers, freelancers and friendly quotes"}
+]

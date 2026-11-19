@@ -9,6 +9,8 @@ import path from "path";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { BrowserWindow } from "electron";
 
+import { FILL_PAGE } from "./document-fill";
+
 export type DocumentPdfOptions = {
   /** Absolute path to the document's HTML file. */
   htmlPath: string;
@@ -22,6 +24,15 @@ export type DocumentPdfOptions = {
    * margin (see FOOTER_TEMPLATE).
    */
   fullBleed?: boolean;
+  /** The sheet turned sideways, for a certificate. */
+  landscape?: boolean;
+  /**
+   * The page's own `@page` rule sets the margins and draws the page number
+   * (a CSS margin box), in the page's own fonts. Chromium's footer template
+   * cannot load a web font, so its number printed in the machine's default
+   * font (DejaVuSans on Linux), which a user's machine does not have.
+   */
+  cssPageNumbers?: boolean;
 };
 
 export type DocumentPdfResult = {
@@ -124,21 +135,35 @@ export const exportDocumentPdf = async (
     await win.webContents.executeJavaScript(AWAIT_READY);
 
     const bleed = options.fullBleed === true;
-    const data = await win.webContents.printToPDF({
+    // A one-page form grows to use its page; measured for A4's margins.
+    if (!bleed && (options.pageSize ?? "A4") === "A4")
+      await win.webContents.executeJavaScript(FILL_PAGE);
+    const sheet = {
       pageSize: options.pageSize ?? "A4",
+      landscape: options.landscape === true,
       printBackground: true,
-      // Room for the page number, which prints inside the margin. Zero when
-      // bleeding; see `fullBleed`.
-      margins: bleed
-        ? { top: 0, bottom: 0, left: 0, right: 0 }
-        : { top: 0.7, bottom: 0.6, left: 0.75, right: 0.75 },
-      displayHeaderFooter: !bleed,
-      // An empty header, not an absent one: leaving the template out brings
-      // back Chromium's default title-and-date line.
-      ...(bleed
-        ? {}
-        : { headerTemplate: "<span></span>", footerTemplate: FOOTER_TEMPLATE }),
-    });
+    };
+    const data = await win.webContents.printToPDF(
+      !bleed && options.cssPageNumbers === true
+        ? { ...sheet, preferCSSPageSize: true, displayHeaderFooter: false }
+        : {
+            ...sheet,
+            // Room for the page number, which prints inside the margin. Zero when
+            // bleeding; see `fullBleed`.
+            margins: bleed
+              ? { top: 0, bottom: 0, left: 0, right: 0 }
+              : { top: 0.7, bottom: 0.6, left: 0.75, right: 0.75 },
+            displayHeaderFooter: !bleed,
+            // An empty header, not an absent one: leaving the template out brings
+            // back Chromium's default title-and-date line.
+            ...(bleed
+              ? {}
+              : {
+                  headerTemplate: "<span></span>",
+                  footerTemplate: FOOTER_TEMPLATE,
+                }),
+          }
+    );
 
     await fs.writeFile(pdfPath, data);
 

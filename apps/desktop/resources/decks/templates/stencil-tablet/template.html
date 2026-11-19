@@ -3,10 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <title>Stencil &amp; Tablet — Slide Template</title>
+  <link rel="stylesheet" href="fonts.css">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Stardos+Stencil:wght@400;700&family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <script src="deck-stage.js"></script>
 <style>
   :root {
@@ -26,7 +24,7 @@
   body { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
   deck-stage { background: #1a1a1a; }
 
-  section.slide { background: var(--bone); color: var(--ink); overflow: hidden; position: relative; }
+  section.slide { background: var(--bone); color: var(--ink); overflow: hidden; position: relative; width: 1920px; height: 1080px; }
   section.slide.dark { background: var(--black); color: var(--bone); }
 
   /* ---------- chrome ---------- */
@@ -47,7 +45,7 @@
     position: absolute; left: 64px; right: 64px; bottom: 36px;
     display: flex; justify-content: space-between; align-items: center;
     font-family: "Barlow Condensed", sans-serif;
-    font-weight: 600; font-size: 22px;
+    font-weight: 600; font-size: 26px;
     letter-spacing: .08em;
     text-transform: uppercase;
     opacity: .75;
@@ -76,7 +74,7 @@
   }
   .tablet p {
     font-family: "Inter", sans-serif;
-    font-size: 22px;
+    font-size: 26px;
     line-height: 1.4;
     color: var(--ink);
   }
@@ -122,7 +120,7 @@
     font-size: 30px; text-transform: uppercase; letter-spacing: .04em;
   }
   .s-cover .row .who small {
-    display: block; font-size: 22px; font-weight: 500; letter-spacing: .08em; opacity: .65;
+    display: block; font-size: 26px; font-weight: 500; letter-spacing: .08em; opacity: .65;
   }
   .s-cover .row .date {
     font-family: "Stardos Stencil", serif; font-weight: 700;
@@ -143,7 +141,7 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 28px;
   }
-  .s-agenda .item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 36px 18px 36px; }
+  .s-agenda .item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 96px 18px 150px; }
   .s-agenda .item svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .s-agenda .item .n {
     position: relative; z-index: 2;
@@ -153,7 +151,7 @@
   .s-agenda .item .lab {
     position: relative; z-index: 2;
     font-family: "Stardos Stencil", serif; font-weight: 700;
-    font-size: 32px; line-height: 1.05; text-align: center;
+    font-size: 38px; line-height: 1.05; text-align: center;
     text-transform: uppercase; color: var(--ink);
   }
 
@@ -183,7 +181,7 @@
     margin: auto 0 14px; color: var(--ink);
   }
   .s-princ .card p {
-    font-size: 22px; line-height: 1.4; color: var(--ink);
+    font-size: 28px; line-height: 1.4; color: var(--ink);
   }
   .s-princ .card.c4 h3, .s-princ .card.c4 p { color: var(--bone); }
 
@@ -252,14 +250,14 @@
     font-family: "Stardos Stencil", serif; font-weight: 700;
     font-size: 32px; line-height: 1.1;
   }
-  .s-consult .col p { font-size: 20px; line-height: 1.45; }
-  .s-consult .col ul { margin: 0; padding-left: 22px; font-size: 20px; line-height: 1.45; }
+  .s-consult .col p { font-size: 24px; line-height: 1.45; }
+  .s-consult .col ul { margin: 0; padding-left: 22px; font-size: 24px; line-height: 1.45; }
   .s-consult .col ul li { margin-bottom: 8px; }
   .s-consult .col ul li strong { font-weight: 700; }
   .s-consult .col .src {
     margin-top: auto;
     font-family: "Barlow Condensed", sans-serif; font-weight: 700;
-    font-size: 18px; letter-spacing: .12em; text-transform: uppercase;
+    font-size: 24px; letter-spacing: .12em; text-transform: uppercase;
     border-top: 1px dashed rgba(10,10,10,.35); padding-top: 12px; opacity: .75;
   }
 
@@ -278,14 +276,14 @@
     color: var(--bone);
   }
   .s-chart .left h2 em { font-style: normal; color: var(--orange); }
-  .s-chart .left p { font-size: 22px; line-height: 1.5; color: var(--bone); opacity: .85; }
+  .s-chart .left p { font-size: 26px; line-height: 1.5; color: var(--bone); opacity: .85; }
   .s-chart .left .legend {
     margin-top: auto; display: flex; flex-direction: column; gap: 10px;
   }
   .s-chart .left .legend .li {
     display: flex; align-items: center; gap: 14px;
     font-family: "Barlow Condensed", sans-serif; font-weight: 700;
-    font-size: 22px; letter-spacing: .06em; text-transform: uppercase; color: var(--bone);
+    font-size: 26px; letter-spacing: .06em; text-transform: uppercase; color: var(--bone);
   }
   .s-chart .left .legend .li i { width: 32px; height: 6px; }
   .s-chart .right {
@@ -296,7 +294,7 @@
   }
   .s-chart .right .yhead {
     font-family: "Barlow Condensed", sans-serif; font-weight: 700;
-    font-size: 18px; letter-spacing: .12em; text-transform: uppercase;
+    font-size: 24px; letter-spacing: .12em; text-transform: uppercase;
     margin-bottom: 8px; opacity: .7;
   }
   .s-chart .plot { flex: 1; min-height: 0; position: relative;
@@ -306,12 +304,12 @@
     position: absolute; left: -52px; top: 0; bottom: 0;
     display: flex; flex-direction: column; justify-content: space-between;
     font-family: "Barlow Condensed", sans-serif; font-weight: 600;
-    font-size: 18px;
+    font-size: 24px;
   }
   .s-chart .plot svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
   .s-chart .right .xticks { display: flex; justify-content: space-between; padding-top: 10px;
     font-family: "Barlow Condensed", sans-serif; font-weight: 600;
-    font-size: 18px; letter-spacing: .06em; }
+    font-size: 24px; letter-spacing: .06em; }
 
   /* =========== 07 PROCESS DIAGRAM =========== */
   .s-process .head {
@@ -325,7 +323,7 @@
   .s-process .head h2 em { font-style: normal; color: var(--magenta); }
   .s-process .head .sub {
     font-family: "Barlow Condensed", sans-serif; font-weight: 600;
-    font-size: 22px; letter-spacing: .06em; text-transform: uppercase;
+    font-size: 26px; letter-spacing: .06em; text-transform: uppercase;
     max-width: 38ch; line-height: 1.5; opacity: .8; margin-top: 12px;
   }
   .s-process .flow {
@@ -349,7 +347,7 @@
     font-family: "Stardos Stencil", serif; font-weight: 700;
     font-size: 28px; line-height: 1.05; text-transform: uppercase; letter-spacing: .02em;
   }
-  .s-process .node p { font-size: 18px; line-height: 1.4; }
+  .s-process .node p { font-size: 26px; line-height: 1.4; }
   .s-process .node .arr {
     position: absolute; right: -16px; top: 40%;
     width: 32px; height: 32px; z-index: 2;
@@ -360,7 +358,7 @@
     background: var(--paper); border-radius: 14px;
     padding: 0 28px; display: flex; align-items: center; justify-content: space-between;
     font-family: "Barlow Condensed", sans-serif; font-weight: 700;
-    font-size: 20px; letter-spacing: .08em; text-transform: uppercase;
+    font-size: 26px; letter-spacing: .08em; text-transform: uppercase;
   }
 
   /* =========== 08 COMPARISON MATRIX =========== */
@@ -375,7 +373,7 @@
   .s-matrix .head h2 em { font-style: normal; color: var(--teal); }
   .s-matrix .head .sub {
     font-family: "Barlow Condensed", sans-serif; font-weight: 600;
-    font-size: 22px; letter-spacing: .06em; text-transform: uppercase;
+    font-size: 26px; letter-spacing: .06em; text-transform: uppercase;
     max-width: 38ch; line-height: 1.5; opacity: .8; margin-top: 12px;
   }
   .s-matrix .table {
@@ -386,7 +384,7 @@
   }
   .s-matrix .cell {
     padding: 18px 22px; display: flex; align-items: center;
-    font-size: 22px; line-height: 1.35;
+    font-size: 26px; line-height: 1.35;
     border-bottom: 1.5px solid rgba(10,10,10,.35);
     border-right: 1.5px solid rgba(10,10,10,.35);
   }
@@ -405,7 +403,7 @@
     display: inline-block; border-radius: 999px;
     padding: 6px 16px; font-weight: 700;
     font-family: "Barlow Condensed", sans-serif;
-    font-size: 18px; letter-spacing: .08em; text-transform: uppercase;
+    font-size: 24px; letter-spacing: .08em; text-transform: uppercase;
     white-space: nowrap;
   }
   .s-matrix .pill.yes  { background: var(--teal); color: var(--bone); }
@@ -426,7 +424,7 @@
   .s-stats .head h2 em { font-style: normal; color: var(--orange); }
   .s-stats .head .sub {
     font-family: "Barlow Condensed", sans-serif; font-weight: 600;
-    font-size: 22px; letter-spacing: .06em; text-transform: uppercase;
+    font-size: 26px; letter-spacing: .06em; text-transform: uppercase;
     max-width: 36ch; line-height: 1.5; opacity: .85; color: var(--bone); margin-top: 12px;
   }
   .s-stats .grid {
@@ -454,7 +452,7 @@
     font-size: 26px; text-transform: uppercase; letter-spacing: .02em;
     margin-top: auto;
   }
-  .s-stats .stat p { font-size: 20px; line-height: 1.4; }
+  .s-stats .stat p { font-size: 28px; line-height: 1.4; }
 
   /* =========== 10 QUOTE =========== */
   .s-quote { padding: 0; }
@@ -468,6 +466,7 @@
     gap: 60px;
     align-items: center;
   }
+  .s-quote .panel .qmark::before { content: "\201C"; }
   .s-quote .panel .qmark {
     font-family: "Bowlby One", "Stardos Stencil", serif; font-weight: 700;
     font-size: 320px; line-height: .8; color: var(--ink);
@@ -486,16 +485,19 @@
     color: var(--ink);
   }
   .s-quote .panel .who small {
-    display: block; font-weight: 600; font-size: 22px; opacity: .7; margin-top: 4px;
+    display: block; font-weight: 600; font-size: 26px; opacity: .7; margin-top: 4px;
   }
 
   /* =========== 11 CTA =========== */
   .s-cta { padding: 0; }
   .s-cta .stage {
-    position: absolute; inset: 0;
-    padding: 130px 64px 100px;
+    position: absolute; left: 64px; right: 64px; top: 130px; bottom: 100px;
+    padding: 0; box-sizing: border-box;
     display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
   }
+  .s-cta h2, .s-cta h3, .s-cta h4, .s-cta p { margin: 0; }
+  .s-cta .pane.r { gap: 44px; }
+  .s-cta .pane.r h4 { margin-bottom: 10px; }
   .s-cta .pane {
     border-radius: 26px; padding: 40px;
     display: flex; flex-direction: column; gap: 20px;
@@ -507,7 +509,7 @@
     font-size: 130px; line-height: .9; text-transform: uppercase; letter-spacing: -.015em;
   }
   .s-cta .pane.l h2 em { font-style: normal; color: var(--orange); }
-  .s-cta .pane.l p { font-size: 22px; line-height: 1.5; opacity: .9; max-width: 32ch; }
+  .s-cta .pane.l p { font-size: 28px; line-height: 1.5; opacity: .9; max-width: 32ch; }
   .s-cta .pane.r h3 {
     font-family: "Stardos Stencil", serif; font-weight: 700;
     font-size: 36px; line-height: 1; text-transform: uppercase; letter-spacing: .02em;
@@ -521,7 +523,7 @@
     font-family: "Barlow Condensed", sans-serif; font-weight: 800;
     font-size: 26px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px;
   }
-  .s-cta .pane.r .step p { font-size: 20px; line-height: 1.4; }
+  .s-cta .pane.r .step p { font-size: 28px; line-height: 1.4; }
 
   /* =========== 12 DESIGN SYSTEM =========== */
   .s-system .wrap {
@@ -542,7 +544,7 @@
   .s-system .swatch { width: 48px; height: 48px; border-radius: 10px; border: 1.5px solid var(--ink); }
   .s-system .row .label {
     font-family: "Barlow Condensed", sans-serif; font-weight: 700;
-    font-size: 22px; letter-spacing: .04em; text-transform: uppercase;
+    font-size: 26px; letter-spacing: .04em; text-transform: uppercase;
   }
   .s-system .row .label small {
     display: block; font-weight: 500; opacity: .65; letter-spacing: .04em;
@@ -562,9 +564,9 @@
     font-family: "Inter", sans-serif; font-weight: 600; text-transform: none; font-size: 28px;
   }
   .s-system .typespec .desc {
-    font-size: 18px; opacity: .75;
+    font-size: 24px; opacity: .75;
   }
-  .s-system ul { margin: 0; padding-left: 20px; font-size: 18px; line-height: 1.45; }
+  .s-system ul { margin: 0; padding-left: 20px; font-size: 24px; line-height: 1.45; }
   .s-system ul li { margin-bottom: 6px; }
   .s-system .principle {
     font-family: "Stardos Stencil", serif; font-weight: 700;
@@ -578,13 +580,13 @@
 <deck-stage>
 
   <!-- ============ 01 COVER ============ -->
-  <section class="slide s-cover" data-label="01 Cover" data-om-validate="false">
+  <section class="slide s-cover" data-label="title: a small tag line, a two-line title, the presenter or team name with a short line under it, and a date" data-om-validate="false">
     <div class="stage">
       <div>
         <div class="super">Agency name × Partner name</div>
       </div>
       <div>
-        <h1>Bold by<br/>design.</h1>
+        <h1>Bold by design.</h1>
         <div class="row">
           <div class="lockup">
             <div class="mark"></div>
@@ -602,7 +604,7 @@
   </section>
 
   <!-- ============ 02 AGENDA (organic shapes) ============ -->
-  <section class="slide s-agenda dark" data-label="02 Agenda" data-om-validate="false">
+  <section class="slide s-agenda dark" data-label="agenda: four numbered items, each two or three words, in coloured shapes" data-om-validate="false">
     <div class="top">
       <span>Agenda</span>
       <span class="meta"><span>Agency × Partner</span><span>Phase I</span></span>
@@ -645,7 +647,7 @@
   </section>
 
   <!-- ============ 03 PRINCIPLES ============ -->
-  <section class="slide s-princ" data-label="03 Our Principles" data-om-validate="false">
+  <section class="slide s-princ" data-label="four principles: four numbered cards, each a two-line title and a sentence" data-om-validate="false">
     <div class="top">
       <span>Our Principles</span>
       <span class="meta"><span>Agency × Partner</span><span>Phase II</span></span>
@@ -653,22 +655,22 @@
     <div class="row">
       <div class="card c1">
         <div class="n">1</div>
-        <h3>Make it<br/>blunt</h3>
+        <h3>Make it blunt</h3>
         <p>Decisions read at a glance. If a stakeholder needs the legend, the slide is doing too much.</p>
       </div>
       <div class="card c2">
         <div class="n">2</div>
-        <h3>Stay in<br/>the system</h3>
+        <h3>Stay in the system</h3>
         <p>Three serif numerals, two sans weights, six saturated colours. Anything else is a special case.</p>
       </div>
       <div class="card c3">
         <div class="n">3</div>
-        <h3>Show the<br/>shape</h3>
+        <h3>Show the shape</h3>
         <p>Lead with form. Use weight, scale, and silhouette before reaching for icons or imagery.</p>
       </div>
       <div class="card c4">
         <div class="n">4</div>
-        <h3>Earn the<br/>black slide</h3>
+        <h3>Earn the black slide</h3>
         <p>Reserve full-bleed black for moments that deserve a beat. Never as wallpaper.</p>
       </div>
     </div>
@@ -676,19 +678,19 @@
   </section>
 
   <!-- ============ 04 SECTION DIVIDER ============ -->
-  <section class="slide s-sec dark" data-label="04 Section · Direction" data-om-validate="false">
+  <section class="slide s-sec dark" data-label="section divider: a big two-digit section number, a short two-line label and a three-line heading" data-om-validate="false">
     <div class="top">
       <span>Direction</span>
       <span class="meta"><span>Section II</span></span>
     </div>
     <div class="num">02</div>
     <div class="label">Direction<br/>&amp; doctrine</div>
-    <h2>Where we<br/>are going,<br/>and why.</h2>
+    <h2>Where we are going, and why.</h2>
     <div class="footer"><span>North &amp; Partners</span><span>04 / 11</span></div>
   </section>
 
   <!-- ============ 05 CONSULT (text-dense) ============ -->
-  <section class="slide s-consult" data-label="05 Findings · Detail" data-om-validate="false">
+  <section class="slide s-consult" data-label="findings in detail: a short tag and a one-sentence headline, then three columns (what we found, why it matters, what to do), each a heading, a lead line or paragraphs or three bullet points, and a source line" data-om-validate="false">
     <div class="top">
       <span>Findings · Detail</span>
       <span class="meta"><span>Agency × Partner</span><span>Phase III</span></span>
@@ -729,13 +731,13 @@
   </section>
 
   <!-- ============ 06 CHART ============ -->
-  <section class="slide s-chart dark" data-label="06 Retention Curve" data-om-validate="false">
+  <section class="slide s-chart dark" data-label="line chart" data-deck-skip data-om-validate="false">
     <div class="top">
       <span>Retention, by cohort</span>
       <span class="meta"><span>Phase III</span><span>Evidence</span></span>
     </div>
     <div class="left">
-      <h2>Curve<br/>bends at<br/>day three.</h2>
+      <h2>Curve bends at day three.</h2>
       <p>Cohorts that received a written welcome and a human reply within 24 hours retain at roughly 2× the rate of the templated cohort, and the gap holds steady for ninety days.</p>
       <div class="legend">
         <div class="li"><i style="background:var(--bone); opacity:.5"></i> Templated welcome (control)</div>
@@ -770,13 +772,13 @@
   </section>
 
   <!-- ============ 07 PROCESS ============ -->
-  <section class="slide s-process" data-label="07 Process" data-om-validate="false">
+  <section class="slide s-process" data-label="process: a three-line heading and a sentence, five numbered steps each a one-word title and a sentence, and a five-part timeline under them" data-om-validate="false">
     <div class="top">
       <span>How we'll work</span>
       <span class="meta"><span>Agency × Partner</span><span>Phase IV</span></span>
     </div>
     <div class="head">
-      <h2>From insight<br/>to default,<br/>in five moves.</h2>
+      <h2>From insight to default, in five moves.</h2>
       <div class="sub">A repeatable path each pilot follows, end to end, before it is allowed to graduate to the default experience for every customer.</div>
     </div>
     <div class="flow">
@@ -821,13 +823,13 @@
   </section>
 
   <!-- ============ 08 COMPARISON MATRIX ============ -->
-  <section class="slide s-matrix" data-label="08 Comparison" data-om-validate="false">
+  <section class="slide s-matrix" data-label="comparison table: a heading and a sentence, three options as columns scored on four rows, each score a short tag" data-om-validate="false">
     <div class="top">
       <span>Three pilots, side by side</span>
       <span class="meta"><span>Agency × Partner</span><span>Phase IV</span></span>
     </div>
     <div class="head">
-      <h2>Where each<br/>pilot earns<br/>its keep.</h2>
+      <h2>Where each pilot earns its keep.</h2>
       <div class="sub">Scored against the four levers that matter most this cycle. We will only carry forward bets that win on at least two.</div>
     </div>
     <div class="table">
@@ -860,29 +862,29 @@
   </section>
 
   <!-- ============ 09 STATS ============ -->
-  <section class="slide s-stats dark" data-label="09 In Numbers" data-om-validate="false">
+  <section class="slide s-stats dark" data-label="three key figures: a heading and a sentence, then three big figures each with a two-line label and a sentence" data-om-validate="false">
     <div class="top">
       <span>In numbers</span>
       <span class="meta"><span>Phase III</span><span>Evidence</span></span>
     </div>
     <div class="head">
-      <h2>The case,<br/>by the numbers.</h2>
+      <h2>The case, by the numbers.</h2>
       <div class="sub">Three figures we will report against every cycle. If one of these stops moving, the bet is over.</div>
     </div>
     <div class="grid">
       <div class="stat s1">
-        <div class="big">2.4<small>×</small></div>
-        <h3>Retention<br/>multiple</h3>
+        <div class="big">2.4×</div>
+        <h3>Retention multiple</h3>
         <p>Cohort with written welcome + human reply, vs. templated control. Sustained through D90.</p>
       </div>
       <div class="stat s2">
-        <div class="big">$4.1<small>M</small></div>
-        <h3>Projected<br/>retained ARR</h3>
+        <div class="big">$4.1M</div>
+        <h3>Projected retained ARR</h3>
         <p>Modelled on the current quarter's signup cohort, holding all other inputs constant.</p>
       </div>
       <div class="stat s3">
-        <div class="big">72<small>HR</small></div>
-        <h3>The window<br/>that matters</h3>
+        <div class="big">72h</div>
+        <h3>The window that matters</h3>
         <p>Behaviour after the first 72 hours predicts 18-month retention better than any feature metric.</p>
       </div>
     </div>
@@ -890,13 +892,13 @@
   </section>
 
   <!-- ============ 10 QUOTE ============ -->
-  <section class="slide s-quote" data-label="10 Voice" data-om-validate="false">
+  <section class="slide s-quote" data-label="quote: a client quotation of two or three sentences, who said it and their role" data-om-validate="false">
     <div class="top">
       <span>Client voice</span>
       <span class="meta"><span>Phase III</span><span>Evidence</span></span>
     </div>
     <div class="panel">
-      <div class="qmark">"</div>
+      <div class="qmark" aria-hidden="true"></div>
       <div>
         <blockquote>Three days in, someone wrote me a real sentence. I'd been a customer of theirs for nine months before I noticed I'd never been a customer anywhere else again.</blockquote>
         <div class="who">Margaux Lévêque
@@ -908,7 +910,7 @@
   </section>
 
   <!-- ============ 11 CTA ============ -->
-  <section class="slide s-cta" data-label="11 Next" data-om-validate="false">
+  <section class="slide s-cta" data-label="closing: a kicker, a short call to action and a sentence, beside three numbered next steps each a title and a sentence" data-om-validate="false">
     <div class="top">
       <span>What's next</span>
       <span class="meta"><span>Agency × Partner</span><span>Phase V</span></span>
@@ -916,7 +918,7 @@
     <div class="stage">
       <div class="pane l">
         <div class="super" style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: .14em; text-transform: uppercase; opacity: .8;">From here</div>
-        <h2>Pick the<br/>three<br/>bets.</h2>
+        <h2>Pick the three bets.</h2>
         <p>Three pilots in eight weeks. We'll bring back evidence the quarter after, and the question won't be whether to ship — it'll be which two to default.</p>
       </div>
       <div class="pane r">

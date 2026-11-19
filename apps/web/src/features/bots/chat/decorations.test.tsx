@@ -24,6 +24,10 @@ import {
 vi.mock("#renderer/components/share/share-row-button", () => ({
   ShareRowButton: () => null,
 }));
+// "Try another look" reads the router's transport, not mounted here either.
+vi.mock("#renderer/components/file-preview/look-row-button", () => ({
+  LookRowButton: () => null,
+}));
 // No router here: a link is its words.
 vi.mock("#renderer/lib/navigation/app-link", () => ({
   AppLink: ({ children }: { children: ReactNode }) => <a>{children}</a>,

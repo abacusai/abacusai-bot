@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>8-BIT ORBIT | Pixel Art Presentation Template</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Tektur:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
   <style>
     :root {
       --neon-pink: #F0A6CA;
@@ -211,7 +209,7 @@
       display: inline-block;
       font-family: var(--font-display);
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 1.1rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       padding: 16px 36px;
@@ -302,7 +300,7 @@
     /* Section labels */
     .pixel-label {
       font-family: var(--font-mono);
-      font-size: 0.75rem;
+      font-size: 1rem;
       font-weight: 700;
       letter-spacing: 0.2em;
       text-transform: uppercase;
@@ -337,7 +335,7 @@
     h3 { font-size: clamp(1.1rem, 2vw, 1.5rem); }
     p, li {
       font-family: var(--font-body);
-      font-size: clamp(0.9rem, 1.2vw, 1.15rem);
+      font-size: clamp(1.25rem, 1.6vw, 1.6rem);
       line-height: 1.7;
       font-weight: 400;
     }
@@ -382,7 +380,7 @@
       left: 50%;
       transform: translateX(-50%);
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 1rem;
       color: var(--neon-cyan);
       background: rgba(10, 14, 39, 0.8);
       padding: 8px 20px;
@@ -400,7 +398,7 @@
     /* Slide 1: Hero */
     .hero-subtitle {
       font-family: var(--font-mono);
-      font-size: 0.85rem;
+      font-size: 1rem;
       letter-spacing: 0.3em;
       color: var(--neon-pink);
       text-transform: uppercase;
@@ -409,7 +407,7 @@
 
     .hero-tagline {
       font-family: var(--font-body);
-      font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+      font-size: clamp(1.3rem, 1.8vw, 1.6rem);
       color: rgba(255,255,255,0.7);
       max-width: 500px;
       text-align: center;
@@ -427,7 +425,7 @@
 
     .hero-badge {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
+      font-size: 1rem;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 8px 16px;
@@ -602,13 +600,13 @@
     }
 
     .feature-card h3 {
-      font-size: 1.1rem;
+      font-size: 1.35rem;
       margin-bottom: 8px;
       color: var(--deep-navy);
     }
 
     .feature-card p {
-      font-size: 0.85rem;
+      font-size: 1.25rem;
       color: rgba(15, 27, 61, 0.75);
       line-height: 1.6;
     }
@@ -771,9 +769,11 @@
     .timeline-events {
       display: flex;
       flex-direction: column;
-      gap: 32px;
+      gap: 0;
       position: relative;
     }
+    /* Events alternate sides, so each tucks up beside the one before. */
+    .timeline-event + .timeline-event { margin-top: -1.75rem; }
 
     .timeline-event {
       display: grid;
@@ -803,20 +803,20 @@
     .timeline-node.active { background: var(--neon-yellow); }
 
     .timeline-text h4 {
-      font-size: 1rem;
+      font-size: 1.3rem;
       color: var(--deep-navy);
       margin-bottom: 4px;
     }
 
     .timeline-text p {
-      font-size: 0.85rem;
+      font-size: 1.2rem;
       color: rgba(15, 27, 61, 0.7);
       line-height: 1.5;
     }
 
     .timeline-text .date {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
+      font-size: 1rem;
       color: var(--neon-cyan);
       background: var(--deep-navy);
       display: inline-block;
@@ -893,7 +893,7 @@
 
     .stat-label {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
+      font-size: 1rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--neon-pink);
@@ -921,7 +921,7 @@
 
     .quote-text {
       font-family: var(--font-body);
-      font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+      font-size: clamp(1.5rem, 2.4vw, 2rem);
       font-weight: 500;
       
       color: var(--deep-navy);
@@ -933,7 +933,7 @@
     .quote-author {
       margin-top: 2rem;
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 1rem;
       color: rgba(15, 27, 61, 0.7);
       letter-spacing: 0.1em;
     }
@@ -1048,7 +1048,7 @@
     .cta-content p {
       color: rgba(255,255,255,0.7);
       margin-bottom: 2.5rem;
-      font-size: 1.1rem;
+      font-size: 1.35rem;
     }
 
     .cta-buttons {
@@ -1086,7 +1086,7 @@
       bottom: 24px;
       right: 24px;
       font-family: var(--font-mono);
-      font-size: 0.65rem;
+      font-size: 1rem;
       color: var(--neon-cyan);
       opacity: 0.5;
       z-index: 100;
@@ -1098,6 +1098,12 @@
       .slides-container { transition: none; }
       .starfield .star, .pixel-particles .p { animation: none; }
       .chart-bar, .hbar-fill { transition: none; }
+    }
+    /* Curated for print: glyphs drawn by CSS are not text slots; screen
+       navigation stays off paper. */
+    [data-glyph]::before { content: attr(data-glyph); }
+    @media print {
+      .nav-dots, .nav-hint { display: none !important; }
     }
   </style>
 </head>
@@ -1117,12 +1123,12 @@
   <div class="slides-container" id="slidesContainer">
 
     <!-- ========== SLIDE 1: HERO ========== -->
-    <section class="slide bg-grid scanlines grain crt-glow" data-slide="1">
+    <section class="slide bg-grid scanlines grain crt-glow" data-slide="1" data-label="title">
       <div class="starfield" id="starfield1"></div>
       <div class="pixel-particles" id="particles1"></div>
       <div class="slide-content" style="z-index:10;">
         <div class="hero-subtitle">Pixel Perfect Presentation System</div>
-        <h1 class="pixel-hero-text" style="text-align:center;">8-BIT<br>ORBIT</h1>
+        <h1 class="pixel-hero-text" style="text-align:center;">8-BIT ORBIT</h1>
         <p class="hero-tagline">A retro-futuristic deck engine for bold storytellers. Built for arcades, engineered for boardrooms.</p>
         <div class="hero-badges">
           <span class="hero-badge">10 Slides</span>
@@ -1133,7 +1139,7 @@
     </section>
 
     <!-- ========== SLIDE 2: SPLIT INTRO ========== -->
-    <section class="slide bg-grid-pink scanlines grain" data-slide="2">
+    <section class="slide bg-grid-pink scanlines grain" data-slide="2" data-label="heading and two paragraphs beside a pixel-art panel">
       <div class="slide-content">
         <div class="split-layout">
           <div class="pixel-avatar-zone pixel-corners yellow-corners">
@@ -1158,7 +1164,7 @@
     </section>
 
     <!-- ========== SLIDE 3: FEATURE GRID ========== -->
-    <section class="slide bg-grid-cyan scanlines grain" data-slide="3">
+    <section class="slide bg-grid-cyan scanlines grain" data-slide="3" data-label="four feature cards, each a title and a sentence">
       <div class="slide-content">
         <div style="text-align: center; margin-bottom: 2.5rem;">
           <span class="pixel-label" style="background: var(--deep-navy); color: var(--neon-cyan);">Core Systems</span>
@@ -1190,7 +1196,7 @@
     </section>
 
     <!-- ========== SLIDE 4: VERTICAL BAR CHART ========== -->
-    <section class="slide bg-grid scanlines grain crt-glow" data-slide="4">
+    <section class="slide bg-grid scanlines grain crt-glow" data-slide="4" data-label="bar chart (sample data)" data-deck-skip>
       <div class="starfield" id="starfield4"></div>
       <div class="slide-content">
         <div class="chart-slide-layout">
@@ -1231,7 +1237,7 @@
     </section>
 
     <!-- ========== SLIDE 5: HORIZONTAL BAR CHART ========== -->
-    <section class="slide bg-grid-lavender scanlines grain" data-slide="5">
+    <section class="slide bg-grid-lavender scanlines grain" data-slide="5" data-label="five horizontal bars (sample percentages)" data-deck-skip>
       <div class="slide-content">
         <div class="chart-slide-layout">
           <div class="pixel-chart-title" style="margin-bottom: 2.5rem;">
@@ -1281,7 +1287,7 @@
     </section>
 
     <!-- ========== SLIDE 6: TIMELINE ========== -->
-    <section class="slide bg-grid-pink scanlines grain" data-slide="6">
+    <section class="slide bg-grid-pink scanlines grain" data-slide="6" data-label="timeline of four dated milestones">
       <div class="slide-content">
         <div style="text-align: center; margin-bottom: 2.5rem;">
           <span class="pixel-label">Chronology</span>
@@ -1340,29 +1346,29 @@
     </section>
 
     <!-- ========== SLIDE 7: STATS / COUNTERS ========== -->
-    <section class="slide bg-grid scanlines grain crt-glow" data-slide="7">
+    <section class="slide bg-grid scanlines grain crt-glow" data-slide="7" data-label="four big figures with labels">
       <div class="starfield" id="starfield7"></div>
       <div class="slide-content">
         <div style="text-align: center; margin-bottom: 2.5rem;">
           <span class="pixel-label">Live Telemetry</span>
           <h2 style="color: var(--neon-cyan);">Platform Vitals</h2>
-          <p style="color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 0.5rem;">Real-time aggregate figures from active deployments</p>
+          <p style="color: rgba(255,255,255,0.6); font-size: 1.25rem; margin-top: 0.5rem;">Real-time aggregate figures from active deployments</p>
         </div>
-        <div class="stats-grid" id="statsGrid">
+        <div class="stats-grid" data-deck-grow>
           <div class="stat-block">
-            <div class="stat-number" data-target="847">0</div>
+            <div class="stat-number">847</div>
             <div class="stat-label">Active Worlds</div>
           </div>
           <div class="stat-block">
-            <div class="stat-number" data-target="12.4" data-suffix="M">0</div>
+            <div class="stat-number">12.4M</div>
             <div class="stat-label">Pixels Rendered</div>
           </div>
           <div class="stat-block">
-            <div class="stat-number" data-target="99.9" data-suffix="%">0</div>
+            <div class="stat-number">99.9%</div>
             <div class="stat-label">Uptime Score</div>
           </div>
           <div class="stat-block">
-            <div class="stat-number" data-target="2048">0</div>
+            <div class="stat-number">2,048</div>
             <div class="stat-label">Max Resolution</div>
           </div>
         </div>
@@ -1370,10 +1376,10 @@
     </section>
 
     <!-- ========== SLIDE 8: QUOTE ========== -->
-    <section class="slide bg-grid-cyan scanlines grain" data-slide="8">
+    <section class="slide bg-grid-cyan scanlines grain" data-slide="8" data-label="quote with attribution">
       <div class="slide-content">
         <div class="quote-container pixel-corners">
-          <div class="quote-mark">"</div>
+          <div class="quote-mark" data-glyph="&#8220;"></div>
           <p class="quote-text">
             The best presentations do not merely inform. They immerse. They transform the conference room into an arcade cabinet where every slide is a new level waiting to be unlocked.
           </p>
@@ -1384,7 +1390,7 @@
     </section>
 
     <!-- ========== SLIDE 9: PRICING TIERS ========== -->
-    <section class="slide bg-grid-lavender scanlines grain" data-slide="9">
+    <section class="slide bg-grid-lavender scanlines grain" data-slide="9" data-label="three pricing tiers with features (needs real prices)" data-deck-skip>
       <div class="slide-content">
         <div style="text-align: center; margin-bottom: 2.5rem;">
           <span class="pixel-label" style="background: var(--deep-navy); color: var(--neon-pink);">Access Tiers</span>
@@ -1433,13 +1439,13 @@
     </section>
 
     <!-- ========== SLIDE 10: CLOSING CTA ========== -->
-    <section class="slide bg-grid scanlines grain crt-glow" data-slide="10">
+    <section class="slide bg-grid scanlines grain crt-glow" data-slide="10" data-label="closing with a call to action and two buttons">
       <div class="starfield" id="starfield10"></div>
       <div class="pixel-particles" id="particles10"></div>
       <div class="pixel-landscape" id="landscape10"></div>
       <div class="slide-content" style="z-index:10;">
         <div class="cta-content">
-          <h2>Ready Player<br>One?</h2>
+          <h2>Ready Player One?</h2>
           <p>Deploy your first 8-BIT ORBIT deck in under sixty seconds. No dependencies. No friction. Just pure presentation power.</p>
           <div class="cta-buttons">
             <button class="pixel-btn">Initialize Deck</button>

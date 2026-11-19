@@ -1,0 +1,31 @@
+/*
+ * Document designs: fixed designs per document type, each a set of rules
+ * under html[data-design="<id>"] over the type's own markup (guide.md), so a
+ * design switches with a reprint and every check still applies. One file per
+ * type in designs/. Faces are OFL (Google Fonts), latin subset, from the deck
+ * templates; a design names them through custom properties (--display,
+ * --text) so the font pass (fonts.ts) leaves them alone.
+ */
+@import url("designs/resume.css");
+@import url("designs/certificate.css");
+@import url("designs/invoice.css");
+@import url("designs/report.css");
+@import url("designs/flyer.css");
+@import url("designs/invitation.css");
+@import url("designs/letter.css");
+@import url("designs/proposal.css");
+
+@font-face { font-family: "Playfair Display"; font-weight: 400 900; src: url("fonts/playfair-display-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "DM Serif Display"; font-weight: 400; src: url("fonts/dm-serif-display-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Fraunces"; font-weight: 400; src: url("fonts/fraunces-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Fraunces"; font-weight: 600 700; src: url("fonts/fraunces-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 300 800; src: url("fonts/bricolage-grotesque-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Bebas Neue"; font-weight: 400; src: url("fonts/bebas-neue-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Caveat"; font-weight: 400 700; src: url("fonts/caveat-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Cormorant Garamond"; font-weight: 400 700; src: url("fonts/cormorant-garamond-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Libre Baskerville"; font-weight: 400 700; src: url("fonts/libre-baskerville-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-weight: 300 800; src: url("fonts/dm-sans-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Lora"; font-weight: 400 700; src: url("fonts/lora-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-weight: 300 700; src: url("fonts/space-grotesk-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 300 800; src: url("fonts/manrope-latin-var.woff2") format("woff2"); }
+@font-face { font-family: "Archivo Black"; font-weight: 400; src: url("fonts/archivo-black-latin-400.woff2") format("woff2"); }

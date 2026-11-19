@@ -1,0 +1,129 @@
+/* flyer designs: html[data-design="flyer-…"] over the poster markup of
+   guide.md (body.doc.bleed > .poster: .band with .kicker, h1, .when; .body
+   with p.big, table.data timetable, .offers, .callout, .closing; .foot).
+   Notices use the same markup. Band and foot never shrink, so a long title
+   runs down past the page (and the fit pass shrinks it) instead of up out of
+   sight. Rules carry body.bleed .poster so they beat the system's own. */
+
+/* ------------------------------------------------------------------ */
+/* Blast: a loud sale and launch poster. Sun-yellow paper, a black     */
+/* band with hazard tape and a slanted edge, the title in tall Bebas    */
+/* capitals, a red tag for the date, red sticker offers.                */
+/* ------------------------------------------------------------------ */
+html[data-design="flyer-blast"]:root {
+  --accent: #e3171f; --accent-soft: #fff3b0; --ink: #111111; --muted: #2b2b2b; --line: #111111;
+  --sun: #ffd60a;
+  --display: "Bebas Neue", var(--sans);
+  --heavy: "Bricolage Grotesque", var(--sans);
+  --text: "Space Grotesk", var(--sans);
+}
+html[data-design="flyer-blast"] body.bleed .poster { background: var(--sun); font-family: var(--text); color: var(--ink); }
+html[data-design="flyer-blast"] body.bleed .poster .band { position: relative; flex-shrink: 0; min-height: calc(96mm * var(--fit)); background: var(--ink); color: #fff; padding: calc(18mm * var(--fit)) 16mm calc(20mm * var(--fit)); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 13mm), 0 100%); }
+html[data-design="flyer-blast"] body.bleed .poster .band::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8mm; background: repeating-linear-gradient(-45deg, var(--sun) 0 5mm, var(--ink) 5mm 10mm); }
+html[data-design="flyer-blast"] body.bleed .poster .band .kicker { font-family: var(--heavy); font-weight: 800; color: var(--sun); opacity: 1; font-size: calc(13pt * var(--fit)); letter-spacing: 0.14em; margin: 0 0 calc(7mm * var(--fit)); }
+html[data-design="flyer-blast"] body.bleed .poster h1 { text-wrap: balance; font-family: var(--display); font-weight: 400; font-size: calc(118pt * var(--fit)); line-height: 1.02; letter-spacing: 0.01em; text-transform: uppercase; margin: 0 0 3mm; color: #fff; }
+html[data-design="flyer-blast"] body.bleed .poster .when { display: inline-block; align-self: flex-start; background: var(--accent); color: #fff; font-family: var(--heavy); font-weight: 800; font-size: calc(20pt * var(--fit)); line-height: 1.2; padding: 2.5mm 5mm; transform: rotate(-1.5deg); margin: 1mm 0 0; }
+html[data-design="flyer-blast"] body.bleed .poster .body { padding: calc(6mm * var(--fit)) 16mm calc(9mm * var(--fit)); gap: calc(6mm * var(--fit)); }
+html[data-design="flyer-blast"] body.bleed .poster .big { font-family: var(--heavy); font-weight: 800; font-size: calc(27pt * var(--fit)); line-height: 1.15; letter-spacing: -0.01em; text-transform: uppercase; }
+html[data-design="flyer-blast"] body.bleed .poster .body > p:not(.big) { font-family: var(--heavy); font-weight: 600; }
+html[data-design="flyer-blast"] body.bleed .poster table.data { font-family: var(--heavy); font-weight: 700; border-top: 1.5mm solid var(--ink); }
+html[data-design="flyer-blast"] body.bleed .poster table.data th { font-family: var(--text); color: var(--ink); border-bottom: 0.75pt solid var(--ink); font-weight: 700; letter-spacing: 0.14em; }
+html[data-design="flyer-blast"] body.bleed .poster table.data td { border-bottom: 0.75pt solid var(--ink); }
+html[data-design="flyer-blast"] body.bleed .poster table.data td:first-child { font-family: var(--display); font-weight: 400; font-size: 1.45em; line-height: 1; color: var(--accent); vertical-align: middle; }
+html[data-design="flyer-blast"] body.bleed .poster .offers { gap: 7mm; }
+html[data-design="flyer-blast"] body.bleed .poster .offers > * { background: var(--accent); color: #fff; border-radius: 0; font-family: var(--heavy); font-weight: 800; box-shadow: 2mm 2mm 0 var(--ink); text-transform: uppercase; letter-spacing: 0.01em; }
+html[data-design="flyer-blast"] body.bleed .poster .offers > :nth-child(even) { background: var(--ink); color: var(--sun); box-shadow: 2mm 2mm 0 var(--accent); }
+html[data-design="flyer-blast"] body.bleed .poster .callout { background: #fff; border: 1.2mm solid var(--ink); border-radius: 0; box-shadow: 2.5mm 2.5mm 0 var(--accent); padding: 5mm 6mm; }
+html[data-design="flyer-blast"] body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(.callout):not(:last-child) { border-left-color: var(--ink); }
+html[data-design="flyer-blast"] body.bleed .poster .tile { background: var(--ink); color: #fff; border-radius: 0; }
+html[data-design="flyer-blast"] body.bleed .poster .tile .value { color: var(--sun); font-family: var(--display); font-weight: 400; }
+html[data-design="flyer-blast"] body.bleed .poster .tile .label { color: #fff; }
+html[data-design="flyer-blast"] body.bleed .poster .foot { flex-shrink: 0; background: var(--ink); color: var(--sun); font-family: var(--heavy); font-weight: 800; font-size: calc(20pt * var(--fit)); padding: calc(15mm * var(--fit)) 16mm calc(10mm * var(--fit)); clip-path: polygon(0 calc(8mm * var(--fit)), 100% 0, 100% 100%, 0 100%); }
+
+/* ------------------------------------------------------------------ */
+/* Atelier: an elegant studio or class poster. Warm paper inside a      */
+/* hairline frame, the title in Cormorant under a clay arch, times in   */
+/* serif, outlined offers, a green contact plate.                       */
+/* ------------------------------------------------------------------ */
+html[data-design="flyer-atelier"]:root {
+  --accent: #2f5d50; --accent-soft: #e4ece6; --ink: #1f2a26; --muted: #5a6761; --line: #c7cdbf;
+  --paper: #f6f0e5; --clay: #c46f4b; --arch: #ecdccb;
+  --display: "Cormorant Garamond", var(--serif);
+  --text: "DM Sans", var(--sans);
+}
+html[data-design="flyer-atelier"] body.bleed .poster { position: relative; background: var(--paper); font-family: var(--text); color: var(--ink); }
+html[data-design="flyer-atelier"] body.bleed .poster::before { content: ""; position: absolute; inset: 7mm; border: 0.75pt solid var(--accent); pointer-events: none; }
+html[data-design="flyer-atelier"] body.bleed .poster::after { content: ""; position: absolute; left: 50%; top: 7mm; width: 14mm; height: 3mm; transform: translate(-50%, -50%); background: radial-gradient(circle, var(--clay) 0 1.2mm, transparent 1.3mm) center / 4.6mm 3mm repeat-x, var(--paper); pointer-events: none; }
+html[data-design="flyer-atelier"] body.bleed .poster .band { position: relative; flex-shrink: 0; min-height: 0; background: none; color: var(--ink); text-align: center; align-items: center; justify-content: flex-start; padding: calc(22mm * var(--fit)) 22mm calc(7mm * var(--fit)); }
+html[data-design="flyer-atelier"] body.bleed .poster .band::before { content: ""; position: absolute; left: 50%; transform: translateX(-50%); top: calc(14mm * var(--fit)); bottom: 0; width: 132mm; background: var(--arch); border-radius: 66mm 66mm 0 0; }
+html[data-design="flyer-atelier"] body.bleed .poster .band > * { position: relative; z-index: 1; }
+html[data-design="flyer-atelier"] body.bleed .poster .band .kicker { font-family: var(--text); font-weight: 600; color: var(--accent); opacity: 1; font-size: calc(11pt * var(--fit)); letter-spacing: 0.26em; margin: calc(11mm * var(--fit)) 0 calc(4mm * var(--fit)); max-width: 120mm; }
+html[data-design="flyer-atelier"] body.bleed .poster h1 { text-wrap: balance; font-family: var(--display); font-weight: 400; font-size: calc(84pt * var(--fit)); line-height: 0.95; letter-spacing: -0.01em; color: var(--accent); margin: 0 0 5mm; }
+html[data-design="flyer-atelier"] body.bleed .poster .when { font-family: var(--text); font-weight: 500; font-size: calc(16pt * var(--fit)); letter-spacing: 0.04em; color: var(--ink); border-top: 0.75pt solid var(--clay); padding: 3mm 4mm 0; margin-bottom: 2mm; }
+html[data-design="flyer-atelier"] body.bleed .poster .body { padding: calc(8mm * var(--fit)) 24mm calc(7mm * var(--fit)); gap: calc(5mm * var(--fit)); }
+html[data-design="flyer-atelier"] body.bleed .poster .big { font-family: var(--display); font-weight: 400; font-size: calc(28pt * var(--fit)); line-height: 1.2; color: var(--accent); text-align: center; }
+html[data-design="flyer-atelier"] body.bleed .poster .body > p:not(.big) { text-align: center; }
+html[data-design="flyer-atelier"] body.bleed .poster table.data { font-family: var(--text); font-weight: 500; }
+html[data-design="flyer-atelier"] body.bleed .poster table.data th { color: var(--clay); border-bottom: 0.75pt solid var(--accent); font-weight: 600; letter-spacing: 0.2em; }
+html[data-design="flyer-atelier"] body.bleed .poster table.data td { border-bottom: 0.75pt dotted var(--muted); }
+html[data-design="flyer-atelier"] body.bleed .poster table.data td:first-child { font-family: var(--display); font-weight: 400; font-size: 1.3em; line-height: 1; color: var(--clay); vertical-align: middle; }
+html[data-design="flyer-atelier"] body.bleed .poster table.data b { font-weight: 600; }
+html[data-design="flyer-atelier"] body.bleed .poster .offers { gap: 6mm; }
+html[data-design="flyer-atelier"] body.bleed .poster .offers > * { background: none; border: 0.75pt solid var(--accent); outline: 0.75pt solid var(--accent); outline-offset: -2mm; border-radius: 0; color: var(--accent); font-family: var(--text); font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; padding: 7mm 6mm; }
+html[data-design="flyer-atelier"] body.bleed .poster .offers > :first-child { background: var(--accent); color: var(--paper); outline-color: var(--paper); }
+html[data-design="flyer-atelier"] body.bleed .poster .callout { background: var(--arch); border: 0; border-radius: 0; border-top: 0.75pt solid var(--clay); border-bottom: 0.75pt solid var(--clay); padding: 5mm 6mm; }
+html[data-design="flyer-atelier"] body.bleed .poster .callout .big { color: var(--ink); }
+html[data-design="flyer-atelier"] body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(.callout):not(:last-child) { border-left: 0; padding-left: 0; text-align: center; }
+html[data-design="flyer-atelier"] body.bleed .poster .tile { background: none; border: 0.75pt solid var(--accent); border-radius: 0; text-align: center; }
+html[data-design="flyer-atelier"] body.bleed .poster .tile .value { font-family: var(--display); font-weight: 400; color: var(--accent); }
+html[data-design="flyer-atelier"] body.bleed .poster .foot { flex-shrink: 0; margin: 0 14mm; border-bottom: 14mm solid var(--paper); background: var(--accent) padding-box; color: var(--paper); font-family: var(--text); font-weight: 600; font-size: calc(17pt * var(--fit)); text-align: center; padding: calc(6mm * var(--fit)) 10mm; }
+
+/* ------------------------------------------------------------------ */
+/* Fiesta: a playful community event. A violet band with confetti and   */
+/* a scalloped edge, a chunky grotesque title, the timetable as cards   */
+/* with coloured time tabs, tilted offer cards, a coral foot.           */
+/* ------------------------------------------------------------------ */
+html[data-design="flyer-fiesta"]:root {
+  --accent: #ff5a36; --accent-soft: #ffe4da; --ink: #1d1a3a; --muted: #4f4b6b; --line: #e6dfd2;
+  --violet: #5636e8; --sun: #ffc531; --mint: #22c3a0; --cream: #fff8ec;
+  --display: "Bricolage Grotesque", var(--sans);
+  --text: "Manrope", var(--sans);
+}
+html[data-design="flyer-fiesta"] body.bleed .poster { background: var(--cream); font-family: var(--text); color: var(--ink); }
+html[data-design="flyer-fiesta"] body.bleed .poster .band {
+  position: relative; flex-shrink: 0; min-height: calc(92mm * var(--fit)); background-color: var(--violet); color: #fff; padding: calc(16mm * var(--fit)) 40mm calc(12mm * var(--fit)) 16mm;
+  background-image:
+    radial-gradient(circle at calc(100% - 20mm) 22mm, var(--sun) 0 9mm, transparent 9.2mm),
+    radial-gradient(circle at calc(100% - 9mm) 44mm, var(--accent) 0 4mm, transparent 4.2mm),
+    radial-gradient(circle at calc(100% - 27mm) 52mm, var(--mint) 0 5mm, transparent 5.2mm),
+    radial-gradient(circle at calc(100% - 13mm) 70mm, #fff 0 2mm, transparent 2.2mm),
+    radial-gradient(circle at calc(100% - 30mm) 80mm, var(--sun) 0 2.5mm, transparent 2.7mm),
+    radial-gradient(circle at calc(100% - 8mm) 92mm, var(--mint) 0 2mm, transparent 2.2mm),
+    radial-gradient(circle at 40% 7mm, #fff 0 1.6mm, transparent 1.8mm),
+    radial-gradient(circle at 58% 11mm, var(--accent) 0 2.2mm, transparent 2.4mm),
+    radial-gradient(circle at 8mm 9mm, var(--mint) 0 2.4mm, transparent 2.6mm);
+}
+html[data-design="flyer-fiesta"] body.bleed .poster .band::after { content: ""; position: absolute; left: 0; right: 0; bottom: -5.5mm; height: 6mm; background: radial-gradient(circle at 5mm 0, var(--violet) 0 5mm, transparent 5.2mm) 0 0 / 10mm 6mm repeat-x; }
+html[data-design="flyer-fiesta"] body.bleed .poster .band .kicker { display: inline-block; align-self: flex-start; background: var(--sun); color: var(--ink); opacity: 1; font-family: var(--display); font-weight: 800; font-size: calc(12pt * var(--fit)); letter-spacing: 0.08em; padding: 1.8mm 4.5mm; border-radius: 10mm; margin: 0 0 5mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster h1 { text-wrap: balance; font-family: var(--display); font-weight: 800; font-size: calc(80pt * var(--fit)); line-height: 0.95; letter-spacing: -0.035em; margin: 0 0 5mm; color: #fff; }
+html[data-design="flyer-fiesta"] body.bleed .poster .when { font-family: var(--display); font-weight: 700; font-size: calc(21pt * var(--fit)); color: var(--sun); }
+html[data-design="flyer-fiesta"] body.bleed .poster .body { padding: calc(13mm * var(--fit)) 16mm calc(9mm * var(--fit)); gap: calc(6mm * var(--fit)); }
+html[data-design="flyer-fiesta"] body.bleed .poster .big { font-family: var(--display); font-weight: 800; font-size: calc(27pt * var(--fit)); line-height: 1.15; letter-spacing: -0.015em; color: var(--ink); }
+html[data-design="flyer-fiesta"] body.bleed .poster .body > p:not(.big) { font-weight: 600; }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data { border-collapse: separate; border-spacing: 0 2.4mm; margin: -2.4mm 0; font-family: var(--display); font-weight: 600; }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data th { border: 0; color: var(--muted); padding: 0 4mm; font-family: var(--text); font-weight: 800; letter-spacing: 0.14em; }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data td { background: #fff; border: 0; padding: 3mm 5mm; box-shadow: 0 0.6mm 0 var(--line); }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data td:first-child { color: #fff; background: var(--accent); border-radius: 3mm 0 0 3mm; font-weight: 800; padding-right: 6mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data td:last-child { border-radius: 0 3mm 3mm 0; }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data td:only-child { border-radius: 3mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data tr:nth-child(4n+3) td:first-child { background: var(--violet); }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data tr:nth-child(4n) td:first-child { background: var(--mint); }
+html[data-design="flyer-fiesta"] body.bleed .poster table.data tr:nth-child(4n+1) td:first-child { background: #e8a400; }
+html[data-design="flyer-fiesta"] body.bleed .poster .offers { gap: 8mm; padding: 0 2mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster .offers > * { background: var(--sun); color: var(--ink); border-radius: 6mm; font-family: var(--display); font-weight: 800; transform: rotate(-1.5deg); }
+html[data-design="flyer-fiesta"] body.bleed .poster .offers > :nth-child(even) { background: var(--mint); color: #fff; transform: rotate(1.5deg); }
+html[data-design="flyer-fiesta"] body.bleed .poster .callout { background: #fff; border: 0; border-radius: 6mm; box-shadow: inset 0 0 0 1mm var(--violet); padding: 6mm 7mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(.callout):not(:last-child) { border-left: 2.5mm solid var(--accent); border-radius: 1mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster .tile { background: #fff; border-radius: 5mm; }
+html[data-design="flyer-fiesta"] body.bleed .poster .tile .value { font-family: var(--display); font-weight: 800; color: var(--violet); }
+html[data-design="flyer-fiesta"] body.bleed .poster .foot { flex-shrink: 0; margin: 0 8mm; border-radius: 8mm 8mm 0 0; background: var(--accent); color: #fff; font-family: var(--display); font-weight: 800; font-size: calc(18pt * var(--fit)); padding: calc(8mm * var(--fit)) 12mm; }

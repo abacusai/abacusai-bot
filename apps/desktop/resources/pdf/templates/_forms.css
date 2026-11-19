@@ -1,0 +1,311 @@
+/*
+ * Fixed-layout documents: invoice, quote, resume, letter (document-forms.ts writes the
+ * markup). Appended after the base and the template, and drawn only from the
+ * template's tokens, so every look also gives each form its palette and faces.
+ */
+
+.form { font-size: 10pt; }
+/* A form is laid out edge to edge; a template's reading measure is for prose. */
+.form.doc, .form p, .form ul, .form ol, .form li, .form dl { max-width: none; }
+.form .label {
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 1.5mm;
+}
+.form .party-name { font-weight: 600; font-size: 11pt; color: var(--ink); }
+.form .party { color: var(--ink-soft); line-height: 1.5; }
+
+/* ── Invoice ──────────────────────────────────────────────────────────────── */
+
+.form-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12mm;
+  padding-bottom: 8mm;
+  border-bottom: 2px solid var(--accent);
+}
+.form-kind {
+  font-family: var(--display, var(--sans));
+  font-size: 26pt;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 5mm;
+}
+.form-meta {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1.5mm 6mm;
+  margin: 0;
+  text-align: right;
+}
+.form-meta dt { color: var(--ink-faint); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
+.form-meta dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.bill-to { margin: 8mm 0 8mm; }
+
+.form table { width: 100%; border-collapse: collapse; }
+.items th {
+  text-align: left;
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0 0 2.5mm;
+  border-bottom: 1px solid var(--ink);
+}
+.items td { padding: 3mm 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.items th:not(:first-child), .items td:not(:first-child) { text-align: right; padding-left: 6mm; white-space: nowrap; }
+.items tr { break-inside: avoid; }
+
+.sums { width: auto !important; margin: 5mm 0 0 auto; min-width: 45%; break-inside: avoid; }
+.sums td { padding: 1.6mm 0; color: var(--ink-soft); }
+.sums td:last-child { text-align: right; padding-left: 12mm; font-variant-numeric: tabular-nums; color: var(--ink); }
+.sums .grand td {
+  border-top: 2px solid var(--accent);
+  padding-top: 3mm;
+  font-weight: 700;
+  font-size: 12.5pt;
+  color: var(--ink);
+}
+
+.form .note { margin-top: 10mm; color: var(--ink-soft); break-inside: avoid; }
+.form .note p { margin: 0 0 2mm; }
+
+/* ── Quote: a place to accept it ─────────────────────────────────────────── */
+
+.accept { margin-top: 12mm; break-inside: avoid; }
+.sign-lines { display: grid; grid-template-columns: 1.2fr 1.2fr 0.8fr; gap: 8mm; margin-top: 10mm; }
+.sign-line { display: block; border-bottom: 1px solid var(--ink-soft); height: 0; }
+.sign-caption { display: block; margin-top: 1.5mm; font-size: 8pt; color: var(--ink-faint); }
+
+/* ── Proposal: the case, the plan and the price ─────────────────────────── */
+
+.proposal-head { padding-bottom: 7mm; border-bottom: 2px solid var(--accent); margin-bottom: 4mm; }
+.proposal-head .form-kind { font-size: 11pt; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 4mm; }
+.form-proposal h1 { font-family: var(--display, var(--sans)); font-size: 26pt; line-height: 1.15; margin: 0 0 7mm; }
+.proposal-meta { display: flex; flex-wrap: wrap; gap: 4mm 12mm; margin: 0; }
+.proposal-meta dt { font-size: 7.5pt; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
+.proposal-meta dd { margin: 0.8mm 0 0; font-weight: 600; color: var(--ink); }
+.form-proposal .part { margin-top: 8mm; }
+/* A heading never ends a page: it goes over with what it introduces. */
+.form-proposal .part h2 { break-after: avoid; page-break-after: avoid; }
+.form-proposal .part p { margin: 0 0 3mm; }
+.form-proposal .part ul { margin: 0; padding-left: 5mm; }
+.form-proposal .part li { margin-bottom: 1.2mm; }
+.steps { list-style: none; counter-reset: step; padding: 0; margin: 0; }
+.step { counter-increment: step; position: relative; padding: 0 0 3.5mm 10mm; break-inside: avoid; }
+.step::before {
+  content: counter(step);
+  position: absolute; left: 0; top: 0;
+  width: 6.5mm; height: 6.5mm; border-radius: 50%;
+  background: var(--accent); color: var(--paper);
+  font-size: 8.5pt; font-weight: 700; text-align: center; line-height: 6.5mm;
+}
+.step-title { font-weight: 600; color: var(--ink); }
+.step-detail { color: var(--ink-soft); }
+.plan td { padding: 2.5mm 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.plan tr { break-inside: avoid; }
+.plan-dates { width: 34mm; color: var(--accent); font-weight: 600; white-space: nowrap; padding-right: 6mm !important; }
+.plan-phase { font-weight: 600; color: var(--ink); }
+.plan-detail { color: var(--ink-soft); }
+.form-proposal .items { break-before: avoid; }
+
+/* ── Worksheet and study guide ────────────────────────────────────────────── */
+
+.sheet-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10mm; padding-bottom: 5mm; border-bottom: 2px solid var(--accent); }
+.sheet-head .form-kind { font-size: 10pt; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 3mm; }
+.form-worksheet h1 { font-family: var(--display, var(--sans)); font-size: 24pt; line-height: 1.15; margin: 0; }
+.sheet-total { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 11pt; }
+.student-lines { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8mm; margin: 7mm 0 2mm; }
+.student-lines > div { display: flex; align-items: flex-end; gap: 3mm; }
+.student-lines .label { margin: 0; }
+.student-lines .sign-line { flex: 1; }
+.instructions { margin-top: 5mm; padding: 3mm 4mm; border-left: 3px solid var(--accent); color: var(--ink-soft); }
+.instructions p { margin: 0 0 1.5mm; }
+.instructions p:last-child { margin: 0; }
+.form-worksheet .part { margin-top: 7mm; }
+.form-worksheet .part h2 { break-after: avoid; page-break-after: avoid; }
+.form-worksheet .part ul { margin: 0; padding-left: 5mm; }
+.terms { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 8mm; }
+.terms > div { break-inside: avoid; }
+.terms dt { font-weight: 700; color: var(--ink); }
+.terms dd { margin: 0.5mm 0 0; color: var(--ink-soft); }
+.questions, .answers { list-style: none; padding: 0; margin: 0; }
+.question { margin-bottom: 6mm; break-inside: avoid; }
+.q-head { display: flex; gap: 3mm; align-items: baseline; }
+.q-number {
+  flex: none; display: inline-block; min-width: 6.5mm; height: 6.5mm; line-height: 6.5mm;
+  border-radius: 50%; background: var(--accent); color: var(--paper);
+  text-align: center; font-size: 8.5pt; font-weight: 700;
+}
+.q-text { flex: 1; font-weight: 600; color: var(--ink); }
+.q-marks { flex: none; color: var(--ink-faint); font-size: 9pt; }
+.choices { list-style: none; margin: 3mm 0 0 9.5mm; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm 8mm; }
+.choice-letter {
+  display: inline-block; width: 5.5mm; height: 5.5mm; line-height: 5mm; margin-right: 2.5mm;
+  border: 1px solid var(--ink-soft); border-radius: 50%; text-align: center; font-size: 8pt; font-weight: 600;
+}
+.answer-lines { margin: 1mm 0 0 9.5mm; }
+.write-line { display: block; height: 9mm; border-bottom: 1px solid var(--ink-faint); opacity: 0.6; }
+.answer-key { break-before: page; page-break-before: always; }
+.answers li { display: flex; gap: 3mm; align-items: baseline; margin-bottom: 3mm; }
+
+/* ── Activity report ──────────────────────────────────────────────────────── */
+
+.form-activity_report h1 { font-family: var(--display, var(--sans)); font-size: 26pt; line-height: 1.15; margin: 0 0 6mm; }
+.form-activity_report .part { margin-top: 8mm; }
+.form-activity_report .part h2 { break-after: avoid; page-break-after: avoid; }
+.form-activity_report .part ul { margin: 0; padding-left: 5mm; }
+.form-activity_report .part li { margin-bottom: 1.2mm; }
+.form-activity_report .part p { margin: 0 0 3mm; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(36mm, 1fr)); gap: 4mm; }
+.metric { border-top: 3px solid var(--accent); padding-top: 3mm; break-inside: avoid; }
+.metric-value { font-family: var(--display, var(--sans)); font-size: 22pt; font-weight: 700; line-height: 1.1; color: var(--ink); }
+.metric-label { color: var(--ink-soft); margin: 1mm 0 1.5mm; }
+.change { display: inline-block; font-size: 8.5pt; font-weight: 700; padding: 0.3mm 2mm; border-radius: 2mm; background: var(--rule); color: var(--ink); }
+.change.up { color: #1d7a46; }
+.change.down { color: #b4362c; }
+.metric-previous { font-size: 8.5pt; color: var(--ink-faint); margin-top: 1mm; }
+.log td:nth-child(n+3), .log th:nth-child(n+3) { text-align: right; }
+.log td:nth-child(2), .log th:nth-child(2) { text-align: left !important; white-space: normal !important; }
+.log td:first-child { white-space: nowrap; color: var(--ink-soft); padding-right: 6mm; }
+.log-detail { color: var(--ink-soft); font-size: 9pt; }
+.log .log-total td { font-weight: 700; color: var(--ink); border-top: 2px solid var(--accent); border-bottom: none; }
+
+/* ── Resume ───────────────────────────────────────────────────────────────── */
+
+.resume-head { padding-bottom: 6mm; border-bottom: 2px solid var(--accent); margin-bottom: 2mm; }
+.form-resume h1 { font-size: 26pt; margin: 0 0 1.5mm; line-height: 1.1; }
+.form-resume h1 { font-family: var(--display, var(--sans)); }
+.resume-head .headline { font-size: 12pt; color: var(--accent); font-weight: 600; margin-bottom: 2.5mm; }
+.resume-head .contact { color: var(--ink-soft); font-size: 9pt; }
+.resume-head .dot { margin: 0 2mm; color: var(--ink-faint); }
+
+.form-resume section { margin-top: 6mm; }
+.form-resume h2 {
+  font-size: 8.5pt !important;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 3mm;
+  padding: 0 0 1.5mm;
+  border-bottom: 1px solid var(--rule);
+  border-left: none;
+  border-top: none;
+  background: none;
+  counter-increment: none;
+}
+.form-resume h2::before { content: none !important; }
+.form-resume p { margin: 0 0 2mm; }
+.entry { margin-bottom: 4mm; break-inside: avoid; }
+.entry-head { display: flex; align-items: baseline; gap: 1mm; }
+.entry-title { font-weight: 600; color: var(--ink); }
+.entry-org { color: var(--ink-soft); }
+.entry-dates { margin-left: auto; color: var(--ink-faint); font-size: 9pt; white-space: nowrap; padding-left: 4mm; }
+.entry ul { margin: 1.5mm 0 0; padding-left: 4.5mm; }
+.entry li { margin-bottom: 0.8mm; color: var(--ink-soft); }
+.skills { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 2mm; }
+.skills li {
+  border: 1px solid var(--rule);
+  border-radius: 3mm;
+  padding: 0.6mm 3mm;
+  font-size: 9pt;
+  color: var(--ink-soft);
+}
+
+/* ── Letter ───────────────────────────────────────────────────────────────── */
+
+.letter-head { padding-bottom: 5mm; border-bottom: 2px solid var(--accent); margin-bottom: 12mm; }
+.letter-head .party { font-size: 9pt; }
+.letter-date { color: var(--ink-soft); margin-bottom: 8mm; }
+.letter-to { margin-bottom: 9mm; }
+.letter-subject { font-weight: 700; margin-bottom: 6mm; color: var(--ink); }
+.letter-body { font-family: var(--serif); font-size: 11pt; line-height: 1.6; }
+.letter-body p { margin: 0 0 4mm; }
+.letter-sign { margin-top: 8mm; break-inside: avoid; }
+.letter-sign p { margin: 0 0 14mm; font-family: var(--serif); font-size: 11pt; }
+
+/* ── Certificate: one landscape sheet, framed to its edges ────────────────── */
+
+/* The exporter prints it landscape with no margins (formPage); the sheet's own
+   inset and frame stand in for them. `html body` outranks `body.bleed .doc`. */
+html body .doc.form-certificate {
+  width: 297mm;
+  height: 209mm;
+  padding: 11mm;
+  margin: 0;
+  overflow: hidden;
+}
+.cert-frame {
+  height: 100%;
+  border: 2.5px solid var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -3.5mm;
+  padding: 13mm 22mm 11mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.cert-issuer {
+  font-size: 12pt;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 7mm;
+}
+.form-certificate h1.cert-title {
+  font-family: var(--display, var(--serif));
+  font-size: 46pt;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent);
+  margin: 0 0 10mm;
+  padding: 0;
+  border: none;
+  max-width: 100%;
+}
+.cert-presented, .cert-statement { font-size: 15pt; color: var(--ink-soft); font-style: italic; font-family: var(--serif); }
+.cert-name {
+  font-family: var(--serif);
+  font-size: 44pt;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 4mm 0 4mm;
+  padding: 0 10mm 3mm;
+  border-bottom: 1px solid var(--rule);
+}
+.cert-achievement { font-size: 22pt; font-weight: 600; color: var(--ink); margin-top: 3mm; line-height: 1.3; }
+.cert-detail { font-size: 13pt; color: var(--ink-soft); margin: 4mm 0 0; max-width: 190mm; }
+.cert-signatures { display: flex; justify-content: center; gap: 22mm; margin-top: 14mm; width: 100%; }
+.signature { min-width: 58mm; }
+.signature .sign-line { margin-bottom: 2mm; }
+.signature .party { font-size: 10.5pt; }
+.signature .party-name { font-size: 12.5pt; }
+.cert-foot { margin-top: 10mm; font-size: 10.5pt; color: var(--ink-faint); letter-spacing: 0.06em; }
+.cert-foot .dot { margin: 0 2.5mm; }
+/* A name over ~28 characters or an award over ~60 would wrap past the frame. */
+.cert-name.long { font-size: 30pt; }
+.cert-achievement.long { font-size: 16pt; max-width: 210mm; }
+.form-proposal .closing { break-inside: avoid; page-break-inside: avoid; }
+.form-activity_report .outlook { display: grid; grid-template-columns: repeat(auto-fit, minmax(45mm, 1fr)); gap: 0 8mm; break-inside: avoid; }
+.form-activity_report .outlook:empty { display: none; }
+/* An activity report is a one-page summary: tighter than a proposal, so a
+   long summary does not push its closing lists onto a second sheet. */
+.form-activity_report .proposal-head { padding-bottom: 5mm; margin-bottom: 2mm; }
+.form-activity_report h1 { font-size: 22pt; margin-bottom: 4mm; }
+.form-activity_report .part { margin-top: 5.5mm; }
+.form-activity_report .metric-value { font-size: 19pt; }
+.form-activity_report .metric-label { margin: 0.5mm 0 1mm; }
+.form-activity_report .items td { padding: 2mm 0; }

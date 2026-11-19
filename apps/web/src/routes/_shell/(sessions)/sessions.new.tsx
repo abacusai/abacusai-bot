@@ -28,6 +28,7 @@ import {
   shellStore,
 } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { TemplatesStarter } from "#renderer/features/templates";
 import { useTourState } from "#renderer/features/tour";
 import { useChatCommands } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
@@ -90,6 +91,7 @@ const SessionsNewRoute = () => {
       >
         <SessionStartPage
           key={draft.id}
+          templates={(props) => <TemplatesStarter {...props} />}
           workspaceId={workspaceId}
           hintHeld={tour != null}
           handoff={async (id, envelope) => {

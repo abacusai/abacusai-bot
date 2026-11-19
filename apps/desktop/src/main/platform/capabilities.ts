@@ -38,6 +38,9 @@ export const WEB_HOST_DENIED = [
   "routines.replyToRun",
   // The desktop's status board (routines and chat apps on this computer).
   "status",
+  // "Try another look" reprints a document with the desktop's print engine.
+  "files.relook",
+  "files.designs",
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [

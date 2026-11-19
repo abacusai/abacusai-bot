@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Presentation Template</title>
+  <link rel="stylesheet" href="fonts.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600;700&display=swap');
 
         :root {
             --coral: #E85D5D;
@@ -969,6 +969,21 @@
             opacity: 0.2;
         }
 
+        /* No contact details: the contact panel is dropped and the closing
+           panel takes the whole slide instead of leaving 45% blank. Keyed on
+           the missing panel, not :only-child: printing adds a page number. */
+        .slide-10:not(:has(.right-panel)) .left-panel {
+            grid-column: 1 / -1;
+            grid-row: 1 / -1;
+            padding-left: clamp(60px, 10vw, 180px);
+            padding-right: clamp(60px, 10vw, 180px);
+        }
+
+        .slide-10:not(:has(.right-panel)) .left-panel .closing-subtitle {
+            max-width: 60%;
+            font-size: clamp(16px, 1.7vw, 26px);
+        }
+
         .slide-10 .right-panel {
             background: var(--cream);
             padding: clamp(40px, 8vh, 100px) clamp(40px, 6vw, 80px);
@@ -1076,7 +1091,7 @@
 <body>
     <div class="presentation">
         <!-- Slide 1: Title / Cover -->
-        <div class="slide slide-1 active">
+        <div class="slide slide-1 active" data-label="title">
             <div class="top-section">
                 <div class="zigzag-layer">
                     <svg viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
@@ -1086,20 +1101,20 @@
                                   fill="none" stroke="#1A1A1A" stroke-width="12" stroke-linejoin="miter" stroke-linecap="butt" opacity="0.15"/>
                     </svg>
                 </div>
-                <div class="brand-mark">VENTURE</div>
+                <div class="brand-mark">Venture Partners</div>
             </div>
             <div class="bottom-section">
                 <div>
-                    <div class="main-title">QUARTERLY<br>STRATEGY<br>SESSION 2026</div>
+                    <div class="main-title">Quarterly Strategy Session 2026</div>
                     <div class="title-rule"></div>
                 </div>
                 <div class="meta-row">
                     <div class="meta-left">
-                        <div class="meta-label">Location</div>
+                        <div class="meta-label" data-deck-label>Location</div>
                         <div class="meta-value">7TH FLOOR</div>
                     </div>
                     <div class="meta-right">
-                        <div class="meta-label">May 15 / 09:00 Start</div>
+                        <div class="meta-label" data-deck-label>May 15 / 09:00 Start</div>
                         <div class="meta-date">2026</div>
                     </div>
                 </div>
@@ -1107,7 +1122,7 @@
         </div>
 
         <!-- Slide 2: Introduction -->
-        <div class="slide slide-2">
+        <div class="slide slide-2" data-label="overview paragraph">
             <div class="section-label">01 / Overview</div>
             <div class="big-statement">REDEFINING THE BOUNDARIES OF WHAT IS POSSIBLE</div>
             <div class="body-text">
@@ -1119,7 +1134,7 @@
         </div>
 
         <!-- Slide 3: Two Column -->
-        <div class="slide slide-3">
+        <div class="slide slide-3" data-label="three pillars">
             <div class="left-col">
                 <div class="number">03</div>
                 <div class="col-title">CORE<br>PILLARS</div>
@@ -1141,7 +1156,7 @@
         </div>
 
         <!-- Slide 4: Chart / Data -->
-        <div class="slide slide-4">
+        <div class="slide slide-4" data-label="bar chart with three figures" data-deck-skip>
             <div class="slide-header">
                 <div class="header-left">
                     <div class="section-label">02 / Performance</div>
@@ -1174,7 +1189,7 @@
         </div>
 
         <!-- Slide 5: Full Width Feature -->
-        <div class="slide slide-5">
+        <div class="slide slide-5" data-label="one-word statement">
             <div class="visual-area">
                 <div class="pattern-overlay"></div>
                 <div class="center-text">IMPACT</div>
@@ -1186,7 +1201,7 @@
         </div>
 
         <!-- Slide 6: Three Columns -->
-        <div class="slide slide-6">
+        <div class="slide slide-6" data-label="three objectives with figures">
             <div class="slide-title">KEY OBJECTIVES</div>
             <div class="slide-subtitle">Strategic priorities for the upcoming fiscal period</div>
             <div class="columns-grid">
@@ -1212,7 +1227,7 @@
         </div>
 
         <!-- Slide 7: Quote -->
-        <div class="slide slide-7">
+        <div class="slide slide-7" data-label="quote">
             <div class="quote-left">
                 <div class="giant-mark">"</div>
             </div>
@@ -1225,7 +1240,7 @@
         </div>
 
         <!-- Slide 8: Timeline / Diagram -->
-        <div class="slide slide-8">
+        <div class="slide slide-8" data-label="timeline (five milestones)">
             <div class="slide-header">
                 <div class="section-label">03 / Roadmap</div>
                 <div class="slide-title">PROJECT TIMELINE</div>
@@ -1273,7 +1288,7 @@
         </div>
 
         <!-- Slide 9: Team Grid -->
-        <div class="slide slide-9">
+        <div class="slide slide-9" data-label="team of four">
             <div class="slide-title">LEADERSHIP</div>
             <div class="slide-subtitle">The people driving our vision forward</div>
             <div class="team-grid">
@@ -1301,7 +1316,7 @@
         </div>
 
         <!-- Slide 10: Closing -->
-        <div class="slide slide-10">
+        <div class="slide slide-10" data-label="closing / contact">
             <div class="left-panel">
                 <div class="closing-title">THANK<br>YOU</div>
                 <div class="closing-subtitle">Let's build something extraordinary together. Reach out to start the conversation.</div>
@@ -1311,15 +1326,15 @@
             </div>
             <div class="right-panel">
                 <div class="contact-block">
-                    <div class="contact-label">Email</div>
+                    <div class="contact-label" data-deck-label>Email</div>
                     <div class="contact-value">HELLO@VENTURE.IO</div>
                 </div>
                 <div class="contact-block">
-                    <div class="contact-label">Phone</div>
+                    <div class="contact-label" data-deck-label>Phone</div>
                     <div class="contact-value">+1 (555) 014-2298</div>
                 </div>
                 <div class="contact-block">
-                    <div class="contact-label">Office</div>
+                    <div class="contact-label" data-deck-label>Office</div>
                     <div class="contact-value">SEATTLE, WA</div>
                 </div>
                 <div class="social-row">

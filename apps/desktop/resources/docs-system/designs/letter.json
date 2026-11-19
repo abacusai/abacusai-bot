@@ -1,0 +1,5 @@
+[
+  {"id": "letter-letterhead", "name": "Letterhead", "blurb": "the sender on a navy letterhead plate with a gold hem, clean sans text and a handwritten signature; business, formal and official letters"},
+  {"id": "letter-margin", "name": "Margin", "blurb": "a hairline down the left with a coral bar, the name in Space Grotesk and the address and date in monospace; modern, minimal cover and personal letters"},
+  {"id": "letter-engraved", "name": "Engraved", "blurb": "the name centred in spaced Cormorant capitals over a small ornament, Lora text and a claret subject; personal, traditional and courteous letters"}
+]

@@ -3,9 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <title>Emerald Editorial Deck</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@500;700;800;900&family=Playfair+Display:wght@700;800;900&family=DM+Serif+Display:wght@400&family=Rozha+One&family=Yeseva+One&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
 <style>
   :root {
     --bg: #3CD896;
@@ -252,7 +250,9 @@
     font-size: 26px;
     letter-spacing: 0.1em;
     text-align: right;
-    white-space: nowrap;
+    /* A tag of a few words; a longer one wraps in its column rather than
+       running off the slide. */
+    max-width: 100%;
   }
 
   /* ============== SLIDE 3 — SECTION OPENER ============== */
@@ -751,7 +751,7 @@
 <deck-stage width="1920" height="1080" no-rail>
 
   <!-- ============== SLIDE 1 — COVER ============== -->
-  <section class="slide s1" data-screen-label="01 Cover">
+  <section class="slide s1" data-screen-label="01 Cover" data-label="title">
     <div class="s1-stage">
       <div class="s1-the">The</div>
       <div class="s1-big">STATE</div>
@@ -774,7 +774,7 @@
   </section>
 
   <!-- ============== SLIDE 2 — AGENDA ============== -->
-  <section class="slide s2" data-screen-label="02 Agenda">
+  <section class="slide s2" data-screen-label="02 Agenda" data-label="agenda (five items): a number, a name and a tag of a few words each (a kind and a time, like OVERVIEW · 8 MIN)">
     <div class="masthead">
       <span>AGENDA</span>
       <span>FORTY MINUTES</span>
@@ -813,7 +813,7 @@
   </section>
 
   <!-- ============== SLIDE 3 — SECTION OPENER (split) ============== -->
-  <section class="slide s3" data-screen-label="03 Section Opener">
+  <section class="slide s3" data-screen-label="03 Section Opener" data-label="section opener: big number and summary">
     <div class="s3-left">
       <div class="top">
         <span>SECTION OPENER</span>
@@ -838,7 +838,7 @@
   </section>
 
   <!-- ============== SLIDE 4 — STATEMENT + 3 SUPPORTING ============== -->
-  <section class="slide s4" data-screen-label="04 Statement And Three">
+  <section class="slide s4" data-screen-label="04 Statement And Three" data-label="statement and three points">
     <div class="masthead">
       <span>OVERVIEW · A READING OF THE PERIOD</span>
       <span>THREE THREADS</span>
@@ -872,14 +872,14 @@
   </section>
 
   <!-- ============== SLIDE 5 — CHART ============== -->
-  <section class="slide s5" data-screen-label="05 Data Study">
+  <section class="slide s5" data-screen-label="05 Data Study" data-label="chart" data-deck-skip>
     <div class="masthead">
       <span>DATA STUDY · QUARTERLY MOVEMENT</span>
       <span>SIX QUARTERS</span>
     </div>
 
     <div class="s5-head">
-      <h2 class="s5-h">How the<br>numbers moved.</h2>
+      <h2 class="s5-h">How the numbers moved.</h2>
       <p class="s5-sub">Two indicators tracked side by side across six quarters. The lighter bars show what was committed; the bone bars show what was delivered against it.</p>
     </div>
 
@@ -961,7 +961,7 @@
   </section>
 
   <!-- ============== SLIDE 6 — PROCESS ============== -->
-  <section class="slide s6" data-screen-label="06 Process Diagram">
+  <section class="slide s6" data-screen-label="06 Process Diagram" data-label="four-step process">
     <div class="masthead">
       <span>DIAGRAM · THE WORKING METHOD</span>
       <span>FOUR STEPS</span>
@@ -970,7 +970,7 @@
     <div class="s6-head">
       <div>
         <div class="s6-eyebrow">FROM QUESTION TO DECISION</div>
-        <h2 class="s6-h">A four-step<br>working method.</h2>
+        <h2 class="s6-h">A four-step working method.</h2>
       </div>
       <p class="s6-sub">A short loop the team runs every fortnight. Each step has a single owner and produces one artefact that the next step depends on. The cadence is the most important part.</p>
     </div>
@@ -1004,7 +1004,7 @@
   </section>
 
   <!-- ============== SLIDE 7 — KPI GRID ============== -->
-  <section class="slide s7" data-screen-label="07 KPI Grid">
+  <section class="slide s7" data-screen-label="07 KPI Grid" data-label="four KPI figures" data-deck-skip>
     <div class="masthead">
       <span>HEADLINE INDICATORS · Q3</span>
       <span>FOUR NUMBERS</span>
@@ -1013,7 +1013,7 @@
     <div class="s7-head">
       <div>
         <div class="s7-eyebrow">FOUR NUMBERS WORTH KEEPING IN VIEW</div>
-        <h2 class="s7-h">By the<br>numbers.</h2>
+        <h2 class="s7-h">By the numbers.</h2>
       </div>
       <p class="s7-sub">A short panel of indicators the team reviews each month. Variances are read against the plan agreed in March, not against the prior year.</p>
     </div>
@@ -1047,7 +1047,7 @@
   </section>
 
   <!-- ============== SLIDE 8 — CLOSING ============== -->
-  <section class="slide s8" data-screen-label="08 Closing">
+  <section class="slide s8" data-screen-label="08 Closing" data-label="closing">
     <div class="s8-top">
       <span>CLOSING NOTES</span>
       <span>END OF BRIEFING</span>

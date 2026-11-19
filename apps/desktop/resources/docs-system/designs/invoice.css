@@ -1,0 +1,109 @@
+/* invoice designs: html[data-design="invoice-…"] over the money markup of
+   guide.md (a .doc-head, the parties in .cols-2, a table.data[data-currency]
+   with data-role rows, tiles, terms). Quotes and estimates take them too. */
+
+/* ------------------------------------------------------------------ */
+/* Banner: a cobalt band across the top with the title in a heavy      */
+/* display face, a dark table header, the total on a cobalt bar.       */
+/* ------------------------------------------------------------------ */
+html[data-design="invoice-banner"]:root {
+  --accent: #2743c9; --accent-soft: #e8ecfb; --ink: #121626; --muted: #5a6072; --line: #dde0e8;
+  --sans: "Manrope", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --display: "Archivo Black", var(--sans);
+}
+html[data-design="invoice-banner"] .doc-head { position: relative; overflow: hidden; background: var(--accent); color: #fff; border: 0; padding: 10mm 9mm 8mm; margin-bottom: 8mm; align-items: flex-end; }
+html[data-design="invoice-banner"] .doc-head::after { content: ""; position: absolute; right: -18mm; top: -26mm; width: 70mm; height: 70mm; border-radius: 50%; background: rgba(255, 255, 255, 0.09); }
+html[data-design="invoice-banner"] .doc-head::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2mm; background: var(--ink); }
+html[data-design="invoice-banner"] .doc-head > * { position: relative; z-index: 1; }
+html[data-design="invoice-banner"] .doc-head .kicker { color: #fff; opacity: 0.85; letter-spacing: 0.16em; }
+html[data-design="invoice-banner"] .doc-head h1 { font-family: var(--display); font-weight: 400; font-size: calc(28pt * var(--fit)); letter-spacing: -0.01em; line-height: 1.08; color: #fff; margin-bottom: 2mm; }
+html[data-design="invoice-banner"] .doc-head .lead { color: #fff; opacity: 0.88; margin: 0; font-size: calc(12pt * var(--fit)); }
+html[data-design="invoice-banner"] .doc-head .meta { color: #fff; opacity: 0.92; font-size: calc(10pt * var(--fit)); }
+html[data-design="invoice-banner"] .cols-2 > div { border-left: 1.2mm solid var(--accent); padding-left: 4mm; }
+html[data-design="invoice-banner"] .cols-2 h3 { margin-top: 0; font-size: calc(9.5pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-weight: 800; }
+html[data-design="invoice-banner"] body.doc h2 { font-family: var(--display); font-weight: 400; color: var(--ink); font-size: calc(13pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.05em; }
+html[data-design="invoice-banner"] table.data th { background: var(--ink); color: #fff; border: 0; padding: 2.6mm 2.5mm; font-weight: 700; }
+html[data-design="invoice-banner"] table.data td { border-bottom-color: var(--line); padding: 2.6mm 2.5mm; }
+html[data-design="invoice-banner"] table.data tr:nth-child(even):not([data-role]) td { background: #f6f7fb; }
+html[data-design="invoice-banner"] table.data tr[data-role="subtotal"] td { border-top: 1pt solid var(--ink); }
+html[data-design="invoice-banner"] table.data tr[data-role="total"] td { background: var(--accent); color: #fff; border: 0; font-weight: 800; font-size: calc(12.5pt * var(--fit)); padding: 3.2mm 2.5mm; }
+html[data-design="invoice-banner"] .tile { background: var(--accent-soft); border-radius: 0; border-top: 1.2mm solid var(--accent); }
+html[data-design="invoice-banner"] .tile:first-child { background: var(--ink); border-top-color: var(--accent); }
+html[data-design="invoice-banner"] .tile:first-child .value, html[data-design="invoice-banner"] .tile:first-child .label { color: #fff; }
+html[data-design="invoice-banner"] .tile .value { font-family: var(--display); font-weight: 400; }
+html[data-design="invoice-banner"] .callout { background: var(--accent-soft); border-left-color: var(--accent); border-radius: 0; }
+
+/* ------------------------------------------------------------------ */
+/* Ledger: an accountant's page. Hairlines, monospaced figures and      */
+/* labels, a light grotesque title, the total double-ruled, one green.  */
+/* ------------------------------------------------------------------ */
+html[data-design="invoice-ledger"]:root {
+  --accent: #23694c; --accent-soft: #eaf3ee; --ink: #1a1c1e; --muted: #63676d; --line: #d4d6d9;
+  --head: "Space Grotesk", var(--sans);
+}
+html[data-design="invoice-ledger"] .doc-head { border-top: 0.75pt solid var(--ink); border-bottom: 0.75pt solid var(--ink); padding: 6mm 0 5mm; margin-bottom: 7mm; }
+html[data-design="invoice-ledger"] .kicker { font-family: var(--mono); font-weight: 400; color: var(--accent); letter-spacing: 0.1em; font-size: calc(9.5pt * var(--fit)); }
+html[data-design="invoice-ledger"] .doc-head h1 { font-family: var(--head); font-weight: 400; font-size: calc(30pt * var(--fit)); letter-spacing: -0.02em; }
+html[data-design="invoice-ledger"] .doc-head .lead { font-size: calc(11.5pt * var(--fit)); margin: 0; }
+html[data-design="invoice-ledger"] .doc-head .meta { font-family: var(--mono); font-size: calc(9.5pt * var(--fit)); color: var(--ink); line-height: 1.7; }
+html[data-design="invoice-ledger"] .cols-2 { border-bottom: 0.5pt solid var(--line); padding-bottom: 2mm; }
+html[data-design="invoice-ledger"] .cols-2 h3, html[data-design="invoice-ledger"] body.doc h2 { font-family: var(--mono); font-weight: 400; font-size: calc(9.5pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
+html[data-design="invoice-ledger"] .cols-2 h3 { margin-top: 0; }
+html[data-design="invoice-ledger"] body.doc h2 { margin-top: 8mm; padding-bottom: 1.5mm; border-bottom: 0.5pt solid var(--line); }
+html[data-design="invoice-ledger"] body.doc h2::before { content: "§ "; color: var(--accent); }
+html[data-design="invoice-ledger"] table.data th { font-family: var(--mono); font-weight: 400; color: var(--muted); border-bottom: 0.75pt solid var(--ink); }
+html[data-design="invoice-ledger"] table.data td { border-bottom: 0.5pt dashed #c4c7cb; }
+html[data-design="invoice-ledger"] table.data td.num, html[data-design="invoice-ledger"] table.data th.num { font-family: var(--mono); font-size: calc(10pt * var(--fit)); }
+html[data-design="invoice-ledger"] table.data tr[data-role] td { border-bottom: 0; }
+html[data-design="invoice-ledger"] table.data tr[data-role="subtotal"] td { border-top: 0.75pt solid var(--ink); }
+html[data-design="invoice-ledger"] table.data tr[data-role="total"] td { border-top: 0.75pt solid var(--ink); border-bottom: 2.4pt double var(--ink); font-family: var(--head); font-weight: 700; color: var(--ink); }
+html[data-design="invoice-ledger"] table.data tr[data-role="total"] td.num { font-family: var(--mono); font-size: calc(11pt * var(--fit)); color: var(--accent); }
+html[data-design="invoice-ledger"] .tiles { gap: 0; border: 0.75pt solid var(--ink); }
+html[data-design="invoice-ledger"] .tile { background: none; border-radius: 0; }
+html[data-design="invoice-ledger"] .tile + .tile { border-left: 0.75pt solid var(--ink); }
+html[data-design="invoice-ledger"] .tile .value { font-family: var(--mono); font-weight: 400; font-size: calc(18pt * var(--fit)); color: var(--ink); }
+html[data-design="invoice-ledger"] .tile:first-child .value { color: var(--accent); }
+html[data-design="invoice-ledger"] .tile .label { font-family: var(--mono); font-size: calc(9pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+html[data-design="invoice-ledger"] .callout { background: none; border: 0.75pt solid var(--line); border-left: 2pt solid var(--accent); border-radius: 0; }
+html[data-design="invoice-ledger"] ul { list-style: none; padding-left: 0; }
+html[data-design="invoice-ledger"] ul > li { padding-left: 5mm; position: relative; }
+html[data-design="invoice-ledger"] ul > li::before { content: "—"; position: absolute; left: 0; color: var(--accent); font-family: var(--mono); }
+
+/* ------------------------------------------------------------------ */
+/* Studio: warm and friendly. A cream header with a terracotta sun, a   */
+/* soft serif title, the parties on cream cards, the total on a         */
+/* terracotta bar with rounded ends.                                    */
+/* ------------------------------------------------------------------ */
+html[data-design="invoice-studio"]:root {
+  --accent: #bf532e; --accent-soft: #f8eae1; --ink: #2b221d; --muted: #75685f; --line: #e8ddd3;
+  --cream: #f6efe6;
+  --sans: "DM Sans", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --display: "Fraunces", var(--serif);
+}
+html[data-design="invoice-studio"] .doc-head { position: relative; overflow: hidden; background: var(--cream); border: 0; border-radius: 6mm; padding: 16mm 9mm 8mm; margin-bottom: 7mm; }
+html[data-design="invoice-studio"] .doc-head::after { content: ""; position: absolute; right: -10mm; top: -16mm; width: 34mm; height: 34mm; border-radius: 50%; background: var(--accent); }
+html[data-design="invoice-studio"] .doc-head::before { content: ""; position: absolute; right: 30mm; top: -6mm; width: 12mm; height: 12mm; border-radius: 50%; background: #e7b48f; }
+html[data-design="invoice-studio"] .doc-head > * { position: relative; z-index: 1; }
+html[data-design="invoice-studio"] .kicker { color: var(--accent); letter-spacing: 0.14em; }
+html[data-design="invoice-studio"] .doc-head h1 { font-family: var(--display); font-weight: 600; font-size: calc(30pt * var(--fit)); letter-spacing: -0.01em; }
+html[data-design="invoice-studio"] .doc-head .lead { font-family: var(--display); font-style: italic; font-size: calc(12.5pt * var(--fit)); margin: 0; }
+html[data-design="invoice-studio"] .doc-head .meta { font-size: calc(10pt * var(--fit)); color: var(--ink); }
+html[data-design="invoice-studio"] .cols-2 { gap: 5mm; }
+html[data-design="invoice-studio"] .cols-2 > div { border: 0.75pt solid var(--line); border-radius: 4mm; padding: 4mm 5mm 1.5mm; }
+html[data-design="invoice-studio"] .cols-2 h3 { margin-top: 0; font-size: calc(9.5pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); }
+html[data-design="invoice-studio"] body.doc h2 { font-family: var(--display); font-weight: 600; color: var(--ink); font-size: calc(16pt * var(--fit)); }
+html[data-design="invoice-studio"] body.doc h3 { font-family: var(--sans); }
+html[data-design="invoice-studio"] table.data th { background: var(--cream); color: var(--ink); border: 0; padding: 2.6mm 3mm; }
+html[data-design="invoice-studio"] table.data th:first-child { border-radius: 2.5mm 0 0 2.5mm; }
+html[data-design="invoice-studio"] table.data th:last-child { border-radius: 0 2.5mm 2.5mm 0; }
+html[data-design="invoice-studio"] table.data td { padding: 2.6mm 3mm; border-bottom: 0.5pt solid var(--line); }
+html[data-design="invoice-studio"] table.data tr[data-role] td { border-bottom: 0; }
+html[data-design="invoice-studio"] table.data tr[data-role="subtotal"] td { padding-top: 4mm; }
+html[data-design="invoice-studio"] table.data tr[data-role="total"] td { background: var(--accent); color: #fff; border: 0; font-family: var(--display); font-weight: 600; font-size: calc(13pt * var(--fit)); padding: 3mm; }
+html[data-design="invoice-studio"] table.data tr[data-role="total"] td:first-child { border-radius: 3mm 0 0 3mm; }
+html[data-design="invoice-studio"] table.data tr[data-role="total"] td:last-child { border-radius: 0 3mm 3mm 0; }
+html[data-design="invoice-studio"] .tile { background: var(--cream); border-radius: 4mm; }
+html[data-design="invoice-studio"] .tile .value { font-family: var(--display); font-weight: 600; color: var(--accent); }
+html[data-design="invoice-studio"] .callout { background: var(--cream); border-left: 0; border-radius: 4mm; }
+html[data-design="invoice-studio"] ul > li::marker { color: var(--accent); }
+html[data-design="invoice-banner"][data-look] table.data th { color: #fff; font-variant: normal; text-transform: none; }

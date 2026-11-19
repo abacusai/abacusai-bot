@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Retro Zine Business Presentation</title>
+  <link rel="stylesheet" href="fonts.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
     :root {
       --bg: #C8B99A;
@@ -78,7 +78,7 @@
       right: 24px;
       z-index: 100;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 14px;
+      font-size: 18px;
       letter-spacing: 2px;
       color: var(--black);
       background: var(--white);
@@ -178,7 +178,7 @@
     }
     .slide-hero .hero-label {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 14px;
+      font-size: 18px;
       font-weight: 600;
       letter-spacing: 4px;
       text-transform: uppercase;
@@ -239,7 +239,7 @@
     }
     .slide-split .split-label {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 14px;
+      font-size: 18px;
       letter-spacing: 3px;
       color: var(--green);
       margin-bottom: 20px;
@@ -393,7 +393,7 @@
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 12px;
+      font-size: 15px;
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--black);
@@ -424,7 +424,7 @@
     }
     .slide-editorial .ed-header .ed-issue {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 14px;
+      font-size: 18px;
       letter-spacing: 3px;
       color: var(--black);
     }
@@ -468,7 +468,7 @@
     }
     .slide-numbers .num-header {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(14px, 1.5vw, 18px);
+      font-size: clamp(18px, 1.9vw, 24px);
       letter-spacing: 4px;
       color: var(--green);
       text-transform: uppercase;
@@ -519,7 +519,7 @@
       top: 40px;
       left: 60px;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(14px, 1.5vw, 18px);
+      font-size: clamp(18px, 1.9vw, 24px);
       letter-spacing: 4px;
       color: var(--green);
       text-transform: uppercase;
@@ -652,7 +652,7 @@
     }
     .slide-rsvp .rsvp-field label {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 14px;
+      font-size: 18px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--green);
@@ -686,7 +686,7 @@
     }
     .slide-closing .closing-label {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 12px;
+      font-size: 15px;
       letter-spacing: 4px;
       text-transform: uppercase;
       color: var(--green);
@@ -717,7 +717,7 @@
       justify-content: center;
       gap: 32px;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 14px;
+      font-size: 18px;
       letter-spacing: 3px;
       text-transform: uppercase;
     }
@@ -752,6 +752,10 @@
       .slide-collage .collage-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; overflow-y: auto; }
       .slide-rsvp .rsvp-card { padding: 28px; }
     }
+      /* The keyboard hint is for the screen, not the page. */
+    @media print { .nav-hint, .progress-bar { display: none !important; } }
+      .ed-col .ed-sub { display: block; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--green); margin-bottom: 10px; }
+    .ed-col p { margin: 0 0 12px; }
   </style>
 </head>
 <body>
@@ -769,30 +773,33 @@
   <div class="slides-container" id="slidesContainer">
 
     <!-- SLIDE 1: HERO TITLE -->
-    <div class="slide slide-hero active" data-index="0">
+    <div class="slide slide-hero active" data-index="0" data-label="title: a kicker, the name (a dish, a menu, an event) in up to two lines and a short tagline">
       <div class="hero-label">Q3 Strategic Overview</div>
       <div class="hero-title">NEXUS<br>VENTURES</div>
-      <svg class="hero-illustration" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="110" cy="120" rx="60" ry="45" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="3"/>
-        <circle cx="110" cy="120" r="18" fill="#C8B99A" stroke="#1A1A1A" stroke-width="2"/>
-        <circle cx="110" cy="120" r="6" fill="#1A1A1A"/>
-        <path d="M60 85 Q75 60 110 55 Q150 50 175 75" stroke="#1A1A1A" stroke-width="3" fill="none"/>
-        <path d="M70 100 Q80 80 100 75" stroke="#C8B99A" stroke-width="2" fill="none" opacity="0.6"/>
-        <path d="M180 140 L180 60 Q180 40 200 40 L220 40 Q240 40 240 60 L240 140" stroke="#1A1A1A" stroke-width="3" fill="none"/>
-        <path d="M180 140 Q180 160 200 160 L220 160 Q240 160 240 140" stroke="#1A1A1A" stroke-width="3" fill="none"/>
-        <path d="M170 75 Q210 90 250 75" stroke="#1A1A1A" stroke-width="2" fill="none" opacity="0.3"/>
-        <path d="M180 50 Q210 60 230 50" stroke="#1A1A1A" stroke-width="2" fill="none" opacity="0.3"/>
-        <path d="M40 150 Q90 130 130 160 Q170 190 220 150" stroke="#1A1A1A" stroke-width="3" fill="none"/>
-        <path d="M50 165 Q100 145 140 175 Q180 205 230 165" stroke="#1A1A1A" stroke-width="3" fill="none"/>
-        <path d="M30 160 L50 155 L45 175 Z" fill="#C8B99A" stroke="#1A1A1A" stroke-width="2"/>
-        <path d="M240 145 L260 140 L255 160 Z" fill="#C8B99A" stroke="#1A1A1A" stroke-width="2"/>
+      <!-- A steaming bowl and spoon: the template is offered for recipes,
+           cooking classes and cafés, so its cover draws food. -->
+      <svg class="hero-illustration" role="img" aria-label="A steaming bowl and spoon" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M112 78 Q102 64 112 50 Q122 36 112 22" stroke="#1A1A1A" stroke-width="3" fill="none" opacity="0.45"/>
+        <path d="M150 74 Q140 60 150 46 Q160 32 150 18" stroke="#1A1A1A" stroke-width="3" fill="none"/>
+        <path d="M188 78 Q178 64 188 50 Q198 36 188 22" stroke="#1A1A1A" stroke-width="3" fill="none" opacity="0.45"/>
+        <path d="M58 100 L242 100 Q236 164 150 170 Q64 164 58 100 Z" fill="#C8B99A" stroke="#1A1A1A" stroke-width="3"/>
+        <ellipse cx="150" cy="100" rx="92" ry="13" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="3"/>
+        <circle cx="122" cy="99" r="5" fill="#C8B99A"/>
+        <circle cx="160" cy="97" r="6" fill="#C8B99A"/>
+        <circle cx="186" cy="101" r="4" fill="#C8B99A"/>
+        <path d="M78 122 Q112 138 150 138" stroke="#1A1A1A" stroke-width="2" fill="none" opacity="0.3"/>
+        <path d="M122 168 L127 182 L173 182 L178 168" stroke="#1A1A1A" stroke-width="3" fill="none"/>
+        <path d="M214 92 L262 46" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="268" cy="40" rx="13" ry="8" transform="rotate(-44 268 40)" fill="#C8B99A" stroke="#1A1A1A" stroke-width="2"/>
+        <path d="M28 150 L48 145 L43 165 Z" fill="#C8B99A" stroke="#1A1A1A" stroke-width="2"/>
+        <path d="M252 150 L272 145 L267 165 Z" fill="#C8B99A" stroke="#1A1A1A" stroke-width="2"/>
       </svg>
       <div class="hero-sub">Growth &mdash; Innovation &mdash; Partnership</div>
       <div class="hero-date">2026</div>
     </div>
 
     <!-- SLIDE 2: SPLIT EDITORIAL -->
-    <div class="slide slide-split" data-index="1">
+    <div class="slide slide-split" data-index="1" data-label="introduction: a kicker, a heading, a paragraph and one big figure with a caption (a time, a count)">
       <div class="split-left">
         <div class="split-label">Our Mission</div>
         <div class="split-heading">Building<br>Tomorrow</div>
@@ -809,7 +816,7 @@
     </div>
 
     <!-- SLIDE 3: STATEMENT -->
-    <div class="slide slide-statement" data-index="2">
+    <div class="slide slide-statement" data-index="2" data-label="quote or one big idea with who said it">
       <div class="statement-line-top"></div>
       <div class="statement-quote">
         "The companies that thrive<br>are not the ones that predict<br>the future. They are the ones<br>that build it."
@@ -819,9 +826,9 @@
     </div>
 
     <!-- SLIDE 4: INFO GRID -->
-    <div class="slide slide-grid" data-index="3">
+    <div class="slide slide-grid" data-index="3" data-label="at a glance: four labelled facts (prep time, cook time, serves, difficulty; or who, where, when, cost)">
       <div class="grid-header">At a Glance</div>
-      <div class="grid-boxes">
+      <div class="grid-boxes" data-deck-grow>
         <div class="grid-box">
           <div class="grid-box-label">Founded</div>
           <div class="grid-box-value"><strong>2019</strong> &mdash; San Francisco, CA</div>
@@ -842,7 +849,7 @@
     </div>
 
     <!-- SLIDE 5: FULL VISUAL -->
-    <div class="slide slide-visual" data-index="4">
+    <div class="slide slide-visual" data-index="4" data-label="one highlight stamped large: a two-line heading, a line and a caption">
       <div class="visual-bg">
         <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
           <circle cx="200" cy="200" r="160" stroke="#1A1A1A" stroke-width="2" fill="none" opacity="0.15"/>
@@ -857,47 +864,36 @@
         </svg>
       </div>
       <div class="visual-overlay stamp">
-        <h2>Q3<br>Target</h2>
+        <h2>Q3 Target</h2>
         <p>$18M ARR by December</p>
       </div>
       <div class="visual-caption">Fiscal year ending March 2027</div>
     </div>
 
     <!-- SLIDE 6: EDITORIAL -->
-    <div class="slide slide-editorial" data-index="5">
+    <div class="slide slide-editorial" data-index="5" data-label="two columns of text under a heading (ingredients and method, or two parts of a plan)">
       <div class="ed-header">
-        <h2>Product<br>Roadmap</h2>
+        <h2>Product Roadmap</h2>
         <div class="ed-issue">FY 2026 / 2027</div>
       </div>
-      <div class="ed-columns">
+      <div class="ed-columns" data-deck-grow>
         <div class="ed-col">
-          <span class="ed-drop">P</span>hase one is about foundation — refining our core platform, 
-          improving onboarding velocity, and expanding our API surface to serve 
-          <span class="ed-highlight">enterprise clients</span> with stricter compliance needs. 
-          We shipped 14 major releases this quarter alone.
-          <br><br>
-          The feedback loop with early adopters has sharpened our roadmap significantly. 
-          What started as a single feature request is now a dedicated vertical.
+          <strong class="ed-sub">Phase one: foundation</strong>
+          <p>Refining our core platform, improving onboarding velocity, and expanding our API surface to serve enterprise clients with stricter compliance needs.</p>
+          <p>We shipped 14 major releases this quarter alone, and the feedback loop with early adopters has sharpened our roadmap.</p>
         </div>
         <div class="ed-col">
-          <strong style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--green);">PHASE TWO: SCALE</strong>
-          <br><br>
-          Next quarter we shift from build mode to distribution. The product is proven. 
-          Now we need partners, channels, and the operational muscle to support 
-          10x user growth without breaking the experience.
-          <br><br>
-          International expansion is next. Two new regions. Localized support. 
-          Same product ethos, adapted for new markets.
-          <br><br>
-          Speed without sacrifice is the goal.
+          <strong class="ed-sub">Phase two: scale</strong>
+          <p>Next quarter we shift from build mode to distribution: partners, channels, and the operational muscle to support 10x user growth.</p>
+          <p>International expansion is next. Two new regions. Localized support. Speed without sacrifice is the goal.</p>
         </div>
       </div>
     </div>
 
     <!-- SLIDE 7: NUMBERED FEATURES -->
-    <div class="slide slide-numbers" data-index="6">
+    <div class="slide slide-numbers" data-index="6" data-label="three numbered steps, each a short title and a sentence">
       <div class="num-header">Our Core Values</div>
-      <div class="num-grid">
+      <div class="num-grid" data-deck-grow>
         <div class="num-item">
           <div class="num-digit">01</div>
           <div class="num-label">Clarity</div>
@@ -917,7 +913,7 @@
     </div>
 
     <!-- SLIDE 8: COLLAGE -->
-    <div class="slide slide-collage" data-index="7">
+    <div class="slide slide-collage" data-index="7" data-label="four notes: a short title and a sentence each (tips, variations, courses)">
       <div class="collage-header">Capabilities</div>
       <div class="collage-container">
         <div class="tape" style="top: 12%; left: 30%; transform: rotate(-25deg);"></div>
@@ -945,7 +941,7 @@
     </div>
 
     <!-- SLIDE 9: RSVP -->
-    <div class="slide slide-rsvp" data-index="8">
+    <div class="slide slide-rsvp" data-index="8" data-label="sign-up form: a heading, a line and four blank fields to fill in, with a button word">
       <div class="rsvp-card">
         <div class="rsvp-title">Let's Talk</div>
         <div class="rsvp-subtitle">Ready to explore what we can build together?</div>
@@ -972,7 +968,7 @@
     </div>
 
     <!-- SLIDE 10: CLOSING -->
-    <div class="slide slide-closing" data-index="9">
+    <div class="slide slide-closing" data-index="9" data-label="closing: a kicker, a sign-off in up to two lines, a contact line and three short links">
       <div class="closing-label">Thank You</div>
       <div class="closing-title">Let's Build<br>Together</div>
       <div class="closing-divider"></div>
