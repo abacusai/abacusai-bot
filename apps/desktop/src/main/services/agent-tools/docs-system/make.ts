@@ -27,6 +27,7 @@ import {
   briefValues,
   sharesNotGiven,
   unsupportedNumbers,
+  wrongWeekdays,
 } from "./faithful";
 import {
   describeIssues,
@@ -842,6 +843,14 @@ export const makeDocument = async (opts: {
           `The deck has ${pages.length} slides; the brief asks for ${opts.ask.slides}. Make it ${opts.ask.slides}.`,
         ]
       : []),
+    ...(() => {
+      const wrong = wrongWeekdays(prepared.text, opts.today);
+      return wrong.length > 0
+        ? [
+            `${wrong.join(" ")} Write the right weekday, or leave the weekday out.`,
+          ]
+        : [];
+    })(),
     ...(unsupported.length > 0
       ? [
           `These numbers are not in the request and were not computed by the app: ${unsupported.slice(0, 10).join(", ")}. A number you work out (a share, a change, a total, a per-month figure) must be written as <span data-calc="…"> so the app computes it; anything else you made up (reference numbers, dates, figures) must go.`,

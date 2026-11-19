@@ -135,3 +135,61 @@ export const sharesNotGiven = (parts: number[], facts: string): number[] => {
     );
   });
 };
+
+const DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const DAY = DAYS.join("|");
+const MONTH = MONTHS.join("|");
+/** "Tuesday 24 December", "Tuesday, 24 December 2026", "Tuesday, December 24, 2026". */
+const DATED = new RegExp(
+  `\\b(${DAY}),?\\s+(?:(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH})|(${MONTH})\\s+(\\d{1,2})(?:st|nd|rd|th)?)(?:,?\\s+(\\d{4}))?`,
+  "gi"
+);
+
+/**
+ * Weekdays that do not match their date. The memo in the 1.1.17 sanity said
+ * "Tuesday 24 December" in 2026, a Thursday: the bot wrote 2024's weekdays.
+ * A date without a year is the next one from today.
+ */
+export const wrongWeekdays = (text: string, today: string): string[] => {
+  const now = new Date(today.replace(/^[A-Za-z]+,?\s*/, ""));
+  if (Number.isNaN(now.getTime())) return [];
+  const name = (word: string, list: string[]): number =>
+    list.findIndex((item) => item.toLowerCase() === word.toLowerCase());
+  const out: string[] = [];
+  for (const m of text.normalize("NFKC").replace(/\s+/g, " ").matchAll(DATED)) {
+    const month = name(m[3] ?? m[4]!, MONTHS);
+    const day = Number(m[2] ?? m[5]);
+    let year = m[6] != null ? Number(m[6]) : now.getFullYear();
+    if (m[6] == null && new Date(year, month, day + 1) < now) year += 1;
+    const date = new Date(year, month, day);
+    if (date.getMonth() !== month) continue;
+    const actual = DAYS[date.getDay()]!;
+    if (actual.toLowerCase() !== m[1]!.toLowerCase())
+      out.push(
+        `"${m[0].trim()}" is wrong: ${day} ${MONTHS[month]} ${year} is a ${actual}.`
+      );
+  }
+  return [...new Set(out)];
+};
