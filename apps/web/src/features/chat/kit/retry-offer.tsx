@@ -263,7 +263,9 @@ export const RetryOfferRow = ({
   const shown = useEffectEvent(() => {
     if (showing == null || card?.shownOffer === showing.id) return;
     funnel("retry_offer_shown", showing.reason);
-    if (preview == null)
+    // Only a tap that goes to the plan is an upgrade: a paying plan, or a free
+    // one with the top model already open to it, retries at once.
+    if (preview == null && !direct)
       upgradeSeen(transport.client, "retry_offer", showing.id);
     write({
       ...base,

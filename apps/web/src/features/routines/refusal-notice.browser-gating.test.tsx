@@ -13,6 +13,7 @@ vi.mock("#renderer/lib/use-app-context", () => ({
 }));
 vi.mock("#renderer/lib/upgrade", () => ({
   openUpgrade: vi.fn(async () => {}),
+  upgradeSeen: vi.fn(),
 }));
 const refusal = {
   key: "routines.hosted.planRequired",

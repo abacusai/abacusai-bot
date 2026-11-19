@@ -18,7 +18,10 @@ vi.mock("#renderer/lib/use-account", () => ({
       fixture.tier == null ? undefined : { subscription_tier: fixture.tier },
   }),
 }));
-vi.mock("#renderer/lib/upgrade", () => ({ openUpgrade: fixture.upgrade }));
+vi.mock("#renderer/lib/upgrade", () => ({
+  openUpgrade: fixture.upgrade,
+  upgradeSeen: vi.fn(),
+}));
 vi.mock("#renderer/lib/platform-system", () => ({
   platformSystem: () => ({ openExternal: fixture.openExternal }),
 }));

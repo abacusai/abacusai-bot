@@ -3,7 +3,6 @@ import { useEffect, useEffectEvent, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilePreview } from "#renderer/components/file-preview";
-import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import type { BrowserTab as Native } from "#renderer/features/sessions/browser/browser-tab";
 import { useSessionsTransport } from "#renderer/features/sessions/data/queries";
 import {
@@ -14,7 +13,7 @@ import { externalBrowserUrl } from "#renderer/lib/browser/external-browser-url";
 import { creditsTier } from "#renderer/lib/credits";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openUpgrade, upgradeSeen } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
 import { Button } from "#renderer/ui/button";
 
@@ -41,6 +40,10 @@ export const BrowserTab: typeof Native = ({
   const account = useAccount();
   const tier = creditsTier(account.data);
   const paid = sidebarAccount(account.data).paid;
+  // The free plan's Upgrade below, on screen whenever no file is.
+  useEffect(() => {
+    if (!file && tier === "free") upgradeSeen(client, "web_tab");
+  }, [file, tier, client]);
   if (file)
     return (
       <FilePreview
@@ -81,7 +84,6 @@ export const BrowserTab: typeof Native = ({
         <div className="flex flex-wrap justify-center gap-2">
           {tier === "free" && (
             <Button onClick={() => void openUpgrade(client, "web_tab")}>
-              <UpgradeSeen src="web_tab" />
               {t("web.files.browserUpgrade")}
             </Button>
           )}
