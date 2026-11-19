@@ -16,6 +16,8 @@ export default defineConfig({
     // Written by sync-locales.js and check-jsx-i18n.js --update.
     "**/locales/**",
     "**/i18n-literals-baseline.json",
+    // Written by UPDATE_GOLDEN=1 in 002-prefs-from-renderer-state.test.ts.
+    "**/__fixtures__/expected-prefs/**",
     // Written by the package manager.
     "**/pnpm-lock.yaml",
     "**/package-lock.json",
