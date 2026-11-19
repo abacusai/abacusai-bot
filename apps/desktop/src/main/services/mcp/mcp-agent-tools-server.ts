@@ -2593,9 +2593,26 @@ export class McpAgentToolsServer extends McpHttpServer {
         ? value
         : undefined;
 
+    // A deck ppt printed (<name>-deck/deck.html beside <name>.pdf) is changed
+    // by ppt only: re-exported by hand it skipped every check, and the bot
+    // added two slides of web-searched figures to a board deck (1.1.17).
+    const resolved = this.resolveOutputPath(htmlPath, callerSession);
+    const deckDir = path.dirname(resolved);
+    if (
+      path.basename(resolved) === "deck.html" &&
+      deckDir.endsWith("-deck") &&
+      (await fs.promises
+        .stat(`${deckDir.slice(0, -"-deck".length)}.pdf`)
+        .then((stat) => stat.isFile())
+        .catch(() => false))
+    )
+      return this.err(
+        "This deck was printed by ppt, which checks every slide (figures from the request, sample text, text drawn over text); an export of an edited copy skips those checks. Change it only with ppt: the same template and the change written into the brief. If ppt says the deck is done for this turn, hand it over as it is and offer the change."
+      );
+
     try {
       const result = await exportDeckPdf({
-        htmlPath: this.resolveOutputPath(htmlPath, callerSession),
+        htmlPath: resolved,
         outputPath:
           typeof args.output_path === "string" &&
           args.output_path.trim().length > 0
