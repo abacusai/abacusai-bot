@@ -94,12 +94,15 @@ export const unsupportedNumbers = (
   const digitStrings = new Set(
     tokens(ctx.brief).map((t) => t.replace(/\D/g, ""))
   );
+  // A year is given or not, never near: "2025" passed as close to today's
+  // 2026 on a deck's cover ("Sürüm 1.0 · Ders içeriği · 2025").
   const close = (v: number): boolean =>
     allowed.has(v) ||
-    [...allowed].some(
-      (a) =>
-        Math.abs(a - v) <= 0.051 || (a > 100 && Math.abs(a - v) / a < 0.0005)
-    );
+    (!(Number.isInteger(v) && v >= 1900 && v <= 2100) &&
+      [...allowed].some(
+        (a) =>
+          Math.abs(a - v) <= 0.051 || (a > 100 && Math.abs(a - v) / a < 0.0005)
+      ));
 
   const out: string[] = [];
   const text = printed.normalize("NFKC").replace(/[\u00a0\u202f]/g, " ");
