@@ -91,6 +91,8 @@ export interface RosterContext {
   reloadSkills: () => Promise<void> | void;
   /** The user's recent messages and what the bot read: what a document's numbers are checked against. */
   requestSources?: () => RequestSources;
+  /** This turn's own words (user-text.ts `ownWords`); "" when the app started it. */
+  ownWordsThisTurn: () => string;
 }
 
 /** Whatever pi accepts as a custom tool; the builders return several shapes. */
@@ -235,7 +237,10 @@ export const OWN_TOOLS: readonly RosterEntry[] = [
     build: (ctx) => ctx.memoryTool!,
   },
   // The language every reply is in, for all conversations; see user-language.ts.
-  { name: "set_user_language", build: () => buildSetUserLanguageTool() },
+  {
+    name: "set_user_language",
+    build: (ctx) => buildSetUserLanguageTool(ctx.ownWordsThisTurn),
+  },
   // The tool every handover instruction names; there must always be one.
   {
     name: "present_deliverable",
