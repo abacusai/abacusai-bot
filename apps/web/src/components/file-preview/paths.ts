@@ -61,6 +61,7 @@ export type FileCategory =
   | "html"
   | "document"
   | "presentation"
+  | "video"
   | "binary"
   | "unknown";
 
@@ -84,11 +85,13 @@ const TEXT_EXTS = new Set(
 );
 const DOCUMENT_EXTS = new Set(["pdf", "docx", "xlsx", "xls"]);
 const PRESENTATION_EXTS = new Set(["pptx", "potx", "ppsx"]);
+/** What Chromium plays itself: H.264 MP4 (a motion render) and WebM. */
+const VIDEO_EXTS = new Set(["mp4", "m4v", "webm"]);
 const BINARY_EXTS = new Set(
   (
     "zip tar gz 7z rar bz2 xz exe dll so dylib bin dat msi app dmg doc ppt odt " +
-    "ods odp sqlite db wasm class jar pyc pyo o a obj lib mp3 mp4 avi mov wav " +
-    "flac ogg webm mkv aac wma ttf otf woff woff2 eot"
+    "ods odp sqlite db wasm class jar pyc pyo o a obj lib mp3 avi mov wav " +
+    "flac ogg mkv aac wma ttf otf woff woff2 eot"
   ).split(" ")
 );
 
@@ -105,6 +108,7 @@ export const categorizeFile = (filePath: string): FileCategory => {
   if (IMAGE_EXTS.has(ext)) return "image";
   if (PRESENTATION_EXTS.has(ext)) return "presentation";
   if (DOCUMENT_EXTS.has(ext)) return "document";
+  if (VIDEO_EXTS.has(ext)) return "video";
   if (BINARY_EXTS.has(ext)) return "binary";
   if (MARKDOWN_EXTS.has(ext)) return "markdown";
   if (HTML_EXTS.has(ext)) return "html";
@@ -126,6 +130,7 @@ export type PreviewKind =
   | "pptx"
   | "pdf"
   | "html"
+  | "video"
   | "external";
 
 export const previewKind = (filePath: string): PreviewKind => {
@@ -144,6 +149,8 @@ export const previewKind = (filePath: string): PreviewKind => {
       return "pptx";
     case "html":
       return "html";
+    case "video":
+      return "video";
     default:
       return "external";
   }
@@ -155,7 +162,12 @@ export const previewKind = (filePath: string): PreviewKind => {
  */
 export const hasInAppViewer = (filePath: string): boolean => {
   const category = categorizeFile(filePath);
-  if (category === "presentation" || category === "html") return true;
+  if (
+    category === "presentation" ||
+    category === "html" ||
+    category === "video"
+  )
+    return true;
   if (filePath.toLowerCase().endsWith(".pdf")) return true;
   return (
     category === "image" ||
