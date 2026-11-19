@@ -48,6 +48,9 @@ export default defineConfig({
     // The renderer's tool titles, kinds and result formatting. Browser-safe:
     // no node or pi anywhere in its closure (tool-display.test.ts).
     "src/tool-display.ts",
+    // What a person sees of a command's output, and how far it has got: the
+    // renderer's tool rows and the agent's results read it the same way.
+    "src/terminal-progress.ts",
     "src/user-text.ts",
     // Leaked reasoning tags: the chat-app lanes' reply envelope reads it too.
     "src/reasoning-tags.ts",

@@ -55,6 +55,7 @@ export interface AguiSourceLike {
     lineage: unknown;
     decision: unknown;
   }): Promise<void>;
+  stopTask(input: { threadId: string; id: string }): Promise<void>;
   queue: {
     enqueue(threadId: string, message: string): Promise<void>;
     update(input: {
@@ -188,6 +189,9 @@ export const fixtureAiRouter = impl.ai.router({
   ),
   respondPermission: impl.ai.respondPermission.handler(({ input, context }) =>
     context.deps.ai.respondPermission(input)
+  ),
+  stopTask: impl.ai.stopTask.handler(({ input, context }) =>
+    context.deps.ai.stopTask(input)
   ),
   queue: {
     enqueue: impl.ai.queue.enqueue.handler(({ input, context }) =>

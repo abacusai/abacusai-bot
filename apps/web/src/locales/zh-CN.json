@@ -3556,7 +3556,9 @@
       "askSkipped": "已跳过",
       "askBot": "询问了 {{bot}}：{{what}}",
       "giveTask": "把任务交给了 {{bot}}：{{what}}",
-      "memoryUpdated": "记忆已更新：{{name}}"
+      "memoryUpdated": "记忆已更新：{{name}}",
+      "quiet": "已 {{time}} 无输出",
+      "progress": "进度"
     },
     "transcript": {
       "jump": "跳到末尾",
@@ -3731,6 +3733,12 @@
       "newChat": "在新对话中使用 {{model}} 继续",
       "here": "仍将此对话切换到 {{model}}",
       "cancel": "取消"
+    },
+    "tasks": {
+      "title": "运行中",
+      "stop": "停止",
+      "serving": "正在提供 {{url}}",
+      "stopFailed": "无法停止，请重试。"
     }
   },
   "notch": {

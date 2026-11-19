@@ -53,6 +53,7 @@ import { MessageActionBar } from "./message-actions";
 import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
 import { QueueSlot } from "./queue-slot";
+import { RunningStrip } from "./running-strip";
 import { NoticeRow } from "./status/status";
 
 /** The skin's message widget, for the transcript's rows. */
@@ -385,6 +386,7 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
               <PermissionList />
             </div>
           ) : null}
+          <RunningStrip />
           <QueueSlot
             editingId={editing}
             onEditingChange={(id) => setQueueEditing(threadId, id)}

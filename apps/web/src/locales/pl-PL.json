@@ -3688,7 +3688,9 @@
       "askSkipped": "Pominięto",
       "askBot": "Zapytano {{bot}}: {{what}}",
       "giveTask": "Przekazano zadanie do {{bot}}: {{what}}",
-      "memoryUpdated": "Zaktualizowano pamięć: {{name}}"
+      "memoryUpdated": "Zaktualizowano pamięć: {{name}}",
+      "quiet": "Brak wyjścia od {{time}}",
+      "progress": "Postęp"
     },
     "transcript": {
       "jump": "Przejdź na koniec",
@@ -3867,6 +3869,12 @@
       "newChat": "Kontynuuj w nowym czacie z {{model}}",
       "here": "Mimo to przełącz ten czat na {{model}}",
       "cancel": "Anuluj"
+    },
+    "tasks": {
+      "title": "Działa",
+      "stop": "Zatrzymaj",
+      "serving": "Udostępnia {{url}}",
+      "stopFailed": "Nie udało się zatrzymać. Spróbuj ponownie."
     }
   },
   "notch": {

@@ -3556,7 +3556,9 @@
       "askSkipped": "Overgeslagen",
       "askBot": "{{bot}} gevraagd: {{what}}",
       "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}",
-      "memoryUpdated": "Geheugen bijgewerkt: {{name}}"
+      "memoryUpdated": "Geheugen bijgewerkt: {{name}}",
+      "quiet": "Al {{time}} geen uitvoer",
+      "progress": "Voortgang"
     },
     "transcript": {
       "jump": "Naar het einde",
@@ -3731,6 +3733,12 @@
       "newChat": "Verdergaan in een nieuwe chat met {{model}}",
       "here": "Deze chat toch overzetten naar {{model}}",
       "cancel": "Annuleren"
+    },
+    "tasks": {
+      "title": "Bezig",
+      "stop": "Stoppen",
+      "serving": "Biedt {{url}} aan",
+      "stopFailed": "Kon niet stoppen. Probeer het opnieuw."
     }
   },
   "notch": {

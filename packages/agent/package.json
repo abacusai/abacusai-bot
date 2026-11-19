@@ -61,6 +61,10 @@
       "types": "./dist/memory/index.d.ts",
       "default": "./dist/memory/index.js"
     },
+    "./terminal-progress": {
+      "types": "./dist/terminal-progress.d.ts",
+      "default": "./dist/terminal-progress.js"
+    },
     "./phone-bubbles": {
       "types": "./dist/phone/phone-bubbles.d.ts",
       "default": "./dist/phone/phone-bubbles.js"

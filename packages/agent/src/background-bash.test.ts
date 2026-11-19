@@ -28,7 +28,7 @@ import { default as backgroundExtension } from "./extensions/background.js";
 const operations = createLocalBashOperations();
 
 /** A stand-in for pi's bash: records what the foreground path forwarded to it. */
-function fakeBash(): {
+function fakeBash(text = "foreground ran"): {
   definition: Record<string, unknown>;
   calls: Array<Record<string, unknown>>;
 } {
@@ -50,7 +50,7 @@ function fakeBash(): {
         calls.push(params);
 
         return {
-          content: [{ type: "text", text: "foreground ran" }],
+          content: [{ type: "text", text }],
           details: {},
         };
       },
@@ -58,8 +58,8 @@ function fakeBash(): {
   };
 }
 
-const bashTool = () => {
-  const base = fakeBash();
+const bashTool = (text?: string) => {
+  const base = fakeBash(text);
   const tool = withBackgroundOption(
     base.definition as never,
     process.cwd(),
@@ -110,12 +110,30 @@ describe("the foreground path", () => {
     expect(base.calls[0]).not.toHaveProperty("background");
   });
 
+  it("does not forward the label, which is for the user", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, { command: "echo hi", label: "Saying hi" });
+
+    expect(base.calls).toEqual([{ command: "echo hi" }]);
+  });
+
+  it("gives the model each redrawn progress line at its last state", async () => {
+    const { tool } = bashTool(
+      "Downloading\n 10%\r 55%\r100%\ndone\r\nsaved to f.zip\r"
+    );
+
+    expect(await run(tool, { command: "curl -o f.zip https://x" })).toBe(
+      "Downloading\n100%\ndone\nsaved to f.zip"
+    );
+  });
+
   it("keeps pi's own schema alongside the new argument", () => {
     const { tool } = bashTool();
 
     expect(Object.keys(tool.parameters.properties).sort()).toEqual([
       "background",
       "command",
+      "label",
       "timeout",
     ]);
   });

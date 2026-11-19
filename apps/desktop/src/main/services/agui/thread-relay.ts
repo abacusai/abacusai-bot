@@ -1,6 +1,7 @@
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import {
   AgentStatus,
+  type BackgroundTask,
   type QueueEntry,
   type SkillMetadata,
 } from "@abacus-ai/contract/agent-types";
@@ -379,6 +380,8 @@ export class ThreadRelay {
   #queue: QueueEntry[] = [];
   #agent: AgentState | null = null;
   #skills: SkillMetadata[] = [];
+  /** Latest `background.tasks`: what the live process still runs past a turn. */
+  #backgroundTasks: BackgroundTask[] = [];
   #activity: { status: AgentStatus; runningTools: number } = {
     status: AgentStatus.Idle,
     runningTools: 0,
@@ -570,6 +573,9 @@ export class ThreadRelay {
     // No process is left to correct a count of running tools.
     if (this.#activity.runningTools !== 0)
       this.#apply(this.#custom("agent.heartbeat", { runningTools: 0 }));
+    // Its background jobs and served pages died with it.
+    if (this.#backgroundTasks.length > 0)
+      this.#apply(this.#custom("background.tasks", { tasks: [] }));
     this.runtime = null;
     return true;
   }
@@ -669,6 +675,7 @@ export class ThreadRelay {
         queue: this.#queue.filter((entry) => entry.hidden !== true),
         agent: this.#agent == null ? null : structuredClone(this.#agent),
         skills: [...this.#skills],
+        backgroundTasks: [...this.#backgroundTasks],
         activity: { ...this.#activity },
         notices: [...this.#notices],
         runOutcomes: [...this.#runs],
@@ -1450,6 +1457,11 @@ export class ThreadRelay {
       case "skills.loaded":
         this.#skills = Array.isArray(value.skills)
           ? (value.skills as SkillMetadata[])
+          : [];
+        return;
+      case "background.tasks":
+        this.#backgroundTasks = Array.isArray(value.tasks)
+          ? (value.tasks as BackgroundTask[])
           : [];
         return;
       case "agent.status":

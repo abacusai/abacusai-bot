@@ -10,7 +10,12 @@ import type {
   PermissionDescriptor,
 } from "@abacus-ai/agent";
 
-import type { AgentStatus, QueueEntry, SkillMetadata } from "../agent-types";
+import type {
+  AgentStatus,
+  BackgroundTask,
+  QueueEntry,
+  SkillMetadata,
+} from "../agent-types";
 
 export type { AgentErrorPayload, AgentState, PermissionDescriptor };
 
@@ -124,6 +129,8 @@ export interface AiThreadSnapshot {
   queue: QueueEntry[];
   agent: AgentState | null;
   skills: SkillMetadata[];
+  /** Latest `background.tasks`: what still runs past its turn. */
+  backgroundTasks: BackgroundTask[];
   activity: { status: AgentStatus; runningTools: number };
   notices: AiNotice[];
   /** For the returned message window (`page` applies to both). */

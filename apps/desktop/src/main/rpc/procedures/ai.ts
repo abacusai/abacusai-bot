@@ -151,6 +151,9 @@ export const aiRouter = impl.ai.router({
   respondPermission: impl.ai.respondPermission.handler(({ input, context }) =>
     context.deps.ai.respondPermission(input)
   ),
+  stopTask: impl.ai.stopTask.handler(({ input, context }) =>
+    context.deps.ai.stopTask(input)
+  ),
   queue: {
     enqueue: impl.ai.queue.enqueue.handler(({ input, context }) =>
       context.deps.ai.queue.enqueue(

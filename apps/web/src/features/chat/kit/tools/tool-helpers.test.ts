@@ -5,7 +5,7 @@ import { resolveWorkspacePath } from "#renderer/components/file-preview/paths";
 import { parseImageRead } from "./image-read";
 import { humanToolName, stripLineNumbers, todoItems } from "./normalize";
 import { browserInputLines, expanderFor } from "./tool-line";
-import { toolOpenPath } from "./tool-meta";
+import { toolMeta, toolOpenPath } from "./tool-meta";
 
 describe("tool helpers", () => {
   it("strips arrow line-number prefixes only when every line has one", () => {
@@ -100,5 +100,26 @@ describe("tool helpers", () => {
     expect(
       browserInputLines("browser_execute", { code: "x".repeat(300) })[0]![1]
     ).toHaveLength(201);
+  });
+
+  it("a running command's meta says how far it has got and since when it has been quiet", () => {
+    const running = (output: string) =>
+      ({
+        status: "running",
+        text: "",
+        terminal: { output },
+        source: "live",
+      }) as Parameters<typeof toolMeta>[2];
+    expect(toolMeta("bash", {}, running(" 10%\r 64%"), 1_000, 9_000)).toEqual({
+      kind: "elapsed",
+      since: 1_000,
+      progress: 64,
+      quietSince: 9_000,
+    });
+    // Nothing printed yet: quiet since it started.
+    expect(toolMeta("bash", {}, running(""), 1_000, null)).toMatchObject({
+      progress: null,
+      quietSince: 1_000,
+    });
   });
 });

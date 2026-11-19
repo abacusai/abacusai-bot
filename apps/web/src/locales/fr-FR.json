@@ -3556,7 +3556,9 @@
       "askSkipped": "Skipped",
       "askBot": "A demandé à {{bot}} : {{what}}",
       "giveTask": "A transmis une tâche à {{bot}} : {{what}}",
-      "memoryUpdated": "Mémoire mise à jour : {{name}}"
+      "memoryUpdated": "Mémoire mise à jour : {{name}}",
+      "quiet": "Aucune sortie depuis {{time}}",
+      "progress": "Progression"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3731,6 +3733,12 @@
       "newChat": "Continuer dans une nouvelle conversation avec {{model}}",
       "here": "Passer quand même cette conversation à {{model}}",
       "cancel": "Annuler"
+    },
+    "tasks": {
+      "title": "En cours",
+      "stop": "Arrêter",
+      "serving": "Sert {{url}}",
+      "stopFailed": "Impossible de l'arrêter. Réessayez."
     }
   },
   "notch": {

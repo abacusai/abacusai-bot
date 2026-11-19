@@ -44,6 +44,7 @@ const GALLERY_GROUPS: Array<{
     match: (s) =>
       [
         "session-running",
+        "session-long-work",
         "session-golden-tool-bash",
         "session-golden-plan",
       ].includes(s.id),
