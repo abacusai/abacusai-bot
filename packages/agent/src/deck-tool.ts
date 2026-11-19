@@ -376,6 +376,7 @@ export const deckResultText = (
     template?: string;
     splitNote?: string;
     printNotes?: string[];
+    offered?: number;
   },
   wanted: number
 ): string =>
@@ -410,7 +411,9 @@ export const deckResultText = (
           // blamed the template's size for it.
           (result.printNotes ?? []).some((note) => note.startsWith("Left out"))
             ? `It printed ${result.slides} of the ${wanted} slides asked for because of the slide left out above, not the template's size. Tell the user, and offer to put that content on another slide; do not build slides by hand.`
-            : `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
+            : result.offered != null && result.offered >= wanted
+              ? `It printed ${result.slides} of the ${wanted} slides asked for: the template has ${result.offered}, and the brief filled ${result.slides}. Tell the user, and offer to add content for more slides; do not say the template is too small, and do not build slides by hand.`
+              : `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
         ]
       : []),
     "",
