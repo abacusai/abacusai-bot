@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import type { AbacusStreak } from "@abacus-ai/contract/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMock = vi.hoisted(() => vi.fn());
@@ -27,6 +28,7 @@ const {
   fetchAbacusAccount,
   fetchAbacusModels,
   accountMovedPlan,
+  noteAbacusStreak,
   onAbacusPaymentChange,
   onAbacusPlanChange,
 } = await import("./abacus");
@@ -36,6 +38,45 @@ const { ConnectivityService } =
 beforeEach(() => {
   fetchMock.mockReset();
   clearAbacusCache();
+});
+
+describe("noteAbacusStreak", () => {
+  const streak = (todayDone: boolean): AbacusStreak => ({
+    day: 1,
+    streak: todayDone ? 1 : 0,
+    best: todayDone ? 1 : 0,
+    today_done: todayDone,
+    week: ["today", "later", "later", "later", "later", "later", "later"],
+    daily_credits: 100,
+    today_credits_left: 100,
+    bonus_credits: 500,
+    bonus_state: "pending",
+    bonus_in_days: 6,
+    day_ends_at: "2099-01-01T00:00:00+00:00",
+  });
+  const answer = (value: unknown) =>
+    new Response(JSON.stringify({ subscription_tier: "free", streak: value }), {
+      status: 200,
+    });
+
+  it("outlives a read sent before the report's answer, not one sent after it", async () => {
+    let respond!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => (respond = resolve))
+    );
+    const inFlight = fetchAbacusAccount(true);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    noteAbacusStreak(streak(true));
+    respond(answer(streak(false)));
+    await expect(inFlight).resolves.toMatchObject({
+      streak: { today_done: true },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    fetchMock.mockResolvedValueOnce(answer(null));
+    await expect(fetchAbacusAccount(true)).resolves.toMatchObject({
+      streak: null,
+    });
+  });
 });
 
 describe("fetchAbacusAccount", () => {

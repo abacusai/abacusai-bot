@@ -135,16 +135,26 @@ export const SessionsGlobals = ({
       if (abort.signal.aborted) return;
       finished(notice);
       // The turn spent credits: refresh the pill now, not on the next poll.
-      if (notice.outcome !== "cancelled") {
-        const queryKey = transport.orpc.account.abacus.queryKey();
-        void qc.invalidateQueries({ queryKey });
-        // The turn's report marks today's streak day a moment after the turn
-        // closes: read again then, so its card shows under this reply.
-        const account = qc.getQueryData<AbacusAccountInfo | null>(queryKey);
-        if (account?.streak != null && !account.streak.today_done)
-          setTimeout(() => void qc.invalidateQueries({ queryKey }), 4000);
-      }
+      if (notice.outcome !== "cancelled")
+        void qc.invalidateQueries({
+          queryKey: transport.orpc.account.abacus.queryKey(),
+        });
     });
+    // The turn's report made today a streak day: its card shows under the
+    // reply now, not after the next account read.
+    followNotice(
+      "system",
+      transport,
+      (event) => {
+        if (event.type !== "streak") return;
+        qc.setQueriesData<AbacusAccountInfo | null>(
+          { queryKey: transport.orpc.account.abacus.key() },
+          (account) =>
+            account == null ? account : { ...account, streak: event.streak }
+        );
+      },
+      abort.signal
+    );
     let first = true;
     const waiting = new Set<string>();
     followNotice(

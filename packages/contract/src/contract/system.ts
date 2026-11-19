@@ -1,7 +1,7 @@
 import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
-import type { OpenFilePathResult } from "../contracts";
+import type { AbacusStreak, OpenFilePathResult } from "../contracts";
 import { FUNNEL_STEPS } from "../funnel";
 import type { OpenLink } from "../open-link";
 import { mutation, query, subscription } from "./base";
@@ -60,7 +60,9 @@ export type SystemEvent =
   /** An `abacusaibot://` link is waiting: `takeOpenLink` hands it over. */
   | { type: "open-link" }
   /** A quit met running work, or its wait changed; see `quitGuard`. */
-  | { type: "quit-guard"; state: QuitGuardState };
+  | { type: "quit-guard"; state: QuitGuardState }
+  /** The streak as the platform answered a finished turn's report: newer than the last account read. */
+  | { type: "streak"; streak: AbacusStreak };
 
 /** One piece of running work a quit would stop. */
 export interface QuitGuardWork {
