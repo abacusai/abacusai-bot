@@ -147,6 +147,8 @@ export interface DeckTaskResult {
   template?: string;
   /** A counted list no slide could hold, split over slides. */
   splitNote?: string;
+  /** What printed differently from what was sent: a slide left out, text still overlapping. */
+  printNotes?: string[];
 }
 
 interface PiToolDefinitionLike {
@@ -269,6 +271,8 @@ export interface Draft {
   figurelessChecked?: boolean;
   /** Set once text drawn over other text was sent back. */
   overlapChecked?: boolean;
+  /** What the print left out or could not fix, for the bot to tell the user. */
+  printNotes?: string[];
   printed: {
     pdfPath: string;
     htmlPath: string;
@@ -698,6 +702,9 @@ export const buildTools = (
       if (given.length === 0) return failed("No slides were given.");
 
       const notes: string[] = [];
+      // Slides left out of the print, each with why: the bot tells the user
+      // rather than guess (it once said the template held too few slides).
+      const leftOut: string[] = [];
       // Slide numbers the template does not offer, which would be skipped.
       const unknown: string[] = [];
       // Strings that do not line up with the slots: the filler skipped or
@@ -1027,7 +1034,14 @@ export const buildTools = (
       if (figureless.length > 0 && slides.length > 3)
         for (const index of figureless) {
           const at = slides.findIndex((slide) => slide.index === index);
-          if (at > 0) slides.splice(at, 1);
+          if (at <= 0) continue;
+          const words = Object.values(slides.splice(at, 1)[0]!.values).filter(
+            (value) => value !== REMOVE && value.trim().length > 0
+          );
+          const heading = words.find((value) => value.length > 12) ?? words[0];
+          leftOut.push(
+            `slide ${index}${heading != null ? ` ("${heading.slice(0, 70)}")` : ""}: it is drawn around big figures and the brief gives none`
+          );
         }
 
       // Asked once already: keep the count asked for, the opening slides and
@@ -1173,6 +1187,14 @@ export const buildTools = (
           );
         }
 
+        // Said in the result, not left for the bot to guess.
+        draft.printNotes =
+          leftOut.length > 0
+            ? [
+                `Left out ${leftOut.join("; ")}. What it said is not in the deck.`,
+              ]
+            : [];
+
         draft.printed = {
           pdfPath: result.pdfPath,
           htmlPath: result.htmlPath ?? "",
@@ -1194,6 +1216,7 @@ export const buildTools = (
               ? [`HTML source: ${modelPath(result.htmlPath)}`]
               : []),
             ...notes,
+            ...draft.printNotes.map((note) => `${note} Tell the user.`),
             ...((result.dropped ?? []).length > 0
               ? [
                   `Left out because a number in it was not in the request: ${result.dropped!.join("; ")}. Tell the user what was left out.`,
@@ -1368,6 +1391,9 @@ export async function runDeckTask(
           slides: printed.slides,
           ...(draft.template != null ? { template: draft.template } : {}),
           ...(draft.splitNote != null ? { splitNote: draft.splitNote } : {}),
+          ...((draft.printNotes ?? []).length > 0
+            ? { printNotes: draft.printNotes }
+            : {}),
         }
       : {}),
   };

@@ -375,6 +375,7 @@ export const deckResultText = (
     slides?: number;
     template?: string;
     splitNote?: string;
+    printNotes?: string[];
   },
   wanted: number
 ): string =>
@@ -397,12 +398,19 @@ export const deckResultText = (
     ...(result.splitNote != null
       ? ["", `${result.splitNote} Say so to the user in one line.`]
       : []),
+    ...((result.printNotes ?? []).length > 0
+      ? ["", ...result.printNotes!, "Tell the user these in plain words."]
+      : []),
     ...(result.slides != null && result.slides < wanted
       ? [
           "",
           // emerald-editorial offers six slides; asked for seven, the bot
-          // built the seventh by hand and the .pptx kept six.
-          `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
+          // built the seventh by hand and the .pptx kept six. A slide the
+          // print left out is the reason when there is one: the bot once
+          // blamed the template's size for it.
+          (result.printNotes ?? []).some((note) => note.startsWith("Left out"))
+            ? `It printed ${result.slides} of the ${wanted} slides asked for because of the slide left out above, not the template's size. Tell the user, and offer to put that content on another slide; do not build slides by hand.`
+            : `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
         ]
       : []),
     "",
