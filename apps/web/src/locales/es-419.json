@@ -1919,35 +1919,35 @@
       "build": {
         "orders-system": {
           "name": "App de pedidos y reservas",
-          "detail": "Para una tienda, gimnasio, salón o negocio de servicios.",
+          "detail": "Para tiendas, gimnasios y servicios.",
           "prompt": "Tengo un pequeño negocio. Créame una app sencilla en esta computadora para llevar el control de mis pedidos, reservas o trabajos de servicio: una lista donde pueda agregar, buscar y filtrar, una página para cada uno con el cliente, la fecha, el estado y el precio, y un resumen diario. Crea de inmediato una primera versión con datos de ejemplo para una tienda pequeña típica y ábremela. Luego pregúntame en un mensaje breve a qué se dedica mi negocio y qué necesito controlar, para que puedas adaptarla."
         },
         "business-site": {
           "name": "Sitio web para mi negocio",
-          "detail": "Servicios, horarios, reseñas y un formulario de contacto.",
+          "detail": "Servicios, horarios y contacto.",
           "prompt": "Créame un sitio web para mi negocio: un encabezado con el nombre del negocio y lo que ofrece, una sección de servicios con precios, el horario de atención, algunas reseñas de clientes, dónde encontrarnos y un formulario de contacto. Usa datos de ejemplo que pueda cambiar después y asegúrate de que se vea bien en un celular. Muéstrame la página cuando esté lista y luego pregúntame en un mensaje breve el nombre de mi negocio y a qué se dedica, para que puedas personalizarla."
         },
         "lead-finder": {
           "name": "Encontrar clientes",
-          "detail": "Nuevos clientes potenciales cada mañana, con un primer correo ya redactado."
+          "detail": "Clientes nuevos y primer correo."
         },
         "my-game": {
           "name": "Trabajar en mi juego",
-          "detail": "Unity, Godot, Unreal o Roblox, en la carpeta de tu proyecto.",
+          "detail": "Unity, Godot, Unreal o Roblox.",
           "prompt": "Ayúdame con mi juego. Si no hay ninguna carpeta de proyecto abierta, pregúntame dónde está el proyecto de mi juego. Luego revísalo y dime qué motor y qué versión usa, sus escenas y scripts principales, y cualquier cosa que parezca rota o sin terminar. Sugiéreme los tres siguientes pasos más útiles y espera a que elija uno antes de cambiar algo."
         },
         "morning-inbox": {
-          "name": "Responder mi correo cada mañana",
-          "detail": "Una respuesta redactada para cada correo que requiere tu atención."
+          "name": "Responder mi correo",
+          "detail": "Respuestas listas cada mañana."
         },
         "portfolio-site": {
           "name": "Sitio de portafolio",
-          "detail": "Un sitio de una página para tu trabajo.",
+          "detail": "Una página para tu trabajo.",
           "prompt": "Créame un sitio web de portafolio de una sola página: una portada con mi nombre y una frase de presentación, una cuadrícula con tres proyectos de ejemplo, una sección sobre mí y una de contacto. Usa textos e imágenes de muestra que pueda cambiar después, que se vea limpio y moderno, y asegúrate de que se vea bien en el teléfono. Muéstrame la página cuando esté lista."
         },
         "numbers-dashboard": {
           "name": "Panel de mis números",
-          "detail": "Ventas, costos y tendencias a partir de tu hoja de cálculo.",
+          "detail": "Ventas, costos y tendencias.",
           "prompt": "Créame un panel con los números de mi negocio: los totales de este mes, una gráfica por mes, los productos o clientes principales y cualquier cosa fuera de lo normal. Empieza de inmediato con datos de ventas de ejemplo realistas para que funcione y muéstramelo. Luego pídeme mi hoja de cálculo o archivo CSV y cambia el panel a mis números reales."
         },
         "shop-page": {
@@ -1962,7 +1962,7 @@
         },
         "my-project": {
           "name": "Trabajar en mi app o sitio",
-          "detail": "Una app o un sitio en una carpeta de esta computadora.",
+          "detail": "Una app o sitio en tu computadora.",
           "prompt": "Ayúdame con mi proyecto de app o sitio web. Si no hay una carpeta de proyecto abierta, pregúntame dónde está mi proyecto. Luego revísalo y dime con qué está hecho, cómo se ejecuta, sus partes principales y cualquier cosa que parezca rota o sin terminar. Sugiere los tres próximos pasos más útiles y espera a que elija uno antes de cambiar nada."
         }
       },

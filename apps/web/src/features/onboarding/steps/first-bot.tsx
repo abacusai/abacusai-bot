@@ -235,18 +235,19 @@ export const FirstBotStep = ({
                 data-project={project.id}
                 data-project-kind={project.kind}
                 disabled={busy}
-                className="h-auto min-h-16 items-start justify-start gap-2.5 rounded-xl px-3 py-2.5 text-start whitespace-normal"
+                className="h-auto min-h-0 items-start justify-start gap-2.5 rounded-xl px-3 py-[7px] text-start whitespace-normal"
                 onClick={() => pickProject(project)}
               >
                 <Icon
                   aria-hidden
                   className="text-primary mt-0.5 size-4 shrink-0"
                 />
+                {/* One line each, so Popular's four rows fit in the room three took, in every language. */}
                 <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-[13px] leading-snug font-medium">
+                  <span className="truncate text-[13px] leading-snug font-medium">
                     {t(`sessions.start.build.${project.id}.name`)}
                   </span>
-                  <span className="text-foreground/70 text-xs leading-snug font-normal">
+                  <span className="text-foreground/70 truncate text-xs leading-snug font-normal">
                     {t(`sessions.start.build.${project.id}.detail`)}
                   </span>
                 </span>

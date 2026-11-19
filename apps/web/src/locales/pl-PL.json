@@ -1940,36 +1940,36 @@
       "recent": "Kontynuuj tam, gdzie skończyłeś w {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "Aplikacja do zamówień i rezerwacji",
-          "detail": "Dla sklepu, siłowni, salonu lub firmy usługowej.",
+          "name": "Zamówienia i rezerwacje",
+          "detail": "Dla sklepów, siłowni i salonów.",
           "prompt": "Prowadzę małą firmę. Zbuduj mi na tym komputerze prostą aplikację do śledzenia zamówień, rezerwacji lub zleceń: listę, do której mogę dodawać pozycje i którą mogę przeszukiwać i filtrować, osobną stronę dla każdej pozycji z klientem, datą, statusem i ceną oraz dzienne podsumowanie. Od razu zbuduj pierwszą wersję z przykładowymi danymi dla typowego małego sklepu i otwórz ją dla mnie. Potem w jednej krótkiej wiadomości zapytaj mnie, czym zajmuje się moja firma i co chcę śledzić, aby dopasować aplikację do moich potrzeb."
         },
         "business-site": {
           "name": "Strona dla mojej firmy",
-          "detail": "Usługi, godziny otwarcia, opinie i formularz kontaktowy.",
+          "detail": "Usługi, godziny i kontakt.",
           "prompt": "Zbuduj stronę internetową dla mojej firmy: nagłówek z nazwą firmy i tym, co oferuje, sekcję z usługami i cenami, godziny otwarcia, kilka opinii klientów, informację, gdzie nas znaleźć, oraz formularz kontaktowy. Użyj przykładowych danych, które później podmienię, i zadbaj o to, żeby strona dobrze wyglądała na telefonie. Pokaż mi ją, gdy będzie gotowa, a potem w jednej krótkiej wiadomości zapytaj mnie o nazwę mojej firmy i o to, czym się zajmuje, aby dopasować stronę do mojej firmy."
         },
         "lead-finder": {
           "name": "Znajdź klientów",
-          "detail": "Nowi potencjalni klienci każdego ranka i gotowy szkic pierwszego maila."
+          "detail": "Nowi klienci i pierwszy e-mail."
         },
         "my-game": {
           "name": "Praca nad moją grą",
-          "detail": "Unity, Godot, Unreal lub Roblox, w folderze twojego projektu.",
+          "detail": "Unity, Godot, Unreal lub Roblox.",
           "prompt": "Pomóż mi z moją grą. Jeśli nie jest otwarty żaden folder projektu, zapytaj mnie, gdzie jest projekt mojej gry. Potem przejrzyj go i powiedz mi, jakiego silnika i której wersji używa, jakie ma główne sceny i skrypty oraz co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i zanim cokolwiek zmienisz, poczekaj, aż wybiorę jeden z nich."
         },
         "morning-inbox": {
-          "name": "Odpowiadaj co rano na moje maile",
-          "detail": "Szkic odpowiedzi na każdy mail, który wymaga twojej uwagi."
+          "name": "Odpowiadaj na maile rano",
+          "detail": "Odpowiedzi gotowe co rano."
         },
         "portfolio-site": {
           "name": "Strona z portfolio",
-          "detail": "Jednostronicowa witryna z twoimi pracami.",
+          "detail": "Jedna strona z twoimi pracami.",
           "prompt": "Zbuduj mi jednostronicową stronę z portfolio: sekcję powitalną z moim imieniem i jednozdaniowym wstępem, siatkę z trzema przykładowymi projektami, sekcję „O mnie” i sekcję kontaktową. Użyj tekstów i obrazów zastępczych, które później podmienię, zadbaj o czysty, nowoczesny wygląd i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
         },
         "numbers-dashboard": {
           "name": "Panel z moimi wynikami",
-          "detail": "Sprzedaż, koszty i trendy z twojego arkusza kalkulacyjnego.",
+          "detail": "Sprzedaż, koszty i trendy.",
           "prompt": "Zbuduj panel z wynikami mojej firmy: sumy za bieżący miesiąc, wykres w podziale na miesiące, najlepsze produkty lub klientów oraz wszystko, co odbiega od normy. Zacznij od razu od realistycznych przykładowych danych sprzedażowych, żeby panel działał, i pokaż mi go. Potem poproś mnie o mój arkusz kalkulacyjny lub plik CSV i przełącz panel na moje prawdziwe dane."
         },
         "shop-page": {
@@ -1983,8 +1983,8 @@
           "prompt": "Zrób mi zabawną grę, w którą zagram w przeglądarce w około minutę: grę zręcznościową, w której unikam spadających przedmiotów, z ekranem startowym, sterowaniem strzałkami i dotykiem, wynikiem i rekordem, ekranem końca gry i przyciskiem restartu. Zmieść ją na jednej stronie dopasowanej do okna, sprawdź, czy każde sterowanie działa, i pokaż mi ją, gdy będzie gotowa. Potem zapytaj mnie w jednej krótkiej wiadomości, jaką grę chcę, żeby zrobić z niej moją."
         },
         "my-project": {
-          "name": "Praca nad moją aplikacją lub stroną",
-          "detail": "Aplikacja lub strona w folderze na tym komputerze.",
+          "name": "Moja aplikacja lub strona",
+          "detail": "Aplikacja lub strona na tym PC.",
           "prompt": "Pomóż mi z moim projektem aplikacji lub strony. Jeśli żaden folder projektu nie jest otwarty, zapytaj, gdzie jest mój projekt. Potem przejrzyj go i powiedz mi, z czego jest zbudowany, jak go uruchomić, jakie ma główne części i co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i poczekaj, aż wybiorę jeden, zanim cokolwiek zmienisz."
         }
       },
