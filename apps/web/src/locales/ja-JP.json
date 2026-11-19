@@ -5800,9 +5800,11 @@
     }
   },
   "streak": {
+    "chip_one": "{{count}}日連続",
     "chip_other": "{{count}}日連続",
     "chipStart": "連続記録を始めよう",
     "chipCredits": "今日の{{credits}}クレジット",
+    "best_one": "最高記録: {{count}}日",
     "best_other": "最高記録: {{count}}日",
     "dayState": {
       "done": "{{day}}: 達成",
@@ -5812,6 +5814,7 @@
     },
     "todayCredits": "今日の追加クレジット",
     "todayLeft": "{{total}}中{{left}}残り",
+    "bonusIn_one": "1週間達成で+{{credits}}ボーナスクレジット · あと{{count}}日",
     "bonusIn_other": "1週間達成で+{{credits}}ボーナスクレジット · あと{{count}}日",
     "bonusToday": "今日メッセージを送ると+{{credits}}ボーナスクレジット",
     "bonusAdded": "1週間達成で+{{credits}}ボーナスクレジットを追加しました",
@@ -5819,12 +5822,14 @@
     "howCredits": "毎日{{credits}}の追加クレジットがもらえ、ほかのクレジットより先に使われます。",
     "howMidnight": "使わなかった追加クレジットは深夜0時に失効します。",
     "sidebarLine": "今日の+{{credits}}クレジット",
+    "noteDay_one": "{{count}}日連続！",
     "noteDay_other": "{{count}}日連続！",
     "noteRestart": "新しい連続記録がスタート",
     "noteFullWeek": "1週間達成！",
     "noteTomorrow": "明日また来るとさらに{{credits}}クレジット。",
     "noteToday": "今日もカウントされました。",
     "noteBonusAdded": "残高に+{{credits}}ボーナスクレジットを追加しました。",
+    "noteBonusIn_one": "+{{credits}}の週間ボーナスまであと{{count}}日。",
     "noteBonusIn_other": "+{{credits}}の週間ボーナスまであと{{count}}日。",
     "noteCta": "OK"
   }

@@ -5800,9 +5800,11 @@
     }
   },
   "streak": {
+    "chip_one": "{{count}} hari beruntun",
     "chip_other": "{{count}} hari beruntun",
     "chipStart": "Mulai rangkaianmu",
     "chipCredits": "{{credits}} kredit untuk hari ini",
+    "best_one": "Terbaik: {{count}} hari",
     "best_other": "Terbaik: {{count}} hari",
     "dayState": {
       "done": "{{day}}: selesai",
@@ -5812,6 +5814,7 @@
     },
     "todayCredits": "Kredit ekstra hari ini",
     "todayLeft": "Tersisa {{left}} dari {{total}}",
+    "bonusIn_one": "+{{credits}} kredit bonus untuk seminggu penuh · {{count}} hari lagi",
     "bonusIn_other": "+{{credits}} kredit bonus untuk seminggu penuh · {{count}} hari lagi",
     "bonusToday": "+{{credits}} kredit bonus jika kamu mengirim pesan hari ini",
     "bonusAdded": "+{{credits}} kredit bonus ditambahkan untuk seminggu penuh",
@@ -5819,12 +5822,14 @@
     "howCredits": "Setiap hari kamu mendapat {{credits}} kredit ekstra, dipakai sebelum kredit lainnya.",
     "howMidnight": "Kredit ekstra yang tidak terpakai berakhir tengah malam.",
     "sidebarLine": "+{{credits}} kredit untuk hari ini",
+    "noteDay_one": "{{count}} hari beruntun!",
     "noteDay_other": "{{count}} hari beruntun!",
     "noteRestart": "Rangkaian baru dimulai",
     "noteFullWeek": "Seminggu penuh!",
     "noteTomorrow": "Kembali besok untuk {{credits}} kredit lagi.",
     "noteToday": "Hari ini dihitung. Kerja bagus.",
     "noteBonusAdded": "+{{credits}} kredit bonus ditambahkan ke saldomu.",
+    "noteBonusIn_one": "{{count}} hari lagi menuju bonus mingguan +{{credits}}.",
     "noteBonusIn_other": "{{count}} hari lagi menuju bonus mingguan +{{credits}}.",
     "noteCta": "Oke"
   }
