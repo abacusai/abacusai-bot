@@ -3639,6 +3639,12 @@
       "continue": "Continuer dans un nouveau chat",
       "paidBody": "Un nouveau chat reprend à partir d'un résumé de celui-ci, sur un modèle haut de gamme. Il consomme les crédits plus vite."
     },
+    "topModelRetry": {
+      "retry": "Réessayer avec {{model}}",
+      "dismiss": "Fermer",
+      "opusBody": "Notre modèle le plus puissant reprend cette tâche dans une nouvelle discussion, là où vous vous êtes arrêté. Il consomme les crédits plus vite.",
+      "dialogBody": "Notre modèle le plus puissant pour les tâches difficiles, inclus dans {{plan}}."
+    },
     "topModelCard": {
       "title": "Continuez avec {{model}} grâce à {{plan}}",
       "line": "{{model}} consomme vite les crédits gratuits. Avec {{plan}}, vous le gardez, avec tout ce qui suit."
@@ -4794,6 +4800,7 @@
     "paidWaitingTitle": "Terminez dans votre navigateur",
     "planLine": "Forfait {{plan}} · résiliable à tout moment",
     "planTitle": "Tout ce que {{plan}} vous offre",
+    "planModelTitle": "Relancez-le sur {{model}} avec {{plan}}",
     "startAt": "À partir de",
     "waitingBody": "Votre message part dès que votre forfait est actif.",
     "waitingBodyNoMessage": "Cette fenêtre se ferme dès que votre forfait est actif.",

@@ -59,6 +59,7 @@ import {
 } from "../kit/status/status";
 import { SuccessPitchRow } from "../kit/success-pitch";
 import { TopModelCardRow } from "../kit/top-model-card";
+import { TopModelRetryRow } from "../kit/top-model-retry";
 import { outOfAbacusCredits, UpgradeTriggers } from "../kit/upgrade-triggers";
 import { useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
@@ -964,6 +965,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           <TopModelCardRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
           <ShareOfferRow messages={messages} active={active} />
+          <TopModelRetryRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />
           <UpgradeTriggers
             messages={messages}

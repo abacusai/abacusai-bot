@@ -3639,6 +3639,12 @@
       "continue": "新しいチャットで続ける",
       "paidBody": "このチャットの要約から、新しいチャットで上位モデルが引き継ぎます。クレジットの消費は速くなります。"
     },
+    "topModelRetry": {
+      "retry": "{{model}}で再試行",
+      "dismiss": "閉じる",
+      "opusBody": "最も高性能なモデルが、新しいチャットで続きから引き継ぎます。クレジットの消費は速くなります。",
+      "dialogBody": "難しいタスク向けの最も高性能なモデル。{{plan}} に含まれています。"
+    },
     "topModelCard": {
       "title": "{{plan}}で{{model}}を使い続ける",
       "line": "{{model}}は無料クレジットを速く消費します。{{plan}}ならそのまま使えて、以下もすべて含まれます。"
@@ -4794,6 +4800,7 @@
     "paidWaitingTitle": "ブラウザで手続きを完了してください",
     "planLine": "{{plan}} プラン · いつでも解約可能",
     "planTitle": "{{plan}} でできること",
+    "planModelTitle": "{{plan}} で {{model}} を使ってもう一度実行",
     "startAt": "開始価格",
     "waitingBody": "プランが有効になるとすぐにメッセージが送信されます。",
     "waitingBodyNoMessage": "プランが有効になるとすぐにこの画面は閉じます。",

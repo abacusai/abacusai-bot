@@ -40,6 +40,7 @@
       "dismissals.siteDeployCards": "default",
       "dismissals.successPitchCards": "default",
       "dismissals.topModelHint": "default",
+      "dismissals.topModelRetryClosedAt": "default",
       "dismissals.upgradeRoutinesSeenAt": "default",
       "dismissals.upsell": "default",
       "dismissals.wallReopen": "default",
@@ -125,6 +126,7 @@
         "siteDeployCards": {},
         "successPitchCards": {},
         "topModelHint": null,
+        "topModelRetryClosedAt": null,
         "upgradeRoutinesSeenAt": null,
         "upsell": false,
         "wallReopen": null,
@@ -157,7 +159,10 @@
       "onboardingStep": null,
       "panes": {},
       "pinned": {
-        "botIds": ["bot-a", "bot-b"],
+        "botIds": [
+          "bot-a",
+          "bot-b"
+        ],
         "sessionIds": []
       },
       "projectReminders": true,

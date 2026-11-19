@@ -40,6 +40,7 @@
       "dismissals.siteDeployCards": "legacy",
       "dismissals.successPitchCards": "legacy",
       "dismissals.topModelHint": "legacy",
+      "dismissals.topModelRetryClosedAt": "legacy",
       "dismissals.upgradeRoutinesSeenAt": "legacy",
       "dismissals.upsell": "legacy",
       "dismissals.wallReopen": "legacy",
@@ -125,6 +126,7 @@
         "siteDeployCards": {},
         "successPitchCards": {},
         "topModelHint": null,
+        "topModelRetryClosedAt": null,
         "upgradeRoutinesSeenAt": null,
         "upsell": true,
         "wallReopen": null,
@@ -137,7 +139,10 @@
       "language": "de-DE",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": ["abacus/route-llm-code", "gpt-5"],
+        "favoriteModelIds": [
+          "abacus/route-llm-code",
+          "gpt-5"
+        ],
         "perWorkspace": {
           "ws-1": "gpt-5"
         },
@@ -159,11 +164,19 @@
       "onboardingStep": null,
       "panes": {},
       "pinned": {
-        "botIds": ["bot-a"],
-        "sessionIds": ["s-1", "s-2"]
+        "botIds": [
+          "bot-a"
+        ],
+        "sessionIds": [
+          "s-1",
+          "s-2"
+        ]
       },
       "projectReminders": true,
-      "recentFolders": ["/Users/fixture/project", "/Users/fixture/other"],
+      "recentFolders": [
+        "/Users/fixture/project",
+        "/Users/fixture/other"
+      ],
       "routineCreditHold": null,
       "showLinkPreviews": true,
       "sidebar": {

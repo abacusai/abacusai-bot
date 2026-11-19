@@ -40,6 +40,7 @@
       "dismissals.siteDeployCards": "default",
       "dismissals.successPitchCards": "default",
       "dismissals.topModelHint": "default",
+      "dismissals.topModelRetryClosedAt": "default",
       "dismissals.upgradeRoutinesSeenAt": "default",
       "dismissals.upsell": "default",
       "dismissals.wallReopen": "default",
@@ -125,6 +126,7 @@
         "siteDeployCards": {},
         "successPitchCards": {},
         "topModelHint": null,
+        "topModelRetryClosedAt": null,
         "upgradeRoutinesSeenAt": null,
         "upsell": false,
         "wallReopen": null,
@@ -137,7 +139,10 @@
       "language": "system",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": ["gpt-5", "claude-opus"],
+        "favoriteModelIds": [
+          "gpt-5",
+          "claude-opus"
+        ],
         "perWorkspace": {
           "ws-1": "claude-opus",
           "ws-2": null
@@ -161,7 +166,9 @@
       "panes": {},
       "pinned": {
         "botIds": [],
-        "sessionIds": ["s-1"]
+        "sessionIds": [
+          "s-1"
+        ]
       },
       "projectReminders": true,
       "recentFolders": [],

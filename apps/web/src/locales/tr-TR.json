@@ -3639,6 +3639,12 @@
       "continue": "Yeni bir sohbette devam et",
       "paidBody": "Yeni bir sohbet, bu sohbetin özetinden üst düzey bir modelle devam eder. Krediyi daha hızlı harcar."
     },
+    "topModelRetry": {
+      "retry": "{{model}} ile yeniden dene",
+      "dismiss": "Kapat",
+      "opusBody": "En güçlü modelimiz bunu yeni bir sohbette kaldığın yerden devralır. Kredileri daha hızlı kullanır.",
+      "dialogBody": "Zor görevler için en güçlü modelimiz, {{plan}} planına dahil."
+    },
     "topModelCard": {
       "title": "{{plan}} ile {{model}} ile devam et",
       "line": "{{model}} ücretsiz kredileri hızlı harcar. {{plan}} ile onu kullanmaya devam edersin, aşağıdakilerin hepsiyle birlikte."
@@ -4794,6 +4800,7 @@
     "paidWaitingTitle": "Tarayıcında tamamla",
     "planLine": "{{plan}} plan · istediğin zaman iptal et",
     "planTitle": "{{plan}} ile gelen her şey",
+    "planModelTitle": "{{plan}} ile {{model}} üzerinde yeniden çalıştır",
     "startAt": "Başlangıç fiyatı",
     "waitingBody": "Planın etkinleşir etkinleşmez mesajın gönderilir.",
     "waitingBodyNoMessage": "Planın etkinleşir etkinleşmez bu pencere kapanır.",

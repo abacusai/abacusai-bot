@@ -3639,6 +3639,12 @@
       "continue": "Ga verder in een nieuwe chat",
       "paidBody": "Een nieuwe chat gaat verder vanaf een samenvatting van deze, op een topmodel. Die verbruikt credits sneller."
     },
+    "topModelRetry": {
+      "retry": "Opnieuw met {{model}}",
+      "dismiss": "Sluiten",
+      "opusBody": "Ons sterkste model pakt dit op in een nieuwe chat, precies waar je was gebleven. Het verbruikt sneller credits.",
+      "dialogBody": "Ons sterkste model voor lastige taken, inbegrepen bij {{plan}}."
+    },
     "topModelCard": {
       "title": "Ga door met {{model}} via {{plan}}",
       "line": "{{model}} verbruikt gratis credits snel. Met {{plan}} houd je het, plus alles hieronder."
@@ -4794,6 +4800,7 @@
     "paidWaitingTitle": "Rond het af in je browser",
     "planLine": "{{plan}}-abonnement · altijd opzegbaar",
     "planTitle": "Alles wat je krijgt met {{plan}}",
+    "planModelTitle": "Voer het opnieuw uit op {{model}} met {{plan}}",
     "startAt": "Vanaf",
     "waitingBody": "Je bericht wordt verstuurd zodra je abonnement actief is.",
     "waitingBodyNoMessage": "Dit sluit zodra je abonnement actief is.",
