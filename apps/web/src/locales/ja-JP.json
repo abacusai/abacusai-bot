@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "コンピューターがオフでも動く「{{name}}」という名前のスケジュールタスクを設定してください。内容：{{prompt}}",
     "routinePromptNameOnly": "AbacusAI Botのルーティン「{{name}}」のように、24時間動くスケジュールタスクを設定してください。何をいつ実行するか私に聞いてください。"
   },
+  "planAsk": {
+    "title": "{{plan}}で続けましょう",
+    "line": "毎月新しいクレジットに加えて、以下のすべてが使えます。"
+  },
   "coderPitch": {
     "router": "RouteLLM Code: コード専用のルーターが、ステップごとに最適なコーディングモデルを選択",
     "codingAgent": "コーディングエージェントと CLI",

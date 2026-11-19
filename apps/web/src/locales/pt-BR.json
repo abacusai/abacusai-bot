@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Crie uma tarefa agendada chamada “{{name}}” que rode mesmo com meu computador desligado. O que ela faz: {{prompt}}",
     "routinePromptNameOnly": "Crie uma tarefa agendada que rode 24/7, como minha rotina “{{name}}” do AbacusAI Bot. Pergunte o que ela deve fazer e quando."
   },
+  "planAsk": {
+    "title": "Continue com o {{plan}}",
+    "line": "Créditos novos todo mês, e tudo o que está abaixo."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: nosso roteador feito para código, que escolhe o melhor modelo de código a cada passo",
     "codingAgent": "O agente de código e a CLI",

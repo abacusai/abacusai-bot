@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Crea un'attività pianificata chiamata “{{name}}” che funzioni anche a computer spento. Cosa fa: {{prompt}}",
     "routinePromptNameOnly": "Crea un'attività pianificata attiva 24/7, come la mia routine “{{name}}” di AbacusAI Bot. Chiedimi cosa deve fare e quando."
   },
+  "planAsk": {
+    "title": "Continua con {{plan}}",
+    "line": "Nuovi crediti ogni mese, più tutto quello qui sotto."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: il nostro router pensato per il codice, che sceglie il miglior modello di coding a ogni passo",
     "codingAgent": "L’agente di coding e la CLI",

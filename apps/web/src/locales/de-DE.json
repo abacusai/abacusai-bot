@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Richte eine geplante Aufgabe namens „{{name}}“ ein, die auch bei ausgeschaltetem Computer läuft. Was sie tut: {{prompt}}",
     "routinePromptNameOnly": "Richte eine geplante Aufgabe ein, die rund um die Uhr läuft, wie meine AbacusAI-Bot-Routine „{{name}}“. Frag mich, was sie tun soll und wann."
   },
+  "planAsk": {
+    "title": "Mit {{plan}} weitermachen",
+    "line": "Jeden Monat neue Credits und alles hier unten."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: unser Router für Code, der für jeden Schritt das beste Coding-Modell wählt",
     "codingAgent": "Der Coding-Agent und die CLI",

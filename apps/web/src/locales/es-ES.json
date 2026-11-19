@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Crea una tarea programada llamada “{{name}}” que funcione aunque mi ordenador esté apagado. Qué hace: {{prompt}}",
     "routinePromptNameOnly": "Crea una tarea programada que funcione 24/7, como mi rutina “{{name}}” de AbacusAI Bot. Pregúntame qué debe hacer y cuándo."
   },
+  "planAsk": {
+    "title": "Sigue adelante con {{plan}}",
+    "line": "Créditos nuevos cada mes, y todo lo de abajo."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: nuestro router hecho para código, que elige el mejor modelo de código en cada paso",
     "codingAgent": "El agente de código y la CLI",

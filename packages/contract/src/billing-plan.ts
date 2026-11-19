@@ -45,6 +45,8 @@ export const UPGRADE_SRCS = [
   "model_picker",
   "retry_offer",
   "top_model_card",
+  // The card under a reply where the user asked about plans (success-pitch.ts plan_ask).
+  "plan_ask",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];

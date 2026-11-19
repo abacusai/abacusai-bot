@@ -910,6 +910,29 @@ const successKeepRoutine = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(2) }),
   ]);
 
+/** A free user near the end of the grant asks for something free; the agent reads the plan with its links. */
+const planAskFree = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "My credits are almost gone. Is there a free way to keep working on this?",
+      at(3)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "agent-tools_billing_plan", "a1", { upgrade: true }),
+    b.toolResult("c1", {
+      text: "The user's plan: Free.\nTheir free credits: 36 of 2,000 left.",
+    }),
+    b.textDelta(
+      "a1",
+      "You have 36 of your 2,000 free credits left. They are a one-time grant, so they don't come back on their own. Basic gives you fresh credits every month and everything listed below, and your project keeps going right where it is."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
 /** A result, then the user's thanks and the bot's answer, in their language. */
 const successThanks =
   (words: { ask: string; done: string; thanks: string; welcome: string }) =>
@@ -1705,6 +1728,15 @@ export const SCENARIOS: Scenario[] = [
         lead: "agents",
         name: "btc-bot",
       },
+    },
+  },
+  {
+    id: "plan-ask-free",
+    canvas: ["PlanAskCard", "free plan, credits nearly gone"],
+    skin: "session",
+    events: planAskFree,
+    view: {
+      successPitch: { trigger: "plan_ask", moment: "plan_ask", lead: null },
     },
   },
   {

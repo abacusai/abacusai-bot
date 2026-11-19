@@ -5835,6 +5835,10 @@
     "routinePromptOnce": "Utwórz zaplanowane zadanie o nazwie „{{name}}”, które działa nawet przy wyłączonym komputerze. Co robi: {{prompt}}",
     "routinePromptNameOnly": "Utwórz zaplanowane zadanie działające 24/7, jak moja rutyna „{{name}}” w AbacusAI Bot. Zapytaj mnie, co ma robić i kiedy."
   },
+  "planAsk": {
+    "title": "Działaj dalej z planem {{plan}}",
+    "line": "Nowe kredyty co miesiąc i wszystko poniżej."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: nasz router stworzony do kodu, który na każdym kroku wybiera najlepszy model do kodowania",
     "codingAgent": "Agent do kodowania i CLI",

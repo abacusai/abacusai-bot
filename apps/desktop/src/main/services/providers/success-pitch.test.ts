@@ -715,6 +715,86 @@ describe("SuccessPitchWatch: keep it running", () => {
   });
 });
 
+/**
+ * Asked for free alternatives with the free credits nearly gone, the model's
+ * only offer was a link in text: a turn that read the plan with its links
+ * gets the plan's card, at any point of the free grant.
+ */
+describe("SuccessPitchWatch: a plan ask", () => {
+  const planRead = (upgrade: boolean) =>
+    tool("agent-tools_billing_plan", { upgrade }, "The user's plan: Free.");
+  const NEARLY_OUT = { ...FREE, credits_used: 1964 } as AbacusAccountInfo;
+  const ANSWER =
+    "You have 36 of your 2,000 free credits left. Basic gives you fresh credits every month.";
+
+  it("offers the plan's card after billing_plan with upgrade: true, past half the grant and under it", async () => {
+    for (const account of [NEARLY_OUT, FREE]) {
+      const t = setup({ account });
+      await t.run("Is there a free way to keep going?", [
+        planRead(true),
+        text(ANSWER),
+      ]);
+      expect(t.offer()).toMatchObject({
+        trigger: "plan_ask",
+        moment: "plan_ask",
+        lead: null,
+        sessionId: "s1",
+      });
+    }
+  });
+
+  it("comes ahead of the result's own offer in the same turn", async () => {
+    const t = setup();
+    await t.run("Build it, and what does Basic cost?", [
+      presentSite,
+      planRead(true),
+      text(LONG_REPLY),
+    ]);
+    expect(t.offer()?.trigger).toBe("plan_ask");
+  });
+
+  it("never without upgrade: true, on a paid or unread plan, in a chat app, or beside another card", async () => {
+    const plain = setup({ account: NEARLY_OUT });
+    await plain.run("How many credits do I have?", [
+      planRead(false),
+      text(ANSWER),
+    ]);
+    expect(plain.offer()).toBeNull();
+
+    for (const account of [
+      { ...NEARLY_OUT, subscription_tier: "basic" } as AbacusAccountInfo,
+      null,
+    ]) {
+      const t = setup({ account });
+      await t.run("Anything cheaper?", [planRead(true), text(ANSWER)]);
+      expect(t.offer()).toBeNull();
+    }
+
+    const chat = setup({ account: NEARLY_OUT });
+    await chat.run("Anything free?", [planRead(true), text(ANSWER)], CHAT);
+    expect(chat.offer()).toBeNull();
+
+    const withCard = setup({ account: NEARLY_OUT });
+    await withCard.run("Make me a video, for free", [
+      tool("agent-tools_paid_feature", { feature: "video_generation" }),
+      planRead(true),
+      text(ANSWER),
+    ]);
+    expect(withCard.offer()).toBeNull();
+  });
+
+  it("is held to the pitch's caps, and past half the grant a result alone still offers nothing", async () => {
+    const capped = setup({ account: NEARLY_OUT });
+    capped.setCard(card(1, 100 * SUCCESS_PITCH_GAP_MS - 1000));
+    await capped.run("Anything free?", [planRead(true), text(ANSWER)]);
+    expect(capped.offer()).toBeNull();
+
+    const result = setup({ account: NEARLY_OUT });
+    await result.run("Build it", [presentSite, text(LONG_REPLY)]);
+    expect(result.offer()).toBeNull();
+  });
+});
+
 describe("SuccessPitchWatch: chat apps", () => {
   const praised = async (t: ReturnType<typeof setup>) => {
     await t.run(

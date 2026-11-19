@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Bilgisayarım kapalıyken de çalışan, “{{name}}” adlı zamanlanmış bir görev kur. Ne yapacağı: {{prompt}}",
     "routinePromptNameOnly": "AbacusAI Bot'taki “{{name}}” rutinim gibi 7/24 çalışan zamanlanmış bir görev kur. Ne yapması ve ne zaman çalışması gerektiğini bana sor."
   },
+  "planAsk": {
+    "title": "{{plan}} ile devam et",
+    "line": "Her ay yeni krediler ve aşağıdaki her şey."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: kod için yapılmış yönlendiricimiz, her adımda en iyi kodlama modelini seçer",
     "codingAgent": "Kodlama ajanı ve CLI",
