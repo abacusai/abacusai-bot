@@ -9,6 +9,9 @@ import {
   checkDraft,
   contentWords,
   looksSecret,
+  MAX_CARD_CHARS,
+  MAX_JOURNAL_CHARS,
+  MAX_NOTE_CHARS,
   overlap,
   relatedNotes,
 } from "./gate.js";
@@ -311,6 +314,7 @@ export function buildMemoryTool(
       '"note" a dated journal line when a piece of work is finished and worth finding later (text; one per task, never per message),',
       '"open" a project when this chat turns out to be about one (project: its name, or a new name for ongoing work the user returns to).',
       "",
+      `Sizes: a note holds ${MAX_NOTE_CHARS} characters, the project card ${MAX_CARD_CHARS}, a journal line ${MAX_JOURNAL_CHARS}.`,
       `Types: ${NOTE_TYPES.join(", ")}. "status" needs "expires" (YYYY-MM-DD, 14 days at most).`,
       'about: "you" (who the user is, their rules and preferences) or "project" (this project). Leave it out to let the app choose.',
       `The project card is the note "${CARD_NAME}": update it when the goal, status or a decision changes.`,
@@ -466,9 +470,9 @@ export function buildMemoryTool(
         const text = redactIdNumbers(string(params.text).trim());
         if (text.length === 0)
           return reply("Nothing to note: text is empty.", true);
-        if (text.length > 500)
+        if (text.length > MAX_JOURNAL_CHARS)
           return reply(
-            "A journal line holds 500 characters; say it shorter.",
+            `A journal line holds ${MAX_JOURNAL_CHARS} characters; say it shorter.`,
             true
           );
         const own = await currentProject();
