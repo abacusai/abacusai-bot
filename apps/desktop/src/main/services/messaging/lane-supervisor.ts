@@ -53,6 +53,11 @@ export type LaneSupervisorDeps = {
     state: "waiting" | "stopped-needs-user" | "running",
     reason: "retrying" | "needs-user" | "gave-up" | "ok"
   ) => void;
+  /**
+   * This computer has no internet: a restart could only fail the same way,
+   * so the lane waits (the internet coming back is a hint).
+   */
+  internetDown?: () => boolean;
   /** Network, wake and focus events; returns the stop. Watched only while a lane is down. */
   watchHints: (hint: (reason: string) => void) => () => void;
   /** What the pane shows changed. */
@@ -145,6 +150,12 @@ export class LaneSupervisor {
           () => {
             lane.watchdog = null;
             if (lane.state !== "connecting" || !this.deps.shouldRun(id)) return;
+            // Connecting for want of the internet is no stuck boot.
+            if (this.deps.internetDown?.() === true) {
+              lane.stateSince = this.deps.now();
+              this.noteState(id, "connecting");
+              return;
+            }
             this.deps.log(
               `${id}: still connecting after 10 min, restarting it`
             );
@@ -314,7 +325,11 @@ export class LaneSupervisor {
       this.arm(id, lane, DISK_CHECK_MS);
       return;
     }
-    if (now - lane.downSince! >= LANE_GIVE_UP_MS) {
+    // Offline for a day is still the internet's: it waits, never gives up.
+    if (
+      now - lane.downSince! >= LANE_GIVE_UP_MS &&
+      this.deps.internetDown?.() !== true
+    ) {
       this.deps.log(`${id}: down for a day, waiting for the user`);
       this.clear(lane, "retryTimer");
       lane.nextTryAt = null;
@@ -353,6 +368,12 @@ export class LaneSupervisor {
     lane.nextTryAt = null;
     if (!this.deps.shouldRun(id)) {
       this.forget(id);
+      return;
+    }
+    // No internet: not a try, and not counted; the internet coming back
+    // hints it sooner.
+    if (this.deps.internetDown?.() === true) {
+      this.schedule(id, lane);
       return;
     }
     lane.trying = true;

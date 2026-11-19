@@ -2,13 +2,23 @@
  * The one owner of "can this machine reach Abacus": the OS's own answer where
  * there is one (Electron's `net.isOnline`), sleep and wake, and a light probe
  * of the Abacus API, run only when something suggests the answer changed.
- * Agents, the routine scheduler and anything else read it from here, and
- * deadlines that must not count the machine's sleep are timed by it.
+ * When Abacus does not answer, one neutral public URL tells whose fault it is.
+ * Agents, the routine scheduler, the window's banner and anything else read
+ * it from here, and deadlines that must not count the machine's sleep are
+ * timed by it.
  */
+import type { ConnectivitySnapshot } from "@abacus-ai/contract/status";
+
 import { abacusRoutellmV1, abacusUserAgent } from "../providers/abacus-host";
 
-/** `degraded`: the OS has a network, but the Abacus API does not answer. */
+/**
+ * `offline`: no internet (the OS says so, or the public probe fails too).
+ * `degraded`: the internet works, but the Abacus API does not answer.
+ * Whoever only asks "can we work" treats both as not online.
+ */
 export type ConnectivityState = "online" | "offline" | "degraded";
+
+export type { ConnectivitySnapshot };
 
 export interface ConnectivityChange {
   state: ConnectivityState;
@@ -19,6 +29,10 @@ export interface ConnectivityChange {
 export interface ConnectivityOptions {
   /** Whether the Abacus API answers at all. */
   probe?: () => Promise<boolean>;
+  /** Whether the internet answers at all; asked only when Abacus does not. */
+  publicProbe?: () => Promise<boolean>;
+  /** The snapshot changed (state or next check); for the window. */
+  changed?: (snapshot: ConnectivitySnapshot) => void;
   now?: () => number;
   /** The main log; suspend and resume each get a line. */
   log?: (line: string) => void;
@@ -36,6 +50,26 @@ const PROBE_BACKOFF_MS = [5_000, 10_000, 20_000, 40_000, 60_000];
 /** A fresh-enough answer for a caller about to start network work. */
 const PROBE_FRESH_MS = 60_000;
 const PROBE_TIMEOUT_MS = 5_000;
+
+/**
+ * A well-known endpoint built for exactly this check: an empty 204, no
+ * cookies, nothing about the user sent.
+ */
+const PUBLIC_PROBE_URL = "https://www.gstatic.com/generate_204";
+
+/** Any HTTP answer counts: the question is whether the internet works. */
+export const probePublic = async (): Promise<boolean> => {
+  try {
+    await fetch(PUBLIC_PROBE_URL, {
+      method: "HEAD",
+      credentials: "omit",
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 /** Any HTTP answer counts: the question is the network, not the account. */
 export const probeAbacus = async (): Promise<boolean> => {
@@ -64,6 +98,10 @@ export class ConnectivityService {
   private osOnline: (() => boolean) | null = null;
   private osTimer: ReturnType<typeof setInterval> | null = null;
   private probeTimer: ReturnType<typeof setTimeout> | null = null;
+  private nextCheckAt: number | null = null;
+  private since: number | null = null;
+  /** The OS itself said offline: its "back" is worth a probe at once. */
+  private osSaidOffline = false;
   private probeFailures = 0;
   private probing: Promise<void> | null = null;
   private lastProbeAt = 0;
@@ -73,10 +111,14 @@ export class ConnectivityService {
   private sleeps: Array<{ from: number; to: number }> = [];
   private readonly awakeTimers = new Set<AwakeTimer>();
   private readonly probe: () => Promise<boolean>;
+  private readonly publicProbe: () => Promise<boolean>;
+  private readonly changed: (snapshot: ConnectivitySnapshot) => void;
   private readonly now: () => number;
 
   constructor(options: ConnectivityOptions = {}) {
     this.probe = options.probe ?? probeAbacus;
+    this.publicProbe = options.publicProbe ?? probePublic;
+    this.changed = options.changed ?? (() => {});
     this.now = options.now ?? (() => Date.now());
     this.log = options.log ?? ((line) => console.log(line));
   }
@@ -107,6 +149,14 @@ export class ConnectivityService {
     return this.current === "online";
   }
 
+  snapshot(): ConnectivitySnapshot {
+    return {
+      state: this.current,
+      since: this.since,
+      nextCheckAt: this.nextCheckAt,
+    };
+  }
+
   onChange(listener: (change: ConnectivityChange) => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -131,6 +181,7 @@ export class ConnectivityService {
     if (this.probeTimer != null) clearTimeout(this.probeTimer);
     this.osTimer = null;
     this.probeTimer = null;
+    this.nextCheckAt = null;
   }
 
   /**
@@ -222,12 +273,19 @@ export class ConnectivityService {
     }
     this.probing = (async () => {
       if (this.osOnline != null && !this.osOnline()) {
+        this.osSaidOffline = true;
         this.set("offline", options.resumed === true);
         return;
       }
+      this.osSaidOffline = false;
       const reachable = await this.probe();
+      // Abacus is silent: the internet as a whole says whose fault it is.
+      const internet = reachable || (await this.publicProbe());
       this.lastProbeAt = this.now();
-      this.set(reachable ? "online" : "degraded", options.resumed === true);
+      this.set(
+        reachable ? "online" : internet ? "degraded" : "offline",
+        options.resumed === true
+      );
     })();
     try {
       await this.probing;
@@ -239,15 +297,30 @@ export class ConnectivityService {
   private readOs(): void {
     if (this.asleep || this.osOnline == null) return;
     const up = this.osOnline();
-    if (!up && this.current !== "offline") this.set("offline", false);
-    // The OS says a network is back: whether Abacus answers is the probe's call.
-    else if (up && this.current === "offline") void this.check();
+    if (!up && !this.osSaidOffline) {
+      this.osSaidOffline = true;
+      if (this.current !== "offline") this.set("offline", false);
+    }
+    // The OS says a network is back: whether Abacus answers is the probe's
+    // call. An offline the probes found waits for their own backoff.
+    else if (up && this.osSaidOffline) {
+      this.osSaidOffline = false;
+      void this.check();
+    }
   }
 
   private set(next: ConnectivityState, resumed: boolean): void {
     const changed = next !== this.current;
+    if (changed)
+      this.since =
+        next === "online"
+          ? null
+          : this.current === "online"
+            ? this.now()
+            : this.since;
     this.current = next;
     this.scheduleProbe(changed);
+    this.changed(this.snapshot());
     if (changed || resumed) this.publish(next, resumed);
   }
 
@@ -255,6 +328,7 @@ export class ConnectivityService {
   private scheduleProbe(changed: boolean): void {
     if (this.probeTimer != null) clearTimeout(this.probeTimer);
     this.probeTimer = null;
+    this.nextCheckAt = null;
     if (this.current === "online") {
       this.probeFailures = 0;
       return;
@@ -265,8 +339,10 @@ export class ConnectivityService {
         Math.min(this.probeFailures, PROBE_BACKOFF_MS.length - 1)
       ]!;
     this.probeFailures += 1;
+    this.nextCheckAt = this.now() + delay;
     this.probeTimer = setTimeout(() => {
       this.probeTimer = null;
+      this.nextCheckAt = null;
       if (!this.asleep) void this.check();
     }, delay);
     this.probeTimer.unref?.();

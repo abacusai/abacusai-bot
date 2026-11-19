@@ -17,6 +17,7 @@ import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
 import {
   contextTokensOf,
   creditsOf,
+  networkWaitOf,
   freeLaneOf,
 } from "@abacus-ai/contract/contract/ai-thread";
 import {
@@ -1365,6 +1366,7 @@ export class ThreadRelay {
     const endedAt =
       typeof event.timestamp === "number" ? event.timestamp : Date.now();
     const contextTokens = contextTokensOf(event.metadata);
+    const waits = networkWaitOf(event.metadata);
     const base = {
       runId: active.runId,
       startedAt: active.startedAt,
@@ -1372,6 +1374,7 @@ export class ThreadRelay {
       steps: active.steps,
       afterMessageId: messages.at(-1)?.id ?? null,
       ...(contextTokens != null && { contextTokens }),
+      ...waits,
     };
 
     if (event.type === "RUN_ERROR") {

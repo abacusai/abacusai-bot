@@ -3160,7 +3160,10 @@
         "browser": "Bezig in de browser",
         "subtask": "Bezig met een subtaak"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Wachten op je internet",
+      "waitingForAbacus": "Wachten op AbacusAI",
+      "messageSafe": "Je bericht is veilig. De bot gaat vanzelf verder zodra de verbinding terug is."
     },
     "code": {
       "copied": "Gekopieerd",
@@ -3233,7 +3236,8 @@
       "includedIn": "Inbegrepen bij {{plan}}",
       "includedInPaid": "Inbegrepen bij betaalde abonnementen",
       "commands": "Opdrachten",
-      "commandFailed": "Dat is niet gelukt. Probeer het opnieuw."
+      "commandFailed": "Dat is niet gelukt. Probeer het opnieuw.",
+      "offline": "Typ nu. Het wordt verzonden zodra je weer online bent"
     },
     "day": {
       "today": "Vandaag",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} credits",
       "creditsLeft_one": "{{credits}} credit · nog {{left}} over",
       "creditsLeft_other": "{{credits}} credits · nog {{left}} over",
-      "creditsAction": "{{credits}}. Bekijk je abonnement en credits"
+      "creditsAction": "{{credits}}. Bekijk je abonnement en credits",
+      "waitedInternet": "{{duration}} daarvan was wachten op je internet",
+      "waitedAbacus": "{{duration}} daarvan was wachten op AbacusAI"
     },
     "subagent": {
       "done_one": "Klaar, {{count}} stap, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Je bent offline.",
+      "offlineBody": "Je internetverbinding is weggevallen, niet de app. Alles gaat vanzelf weer verder zodra je internet terug is.",
+      "abacusTitle": "AbacusAI reageert nu niet.",
+      "abacusBody": "Je internet werkt; wij zijn ermee bezig.",
+      "checkingIn": "Opnieuw controleren over {{seconds}}s",
+      "backTitle": "Weer online.",
+      "backSending_one": "Je wachtende bericht wordt nu verzonden.",
+      "backSending_other": "Je {{count}} wachtende berichten worden nu verzonden."
+    },
+    "lanePaused": "gepauzeerd · offline",
+    "laneOfflineNote": "Gepauzeerd terwijl deze computer offline is. De koppeling is in orde; alles gaat vanzelf verder zodra je internet terug is.",
+    "queued": {
+      "title": "Wordt verzonden zodra je weer online bent",
+      "line": "\"{{text}}\" naar {{to}} op {{app}}. Het wordt vanzelf één keer verstuurd zodra je internet terug is.",
+      "cancel": "Dit bericht annuleren",
+      "unsureTitle": "Misschien niet aangekomen",
+      "unsureLine": "\"{{text}}\" naar {{to}} op {{app}}. Je internet viel weg tijdens het verzenden, dus controleer de chat voordat je het opnieuw stuurt.",
+      "dismiss": "Sluiten"
     }
   }
 }

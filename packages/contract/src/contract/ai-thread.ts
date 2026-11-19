@@ -45,6 +45,10 @@ export interface RunOutcomeRecord {
   credits?: number;
   /** Tokens the run's last request sent: how long the chat was by then. */
   contextTokens?: number;
+  /** Time the run spent waiting for the user's internet; absent when none. */
+  networkWaitMs?: number;
+  /** Time it waited while the internet worked and AbacusAI did not answer. */
+  abacusWaitMs?: number;
   error?: AgentErrorPayload & { code?: string };
   /** The last transcript message at the terminal; null for an empty thread. */
   afterMessageId: string | null;
@@ -84,6 +88,36 @@ export const creditsOf = (metadata: unknown): number | undefined => {
   return typeof credits === "number" && Number.isFinite(credits) && credits >= 0
     ? credits
     : undefined;
+};
+
+/**
+ * How long a finished run waited, read off its terminal's
+ * `metadata.abacus.turnUsage`: for the user's internet (`networkWaitMs`) and
+ * for AbacusAI while the internet worked (`abacusWaitMs`); absent when none.
+ */
+export const networkWaitOf = (
+  metadata: unknown
+): Pick<RunOutcomeRecord, "networkWaitMs" | "abacusWaitMs"> => {
+  const usage = (
+    metadata as
+      | {
+          abacus?: {
+            turnUsage?: { networkWaitMs?: unknown; abacusWaitMs?: unknown };
+          };
+        }
+      | null
+      | undefined
+  )?.abacus?.turnUsage;
+  const ms = (value: unknown): number | undefined =>
+    typeof value === "number" && Number.isFinite(value) && value > 0
+      ? value
+      : undefined;
+  const networkWaitMs = ms(usage?.networkWaitMs);
+  const abacusWaitMs = ms(usage?.abacusWaitMs);
+  return {
+    ...(networkWaitMs != null ? { networkWaitMs } : {}),
+    ...(abacusWaitMs != null ? { abacusWaitMs } : {}),
+  };
 };
 
 /** The run in flight at the checkpoint. */

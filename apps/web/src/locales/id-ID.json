@@ -3160,7 +3160,10 @@
         "browser": "Bekerja di browser",
         "subtask": "Mengerjakan subtugas"
       },
-      "longTool": "{{activity}} · {{minutes}} mnt"
+      "longTool": "{{activity}} · {{minutes}} mnt",
+      "waitingForInternet": "Menunggu internet Anda",
+      "waitingForAbacus": "Menunggu AbacusAI",
+      "messageSafe": "Pesan Anda aman. Bot akan lanjut sendiri saat koneksi kembali."
     },
     "code": {
       "copied": "Copied",
@@ -3233,7 +3236,8 @@
       "includedIn": "Termasuk dalam {{plan}}",
       "includedInPaid": "Termasuk dalam paket berbayar",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Ketik sekarang. Akan terkirim begitu Anda online lagi"
     },
     "day": {
       "today": "Today",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} kredit",
       "creditsLeft_one": "{{credits}} kredit · sisa {{left}}",
       "creditsLeft_other": "{{credits}} kredit · sisa {{left}}",
-      "creditsAction": "{{credits}}. Lihat paket dan kredit Anda"
+      "creditsAction": "{{credits}}. Lihat paket dan kredit Anda",
+      "waitedInternet": "{{duration}} di antaranya menunggu internet Anda",
+      "waitedAbacus": "{{duration}} di antaranya menunggu AbacusAI"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Anda sedang offline.",
+      "offlineBody": "Koneksi internet Anda terputus, bukan aplikasinya. Semuanya lanjut sendiri saat internet kembali.",
+      "abacusTitle": "AbacusAI belum merespons sekarang.",
+      "abacusBody": "Internet Anda aman; kami sedang menanganinya.",
+      "checkingIn": "Cek lagi dalam {{seconds}} dtk",
+      "backTitle": "Online lagi.",
+      "backSending_one": "Mengirim pesan Anda yang menunggu sekarang.",
+      "backSending_other": "Mengirim {{count}} pesan Anda yang menunggu sekarang."
+    },
+    "lanePaused": "dijeda · offline",
+    "laneOfflineNote": "Dijeda karena komputer ini sedang offline. Tautannya aman; akan lanjut sendiri saat internet kembali.",
+    "queued": {
+      "title": "Terkirim saat Anda online lagi",
+      "line": "\"{{text}}\" ke {{to}} di {{app}}. Akan terkirim sendiri begitu internet Anda kembali, hanya sekali.",
+      "cancel": "Batalkan pesan ini",
+      "unsureTitle": "Mungkin belum terkirim",
+      "unsureLine": "\"{{text}}\" ke {{to}} di {{app}}. Internet Anda terputus saat pesan dikirim, jadi cek chat sebelum mengirimnya lagi.",
+      "dismiss": "Tutup"
     }
   }
 }

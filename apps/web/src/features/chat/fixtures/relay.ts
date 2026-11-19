@@ -9,6 +9,7 @@ import type {
 import {
   contextTokensOf,
   creditsOf,
+  networkWaitOf,
   freeLaneOf,
   type AiNotice,
   type RunOutcomeRecord,
@@ -368,6 +369,7 @@ const fold = (
       const messages = processor.getMessages();
       const value = record(event);
       const contextTokens = contextTokensOf(value.metadata);
+      const waits = networkWaitOf(value.metadata);
       const base = {
         runId: run.runId,
         startedAt: run.startedAt,
@@ -375,6 +377,7 @@ const fold = (
         steps: run.steps,
         afterMessageId: messages.at(-1)?.id ?? null,
         ...(contextTokens != null ? { contextTokens } : {}),
+        ...waits,
       };
       if (event.type === "RUN_ERROR") {
         const error = record(record(record(value.metadata).abacus).error);

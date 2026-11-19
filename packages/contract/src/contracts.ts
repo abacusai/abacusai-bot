@@ -716,6 +716,8 @@ export type IpcEvent =
   | ({ type: "messaging-updated" } & IpcEventBase)
   /** The status board changed (status-board.ts): `status.list` reads it. */
   | ({ type: "status-updated" } & IpcEventBase)
+  /** The connectivity owner's snapshot changed: `status.connectivity`. */
+  | ({ type: "connectivity-updated" } & IpcEventBase)
   | ({ type: "bots-updated" } & IpcEventBase)
   | ({ type: "channels-updated"; channelId: string | null } & IpcEventBase)
   | ({ type: "cronjobs-updated" } & IpcEventBase)

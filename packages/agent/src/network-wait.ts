@@ -228,11 +228,48 @@ export class NetworkWait {
   private startedAt: number | null = null;
   private attempts = 0;
   private cancelWait: (() => void) | null = null;
+  /**
+   * Time this turn spent in outages, from the first failed call to the call
+   * that answered (failed calls included), by whose it was.
+   */
+  private turnWaitedMs = 0;
+  private turnAbacusWaitedMs = 0;
+  /** The current outage is AbacusAI's, the internet working. */
+  private outageAbacus = false;
 
   constructor(private readonly now: () => number = Date.now) {}
 
-  /** A new turn, or a call that answered: the next outage starts afresh. */
+  /** A new turn: nothing waited yet. */
+  beginTurn(): void {
+    this.startedAt = null;
+    this.attempts = 0;
+    this.turnWaitedMs = 0;
+    this.turnAbacusWaitedMs = 0;
+  }
+
+  /** The outage still open, as of now. */
+  private openOutageMs(): number {
+    return this.startedAt == null
+      ? 0
+      : Math.max(0, this.now() - this.startedAt);
+  }
+
+  /** How long this turn has waited for the user's internet so far. */
+  get waitedMs(): number {
+    return this.turnWaitedMs + (this.outageAbacus ? 0 : this.openOutageMs());
+  }
+
+  /** How long it waited while the internet worked and Abacus did not answer. */
+  get abacusWaitedMs(): number {
+    return (
+      this.turnAbacusWaitedMs + (this.outageAbacus ? this.openOutageMs() : 0)
+    );
+  }
+
+  /** A call that answered: the outage is over, and the next starts afresh. */
   reset(): void {
+    if (this.outageAbacus) this.turnAbacusWaitedMs += this.openOutageMs();
+    else this.turnWaitedMs += this.openOutageMs();
     this.startedAt = null;
     this.attempts = 0;
   }
@@ -247,7 +284,10 @@ export class NetworkWait {
   ): Promise<NetworkWaitOutcome> {
     if (hostIsGone()) return Promise.resolve("cancelled");
     const now = this.now();
-    this.startedAt ??= now;
+    if (this.startedAt == null) {
+      this.startedAt = now;
+      this.outageAbacus = hostConnectivity() === "degraded";
+    }
     const left = this.startedAt + budgetMs - now;
     if (left <= 0) return Promise.resolve("gave-up");
 

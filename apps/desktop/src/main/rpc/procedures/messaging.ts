@@ -30,6 +30,9 @@ export const messagingRouter = impl.messaging.router({
   retryNow: impl.messaging.retryNow.handler(({ input, context }) =>
     context.deps.serviceHost.retryMessagingLane(input.platformId)
   ),
+  cancelQueued: impl.messaging.cancelQueued.handler(({ input, context }) =>
+    context.deps.serviceHost.cancelQueuedChatSend(input.id)
+  ),
   pageOpened: impl.messaging.pageOpened.handler(({ context }) => {
     context.deps.serviceHost.messagingPageOpened();
   }),

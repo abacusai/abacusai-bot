@@ -3160,7 +3160,10 @@
         "browser": "ブラウザで作業中",
         "subtask": "サブタスクを処理中"
       },
-      "longTool": "{{activity}} · {{minutes}}分"
+      "longTool": "{{activity}} · {{minutes}}分",
+      "waitingForInternet": "インターネット接続を待っています",
+      "waitingForAbacus": "AbacusAI を待っています",
+      "messageSafe": "メッセージは保存されています。接続が戻ると、ボットが自動で続行します。"
     },
     "code": {
       "copied": "Copied",
@@ -3233,7 +3236,8 @@
       "includedIn": "{{plan}} に含まれます",
       "includedInPaid": "有料プランに含まれます",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "今入力できます。オンラインに戻るとすぐ送信されます"
     },
     "day": {
       "today": "Today",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} クレジット",
       "creditsLeft_one": "{{credits}} クレジット · 残り {{left}}",
       "creditsLeft_other": "{{credits}} クレジット · 残り {{left}}",
-      "creditsAction": "{{credits}}。プランとクレジットを見る"
+      "creditsAction": "{{credits}}。プランとクレジットを見る",
+      "waitedInternet": "そのうち{{duration}}はインターネット接続待ちでした",
+      "waitedAbacus": "そのうち{{duration}}はAbacusAI待ちでした"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "オフラインです。",
+      "offlineBody": "アプリではなく、インターネット接続が切れています。接続が戻ると、自動で再開します。",
+      "abacusTitle": "AbacusAI が今応答していません。",
+      "abacusBody": "インターネット接続は正常です。こちらで対応中です。",
+      "checkingIn": "{{seconds}}秒後に再確認します",
+      "backTitle": "オンラインに戻りました。",
+      "backSending_one": "待機中のメッセージを今送信しています。",
+      "backSending_other": "待機中の{{count}}件のメッセージを今送信しています。"
+    },
+    "lanePaused": "一時停止中・オフライン",
+    "laneOfflineNote": "このパソコンがオフラインのため一時停止しています。リンクは問題ありません。インターネットが戻ると自動で再開します。",
+    "queued": {
+      "title": "オンラインに戻ると送信されます",
+      "line": "「{{text}}」を{{app}}の{{to}}へ。インターネットが戻り次第、自動で1回だけ送信されます。",
+      "cancel": "このメッセージをキャンセル",
+      "unsureTitle": "送信できていない可能性があります",
+      "unsureLine": "「{{text}}」を{{app}}の{{to}}へ。送信中にインターネット接続が切れたため、再送信する前にチャットを確認してください。",
+      "dismiss": "閉じる"
     }
   }
 }

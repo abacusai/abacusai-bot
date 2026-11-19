@@ -432,3 +432,116 @@ describe("a page whose storage finds the disk full", () => {
     await connector.stop();
   });
 });
+
+describe("a linked WhatsApp while this computer is offline", () => {
+  const QR = { loggedIn: false, loginVisible: true };
+  const CHATS = { loggedIn: true };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const offlineConnector = (
+    pages: Array<{ loggedIn: boolean; loginVisible?: boolean }>,
+    internet: { down: boolean }
+  ) => {
+    const states: string[] = [];
+    const connector = new WhatsAppWebConnector({
+      onMessage: () => {},
+      onState: (state: string) => states.push(state),
+      onLog: () => {},
+      internetDown: () => internet.down,
+    } as never);
+    const queue = [...pages];
+    const internals = connector as unknown as {
+      running: boolean;
+      signedInRecord: boolean | null;
+      run: (script: string, args: unknown) => Promise<unknown>;
+      checkLogin: () => Promise<void>;
+      startInboundPolling: () => void;
+      refreshContacts: () => Promise<void>;
+      relinkOnce: () => Promise<string>;
+    };
+    internals.running = true;
+    internals.signedInRecord = true;
+    internals.run = async () => queue.shift() ?? QR;
+    internals.startInboundPolling = () => {};
+    internals.refreshContacts = async () => {};
+    return { connector, internals, states };
+  };
+
+  it("never asks for a QR or records the link lost, however long the login screen shows", async () => {
+    vi.stubEnv(
+      "ABACUSAI_BOT_HOME",
+      fs.mkdtempSync(path.join(os.tmpdir(), "whatsapp-offline-"))
+    );
+    savePlatformSignedIn("whatsapp", true);
+    const { connector, internals, states } = offlineConnector([], {
+      down: true,
+    });
+    for (let poll = 0; poll < 20; poll += 1) await internals.checkLogin();
+    expect(states).not.toContain("needs_login");
+    expect(readPlatformSignedIn("whatsapp")).toBe(true);
+    expect(readPlatformLinkLost("whatsapp")).toBe(false);
+    await connector.stop();
+  });
+
+  it("asks the internet fresh before calling a recorded link lost", async () => {
+    vi.stubEnv(
+      "ABACUSAI_BOT_HOME",
+      fs.mkdtempSync(path.join(os.tmpdir(), "whatsapp-offline-"))
+    );
+    savePlatformSignedIn("whatsapp", true);
+    // Nobody knows yet that the computer is offline: a page from cache shows the QR.
+    const internet = { down: false };
+    const states: string[] = [];
+    const connector = new WhatsAppWebConnector({
+      onMessage: () => {},
+      onState: (state: string) => states.push(state),
+      onLog: () => {},
+      internetDown: () => internet.down,
+      checkInternet: async () => {
+        internet.down = true;
+      },
+    } as never);
+    const internals = connector as unknown as {
+      running: boolean;
+      signedInRecord: boolean | null;
+      run: () => Promise<unknown>;
+      checkLogin: () => Promise<void>;
+    };
+    internals.running = true;
+    internals.signedInRecord = true;
+    internals.run = async () => QR;
+    for (let poll = 0; poll < 10; poll += 1) await internals.checkLogin();
+    expect(states).not.toContain("needs_login");
+    expect(readPlatformSignedIn("whatsapp")).toBe(true);
+    expect(readPlatformLinkLost("whatsapp")).toBe(false);
+    await connector.stop();
+  });
+
+  it("a connected link that meets a login screen offline is reconnected, never unlinked", async () => {
+    vi.stubEnv(
+      "ABACUSAI_BOT_HOME",
+      fs.mkdtempSync(path.join(os.tmpdir(), "whatsapp-offline-"))
+    );
+    savePlatformSignedIn("whatsapp", true);
+    const internet = { down: false };
+    const { connector, internals, states } = offlineConnector(
+      [CHATS],
+      internet
+    );
+    internals.relinkOnce = async () => "offline";
+    await internals.checkLogin();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(states).toContain("connected");
+    internet.down = true;
+    for (let poll = 0; poll < 20; poll += 1) await internals.checkLogin();
+    expect(states).not.toContain("needs_login");
+    expect(readPlatformSignedIn("whatsapp")).toBe(true);
+    expect(readPlatformLinkLost("whatsapp")).toBe(false);
+    // The same login screen with the internet back is a real logout.
+    internet.down = false;
+    await connector.stop();
+  });
+});

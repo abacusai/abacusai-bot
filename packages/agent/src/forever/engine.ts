@@ -969,7 +969,7 @@ export class ForeverEngine {
     this.router.beginTurn();
     this.pendingNetworkFailure = null;
     this.pendingBusyWait = null;
-    this.networkWait.reset();
+    this.networkWait.beginTurn();
     this.busyWait.reset();
     this.networkFailureReported = false;
     this.stallRecoveriesThisTurn = 0;
@@ -2853,12 +2853,22 @@ export class ForeverEngine {
           }
         : this.lastTurnUsage;
     this.lastTurnUsage = null;
+    const waited = this.networkWait.waitedMs;
+    const abacusWaited = this.networkWait.abacusWaitedMs;
     const hidden = this.hiddenTurn;
     const end = (outcome?: TurnOutcome): void => {
       this.emitAgentEvent({
         type: "turn_complete",
         ...(outcome != null ? { outcome } : {}),
-        ...(usage != null ? { usage } : {}),
+        ...(usage != null
+          ? {
+              usage: {
+                ...usage,
+                ...(waited > 0 ? { networkWaitMs: waited } : {}),
+                ...(abacusWaited > 0 ? { abacusWaitMs: abacusWaited } : {}),
+              },
+            }
+          : {}),
       });
       if (!hidden)
         this.emitAgentEvent({

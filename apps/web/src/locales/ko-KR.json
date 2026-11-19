@@ -3160,7 +3160,10 @@
         "browser": "브라우저에서 작업 중",
         "subtask": "하위 작업 진행 중"
       },
-      "longTool": "{{activity}} · {{minutes}}분"
+      "longTool": "{{activity}} · {{minutes}}분",
+      "waitingForInternet": "인터넷을 기다리는 중",
+      "waitingForAbacus": "AbacusAI를 기다리는 중",
+      "messageSafe": "메시지는 안전합니다. 연결이 돌아오면 봇이 자동으로 계속합니다."
     },
     "code": {
       "copied": "Copied",
@@ -3233,7 +3236,8 @@
       "includedIn": "{{plan}}에 포함",
       "includedInPaid": "유료 요금제에 포함",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "지금 입력하세요. 온라인이 되면 바로 전송됩니다"
     },
     "day": {
       "today": "Today",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} 크레딧",
       "creditsLeft_one": "{{credits}} 크레딧 · {{left}} 남음",
       "creditsLeft_other": "{{credits}} 크레딧 · {{left}} 남음",
-      "creditsAction": "{{credits}}. 플랜과 크레딧 보기"
+      "creditsAction": "{{credits}}. 플랜과 크레딧 보기",
+      "waitedInternet": "그중 {{duration}} 동안 인터넷을 기다렸습니다",
+      "waitedAbacus": "그중 {{duration}} 동안 AbacusAI를 기다렸습니다"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "오프라인 상태입니다.",
+      "offlineBody": "앱 문제가 아니라 인터넷 연결이 끊겼습니다. 인터넷이 돌아오면 자동으로 다시 이어집니다.",
+      "abacusTitle": "AbacusAI가 지금 응답하지 않습니다.",
+      "abacusBody": "인터넷은 괜찮습니다. 저희가 확인 중입니다.",
+      "checkingIn": "{{seconds}}초 후 다시 확인",
+      "backTitle": "다시 온라인입니다.",
+      "backSending_one": "대기 중인 메시지를 지금 보냅니다.",
+      "backSending_other": "대기 중인 메시지 {{count}}개를 지금 보냅니다."
+    },
+    "lanePaused": "일시 중지 · 오프라인",
+    "laneOfflineNote": "이 컴퓨터가 오프라인이라 일시 중지되었습니다. 링크는 괜찮으며, 인터넷이 돌아오면 자동으로 이어집니다.",
+    "queued": {
+      "title": "온라인이 되면 전송됩니다",
+      "line": "{{app}}의 {{to}}에게 \"{{text}}\". 인터넷이 돌아오는 즉시 한 번만 자동으로 전송됩니다.",
+      "cancel": "이 메시지 취소",
+      "unsureTitle": "전송되지 않았을 수 있습니다",
+      "unsureLine": "{{app}}의 {{to}}에게 \"{{text}}\". 보내는 중 인터넷이 끊겼으니 다시 보내기 전에 채팅을 확인해 주세요.",
+      "dismiss": "닫기"
     }
   }
 }

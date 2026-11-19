@@ -3160,7 +3160,10 @@
         "browser": "Travail dans le navigateur",
         "subtask": "Travail sur une sous-tâche"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "En attente de votre connexion internet",
+      "waitingForAbacus": "En attente de AbacusAI",
+      "messageSafe": "Votre message est en sécurité. Le bot continue tout seul quand la connexion revient."
     },
     "code": {
       "copied": "Copied",
@@ -3233,7 +3236,8 @@
       "includedIn": "Inclus dans {{plan}}",
       "includedInPaid": "Inclus dans les offres payantes",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Écrivez maintenant. Le message s’envoie dès que vous êtes de nouveau en ligne"
     },
     "day": {
       "today": "Today",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} crédits",
       "creditsLeft_one": "{{credits}} crédit · {{left}} restants",
       "creditsLeft_other": "{{credits}} crédits · {{left}} restants",
-      "creditsAction": "{{credits}}. Voir votre forfait et vos crédits"
+      "creditsAction": "{{credits}}. Voir votre forfait et vos crédits",
+      "waitedInternet": "{{duration}} d’attente de votre connexion internet",
+      "waitedAbacus": "{{duration}} d’attente de AbacusAI"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Vous êtes hors ligne.",
+      "offlineBody": "Votre connexion internet a été coupée, pas l’application. Tout reprend automatiquement dès son retour.",
+      "abacusTitle": "AbacusAI ne répond pas pour le moment.",
+      "abacusBody": "Votre connexion internet fonctionne ; nous nous en occupons.",
+      "checkingIn": "Nouvel essai dans {{seconds}} s",
+      "backTitle": "De nouveau en ligne.",
+      "backSending_one": "Envoi de votre message en attente.",
+      "backSending_other": "Envoi de vos {{count}} messages en attente."
+    },
+    "lanePaused": "en pause · hors ligne",
+    "laneOfflineNote": "En pause tant que cet ordinateur est hors ligne. Le lien fonctionne ; tout reprend automatiquement quand internet revient.",
+    "queued": {
+      "title": "S’envoie quand vous êtes de nouveau en ligne",
+      "line": "« {{text}} » à {{to}} sur {{app}}. Il part tout seul dès que votre connexion internet revient, une seule fois.",
+      "cancel": "Annuler ce message",
+      "unsureTitle": "L’envoi a peut-être échoué",
+      "unsureLine": "« {{text}} » à {{to}} sur {{app}}. Votre connexion internet a été coupée pendant l’envoi, vérifiez donc la discussion avant de le renvoyer.",
+      "dismiss": "Fermer"
     }
   }
 }

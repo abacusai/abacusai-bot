@@ -25,6 +25,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useConnectivity } from "#renderer/components/connectivity";
 import { SendError } from "#renderer/components/send-error";
 import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
@@ -1114,6 +1115,8 @@ export const ThreadComposer = () => {
     "composer"
   );
 
+  // Offline, typing still works: what is sent waits for the connection.
+  const offline = useConnectivity().state === "offline";
   if (config.readOnly != null || gone)
     return (
       <div
@@ -1128,13 +1131,15 @@ export const ThreadComposer = () => {
       </div>
     );
 
-  const placeholder = busy
-    ? skin === "bot"
-      ? t("chat.composer.busyBot")
-      : t("chat.composer.busySession")
-    : config.mode === "mini" && !expanded
-      ? t("chat.composer.mini")
-      : config.placeholder;
+  const placeholder = offline
+    ? t("chat.composer.offline")
+    : busy
+      ? skin === "bot"
+        ? t("chat.composer.busyBot")
+        : t("chat.composer.busySession")
+      : config.mode === "mini" && !expanded
+        ? t("chat.composer.mini")
+        : config.placeholder;
 
   const surfaceTransition = composerSurface(pref);
   const childFade = composerChildren(pref);

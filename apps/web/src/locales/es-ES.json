@@ -3160,7 +3160,10 @@
         "browser": "Trabajando en el navegador",
         "subtask": "Trabajando en una subtarea"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Esperando a tu internet",
+      "waitingForAbacus": "Esperando a AbacusAI",
+      "messageSafe": "Tu mensaje está a salvo. El bot continúa solo cuando vuelva la conexión."
     },
     "code": {
       "copied": "Copied",
@@ -3233,7 +3236,8 @@
       "includedIn": "Incluido en {{plan}}",
       "includedInPaid": "Incluido en los planes de pago",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Escribe ahora. Se enviará en cuanto vuelvas a estar en línea"
     },
     "day": {
       "today": "Today",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} créditos",
       "creditsLeft_one": "{{credits}} crédito · quedan {{left}}",
       "creditsLeft_other": "{{credits}} créditos · quedan {{left}}",
-      "creditsAction": "{{credits}}. Ver tu plan y tus créditos"
+      "creditsAction": "{{credits}}. Ver tu plan y tus créditos",
+      "waitedInternet": "{{duration}} fue esperando a tu internet",
+      "waitedAbacus": "{{duration}} fue esperando a AbacusAI"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Estás sin conexión.",
+      "offlineBody": "Se ha caído tu conexión a internet, no la app. Todo se reanuda solo cuando vuelva.",
+      "abacusTitle": "AbacusAI no responde ahora mismo.",
+      "abacusBody": "Tu internet va bien; estamos en ello.",
+      "checkingIn": "Comprobando de nuevo en {{seconds}} s",
+      "backTitle": "Vuelves a estar en línea.",
+      "backSending_one": "Enviando ahora tu mensaje pendiente.",
+      "backSending_other": "Enviando ahora tus {{count}} mensajes pendientes."
+    },
+    "lanePaused": "en pausa · sin conexión",
+    "laneOfflineNote": "En pausa mientras este ordenador está sin conexión. El enlace está bien; se reanuda solo cuando vuelva internet.",
+    "queued": {
+      "title": "Se enviará cuando vuelvas a estar en línea",
+      "line": "\"{{text}}\" a {{to}} en {{app}}. Se enviará solo en cuanto vuelva tu internet, una sola vez.",
+      "cancel": "Cancelar este mensaje",
+      "unsureTitle": "Puede que no se haya enviado",
+      "unsureLine": "\"{{text}}\" a {{to}} en {{app}}. Tu internet se cayó mientras se enviaba, así que revisa el chat antes de enviarlo de nuevo.",
+      "dismiss": "Descartar"
     }
   }
 }

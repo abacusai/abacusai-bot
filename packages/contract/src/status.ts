@@ -80,3 +80,15 @@ export const isStopState = (state: StatusState): boolean =>
   state === "stopped-needs-user" ||
   state === "missed" ||
   state === "stopped";
+
+/**
+ * Whether this computer can reach AbacusAI. `offline`: no internet at all;
+ * `degraded`: the internet works, AbacusAI does not answer.
+ */
+export interface ConnectivitySnapshot {
+  state: "online" | "offline" | "degraded";
+  /** When the current not-online spell began; null while online. */
+  since: number | null;
+  /** When the next check runs; null while online. */
+  nextCheckAt: number | null;
+}

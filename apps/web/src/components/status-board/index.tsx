@@ -37,7 +37,10 @@ export const useStatusItems = (): StatusItem[] => {
     followNotice(
       "status",
       transport,
-      () => void cache.invalidateQueries({ queryKey: options.queryKey }),
+      (event) => {
+        if (event.type === "updated")
+          void cache.invalidateQueries({ queryKey: options.queryKey });
+      },
       abort.signal
     );
     return () => abort.abort();

@@ -40,6 +40,8 @@ const harness = (
     /** What the status board heard, in order. */
     reports: [] as string[],
     hint: null as ((reason: string) => void) | null,
+    /** No internet on this computer. */
+    offline: false,
   };
   const supervisor: LaneSupervisor = new LaneSupervisor({
     now: () => Date.now(),
@@ -54,6 +56,7 @@ const harness = (
         supervisor.noteState(id, outcome.state, outcome.failure);
     },
     diskSpaceBack: () => world.diskFree,
+    internetDown: () => world.offline,
     report: (_id, state, reason) => {
       world.reports.push(`${state}:${reason}`);
     },
@@ -391,3 +394,23 @@ describe("a full disk", () => {
 
 /** The shortest first step: 10 s at -50%. */
 const LANE_RETRY_FIRST_STEP = 5_000;
+
+describe("a lane while this computer has no internet", () => {
+  it("is never restarted for it, then comes back when the internet does", async () => {
+    const { supervisor, world } = harness(() => ({ state: "connected" }));
+    world.offline = true;
+    supervisor.noteState(ID, "connected");
+    supervisor.noteState(ID, "connecting");
+    // Past the watchdog, many times over: connecting for want of the internet.
+    await vi.advanceTimersByTimeAsync(LANE_CONNECTING_WATCHDOG_MS * 3);
+    expect(world.restarts).toEqual([]);
+    // A load that failed outright: down, but no restart while offline.
+    supervisor.noteState(ID, unreachable.state, unreachable.failure);
+    await vi.advanceTimersByTimeAsync(LANE_RETRY_CAP_MS * 4);
+    expect(world.restarts).toEqual([]);
+    world.offline = false;
+    world.hint?.("the internet is back");
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(world.restarts).toHaveLength(1);
+  });
+});

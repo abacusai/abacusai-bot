@@ -3160,7 +3160,10 @@
         "browser": "Tarayıcıda çalışılıyor",
         "subtask": "Alt görev üzerinde çalışılıyor"
       },
-      "longTool": "{{activity}} · {{minutes}} dk"
+      "longTool": "{{activity}} · {{minutes}} dk",
+      "waitingForInternet": "İnternetiniz bekleniyor",
+      "waitingForAbacus": "AbacusAI bekleniyor",
+      "messageSafe": "Mesajınız güvende. Bağlantı geri gelince bot kendiliğinden devam eder."
     },
     "code": {
       "copied": "Kopyalandı",
@@ -3233,7 +3236,8 @@
       "includedIn": "{{plan}} planına dahil",
       "includedInPaid": "Ücretli planlara dahil",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Şimdi yazın. Tekrar çevrimiçi olduğunuzda gönderilir"
     },
     "day": {
       "today": "Bugün",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} kredi",
       "creditsLeft_one": "{{credits}} kredi · {{left}} kaldı",
       "creditsLeft_other": "{{credits}} kredi · {{left}} kaldı",
-      "creditsAction": "{{credits}}. Planını ve kredilerini gör"
+      "creditsAction": "{{credits}}. Planını ve kredilerini gör",
+      "waitedInternet": "Bunun {{duration}} kadarı internetinizi beklemekle geçti",
+      "waitedAbacus": "Bunun {{duration}} kadarı AbacusAI beklemekle geçti"
     },
     "subagent": {
       "done_one": "Bitti, {{count}} adım, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Çevrimdışısınız.",
+      "offlineBody": "İnternet bağlantınız koptu, uygulamada sorun yok. İnternet geri gelince her şey kendiliğinden devam eder.",
+      "abacusTitle": "AbacusAI şu anda yanıt vermiyor.",
+      "abacusBody": "İnternetiniz iyi; ilgileniyoruz.",
+      "checkingIn": "{{seconds}} sn içinde tekrar kontrol ediliyor",
+      "backTitle": "Tekrar çevrimiçi.",
+      "backSending_one": "Bekleyen mesajınız şimdi gönderiliyor.",
+      "backSending_other": "Bekleyen {{count}} mesajınız şimdi gönderiliyor."
+    },
+    "lanePaused": "duraklatıldı · çevrimdışı",
+    "laneOfflineNote": "Bu bilgisayar çevrimdışıyken duraklatıldı. Bağlantı tamam; internet geri gelince kendiliğinden devam eder.",
+    "queued": {
+      "title": "Tekrar çevrimiçi olduğunuzda gönderilir",
+      "line": "{{app}} üzerinde {{to}} kişisine \"{{text}}\". İnternetiniz geri gelir gelmez kendiliğinden, yalnızca bir kez gönderilir.",
+      "cancel": "Bu mesajı iptal et",
+      "unsureTitle": "Gitmemiş olabilir",
+      "unsureLine": "{{app}} üzerinde {{to}} kişisine \"{{text}}\". Gönderilirken internetiniz koptu, bu yüzden tekrar göndermeden önce sohbeti kontrol edin.",
+      "dismiss": "Kapat"
     }
   }
 }

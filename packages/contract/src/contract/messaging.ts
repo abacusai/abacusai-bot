@@ -64,6 +64,10 @@ export const messaging = {
   releaseLogin: mutation.input(PlatformInput).output(type<void>()),
   /** Try now: restart a lane that is down, without waiting for its next try. */
   retryNow: mutation.input(PlatformInput).output(type<MessagingSnapshot>()),
+  /** The user's Cancel on a send waiting for the connection: it never goes. */
+  cancelQueued: mutation
+    .input(v.object({ id: v.pipe(v.string(), v.nonEmpty()) }))
+    .output(type<MessagingSnapshot>()),
   /** The Messaging page opened: lanes that are down try again soon. */
   pageOpened: mutation.input(NoInput).output(type<void>()),
   /** The user's Unlink: off, and any login stored on this computer is gone. */

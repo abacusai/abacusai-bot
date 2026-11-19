@@ -188,6 +188,15 @@ export function appConnectResult(
           "part of the task does not need it."
       );
     }
+    case "offline":
+      return host.ok(
+        outcome.linked
+          ? `This computer's internet connection is down. ${outcome.name} is still linked and nothing about the link is wrong: ` +
+              "it picks up by itself when the internet is back, and anything you send now waits and goes once then. " +
+              "No Connect card was shown. Tell the user in one short line that their internet dropped; do not ask them to reconnect or scan anything."
+          : `This computer's internet connection is down, so ${outcome.name} cannot be linked right now and no Connect card was shown. ` +
+              "Tell the user in one short line that their internet dropped; it can be linked once the internet is back."
+      );
     case "not_here":
       return host.ok(
         `${outcome.name} cannot be connected from this chat. Say so, and offer whatever part of the task does not need it.`

@@ -85,6 +85,17 @@ export const DELIVERABLE_QUALITY_PROMPT = [
 export const ATTACHMENTS_PROMPT =
   "Files the user attaches reach you in their message as `@<path>` lines, or from a chat app as `[attachment: ... saved to <path>]`. When the user says they uploaded, attached or shared a file and neither that message nor an earlier one in this chat has it, the upload did not reach you: do not search their computer for it and do not start the task; your whole reply is one short line asking them to attach it again with the + button in the message box or by dragging it into the chat (in a chat app, to send it there). Never build on sample data in its place, never ask them to copy it into a folder, and never mention these line formats to them.";
 
+/**
+ * The internet dropped, and the bot blamed WhatsApp, asked for a QR scan the
+ * user did not need, and said "nothing was sent" after a send that only timed
+ * out. Fixed lines, so the cached prefix holds.
+ */
+export const CONNECTION_PROMPT = [
+  "When a tool result or a resumed turn says this computer's internet connection is down or dropped, say so in one short line in the user's language: their internet dropped, not the app, the chat app or a tool. Never ask them to reconnect, sign in again or scan a QR code for it; things pick up by themselves when the internet is back.",
+  "When it says AbacusAI is not answering while the internet works, say AbacusAI is not answering right now; never blame the user's internet or setup.",
+  'A send that failed or timed out midway may have gone through: say it "may not have gone through", never that nothing was sent, and do not send it again unless the user asks.',
+].join(" ");
+
 /** How to use the file tools; a session without one skips its lines. */
 function toolGuidelinesPrompt(edit: EditTool): string {
   const lines = [
@@ -119,6 +130,7 @@ ${MEDIA_ASKS_PROMPT}
 ${PLAN_ASKS_PROMPT}
 ${DELIVERABLE_QUALITY_PROMPT}
 ${ATTACHMENTS_PROMPT}
+${CONNECTION_PROMPT}
 
 ${toolGuidelinesPrompt(edit)}`;
 }

@@ -242,6 +242,11 @@ const shellRouter = (
     // The status board: nothing stopped unless a test says so.
     status: {
       list: os.status.list.handler(() => options.statusItems ?? []),
+      connectivity: os.status.connectivity.handler(() => ({
+        state: "online" as const,
+        since: null,
+        nextCheckAt: null,
+      })),
       events: os.status.events.handler(quiet as never),
     },
     memory: {
