@@ -109,6 +109,7 @@ export const WEB_HOST_ALLOWED = [
   "ai.hydrate",
   "ai.joinRun",
   "ai.cancel",
+  "ai.stopTask",
   "ai.respondPermission",
   "ai.queue.enqueue",
   "ai.queue.update",
