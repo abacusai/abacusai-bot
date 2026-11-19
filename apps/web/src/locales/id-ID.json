@@ -3611,7 +3611,10 @@
       "open": "Buka"
     },
     "suggestedTasks": {
-      "label": "Ketuk tugas untuk menjalankannya",
+      "pickOne": "Pilih satu untuk melanjutkan",
+      "next": "Berikutnya",
+      "routineLine": "Berjalan sesuai jadwal selama aplikasi terbuka",
+      "copied": "Disalin",
       "copy": "Salin “{{text}}” untuk dikirim dari ponsel",
       "copyFailed": "Gagal menyalin"
     },

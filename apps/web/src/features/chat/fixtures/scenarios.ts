@@ -547,6 +547,56 @@ const nextStepStore = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(1) }),
   ]);
 
+/** A plain offer: three tasks, the last long enough to wrap. */
+const tasksOffer = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make printable pages for a 36x48 trifold about Apollo 11",
+      at(3)
+    ),
+    b.textStart("a1"),
+    b.textDelta(
+      "a1",
+      "Here's the first page, the **center title panel**. Next I'd build the other four in the same style. One question before I go on: should the **timeline** be a tall vertical column, or a strip across the bottom?"
+    ),
+    ...b.toolCall("c1", "suggest_tasks", "a1", {
+      tasks: [
+        { text: "Build the rest with a vertical timeline" },
+        { text: "Build the rest with a timeline strip" },
+        {
+          text: "Build the rest, you pick the timeline, and add a QR code that links to the mission page",
+        },
+      ],
+    }),
+    b.toolResult("c1", { text: "The user sees 3 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
+/** A bot's offer with a copy task, for the user to send from their phone. */
+const tasksCopy = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Set up my Telegram bot", at(3)),
+    b.textStart("a1"),
+    b.textDelta(
+      "a1",
+      "Your bot is connected. Send it a message from your phone to see it answer."
+    ),
+    ...b.toolCall("c1", "suggest_tasks", "a1", {
+      tasks: [
+        { text: "What can you do?", copy: true },
+        { text: "Change how the bot greets people" },
+      ],
+    }),
+    b.toolResult("c1", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
 const successSite = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
@@ -1162,6 +1212,19 @@ export const SCENARIOS: Scenario[] = [
     canvas: ["NextStep", "bot"],
     skin: "bot",
     events: nextStepStore,
+    view: { placeholder: "Message your bot..." },
+  },
+  {
+    id: "tasks-offer-session",
+    canvas: ["SuggestedTasks", "session"],
+    skin: "session",
+    events: tasksOffer,
+  },
+  {
+    id: "tasks-copy-bot",
+    canvas: ["SuggestedTasks", "copy"],
+    skin: "bot",
+    events: tasksCopy,
     view: { placeholder: "Message your bot..." },
   },
   {

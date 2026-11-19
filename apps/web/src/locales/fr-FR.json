@@ -3611,7 +3611,10 @@
       "open": "Ouvrir"
     },
     "suggestedTasks": {
-      "label": "Touchez une tâche pour la lancer",
+      "pickOne": "Choisissez-en une pour continuer",
+      "next": "Ensuite",
+      "routineLine": "S'exécute selon son horaire tant que l'app est ouverte",
+      "copied": "Copié",
       "copy": "Copier « {{text}} » pour l’envoyer depuis votre téléphone",
       "copyFailed": "Impossible de copier"
     },

@@ -3611,7 +3611,10 @@
       "open": "Open"
     },
     "suggestedTasks": {
-      "label": "Tap a task to run it",
+      "pickOne": "Pick one to keep going",
+      "next": "Next",
+      "routineLine": "Runs on its schedule while the app is open",
+      "copied": "Copied",
       "copy": "Copy “{{text}}” to send from your phone",
       "copyFailed": "Couldn't copy that"
     },

@@ -3611,7 +3611,10 @@
       "open": "Apri"
     },
     "suggestedTasks": {
-      "label": "Tocca un'attività per avviarla",
+      "pickOne": "Scegline una per continuare",
+      "next": "Prossimo passo",
+      "routineLine": "Si avvia secondo la sua pianificazione mentre l'app è aperta",
+      "copied": "Copiato",
       "copy": "Copia “{{text}}” per inviarlo dal telefono",
       "copyFailed": "Impossibile copiare"
     },

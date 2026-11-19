@@ -3611,7 +3611,10 @@
       "open": "Öffnen"
     },
     "suggestedTasks": {
-      "label": "Tippe auf eine Aufgabe, um sie zu starten",
+      "pickOne": "Wähle eins, um weiterzumachen",
+      "next": "Als Nächstes",
+      "routineLine": "Läuft nach Zeitplan, solange die App geöffnet ist",
+      "copied": "Kopiert",
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
       "copyFailed": "Kopieren fehlgeschlagen"
     },

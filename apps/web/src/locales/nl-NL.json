@@ -3611,7 +3611,10 @@
       "open": "Openen"
     },
     "suggestedTasks": {
-      "label": "Tik op een taak om die uit te voeren",
+      "pickOne": "Kies er een om verder te gaan",
+      "next": "Volgende",
+      "routineLine": "Draait volgens schema zolang de app open is",
+      "copied": "Gekopieerd",
       "copy": "Kopieer “{{text}}” om vanaf je telefoon te versturen",
       "copyFailed": "Kopiëren is niet gelukt"
     },

@@ -4,11 +4,12 @@
  * message (send-as-user.ts); a copy button puts its text on the clipboard for the
  * user to send from their phone. The buttons show once the reply is done
  * and only on the latest offer, until the user writes anything. A next step
- * under a result (contract next-step.ts) is the same buttons in any chat, with
- * a clock on a routine's.
+ * under a result (contract next-step.ts) is the same card in any chat, with
+ * a clock and a line on a routine's.
  */
 import {
   isSuggestTasksTool,
+  type SuggestedTask,
   suggestedTasks,
   suggestsNextStep,
 } from "@abacus-ai/contract/bots/suggested-tasks";
@@ -20,16 +21,16 @@ import { funnelDetail } from "@abacus-ai/contract/funnel";
 import { nextStepAllowed } from "@abacus-ai/contract/next-step";
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
-import { Check, Clock, Copy } from "lucide-react";
+import { ArrowRight, Check, Clock, Copy } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useOptionalDb } from "#renderer/data/db";
 import { turnsOf } from "#renderer/lib/bot-turns/turns";
+import { cn } from "#renderer/lib/cn";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { hiddenUserMessage } from "#renderer/lib/user-message";
-import { Button } from "#renderer/ui/button";
 
 import { useHost, useThreadStore } from "../../store/selectors";
 import { useChatView } from "../context";
@@ -207,39 +208,104 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
     );
 
   return (
+    <SuggestedTaskList
+      tasks={tasks}
+      nextStep={nextStep}
+      copied={copied}
+      onTap={(task) =>
+        task.copy ? copy(task.text) : send(task.text, task.routine)
+      }
+    />
+  );
+};
+
+/**
+ * The tasks as one card: a label, then a row per task with its icon, the
+ * text and an arrow. The first row's tile is filled, as the likeliest answer.
+ */
+const SuggestedTaskList = ({
+  tasks,
+  nextStep,
+  copied,
+  onTap,
+}: {
+  tasks: readonly SuggestedTask[];
+  nextStep: boolean;
+  copied: string | null;
+  onTap(task: SuggestedTask): void;
+}) => {
+  const { t } = useTranslation();
+  const label = t(
+    nextStep ? "chat.suggestedTasks.next" : "chat.suggestedTasks.pickOne"
+  );
+  return (
     <div
       data-slot="suggested-tasks"
       role="group"
-      aria-label={t("chat.suggestedTasks.label")}
-      className="my-2 flex w-full max-w-[520px] flex-wrap gap-2"
+      aria-label={label}
+      className="bg-card my-2 flex w-full max-w-[520px] flex-col overflow-hidden rounded-xl border"
     >
-      {tasks.map((task) => (
-        <Button
-          key={task.text}
-          size="sm"
-          variant="outline"
-          className="h-auto max-w-full rounded-full py-1.5 text-left whitespace-normal"
-          {...(task.copy
-            ? {
-                "aria-label": t("chat.suggestedTasks.copy", {
-                  text: task.text,
-                }),
-              }
-            : {})}
-          onClick={() =>
-            task.copy ? copy(task.text) : send(task.text, task.routine)
-          }
-        >
-          {task.routine && <Clock aria-hidden className="size-3.5 shrink-0" />}
-          {task.copy &&
-            (copied === task.text ? (
-              <Check aria-hidden className="size-3.5 shrink-0" />
-            ) : (
-              <Copy aria-hidden className="size-3.5 shrink-0" />
-            ))}
-          <span className="min-w-0">{task.text}</span>
-        </Button>
-      ))}
+      <p className="text-muted-foreground px-3.5 pt-2.5 pb-1.5 text-xs font-medium">
+        {label}
+      </p>
+      <div className="divide-border divide-y border-t">
+        {tasks.map((task, index) => {
+          const Icon = task.copy
+            ? copied === task.text
+              ? Check
+              : Copy
+            : task.routine
+              ? Clock
+              : ArrowRight;
+          const line = task.copy
+            ? copied === task.text
+              ? t("chat.suggestedTasks.copied")
+              : null
+            : task.routine
+              ? t("chat.suggestedTasks.routineLine")
+              : null;
+          return (
+            <button
+              key={task.text}
+              type="button"
+              data-task={task.copy ? "copy" : task.routine ? "routine" : "send"}
+              className="group/task hover:bg-muted focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3.5 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+              {...(task.copy
+                ? {
+                    "aria-label": t("chat.suggestedTasks.copy", {
+                      text: task.text,
+                    }),
+                  }
+                : {})}
+              onClick={() => onTap(task)}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-lg",
+                  index === 0
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-foreground border"
+                )}
+              >
+                <Icon className="size-4" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-medium [overflow-wrap:anywhere]">
+                  {task.text}
+                </span>
+                {line != null && (
+                  <span className="text-muted-foreground text-xs">{line}</span>
+                )}
+              </span>
+              <ArrowRight
+                aria-hidden
+                className="text-muted-foreground group-hover/task:text-foreground size-4 shrink-0 transition-colors"
+              />
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

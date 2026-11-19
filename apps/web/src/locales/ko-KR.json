@@ -3611,7 +3611,10 @@
       "open": "열기"
     },
     "suggestedTasks": {
-      "label": "작업을 탭하면 바로 실행돼요",
+      "pickOne": "하나를 골라 계속하세요",
+      "next": "다음",
+      "routineLine": "앱이 열려 있는 동안 일정에 따라 실행됩니다",
+      "copied": "복사됨",
       "copy": "휴대폰에서 보낼 수 있게 “{{text}}” 복사",
       "copyFailed": "복사하지 못했어요"
     },
