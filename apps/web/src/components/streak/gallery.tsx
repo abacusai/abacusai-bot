@@ -98,9 +98,6 @@ const STREAKS: Record<StreakGalleryState, AbacusStreak> = {
   },
 };
 
-export const galleryStreak = (state: StreakGalleryState): AbacusStreak =>
-  STREAKS[state];
-
 /** The home chip with its panel open, and the card under a reply, for one day of the week. */
 export const StreakGallery = ({ state }: { state: StreakGalleryState }) => (
   <div className="flex flex-col gap-10 p-6">
