@@ -85,6 +85,7 @@ import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { isLowEndMachine } from "./platform/low-end-machine";
 import { profileBaseDir } from "./profile-home";
 import { resetUserDataDirectories } from "./profile-home-init";
+import { createQuitGuard } from "./quit-guard";
 import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
 import {
@@ -324,11 +325,6 @@ type WindowStateSchema = {
 };
 let store: InstanceType<typeof Store<WindowStateSchema>>;
 
-// Agent work is kept alive across a window close.
-function hasBackgroundAgentTask(): boolean {
-  return workspaceServiceHost.hasActiveAgentTurn();
-}
-
 // Never `getAllWindows()[0]` instead: the messaging connectors hold hidden
 // BrowserWindows, and a dock click would reveal WhatsApp Web.
 function aliveMainWindow(): BaseWindow | null {
@@ -390,6 +386,54 @@ const updateService = new UpdateService({
     !workspaceServiceHost.hasActiveAgentTurn() &&
     (requested || !workspaceServiceHost.hasLiveTerminalSessions()),
 });
+/** Set by the app's own Restart: the quit relaunches once it goes through. */
+let relaunchAfterQuit = false;
+
+/** The named list a native question shows: one line per chat. */
+function quitGuardWorkLines(work: { label: string }[]): string {
+  return work
+    .map((item) => `• ${item.label || nativeT("quitGuardUnnamed")}`)
+    .join("\n");
+}
+
+// Every quit the user starts meets running work here; see quit-guard.ts.
+const quitGuard = createQuitGuard({
+  work: () => workspaceServiceHost.activeAgentWork(),
+  publish: (state) => emitBusChannel("system", { type: "quit-guard", state }),
+  reveal: () => {
+    revealMainWindow();
+  },
+  askNatively: async (work) => {
+    const window = aliveMainWindow();
+    const options: Electron.MessageBoxOptions = {
+      type: "warning",
+      buttons: [
+        nativeT("quitGuardWait"),
+        nativeT("quitGuardQuitAnyway"),
+        nativeT("quitGuardCancel"),
+      ],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+      title: APP_DISPLAY_NAME,
+      message: nativeT(
+        work.length === 1 ? "quitGuardTitleOne" : "quitGuardTitleMany"
+      ),
+      detail: `${quitGuardWorkLines(work)}\n\n${nativeT("quitGuardDetail")}`,
+    };
+    const { response } =
+      window === null
+        ? await dialog.showMessageBox(options)
+        : await dialog.showMessageBox(window, options);
+    return response === 0 ? "wait" : response === 1 ? "quit" : "cancel";
+  },
+  quit: () => app.quit(),
+  onCancelled: () => {
+    relaunchAfterQuit = false;
+  },
+  log: (line) => console.log(line),
+});
+
 let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
 /** Null until whenReady; wherever it stays null the packaged baseline runs. */
@@ -747,13 +791,11 @@ async function createWindow(restored?: RecreatedWindowState) {
     store.set("windowY", y);
   });
 
-  // Closing must not kill in-flight agent work, so the window hides instead.
-  // macOS always hides (dock convention); Windows/Linux ask first, and only
-  // when a task is running. A real quit sets `isQuitting` first.
+  // macOS hides the window (dock convention). On Windows/Linux closing the
+  // window quits, so with work running the close becomes a quit and the
+  // quit guard asks; idle, the window closes and the app quits as before.
   mainWindow.on("close", (event) => {
     if (isQuitting()) return;
-
-    const taskRunning = hasBackgroundAgentTask();
 
     if (process.platform === "darwin") {
       event.preventDefault();
@@ -770,23 +812,12 @@ async function createWindow(restored?: RecreatedWindowState) {
       return;
     }
 
-    if (!taskRunning) return;
-
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: "question",
-      buttons: [nativeT("keepRunning"), nativeT("quitAnyway")],
-      defaultId: 0,
-      cancelId: 0,
-      title: nativeT("taskRunningTitle"),
-      message: nativeT("taskRunningMessage"),
-      detail: nativeT("taskRunningDetail"),
-    });
-
-    if (choice === 0) {
-      event.preventDefault();
-      mainWindow.hide();
-    }
+    if (!quitGuard.wouldAsk()) return;
+    event.preventDefault();
+    quitGuard.request();
   });
+  // Windows signs out or shuts down: never hold that up with a question.
+  mainWindow.on("session-end", () => quitGuard.release("windows session end"));
 
   // vite-plugin-electron sets this only while the dev server is running.
   const rendererUrl = process.env.VITE_DEV_SERVER_URL ?? null;
@@ -1197,10 +1228,10 @@ const PICKED_FILE_MIME: Record<string, string> = {
 };
 
 /**
- * The about panel and, on macOS, the application menu, labelled in the app's
- * language (native-language.ts). Every item keeps its role, so it acts as
+ * The about panel and the application menu, labelled in the app's language
+ * (native-language.ts). Every item but Quit keeps its role, so it acts as
  * Electron's default menu does; the Window menu keeps its role too, which is
- * how macOS lists the open windows in it.
+ * how macOS lists the open windows in it. Quit asks first when work runs.
  */
 function updateApplicationMenu(): void {
   app.setAboutPanelOptions({
@@ -1211,8 +1242,64 @@ function updateApplicationMenu(): void {
     website: "https://github.com/abacusai/abacusai-bot/blob/main/README.md",
     iconPath: resourcePath("icon2.png"),
   });
-  if (process.platform !== "darwin") return;
   const named = { app: APP_DISPLAY_NAME };
+  const edit: Electron.MenuItemConstructorOptions = {
+    label: nativeT("edit"),
+    submenu: [
+      { role: "undo", label: nativeT("undo") },
+      { role: "redo", label: nativeT("redo") },
+      { type: "separator" },
+      { role: "cut", label: nativeT("cut") },
+      { role: "copy", label: nativeT("copy") },
+      { role: "paste", label: nativeT("paste") },
+      { role: "selectAll", label: nativeT("selectAll") },
+    ],
+  };
+  const view: Electron.MenuItemConstructorOptions = {
+    label: nativeT("view"),
+    submenu: [
+      { role: "reload", label: nativeT("reload") },
+      { role: "forceReload", label: nativeT("forceReload") },
+      { role: "toggleDevTools", label: nativeT("developerTools") },
+      { type: "separator" },
+      { role: "resetZoom", label: nativeT("resetZoom") },
+      { role: "zoomIn", label: nativeT("zoomIn") },
+      { role: "zoomOut", label: nativeT("zoomOut") },
+      { type: "separator" },
+      { role: "togglefullscreen", label: nativeT("fullScreen") },
+    ],
+  };
+  if (process.platform !== "darwin") {
+    // Electron's default menu, with Quit (Ctrl+Q on Linux, none on Windows,
+    // as the default has it) asking first.
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        {
+          label: nativeT("file"),
+          submenu: [
+            {
+              label: nativeT("quit"),
+              ...(process.platform === "linux"
+                ? { accelerator: "Ctrl+Q" }
+                : {}),
+              click: () => quitGuard.request(),
+            },
+          ],
+        },
+        edit,
+        view,
+        {
+          role: "windowMenu",
+          label: nativeT("window"),
+          submenu: [
+            { role: "minimize", label: nativeT("minimize") },
+            { role: "close", label: nativeT("close") },
+          ],
+        },
+      ])
+    );
+    return;
+  }
   // The default menu labels its items from app.name, which keeps the hyphen.
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
@@ -1227,39 +1314,19 @@ function updateApplicationMenu(): void {
           { role: "hideOthers", label: nativeT("hideOthers") },
           { role: "unhide", label: nativeT("showAll") },
           { type: "separator" },
-          { role: "quit", label: nativeT("quitApp", named) },
+          {
+            label: nativeT("quitApp", named),
+            accelerator: "Command+Q",
+            click: () => quitGuard.request(),
+          },
         ],
       },
       {
         label: nativeT("file"),
         submenu: [{ role: "close", label: nativeT("close") }],
       },
-      {
-        label: nativeT("edit"),
-        submenu: [
-          { role: "undo", label: nativeT("undo") },
-          { role: "redo", label: nativeT("redo") },
-          { type: "separator" },
-          { role: "cut", label: nativeT("cut") },
-          { role: "copy", label: nativeT("copy") },
-          { role: "paste", label: nativeT("paste") },
-          { role: "selectAll", label: nativeT("selectAll") },
-        ],
-      },
-      {
-        label: nativeT("view"),
-        submenu: [
-          { role: "reload", label: nativeT("reload") },
-          { role: "forceReload", label: nativeT("forceReload") },
-          { role: "toggleDevTools", label: nativeT("developerTools") },
-          { type: "separator" },
-          { role: "resetZoom", label: nativeT("resetZoom") },
-          { role: "zoomIn", label: nativeT("zoomIn") },
-          { role: "zoomOut", label: nativeT("zoomOut") },
-          { type: "separator" },
-          { role: "togglefullscreen", label: nativeT("fullScreen") },
-        ],
-      },
+      edit,
+      view,
       {
         role: "windowMenu",
         label: nativeT("window"),
@@ -1454,9 +1521,15 @@ const appOperations: AppOperations = {
   legacyInstall: () => legacyInstall,
 
   // Relaunch after adding skills so new agent processes load them at startup.
+  // Asks first like any quit the user starts; relaunches once it goes.
   restartApp() {
-    app.relaunch();
-    app.quit();
+    relaunchAfterQuit = true;
+    quitGuard.request();
+  },
+
+  quitGuard: {
+    state: () => quitGuard.state(),
+    answer: (answer) => quitGuard.answer(answer),
   },
 
   deleteAllData() {
@@ -2097,6 +2170,9 @@ app
       }
     });
 
+    // macOS and Linux: the OS is going down; ask nothing.
+    powerMonitor.on("shutdown", () => quitGuard.release("system shutdown"));
+
     powerMonitor.on("lock-screen", () => {});
     powerMonitor.on("unlock-screen", () => {});
 
@@ -2157,6 +2233,13 @@ let quitUpdateChecked = false;
 /** The quit waiting on its update install; a relaunch cancels it. */
 let quitAwaitingUpdate: object | null = null;
 app.on("before-quit", (event) => {
+  // Never held here: a quit the user starts asked in quitGuard.request(),
+  // and the OS, an update or a signal must not wait on a question.
+  quitGuard.quitStarted();
+  if (relaunchAfterQuit) {
+    relaunchAfterQuit = false;
+    app.relaunch();
+  }
   if (
     !isDataResetPending() &&
     !quitUpdateChecked &&

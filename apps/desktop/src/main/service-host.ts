@@ -649,7 +649,10 @@ import {
   type WorkWaitingPlace,
 } from "./services/providers/work-waiting";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
-import { agentTurnBusy } from "./services/session/agent-busy";
+import {
+  agentBusySessionIds,
+  agentTurnBusy,
+} from "./services/session/agent-busy";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
@@ -4062,6 +4065,24 @@ export class ServiceHost {
       wireOf: (sessionId) =>
         this.agentManagerService.getRuntimeInfo(sessionId)?.wire ?? null,
     });
+  }
+
+  /** The work `hasActiveAgentTurn` counts, named as the sidebar names it. */
+  activeAgentWork(): { sessionId: string; label: string }[] {
+    const ids = agentBusySessionIds({
+      relay: this.aguiRelay,
+      turnState: this.sessionTurnStateService,
+      wireOf: (sessionId) =>
+        this.agentManagerService.getRuntimeInfo(sessionId)?.wire ?? null,
+    });
+    if (ids.length === 0) return [];
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return ids.map((sessionId) => ({
+      sessionId,
+      label: labels.get(sessionId)?.trim() ?? "",
+    }));
   }
 
   /** True while any terminal PTY (user shell or preview server) is alive. */
