@@ -57,6 +57,7 @@ export const ROUTE_RANK: Readonly<
   "/artifacts": { area: "artifacts", rank: 0 },
   "/library": { area: "library", rank: 0 },
   "/library/connectors": { area: "library", rank: 0 },
+  "/library/templates": { area: "library", rank: 0 },
   "/library/messaging": { area: "library", rank: 0 },
   "/library/mcp": { area: "library", rank: 0 },
   "/library/skills": { area: "library", rank: 0 },

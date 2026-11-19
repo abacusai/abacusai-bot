@@ -42,7 +42,7 @@ const READS: Record<string, string> = {
     .join(" "),
   devices: "events list projectInfo simulatorWindowSource status stream.chunks",
   files:
-    "events listDirectory pendingPreview readImageAsDataUrl readPptx readText search treeChildren treeRoot",
+    "designs events listDirectory pendingPreview readImageAsDataUrl readPptx readText search treeChildren treeRoot",
   git: "branches checkoutStatus currentBranch diff prInfo watch worktrees.list",
   github: "pr prDiff status watch",
   links: "preview",

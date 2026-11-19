@@ -1,0 +1,121 @@
+/* proposal designs: html[data-design="proposal-…"] over the proposal markup
+   of guide.md (an ordinary body.doc: .doc-head or .cover, h2 sections, p,
+   .callout, ol.steps, .timeline, table.data with data-role money rows, ul,
+   .cols-2). body.doc.plain is left alone. */
+
+/* ------------------------------------------------------------------ */
+/* Agency: a bold pitch. A black header with an orange hem, numbered   */
+/* section heads in a heavy grotesque, black step squares, the         */
+/* timeline as cards, the total on an orange bar.                      */
+/* ------------------------------------------------------------------ */
+html[data-design="proposal-agency"]:root {
+  --accent: #ff4d17; --accent-soft: #fff0ea; --ink: #121212; --muted: #5e5e5e; --line: #e2e0dc;
+  --display: "Bricolage Grotesque", var(--sans);
+  --text: "DM Sans", var(--sans);
+}
+html[data-design="proposal-agency"] body.doc:not(.plain) { font-family: var(--text); counter-reset: sec; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .doc-head { background: var(--ink); color: #fff; border: 0; border-bottom: 2.5mm solid var(--accent); padding: 11mm 10mm 9mm; margin-bottom: 9mm; align-items: flex-end; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .doc-head h1, html[data-design="proposal-agency"] body.doc:not(.plain) .cover h1 { font-family: var(--display); font-weight: 800; font-size: calc(32pt * var(--fit)); letter-spacing: -0.035em; line-height: 1.02; color: #fff; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .doc-head .kicker, html[data-design="proposal-agency"] body.doc:not(.plain) .cover .kicker { color: var(--accent); opacity: 1; font-family: var(--text); letter-spacing: 0.16em; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .doc-head .lead { color: #fff; opacity: 0.85; margin: 0; font-size: calc(11.5pt * var(--fit)); }
+html[data-design="proposal-agency"] body.doc:not(.plain) .doc-head .meta { color: #fff; opacity: 0.8; flex: none; min-width: 56mm; max-width: 66mm; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .cover .top { background: var(--ink); border-radius: 0; border-bottom: 3mm solid var(--accent); }
+html[data-design="proposal-agency"] body.doc:not(.plain) .cover .top .lead { color: #fff; opacity: 0.85; }
+html[data-design="proposal-agency"] body.doc:not(.plain) h2 { counter-increment: sec; display: flex; align-items: baseline; gap: 3.5mm; font-family: var(--display); font-weight: 800; font-size: calc(19pt * var(--fit)); letter-spacing: -0.02em; color: var(--ink); margin-top: 9mm; break-after: avoid; }
+html[data-design="proposal-agency"] body.doc:not(.plain) h2::before { content: counter(sec, decimal-leading-zero); flex: none; font-size: 0.62em; letter-spacing: 0; color: #fff; background: var(--accent); padding: 0.6mm 1.8mm; position: relative; top: -0.15em; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .cover h2::before, html[data-design="proposal-agency"] body.doc:not(.plain) .doc-head h2::before { content: none; }
+html[data-design="proposal-agency"] body.doc:not(.plain) h3 { font-family: var(--display); font-weight: 700; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .callout { background: var(--ink); color: #fff; border: 0; border-radius: 0; padding: 5mm 6mm; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .callout b, html[data-design="proposal-agency"] body.doc:not(.plain) .callout strong { color: var(--accent); }
+html[data-design="proposal-agency"] body.doc:not(.plain) ol.steps > li::before { background: var(--ink); color: var(--accent); border-radius: 0; font-family: var(--display); font-weight: 800; }
+html[data-design="proposal-agency"] body.doc:not(.plain) ol.steps > li > b:first-child { font-family: var(--display); font-weight: 800; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .timeline { border-top: 0; padding-top: 0; gap: 2.5mm; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .timeline > div { background: #f3f1ee; border-top: 1.8mm solid var(--ink); padding: 3mm 3.5mm 3.5mm; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .timeline > div:last-child { background: var(--accent); border-top-color: var(--ink); color: #fff; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .timeline .when { font-family: var(--display); font-weight: 800; font-size: calc(12pt * var(--fit)); color: var(--accent); }
+html[data-design="proposal-agency"] body.doc:not(.plain) .timeline > div:last-child .when { color: var(--ink); }
+html[data-design="proposal-agency"] body.doc:not(.plain) table.data th { background: var(--ink); color: #fff; border: 0; padding: 2.5mm; }
+html[data-design="proposal-agency"] body.doc:not(.plain) table.data tr[data-role="total"] td { background: var(--accent); color: #fff; border: 0; font-family: var(--display); font-weight: 800; font-size: calc(13pt * var(--fit)); padding: 3mm 2.5mm; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .tile { background: var(--ink); color: #fff; border-radius: 0; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .tile .value { color: var(--accent); font-family: var(--display); font-weight: 800; }
+html[data-design="proposal-agency"] body.doc:not(.plain) .tile .label { color: #fff; }
+html[data-design="proposal-agency"] body.doc:not(.plain) ul > li::marker { color: var(--accent); }
+
+/* ------------------------------------------------------------------ */
+/* Consult: a corporate consulting proposal. A navy top rule, Libre    */
+/* Baskerville headings over Inter, the client details in a side       */
+/* panel, the approach as a grid of cards, the timeline as chevrons.   */
+/* ------------------------------------------------------------------ */
+html[data-design="proposal-consult"]:root {
+  --accent: #0b7076; --accent-soft: #e6f2f2; --ink: #18222f; --muted: #57616e; --line: #d5dbe2;
+  --navy: #13284a; --mist: #f2f5f7;
+  --display: "Libre Baskerville", var(--serif);
+}
+html[data-design="proposal-consult"] body.doc:not(.plain) .doc-head { border: 0; border-top: 2.5mm solid var(--navy); padding: 8mm 0 6mm; margin-bottom: 8mm; align-items: stretch; box-shadow: 0 0.75pt 0 var(--line); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .doc-head h1, html[data-design="proposal-consult"] body.doc:not(.plain) .cover h1 { font-family: var(--display); font-weight: 400; font-size: calc(24pt * var(--fit)); line-height: 1.2; letter-spacing: -0.01em; color: var(--navy); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .doc-head .lead { color: var(--muted); margin: 0; }
+html[data-design="proposal-consult"] body.doc:not(.plain) .doc-head .meta { flex: none; max-width: 64mm; text-align: left; background: var(--mist); border-left: 1mm solid var(--accent); padding: 4mm 5mm; color: var(--ink); align-self: flex-end; }
+html[data-design="proposal-consult"] body.doc:not(.plain) .cover .top { background: var(--navy); border-radius: 0; border-bottom: 2mm solid var(--accent); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .cover .top h1 { color: #fff; }
+html[data-design="proposal-consult"] body.doc:not(.plain) .cover .top .kicker { color: #8fd3d6; opacity: 1; }
+html[data-design="proposal-consult"] body.doc:not(.plain) h2 { font-family: var(--display); font-weight: 400; font-size: calc(15.5pt * var(--fit)); color: var(--navy); padding-bottom: 2mm; margin-top: 9mm; border-bottom: 0.75pt solid var(--line); background: linear-gradient(var(--accent), var(--accent)) left bottom / 16mm 1.6pt no-repeat; break-after: avoid; }
+html[data-design="proposal-consult"] body.doc:not(.plain) h3 { color: var(--navy); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .callout { background: var(--mist); border-left: 1mm solid var(--accent); border-radius: 0; padding: 4mm 5mm; }
+html[data-design="proposal-consult"] body.doc:not(.plain) ol.steps { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; break-inside: avoid; }
+html[data-design="proposal-consult"] body.doc:not(.plain) ol.steps > li { margin: 0; border: 0.75pt solid var(--line); border-top: 1mm solid var(--accent); padding: 4mm 4.5mm 4mm 15mm; }
+html[data-design="proposal-consult"] body.doc:not(.plain) ol.steps > li::before { left: 4.5mm; top: 4mm; border-radius: 0; background: var(--navy); }
+html[data-design="proposal-consult"] body.doc:not(.plain) ol.steps > li > b:first-child { display: block; color: var(--navy); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .timeline { border-top: 0; padding-top: 0; gap: 1mm; }
+html[data-design="proposal-consult"] body.doc:not(.plain) .timeline > div { background: var(--navy); color: #fff; padding: 3mm 7mm 3.5mm 8mm; clip-path: polygon(0 0, calc(100% - 4.5mm) 0, 100% 50%, calc(100% - 4.5mm) 100%, 0 100%, 4.5mm 50%); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .timeline > div:first-child { padding-left: 5mm; clip-path: polygon(0 0, calc(100% - 4.5mm) 0, 100% 50%, calc(100% - 4.5mm) 100%, 0 100%); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .timeline > div:nth-child(even) { background: var(--accent); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .timeline .when { color: #a9e2e4; }
+html[data-design="proposal-consult"] body.doc:not(.plain) table.data th { color: var(--navy); border-bottom: 1.5pt solid var(--navy); }
+html[data-design="proposal-consult"] body.doc:not(.plain) table.data tr:nth-child(even) td { background: var(--mist); }
+html[data-design="proposal-consult"] body.doc:not(.plain) table.data tr[data-role] td { background: none; }
+html[data-design="proposal-consult"] body.doc:not(.plain) table.data tr[data-role="total"] td { background: var(--navy); color: #fff; border-top: 0; }
+html[data-design="proposal-consult"] body.doc:not(.plain) .tile { background: #fff; border-radius: 0; border-top: 1mm solid var(--accent); box-shadow: inset 0 0 0 0.75pt var(--line); }
+html[data-design="proposal-consult"] body.doc:not(.plain) .tile .value { color: var(--navy); font-family: var(--display); font-weight: 400; }
+html[data-design="proposal-consult"] body.doc:not(.plain) ul > li::marker { color: var(--accent); }
+
+/* ------------------------------------------------------------------ */
+/* Studio: a warm proposal from a small studio. A cream header card    */
+/* with a sage leaf, Fraunces headings with a leaf mark, outlined      */
+/* terracotta steps, the timeline as dots on a line, a cream total.    */
+/* ------------------------------------------------------------------ */
+html[data-design="proposal-studio"]:root {
+  --accent: #b9583a; --accent-soft: #f8ebe3; --ink: #2a2622; --muted: #6b635a; --line: #e4dbcf;
+  --sage: #6f8f6f; --cream: #f6efe4;
+  --display: "Fraunces", var(--serif);
+  --text: "DM Sans", var(--sans);
+}
+html[data-design="proposal-studio"] body.doc:not(.plain) { font-family: var(--text); }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head { position: relative; overflow: hidden; background: var(--cream); border: 0; border-radius: 6mm; padding: 10mm 10mm 8mm; margin-bottom: 8mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head::after { content: ""; position: absolute; right: 7mm; top: 6mm; width: 13mm; height: 13mm; background: var(--sage); border-radius: 0 100% 0 100%; opacity: 0.9; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head::before { content: ""; position: absolute; right: 17mm; top: 13mm; width: 8mm; height: 8mm; background: var(--accent); border-radius: 100% 0 100% 0; opacity: 0.85; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head > * { position: relative; z-index: 1; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head > div:first-child { padding-right: 4mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head .meta { flex: none; min-width: 56mm; max-width: 66mm; padding-top: 18mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head h1, html[data-design="proposal-studio"] body.doc:not(.plain) .cover h1 { font-family: var(--display); font-weight: 600; font-size: calc(27pt * var(--fit)); line-height: 1.12; letter-spacing: -0.01em; color: var(--ink); }
+html[data-design="proposal-studio"] body.doc:not(.plain) .doc-head .lead { color: var(--muted); margin: 0; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .kicker { color: var(--accent); }
+html[data-design="proposal-studio"] body.doc:not(.plain) .cover .top { background: var(--cream); color: var(--ink); border-radius: 6mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .cover .top .kicker { color: var(--accent); opacity: 1; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .cover .top .lead { color: var(--muted); opacity: 1; }
+html[data-design="proposal-studio"] body.doc:not(.plain) h2 { font-family: var(--display); font-weight: 600; font-size: calc(17pt * var(--fit)); color: var(--ink); margin-top: 9mm; break-after: avoid; }
+html[data-design="proposal-studio"] body.doc:not(.plain) h2::before { content: ""; display: inline-block; width: 3.6mm; height: 3.6mm; margin-right: 2.8mm; background: var(--sage); border-radius: 0 100% 0 100%; vertical-align: 0.05em; }
+html[data-design="proposal-studio"] body.doc:not(.plain) h3 { font-family: var(--display); font-weight: 600; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .callout { background: var(--cream); border: 0; border-radius: 4mm; padding: 5mm 6mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) ol.steps > li::before { background: #fff; color: var(--accent); border: 1.2pt solid var(--accent); font-family: var(--display); font-weight: 600; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .timeline { position: relative; border-top: 0; padding-top: 7mm; background: linear-gradient(var(--sage), var(--sage)) 0 2.2mm / 100% 1pt no-repeat; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .timeline > div { position: relative; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .timeline > div::before { content: ""; position: absolute; left: 0; top: -6.6mm; width: 3.6mm; height: 3.6mm; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1.2mm #fff; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .timeline .when { font-family: var(--display); font-weight: 600; font-size: calc(12pt * var(--fit)); color: var(--accent); }
+html[data-design="proposal-studio"] body.doc:not(.plain) table.data th { color: var(--sage); border-bottom: 1pt solid var(--sage); }
+html[data-design="proposal-studio"] body.doc:not(.plain) table.data tr[data-role="total"] td { background: var(--cream); border-top: 0; font-family: var(--display); font-weight: 600; font-size: calc(13pt * var(--fit)); padding: 3mm 2.5mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) table.data tr[data-role="total"] td:first-child { border-radius: 3mm 0 0 3mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) table.data tr[data-role="total"] td:last-child { border-radius: 0 3mm 3mm 0; color: var(--accent); }
+html[data-design="proposal-studio"] body.doc:not(.plain) .tile { background: var(--cream); border-radius: 4mm; }
+html[data-design="proposal-studio"] body.doc:not(.plain) .tile .value { font-family: var(--display); font-weight: 600; color: var(--accent); }
+html[data-design="proposal-studio"] body.doc:not(.plain) ul > li::marker { color: var(--sage); }
+html[data-design="proposal-agency"][data-look] body.doc:not(.plain) table.data th { color: #fff; font-variant: normal; text-transform: none; }

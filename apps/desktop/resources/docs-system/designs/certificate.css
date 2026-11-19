@@ -1,0 +1,95 @@
+/* certificate designs: html[data-design="certificate-…"] over the certificate
+   markup of guide.md (.certificate > .frame: .logo, .kicker, h1, .presented,
+   .name, .for, .signs). A page without an h1 uses its kicker as the title. */
+
+/* ------------------------------------------------------------------ */
+/* Heritage: the formal one. Cream paper, a navy frame with a gold     */
+/* inner rule and gold medallions at its corners, a high-contrast       */
+/* Garamond name, Baskerville text.                                    */
+/* ------------------------------------------------------------------ */
+html[data-design="certificate-heritage"]:root {
+  --accent: #1f3a5f; --accent-soft: #eef1f6; --ink: #1d2533; --muted: #5b5a55; --line: #c9b483;
+  --gold: #a8822e;
+  --display: "Playfair Display", var(--serif);
+  --name: "Cormorant Garamond", var(--serif);
+  --text: "Libre Baskerville", var(--serif);
+}
+html[data-design="certificate-heritage"] body.bleed.landscape .certificate { background: #fbf7ec; padding: 9mm; }
+html[data-design="certificate-heritage"] .certificate .frame { position: relative; border: 1.6mm solid var(--accent); outline: 0.5mm solid var(--gold); outline-offset: -3.2mm; padding: 17mm 34mm 15mm; gap: 2.5mm; font-family: var(--text); }
+html[data-design="certificate-heritage"] .certificate .frame::before { content: ""; position: absolute; inset: 6.5mm; border: 0.3mm solid var(--gold); pointer-events: none; }
+html[data-design="certificate-heritage"] .certificate .frame::after {
+  content: ""; position: absolute; inset: 1.5mm; pointer-events: none;
+  --m: radial-gradient(circle, var(--gold) 0 1.5mm, transparent 1.6mm 2.6mm, var(--gold) 2.7mm 3.1mm, transparent 3.2mm);
+  background: var(--m) top left / 10mm 10mm no-repeat, var(--m) top right / 10mm 10mm no-repeat, var(--m) bottom left / 10mm 10mm no-repeat, var(--m) bottom right / 10mm 10mm no-repeat;
+}
+html[data-design="certificate-heritage"] .certificate .frame > * { position: relative; z-index: 1; }
+html[data-design="certificate-heritage"] .certificate .logo img { height: 18mm; }
+html[data-design="certificate-heritage"] .certificate .kicker { font-family: var(--text); font-weight: 400; color: var(--gold); font-size: calc(11pt * var(--fit)); letter-spacing: 0.32em; }
+html[data-design="certificate-heritage"] .certificate h1 { font-family: var(--display); font-weight: 600; font-size: calc(38pt * var(--fit)) !important; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); line-height: 1.1; margin: 1mm 0 2mm !important; }
+html[data-design="certificate-heritage"] .certificate .frame:not(:has(h1)) > .kicker { font-family: var(--display); font-weight: 600; font-size: calc(30pt * var(--fit)); letter-spacing: 0.1em; color: var(--accent); line-height: 1.15; margin: 1mm 0 2mm; }
+html[data-design="certificate-heritage"] .certificate .presented { font-style: italic; color: var(--muted); font-size: calc(12.5pt * var(--fit)); margin: 2mm 0 0; }
+html[data-design="certificate-heritage"] .certificate .name { font-family: var(--name); font-style: normal; font-weight: 400; font-size: calc(56pt * var(--fit)); line-height: 1.05; color: var(--ink); border-bottom: 0; padding: 0 10mm; margin: 0 0 1mm; }
+html[data-design="certificate-heritage"] .certificate .name::after { content: ""; display: block; height: 3mm; margin: 2.5mm auto 0; width: 110mm; background: linear-gradient(var(--gold), var(--gold)) center / 100% 0.3mm no-repeat, linear-gradient(45deg, transparent 35%, var(--gold) 36% 64%, transparent 65%) center / 3mm 3mm no-repeat; }
+html[data-design="certificate-heritage"] .certificate .for { font-size: calc(13pt * var(--fit)); color: var(--ink); line-height: 1.55; }
+html[data-design="certificate-heritage"] .certificate .for b { font-family: var(--display); font-weight: 700; color: var(--accent); font-size: 1.12em; }
+html[data-design="certificate-heritage"] .certificate .signs { margin-top: 9mm; gap: 26mm; }
+html[data-design="certificate-heritage"] .certificate .signs > div { border-top: 0.4mm solid var(--accent); font-size: calc(11pt * var(--fit)); min-width: 62mm; }
+html[data-design="certificate-heritage"] .certificate .signs > div span { font-style: italic; color: var(--muted); font-size: calc(10pt * var(--fit)); }
+
+/* ------------------------------------------------------------------ */
+/* Meridian: modern and geometric. A deep navy band down the left with   */
+/* amber circles, the logo on a white tile in it; the text set left in   */
+/* a heavy grotesque on white.                                           */
+/* ------------------------------------------------------------------ */
+html[data-design="certificate-meridian"]:root {
+  --accent: #e39b2d; --accent-soft: #fdf1df; --ink: #141b2e; --muted: #5f6676; --line: #d9dce3;
+  --band: #141b2e;
+  --sans: "DM Sans", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --display: "Bricolage Grotesque", var(--sans);
+  --label: "Space Grotesk", var(--sans);
+}
+html[data-design="certificate-meridian"] body.bleed.landscape .certificate { position: relative; padding: 0; background: linear-gradient(90deg, var(--band) 0 84mm, #fff 84mm); }
+html[data-design="certificate-meridian"] .certificate::before { content: ""; position: absolute; left: -26mm; bottom: -30mm; width: 98mm; height: 98mm; border-radius: 50%; background: var(--accent); }
+html[data-design="certificate-meridian"] .certificate::after { content: ""; position: absolute; left: 40mm; top: 58mm; width: 62mm; height: 62mm; border-radius: 50%; border: 5mm solid rgba(255, 255, 255, 0.16); clip-path: inset(0 18mm 0 0); }
+html[data-design="certificate-meridian"] .certificate .frame { position: relative; z-index: 1; border: 0; outline: 0; align-items: flex-start; text-align: left; justify-content: center; padding: 18mm 22mm 18mm 110mm; gap: 2.5mm; }
+html[data-design="certificate-meridian"] .certificate .frame::before { content: ""; position: absolute; left: 96mm; top: 18mm; bottom: 18mm; border-left: 0.4mm solid var(--line); }
+html[data-design="certificate-meridian"] .certificate .frame::after { content: ""; position: absolute; right: 14mm; top: 14mm; width: 22mm; height: 22mm; border-top: 2mm solid var(--accent); border-right: 2mm solid var(--accent); }
+html[data-design="certificate-meridian"] .certificate .logo { position: absolute; left: 18mm; top: 18mm; }
+html[data-design="certificate-meridian"] .certificate .logo img { height: 22mm; background: #fff; border-radius: 3mm; padding: 2.5mm; box-sizing: content-box; display: block; }
+html[data-design="certificate-meridian"] .certificate .kicker { font-family: var(--label); font-weight: 700; color: var(--accent); font-size: calc(11.5pt * var(--fit)); letter-spacing: 0.22em; }
+html[data-design="certificate-meridian"] .certificate h1 { font-family: var(--display); font-weight: 800; font-size: calc(36pt * var(--fit)) !important; line-height: 1.02; letter-spacing: -0.02em; color: var(--ink); margin: 0 0 4mm !important; }
+html[data-design="certificate-meridian"] .certificate .frame:not(:has(h1)) > .kicker { font-family: var(--display); font-weight: 800; font-size: calc(26pt * var(--fit)); letter-spacing: -0.01em; color: var(--ink); line-height: 1.05; margin-bottom: 5mm; }
+html[data-design="certificate-meridian"] .certificate .frame:not(:has(h1)) > .kicker::before { content: ""; display: block; width: 12mm; height: 2mm; background: var(--accent); margin-bottom: 4mm; }
+html[data-design="certificate-meridian"] .certificate .presented { font-size: calc(13pt * var(--fit)); color: var(--muted); margin: 2mm 0 0; }
+html[data-design="certificate-meridian"] .certificate .name { font-family: var(--display); font-style: normal; font-weight: 700; font-size: calc(56pt * var(--fit)); line-height: 1.02; letter-spacing: -0.025em; color: var(--ink); border: 0; padding: 0; margin: 0 0 3mm; }
+html[data-design="certificate-meridian"] .certificate .name::after { content: ""; display: block; width: 28mm; height: 2mm; background: var(--accent); margin-top: 4mm; }
+html[data-design="certificate-meridian"] .certificate .for { font-size: calc(15pt * var(--fit)); max-width: 165mm; color: var(--ink); }
+html[data-design="certificate-meridian"] .certificate .for b { font-family: var(--display); font-weight: 700; }
+html[data-design="certificate-meridian"] .certificate .signs { margin-top: 10mm; gap: 12mm; flex-wrap: wrap; }
+html[data-design="certificate-meridian"] .certificate .signs > div { min-width: 46mm; border-top: 0.5mm solid var(--ink); font-weight: 600; font-size: calc(12pt * var(--fit)); }
+html[data-design="certificate-meridian"] .certificate .signs > div span { font-family: var(--label); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; font-size: calc(9pt * var(--fit)); }
+
+/* ------------------------------------------------------------------ */
+/* Linen: minimal and elegant. Warm paper, one hairline frame, a large  */
+/* display serif, widely spaced small capitals and a short gold rule.   */
+/* ------------------------------------------------------------------ */
+html[data-design="certificate-linen"]:root {
+  --accent: #a3824a; --accent-soft: #f4eee3; --ink: #22201c; --muted: #77716a; --line: #cfc5b3;
+  --sans: "DM Sans", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --display: "DM Serif Display", var(--serif);
+}
+html[data-design="certificate-linen"] body.bleed.landscape .certificate { background: #f6f3ec; padding: 13mm; }
+html[data-design="certificate-linen"] .certificate .frame { border: 0.3mm solid var(--line); outline: 0; padding: 18mm 36mm; gap: 2mm; background: #fbf9f4; }
+html[data-design="certificate-linen"] .certificate .logo img { height: 16mm; }
+html[data-design="certificate-linen"] .certificate .logo { margin-bottom: 3mm; }
+html[data-design="certificate-linen"] .certificate .kicker { font-weight: 500; color: var(--muted); font-size: calc(10.5pt * var(--fit)); letter-spacing: 0.42em; }
+html[data-design="certificate-linen"] .certificate h1 { font-family: var(--display); font-weight: 400; font-size: calc(30pt * var(--fit)) !important; letter-spacing: 0.01em; color: var(--ink); margin: 2mm 0 1mm !important; }
+html[data-design="certificate-linen"] .certificate .frame:not(:has(h1)) > .kicker { color: var(--accent); font-size: calc(13pt * var(--fit)); font-weight: 600; }
+html[data-design="certificate-linen"] .certificate .presented { font-size: calc(11.5pt * var(--fit)); color: var(--muted); letter-spacing: 0.04em; margin: 6mm 0 1mm; }
+html[data-design="certificate-linen"] .certificate .name { font-family: var(--display); font-style: normal; font-weight: 400; font-size: calc(58pt * var(--fit)); line-height: 1.05; color: var(--ink); border: 0; padding: 0; margin: 0 0 2mm; }
+html[data-design="certificate-linen"] .certificate .name::after { content: ""; display: block; width: 18mm; height: 0.6mm; background: var(--accent); margin: 5mm auto 0; }
+html[data-design="certificate-linen"] .certificate .for { font-size: calc(13.5pt * var(--fit)); color: var(--ink); line-height: 1.6; }
+html[data-design="certificate-linen"] .certificate .for b { font-weight: 600; }
+html[data-design="certificate-linen"] .certificate .signs { margin-top: 12mm; gap: 34mm; }
+html[data-design="certificate-linen"] .certificate .signs > div { min-width: 56mm; border-top: 0.25mm solid var(--muted); font-size: calc(11pt * var(--fit)); padding-top: 2.5mm; }
+html[data-design="certificate-linen"] .certificate .signs > div span { text-transform: uppercase; letter-spacing: 0.2em; font-size: calc(9pt * var(--fit)); margin-top: 0.5mm; }

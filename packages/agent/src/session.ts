@@ -71,6 +71,7 @@ import { createGuardrails } from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
+import pdfRoute from "./extensions/pdf-route.js";
 import requestSize from "./extensions/request-size.js";
 import {
   COMPACTED_ACTION,
@@ -193,6 +194,7 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
+import { requestSources } from "./request-facts.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { buildRoster } from "./roster.js";
 import {
@@ -551,6 +553,22 @@ export function componentsPrompt(
         "and say so when you do it.",
       ].join("\n")
     );
+    // An attached deck to improve was rebuilt by script in 2 of 3 runs: the
+    // Office-file rule (edit the user's own file) read as the way to do it.
+    const remake = [
+      qualifiedName(availableTools, "ppt"),
+      qualifiedName(availableTools, "document"),
+    ].filter((name): name is string => name != null);
+    if (remake.length > 0)
+      sections.push(
+        [
+          "A file the user wants improved, redesigned or made professional is made anew: for their",
+          `.pptx or .docx, call ${remake.map((n) => `\`${n}\``).join(" or ")} with source_file set to it (the tool reads its words,`,
+          "figures and pictures; do not read or unzip it yourself), and put only what they want",
+          "changed in the brief; for a PDF, read it and pass its words, figures and pictures' paths.",
+          "Editing their file in place is for a change they name (a title, a figure), not a redesign.",
+        ].join("\n")
+      );
   }
 
   const serve = qualifiedName(availableTools, "serve");
@@ -956,6 +974,8 @@ export class AbacusBotSession {
       ...componentToolNames(hostServices),
       ...this.mcp.tools.map((tool) => tool.name),
     ]);
+    const documentTool = qualifiedName(toolNames, "document");
+    const deckTool = qualifiedName(toolNames, "ppt");
     // A run nobody watches gets none of the user's private context: a page it
     // reads could ask for it back. Its routine's own prompt still arrives.
     const unattended = this.mode === AgentMode.Unattended;
@@ -1087,6 +1107,21 @@ export class AbacusBotSession {
               name: "abacusai-bot-email-format",
               factory: emailFormat as unknown as (pi: ExtensionAPI) => void,
             },
+            // A new PDF goes through the document tool, not weasyprint or
+            // reportlab in bash (overnight: the chat's certificate).
+            ...(documentTool != null || deckTool != null
+              ? [
+                  {
+                    name: "abacusai-bot-pdf-route",
+                    factory: pdfRoute({
+                      ...(documentTool != null
+                        ? { document: documentTool }
+                        : {}),
+                      ...(deckTool != null ? { ppt: deckTool } : {}),
+                    }) as unknown as (pi: ExtensionAPI) => void,
+                  },
+                ]
+              : []),
             {
               name: "abacusai-bot-compaction-pruner",
               factory: compactionPruner as unknown as (
@@ -1257,6 +1292,8 @@ export class AbacusBotSession {
         // Read at spawn: the chat's model moves with a pick or a pool hop, and
         // a sub-agent runs on the one the user is on then, not at start.
         model: () => this.session?.model ?? model,
+        // A document's numbers are checked against the person, not the bot.
+        requestSources: () => requestSources(this.session?.messages ?? []),
         browserModel: () =>
           browserModelOverride ?? this.session?.model ?? model,
         hostServices: hostServices ? this.hostServices : null,

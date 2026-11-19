@@ -3,10 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <title>Cobalt Grid — Slide Template</title>
+  <link rel="stylesheet" href="fonts.css">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;1,300;1,400;1,500&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root {
     --paper:    #F0EBDE;   /* warm cream / ivory paper canvas */
@@ -89,7 +87,7 @@
     right: clamp(28px, 2.4vw, 48px);
     bottom: clamp(48px, 4.8vh, 76px);
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(11px, 0.82vw, 13px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.06em;
     z-index: 9;
@@ -169,10 +167,22 @@
     position: absolute;
     left: clamp(36px, 3.6vw, 80px);
     top: clamp(80px, 9vh, 160px);
+    /* Title, subtitle and footer stack in one column that stops above the
+       page number, so a long title pushes the footer down instead of
+       running into it (and clips, so print shrinks it to fit). */
+    bottom: clamp(82px, 8vh, 120px);
     z-index: 5;
-    max-width: 60%;
+    width: 60%;
+    display: flex; flex-direction: column;
+    overflow: hidden;
   }
+  /* The title's own box gives way first: a long title is clipped here, which
+     print reads as overflow and shrinks, while the subtitle and footer
+     below keep their room. */
+  .s-cover .title-box { flex: 0 1 auto; min-height: 0; overflow: hidden; }
+  .s-cover .subkicker, .s-cover .cfooter { flex-shrink: 0; }
   .s-cover .title {
+    margin: 0.35em 0 0;
     font-family: 'Newsreader', Georgia, serif;
     
     font-weight: 400;
@@ -190,7 +200,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: clamp(13px, 1vw, 16px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
   }
   .s-cover .subkicker .ed {
@@ -231,7 +241,7 @@
   }
   .s-cover .vstack .v-row {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(12px, 0.9vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     line-height: 1;
     color: var(--ink);
     letter-spacing: 0.04em;
@@ -243,24 +253,22 @@
   .s-cover .cfooter {
     /* Constrained to the left half so it never runs under the right-side
        pixel-glitch column on any viewport. */
-    position: absolute;
-    left: clamp(36px, 3.6vw, 80px);
-    right: clamp(680px, 40vw, 880px);
-    bottom: clamp(82px, 8vh, 120px);
+    margin-top: auto;
+    padding-top: clamp(16px, 2vh, 28px);
     display: flex; justify-content: flex-start; align-items: end;
     z-index: 5;
     gap: clamp(28px, 3vw, 56px);
   }
   .s-cover .cfooter .colf {
     font-family: 'Hanken Grotesk', sans-serif;
-    font-size: clamp(14px, 0.92vw, 15px);
+    font-size: clamp(20px, 1.56vw, 30px);
     line-height: 1.45;
     color: var(--ink);
   }
   .s-cover .cfooter .colf .ftag {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(11px, 0.78vw, 13px);
+    font-size: clamp(16px, 1.25vw, 24px);
     margin-bottom: 4px;
     color: var(--ink);
   }
@@ -302,12 +310,12 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    font-size: clamp(12px, 0.85vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
   }
   .s-manifesto .attr .meta-tag {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(12px, 0.82vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.04em;
     opacity: 0.78;
@@ -342,7 +350,7 @@
   .s-index .topbar .lab-tag {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink); text-align: right;
   }
   .s-index .list {
@@ -361,7 +369,7 @@
   }
   .s-index .row .num-tag {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(13px, 0.9vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.04em;
     padding-top: 6px;
@@ -378,7 +386,7 @@
   .s-index .row p {
     margin: 0;
     font-family: 'Hanken Grotesk', sans-serif;
-    font-size: clamp(14px, 0.95vw, 15px);
+    font-size: clamp(20px, 1.56vw, 30px);
     line-height: 1.5;
     color: var(--ink);
     max-width: 92%;
@@ -408,7 +416,7 @@
   }
   .s-chapter .nm-tag {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(13px, 0.92vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.06em;
   }
@@ -424,7 +432,7 @@
   .s-chapter .lede {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 400;
-    font-size: clamp(15px, 1vw, 18px);
+    font-size: clamp(22px, 1.72vw, 33px);
     line-height: 1.5;
     color: var(--ink);
     max-width: 56ch;
@@ -458,7 +466,7 @@
   .s-data .topbar .lab-tag {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink); text-align: right;
   }
   .s-data .body {
@@ -484,13 +492,13 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    font-size: clamp(13px, 0.95vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     margin-top: 6px;
   }
   .s-data .stat .desc {
     font-family: 'Hanken Grotesk', sans-serif;
-    font-size: clamp(15px, 1vw, 17px);
+    font-size: clamp(20px, 1.56vw, 30px);
     line-height: 1.5;
     color: var(--ink);
     max-width: 30ch;
@@ -531,7 +539,7 @@
   }
   .s-data .chart .ticks .ticklab {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(12px, 0.85vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.04em;
     text-align: center;
@@ -561,7 +569,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.2em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     margin-bottom: clamp(16px, 1.8vh, 28px);
   }
@@ -588,12 +596,12 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    font-size: clamp(13px, 0.92vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
   }
   .s-quote .qattr .role-meta {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(12px, 0.85vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.04em;
     opacity: 0.78;
@@ -626,7 +634,7 @@
   .s-table .topbar .lab-tag {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink); text-align: right;
   }
   .s-table .ledger {
@@ -657,12 +665,12 @@
   .s-table .row.headrow > div {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(11px, 0.75vw, 12px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
   }
   .s-table .num-tag {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(13px, 0.95vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     letter-spacing: 0.04em;
   }
@@ -675,19 +683,19 @@
   }
   .s-table .desc {
     font-family: 'Hanken Grotesk', sans-serif;
-    font-size: clamp(14px, 0.95vw, 15px);
+    font-size: clamp(18px, 1.41vw, 27px);
     line-height: 1.4;
     color: var(--ink);
   }
   .s-table .mood-tag {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600;
-    font-size: clamp(13px, 0.92vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
   }
   .s-table .delta-tag {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: clamp(13px, 0.92vw, 15px);
+    font-size: clamp(16px, 1.25vw, 24px);
     text-align: right;
     color: var(--ink);
     letter-spacing: 0.04em;
@@ -704,7 +712,7 @@
     top: clamp(80px, 9vh, 160px);
     left: clamp(36px, 3.6vw, 80px);
     width: clamp(220px, 26vw, 460px);
-    bottom: clamp(220px, 22vh, 360px);
+    bottom: clamp(250px, 34vh, 400px);
     opacity: 0.75;
   }
   .s-colophon .qr-block {
@@ -716,17 +724,23 @@
   .s-colophon .titlewrap {
     position: absolute;
     right: clamp(36px, 3.6vw, 80px);
-    top: 28%;
+    top: 22%;
+    /* Stops above the footer columns: a long closing line shrinks to fit
+       in print instead of running into them. */
+    bottom: 36vh;
     z-index: 5;
-    max-width: 56%;
+    width: 56%;
+    display: flex; flex-direction: column;
+    overflow: hidden;
     text-align: right;
   }
+  .s-colophon .titlewrap > :first-child { margin-top: auto; }
   .s-colophon .ktag {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.22em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.25vw, 24px);
     color: var(--ink);
     margin-bottom: clamp(14px, 1.6vh, 24px);
   }
@@ -758,15 +772,18 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: clamp(11px, 0.78vw, 13px);
+    font-size: clamp(16px, 1.25vw, 24px);
     margin-bottom: 6px;
     color: var(--ink);
   }
   .s-colophon .col-footer .ftxt {
     font-family: 'Hanken Grotesk', sans-serif;
-    font-size: clamp(14px, 0.95vw, 15px);
+    font-size: clamp(20px, 1.56vw, 30px);
     line-height: 1.5;
     color: var(--ink);
+  }
+  @media print {
+    .nav-hint { display: none !important; }
   }
 </style>
 </head>
@@ -786,12 +803,23 @@
   <div class="stage">
 
     <!-- 1. COVER ──────────────────────────────────────────────── -->
-    <section class="slide s-cover hairlines active">
+    <section class="slide s-cover hairlines active" data-label="title">
       <div class="titlewrap">
-        <h1 class="title">Index<br/>2026</h1>
+        <div class="title-box"><h1 class="title">Index 2026</h1></div>
         <div class="subkicker">
           <div class="l caption">Field Office Quarterly · Volume IV</div>
           <div class="ed">A field report on the state of things.</div>
+        </div>
+        <!-- Footer row — two columns, sized to clear the right-side pixel-glitch -->
+        <div class="cfooter">
+          <div class="colf">
+            <div class="ftag caption">Edited by</div>
+            <div>Field Office Editorial · Lin Ito &amp; Anya Mehrotra</div>
+          </div>
+          <div class="colf">
+            <div class="ftag caption">Distributed</div>
+            <div>To subscribers &amp; the open web · twice a year</div>
+          </div>
         </div>
       </div>
 
@@ -821,23 +849,12 @@
         <div class="v-row caption">field-office.co</div>
       </div>
 
-      <!-- Footer row — two columns, sized to clear the right-side pixel-glitch -->
-      <div class="cfooter">
-        <div class="colf">
-          <div class="ftag caption">Edited by</div>
-          <div>Field Office Editorial · Lin Ito &amp; Anya Mehrotra</div>
-        </div>
-        <div class="colf">
-          <div class="ftag caption">Distributed</div>
-          <div>To subscribers &amp; the open web · twice a year</div>
-        </div>
-      </div>
 
       <div class="pagenum">01 / 08</div>
     </section>
 
     <!-- 2. MANIFESTO ───────────────────────────────────────────── -->
-    <section class="slide s-manifesto hairlines">
+    <section class="slide s-manifesto hairlines" data-label="big statement">
       <div class="stmt-wrap">
         <p class="stmt">A trend is a quiet question that several rooms started asking <span class="roman">at roughly the same time.</span></p>
         <div class="attr">
@@ -849,7 +866,7 @@
     </section>
 
     <!-- 3. INDEX OF TRENDS ─────────────────────────────────────── -->
-    <section class="slide s-index hairlines">
+    <section class="slide s-index hairlines" data-label="six items with short descriptions">
       <div class="frame">
         <div class="topbar">
           <div class="h">The index, in six entries.</div>
@@ -904,7 +921,7 @@
     </section>
 
     <!-- 4. CHAPTER DIVIDER ─────────────────────────────────────── -->
-    <section class="slide s-chapter hairlines">
+    <section class="slide s-chapter hairlines" data-label="section opener with a paragraph">
       <div class="pixel-glitch" aria-hidden="true">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
@@ -933,7 +950,7 @@
     </section>
 
     <!-- 5. DATA / PIXEL-STACK CHART ───────────────────────────── -->
-    <section class="slide s-data hairlines">
+    <section class="slide s-data hairlines" data-label="bar chart with two big figures" data-deck-skip>
       <div class="frame">
         <div class="topbar">
           <div class="h">Reader response, by quarter.</div>
@@ -1007,7 +1024,7 @@
     </section>
 
     <!-- 6. QUOTE ──────────────────────────────────────────────── -->
-    <section class="slide s-quote hairlines">
+    <section class="slide s-quote hairlines" data-label="quote">
       <div class="pixel-glitch" aria-hidden="true">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
@@ -1036,7 +1053,7 @@
     </section>
 
     <!-- 7. TREND TABLE ─────────────────────────────────────────── -->
-    <section class="slide s-table hairlines">
+    <section class="slide s-table hairlines" data-label="table (eight rows)" data-deck-skip>
       <div class="frame">
         <div class="topbar">
           <div class="h">Trend ledger, in long.</div>
@@ -1112,7 +1129,7 @@
     </section>
 
     <!-- 8. COLOPHON / CLOSING ─────────────────────────────────── -->
-    <section class="slide s-colophon hairlines">
+    <section class="slide s-colophon hairlines" data-label="closing">
       <div class="pixel-glitch" aria-hidden="true">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
@@ -1144,21 +1161,21 @@
 
       <div class="titlewrap">
         <div class="ktag caption">Colophon · Index 2026</div>
-        <h2 class="ttl">See you in the<br/>autumn issue.</h2>
+        <h2 class="ttl">See you in the autumn issue.</h2>
       </div>
 
       <div class="col-footer">
         <div>
           <div class="ftag caption">Editors</div>
-          <div class="ftxt">Lin Ito &amp; Anya Mehrotra<br/>with the field-office collective</div>
+          <div class="ftxt">Lin Ito &amp; Anya Mehrotra, with the field-office collective</div>
         </div>
         <div>
           <div class="ftag caption">Designed</div>
-          <div class="ftxt">In Newsreader, Hanken Grotesk<br/>&amp; DM Mono · cobalt on cream</div>
+          <div class="ftxt">In Newsreader, Hanken Grotesk &amp; DM Mono, cobalt on cream</div>
         </div>
         <div>
           <div class="ftag caption">Subscribed</div>
-          <div class="ftxt">field-office.co · twice a year<br/>quiet, paid, and read slowly</div>
+          <div class="ftxt">field-office.co · twice a year, quiet, paid, and read slowly</div>
         </div>
         <div>
           <div class="ftag caption">Until autumn</div>

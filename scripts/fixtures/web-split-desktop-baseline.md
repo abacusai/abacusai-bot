@@ -8,7 +8,20 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `94544149`, one folder picker for routines
+## Current: `0f609ac5`, the task list under a reply as one card
+
+**459 / 9929434 / 3338473.** Records the renderer with the suggested tasks drawn
+as one card with a row per task (#874), measured on that branch merged with main
+`80075f79`. Against the previous baseline `94544149` (456 / 9844405 / 3304119):
++3 chunks, +85029 bytes (+0.86%), +34354 gzip bytes (+1.04%). Main had already
+grown to within the 1% allowance since `94544149` without a new baseline; the
+task card's rows tipped gzip past it. `apps/web`'s dependencies did not change.
+The 1% allowance is unchanged.
+
+Measured from a build on Linux x64, clean `dist`, summed the same way as
+`check-desktop-parity.mjs`. This baseline-only change touches no renderer code.
+
+### `94544149`, one folder picker for routines
 
 **456 / 9844405 / 3304119.** Records the renderer with the routines folder
 picker (one picker everywhere, with Choose a folder). Measured on this branch

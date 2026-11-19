@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   BUILD_PROJECTS,
-  PROJECT_SLOTS,
+  POPULAR_SLOTS,
   PROJECT_STARTERS,
   PROJECT_TABS,
   projectsIn,
@@ -33,11 +33,11 @@ describe("project starters", () => {
 
   it("shows the catalog's head under Popular, without the hidden ones", () => {
     expect(projectsIn("popular")).toEqual(
-      PROJECT_STARTERS.slice(0, PROJECT_SLOTS)
+      PROJECT_STARTERS.slice(0, POPULAR_SLOTS)
     );
     const shown = projectsIn("popular", ["morning-inbox"]);
     expect(shown.map((p) => p.id)).not.toContain("morning-inbox");
-    expect(shown).toHaveLength(PROJECT_SLOTS);
+    expect(shown).toHaveLength(POPULAR_SLOTS);
   });
 
   it("offers only build projects on the start page", () => {

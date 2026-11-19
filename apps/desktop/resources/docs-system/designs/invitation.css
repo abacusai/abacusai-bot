@@ -1,0 +1,114 @@
+/* invitation designs: html[data-design="invitation-…"] over the invitation
+   markup of guide.md (body.doc.bleed > .poster.invite: .band with .kicker,
+   h1, .when; .body with p.big and p; .foot). Band and foot never shrink, so a
+   long name runs down (and the fit pass shrinks it) instead of up out of
+   sight. Rules carry body.bleed .poster so they beat the system's own. */
+
+/* ------------------------------------------------------------------ */
+/* Confetti: a children's party. Bunting across the top of a sunny      */
+/* band with a rounded hem, a handwritten "you're invited", a chunky    */
+/* title, the details on a dashed card with confetti around it.         */
+/* ------------------------------------------------------------------ */
+html[data-design="invitation-confetti"]:root {
+  --accent: #f0457f; --accent-soft: #ffe1ec; --ink: #2b1d5e; --muted: #4c4372; --line: #e8e1f2;
+  --sun: #ffd23f; --sky: #34b5f5; --mint: #22c39a; --paper: #fffdf5;
+  --display: "Bricolage Grotesque", var(--sans);
+  --hand: "Caveat", var(--sans);
+  --text: "Manrope", var(--sans);
+}
+html[data-design="invitation-confetti"] body.bleed .poster {
+  background-color: var(--paper); font-family: var(--text); color: var(--ink); text-align: center;
+  background-image:
+    radial-gradient(circle at 7mm 140mm, var(--accent) 0 2.2mm, transparent 2.4mm),
+    radial-gradient(circle at 12mm 168mm, var(--sky) 0 1.6mm, transparent 1.8mm),
+    radial-gradient(circle at 6mm 196mm, var(--sun) 0 2.6mm, transparent 2.8mm),
+    radial-gradient(circle at 11mm 226mm, var(--mint) 0 1.8mm, transparent 2mm),
+    radial-gradient(circle at calc(100% - 8mm) 150mm, var(--sun) 0 2.4mm, transparent 2.6mm),
+    radial-gradient(circle at calc(100% - 12mm) 180mm, var(--accent) 0 1.6mm, transparent 1.8mm),
+    radial-gradient(circle at calc(100% - 6mm) 207mm, var(--sky) 0 2.6mm, transparent 2.8mm),
+    radial-gradient(circle at calc(100% - 11mm) 236mm, var(--mint) 0 1.8mm, transparent 2mm);
+}
+html[data-design="invitation-confetti"] body.bleed .poster .band {
+  position: relative; flex-shrink: 0; min-height: calc(110mm * var(--fit)); justify-content: center; align-items: center;
+  background: var(--sun); color: var(--ink); padding: calc(30mm * var(--fit)) 18mm calc(14mm * var(--fit));
+  border-radius: 0 0 50% 50% / 0 0 16mm 16mm;
+}
+html[data-design="invitation-confetti"] body.bleed .poster .band::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 3mm; height: 14mm;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 17.5mm, var(--sky) 17.5mm 35mm, var(--mint) 35mm 52.5mm, #ff8a3d 52.5mm 70mm);
+  -webkit-mask: conic-gradient(from -32deg at 50% 100%, #000 64deg, transparent 0) 0 0 / 17.5mm 14mm repeat-x;
+  mask: conic-gradient(from -32deg at 50% 100%, #000 64deg, transparent 0) 0 0 / 17.5mm 14mm repeat-x;
+}
+html[data-design="invitation-confetti"] body.bleed .poster .band::after { content: ""; position: absolute; left: 0; right: 0; top: 2.6mm; height: 0.8mm; background: var(--ink); opacity: 0.55; }
+html[data-design="invitation-confetti"] body.bleed .poster .band .kicker { font-family: var(--hand); font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--accent); opacity: 1; font-size: calc(30pt * var(--fit)); line-height: 1.1; margin: 0 0 2mm; }
+html[data-design="invitation-confetti"] body.bleed .poster h1 { text-wrap: balance; font-family: var(--display); font-weight: 800; font-size: calc(74pt * var(--fit)); line-height: 1; letter-spacing: -0.03em; color: var(--ink); margin: 0 0 calc(6mm * var(--fit)); }
+html[data-design="invitation-confetti"] body.bleed .poster .when { display: inline-block; align-self: center; background: #fff; color: var(--ink); font-family: var(--display); font-weight: 700; font-size: calc(19pt * var(--fit)); line-height: 1.25; padding: 2.5mm 7mm; border-radius: 12mm; box-shadow: 0 1.2mm 0 rgba(43, 29, 94, 0.25); }
+html[data-design="invitation-confetti"] body.bleed .poster .body { margin: calc(12mm * var(--fit)) 22mm calc(12mm * var(--fit)); padding: calc(8mm * var(--fit)) 10mm; border: 1mm dashed var(--accent); border-radius: 9mm; background: #fff; justify-content: space-evenly; gap: calc(5mm * var(--fit)); }
+html[data-design="invitation-confetti"] body.bleed .poster .big { font-family: var(--display); font-weight: 800; font-size: calc(26pt * var(--fit)); line-height: 1.2; color: var(--ink); }
+html[data-design="invitation-confetti"] body.bleed .poster .body > p:not(.big) { font-family: var(--text); font-weight: 600; font-size: calc(18pt * var(--fit)); color: var(--muted); }
+html[data-design="invitation-confetti"] body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(:last-child) { border-left: 0; padding-left: 0; }
+html[data-design="invitation-confetti"] body.bleed .poster .offers > * { background: var(--accent-soft); border-radius: 6mm; }
+html[data-design="invitation-confetti"] body.bleed .poster table.data td:first-child { color: var(--accent); }
+html[data-design="invitation-confetti"] body.bleed .poster .foot { flex-shrink: 0; background: var(--ink); color: #fff; font-family: var(--display); font-weight: 700; font-size: calc(18pt * var(--fit)); text-align: center; padding: calc(9mm * var(--fit)) 16mm; border-radius: 10mm 10mm 0 0; margin: 0 10mm; }
+
+/* ------------------------------------------------------------------ */
+/* Vows: a wedding or formal occasion. Ivory card, a double gold frame  */
+/* with corner dots, everything centred in Cormorant, the date between  */
+/* gold rules, a dot-and-rule ornament under the names.                 */
+/* ------------------------------------------------------------------ */
+html[data-design="invitation-vows"]:root {
+  --accent: #9a7b3c; --accent-soft: #f4ecdc; --ink: #2a2730; --muted: #5d5850; --line: #d9ccb0;
+  --gold: #a8853f; --ivory: #fbf7ee;
+  --display: "Cormorant Garamond", var(--serif);
+  --text: "Cormorant Garamond", var(--serif);
+}
+html[data-design="invitation-vows"] body.bleed .poster { position: relative; background: var(--ivory); font-family: var(--text); color: var(--ink); text-align: center; }
+html[data-design="invitation-vows"] body.bleed .poster::before { content: ""; position: absolute; inset: 10mm; border: 1.6pt solid var(--gold); pointer-events: none; }
+html[data-design="invitation-vows"] body.bleed .poster::after {
+  content: ""; position: absolute; inset: 13mm; border: 0.5pt solid var(--gold); pointer-events: none;
+  --m: radial-gradient(circle, var(--gold) 0 1.3mm, transparent 1.4mm);
+  background: var(--m) -3mm -3mm / 6mm 6mm no-repeat, var(--m) calc(100% + 3mm) -3mm / 6mm 6mm no-repeat, var(--m) -3mm calc(100% + 3mm) / 6mm 6mm no-repeat, var(--m) calc(100% + 3mm) calc(100% + 3mm) / 6mm 6mm no-repeat;
+}
+html[data-design="invitation-vows"] body.bleed .poster .band { position: relative; flex-shrink: 0; min-height: 0; background: none; color: var(--ink); justify-content: flex-start; align-items: center; padding: calc(40mm * var(--fit)) 28mm calc(14mm * var(--fit)); }
+html[data-design="invitation-vows"] body.bleed .poster .band::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 64mm; height: 5mm; transform: translateX(-50%); background: radial-gradient(circle, var(--gold) 0 1.3mm, var(--ivory) 1.4mm 3.6mm, transparent 3.7mm) center / 10mm 5mm no-repeat, linear-gradient(var(--gold), var(--gold)) center / 100% 0.6pt no-repeat; }
+html[data-design="invitation-vows"] body.bleed .poster .band .kicker { font-family: var(--text); font-weight: 400; color: var(--gold); opacity: 1; font-size: calc(14pt * var(--fit)); letter-spacing: 0.32em; margin: 0 0 calc(8mm * var(--fit)); }
+html[data-design="invitation-vows"] body.bleed .poster h1 { text-wrap: balance; font-family: var(--display); font-weight: 400; font-size: calc(64pt * var(--fit)); line-height: 1.08; letter-spacing: 0; color: var(--ink); margin: 0 0 calc(8mm * var(--fit)); }
+html[data-design="invitation-vows"] body.bleed .poster .when { display: flex; align-items: center; justify-content: center; gap: 5mm; width: 100%; font-family: var(--text); font-weight: 400; font-size: calc(17pt * var(--fit)); letter-spacing: 0.14em; text-transform: uppercase; text-wrap: balance; color: var(--ink); }
+html[data-design="invitation-vows"] body.bleed .poster .when::before, html[data-design="invitation-vows"] body.bleed .poster .when::after { content: ""; flex: 0 0 10mm; height: 0.6pt; background: var(--gold); }
+html[data-design="invitation-vows"] body.bleed .poster .body { padding: calc(10mm * var(--fit)) 30mm calc(6mm * var(--fit)); gap: calc(5mm * var(--fit)); justify-content: space-evenly; }
+html[data-design="invitation-vows"] body.bleed .poster .big { font-family: var(--display); font-weight: 400; font-size: calc(28pt * var(--fit)); line-height: 1.2; color: var(--gold); }
+html[data-design="invitation-vows"] body.bleed .poster .body > p:not(.big) { font-family: var(--text); font-weight: 400; font-size: calc(20pt * var(--fit)); line-height: 1.35; color: var(--ink); }
+html[data-design="invitation-vows"] body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(:last-child) { border-left: 0; padding-left: 0; }
+html[data-design="invitation-vows"] body.bleed .poster .offers > * { background: none; border: 0.6pt solid var(--gold); border-radius: 0; font-weight: 400; }
+html[data-design="invitation-vows"] body.bleed .poster table.data td:first-child { color: var(--gold); }
+html[data-design="invitation-vows"] body.bleed .poster .foot { flex-shrink: 0; background: none; color: var(--muted); font-family: var(--text); font-weight: 400; font-size: calc(15pt * var(--fit)); letter-spacing: 0.04em; text-align: center; margin: 0 28mm; padding: calc(5mm * var(--fit)) 0 calc(22mm * var(--fit)); border-top: 0.6pt solid var(--gold); }
+
+/* ------------------------------------------------------------------ */
+/* Soirée: a modern celebration. A night-violet card, two overlapping   */
+/* circles as the header graphic, the title in heavy Archivo set left,  */
+/* a coral rule, gold for the place, a coral foot.                      */
+/* ------------------------------------------------------------------ */
+html[data-design="invitation-soiree"]:root {
+  --accent: #ff7657; --accent-soft: #3a3358; --ink: #17142b; --muted: #c9c3de; --line: #3d3760;
+  --night: #17142b; --lilac: #a996ff; --gold: #f4c55a; --cloud: #f3f0fa;
+  --display: "Archivo Black", var(--sans);
+  --text: "Space Grotesk", var(--sans);
+}
+html[data-design="invitation-soiree"] body.bleed .poster { position: relative; background: var(--night); font-family: var(--text); color: var(--cloud); }
+html[data-design="invitation-soiree"] body.bleed .poster .band { position: relative; flex-shrink: 0; min-height: 0; background: none; color: var(--cloud); justify-content: flex-start; padding: calc(66mm * var(--fit)) 18mm calc(8mm * var(--fit)); overflow: visible; }
+html[data-design="invitation-soiree"] body.bleed .poster .band::before { content: ""; position: absolute; right: -26mm; top: -34mm; width: 104mm; height: 104mm; border-radius: 50%; border: 1.4mm solid var(--accent); }
+html[data-design="invitation-soiree"] body.bleed .poster .band::after { content: ""; position: absolute; right: 54mm; top: 14mm; width: 38mm; height: 38mm; border-radius: 50%; background: var(--lilac); }
+html[data-design="invitation-soiree"] body.bleed .poster .band > * { position: relative; z-index: 1; }
+html[data-design="invitation-soiree"] body.bleed .poster .band .kicker { font-family: var(--text); font-weight: 700; color: var(--gold); opacity: 1; font-size: calc(13pt * var(--fit)); letter-spacing: 0.24em; margin: 0 0 calc(5mm * var(--fit)); }
+html[data-design="invitation-soiree"] body.bleed .poster h1 { text-wrap: balance; font-family: var(--display); font-weight: 400; font-size: calc(62pt * var(--fit)); line-height: 1.05; letter-spacing: -0.02em; color: #fff; margin: 0 0 calc(6mm * var(--fit)); }
+html[data-design="invitation-soiree"] body.bleed .poster h1::after { content: ""; display: block; width: 32mm; height: 1.8mm; background: var(--accent); margin-top: calc(6mm * var(--fit)); }
+html[data-design="invitation-soiree"] body.bleed .poster .when { font-family: var(--text); font-weight: 700; font-size: calc(21pt * var(--fit)); color: #fff; }
+html[data-design="invitation-soiree"] body.bleed .poster .body { padding: calc(8mm * var(--fit)) 18mm calc(12mm * var(--fit)); gap: calc(5mm * var(--fit)); justify-content: flex-start; }
+html[data-design="invitation-soiree"] body.bleed .poster .big { font-family: var(--text); font-weight: 700; font-size: calc(25pt * var(--fit)); line-height: 1.2; color: var(--gold); }
+html[data-design="invitation-soiree"] body.bleed .poster .body > p:not(.big) { font-family: var(--text); font-weight: 400; font-size: calc(19pt * var(--fit)); color: var(--muted); }
+html[data-design="invitation-soiree"] body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(:last-child) { border-left-color: var(--accent); }
+html[data-design="invitation-soiree"] body.bleed .poster .offers > * { background: var(--accent-soft); color: #fff; border-radius: 0; }
+html[data-design="invitation-soiree"] body.bleed .poster table.data th { color: var(--muted); border-bottom-color: var(--accent); }
+html[data-design="invitation-soiree"] body.bleed .poster table.data td { border-bottom-color: var(--line); }
+html[data-design="invitation-soiree"] body.bleed .poster table.data td:first-child { color: var(--gold); }
+html[data-design="invitation-soiree"] body.bleed .poster .foot { flex-shrink: 0; background: var(--accent); color: var(--night); font-family: var(--text); font-weight: 700; font-size: calc(18pt * var(--fit)); padding: calc(9mm * var(--fit)) 18mm; }

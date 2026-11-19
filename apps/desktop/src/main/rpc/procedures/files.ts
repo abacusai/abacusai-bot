@@ -30,6 +30,16 @@ export const filesRouter = impl.files.router({
     if (!list) throw unsupported("files.listDirectory");
     return list(input.path);
   }),
+  relook: impl.files.relook.handler(({ input, context }) => {
+    const relook = context.deps.app.relookDocument;
+    if (!relook) throw unsupported("files.relook");
+    return relook(input.path, input.look, input.design);
+  }),
+  designs: impl.files.designs.handler(({ input, context }) => {
+    const designs = context.deps.app.documentDesigns;
+    if (!designs) throw unsupported("files.designs");
+    return designs(input.path);
+  }),
   mkdir: impl.files.mkdir.handler(({ input, context }) => {
     const mkdir = context.deps.app.mkdir;
     if (!mkdir) throw unsupported("files.mkdir");

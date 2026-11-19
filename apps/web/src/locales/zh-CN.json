@@ -1925,26 +1925,26 @@
       "build": {
         "orders-system": {
           "name": "订单和预约应用",
-          "detail": "适合商店、健身房、美容美发店或服务类生意。",
+          "detail": "适合商店、健身房、沙龙。",
           "prompt": "我在做小生意。请在这台电脑上帮我做一个简单的应用，用来管理我的订单、预约或服务工单：要有一个可以添加、搜索和筛选的列表，每一条都有单独的页面，显示客户、日期、状态和价格，还要有每日汇总。请马上用一家典型小店的示例数据做出第一版，并帮我打开。然后用一条简短的消息问我做的是什么生意、需要记录哪些内容，好让你按我的情况调整。"
         },
         "business-site": {
           "name": "我的生意网站",
-          "detail": "服务项目、营业时间、客户评价和联系表单。",
+          "detail": "服务、营业时间、联系方式。",
           "prompt": "请帮我的生意做一个网站：顶部写上店名和主营内容，有一个带价格的服务板块，还要有营业时间、几条客户评价、店铺位置和联系表单。先用示例信息占位，之后我再替换，并确保在手机上显示正常。做好后给我看看页面，然后用一条简短的消息问我店名和做的是什么生意，好让你按我的情况调整。"
         },
         "lead-finder": {
           "name": "寻找客户",
-          "detail": "每天早上提供新的潜在客户，并起草好第一封邮件。"
+          "detail": "每天新客户，附首封邮件草稿。"
         },
         "my-game": {
           "name": "开发我的游戏",
-          "detail": "Unity、Godot、Unreal 或 Roblox，直接在你的项目文件夹里。",
+          "detail": "Unity、Godot、Unreal 或 Roblox。",
           "prompt": "请帮我做我的游戏。如果还没有打开项目文件夹，先问我游戏项目在哪里。然后看一遍项目，告诉我它用的是哪个引擎和版本、主要的场景和脚本，以及看起来有问题或没做完的地方。给我建议三个最有用的下一步，等我选好一个再动手修改。"
         },
         "morning-inbox": {
           "name": "每天早上回复我的邮件",
-          "detail": "为每封需要你处理的邮件起草回复。"
+          "detail": "每天早上起草回复。"
         },
         "portfolio-site": {
           "name": "作品集网站",
@@ -1953,7 +1953,7 @@
         },
         "numbers-dashboard": {
           "name": "我的数据看板",
-          "detail": "根据你的电子表格查看销售额、成本和趋势。",
+          "detail": "销售、成本和趋势。",
           "prompt": "请帮我做一个业务数据看板：显示本月合计、按月的图表、排名靠前的产品或客户，以及任何异常情况。请马上用逼真的示例销售数据做出能用的版本，并给我看看。然后向我要电子表格或 CSV 文件，把看板换成我的真实数据。"
         },
         "shop-page": {
@@ -1962,9 +1962,14 @@
           "prompt": "为我的小生意做一个单页商店：页头放店名，六件示例商品，每件有照片、名称、价格和“加入购物车”按钮，再加一个简单的购物车和一个联系方式板块。使用之后可以替换的占位商品，并确保在手机上显示正常。做好后把页面展示给我。"
         },
         "simple-game": {
-          "name": "一个简单的游戏",
-          "detail": "在浏览器中就能玩。",
-          "prompt": "做一个我马上就能在浏览器里玩的简单游戏：贪吃蛇，支持方向键和滑动操作，有分数、最高分和重新开始按钮。只用一个页面，做好后展示给我。"
+          "name": "能玩的小游戏",
+          "detail": "大约一分钟就能玩。",
+          "prompt": "帮我做一个大约一分钟就能在浏览器里玩的有趣小游戏：一个躲避掉落物体的街机游戏，要有开始界面、方向键和触屏操作、分数和最高分、游戏结束界面和重新开始按钮。做成适合窗口大小的单个页面，确认每个操作都能用，做好后给我看。然后用一条简短消息问我想要什么样的游戏，把它改成我的游戏。"
+        },
+        "my-project": {
+          "name": "处理我的应用或网站",
+          "detail": "这台电脑上的应用或网站。",
+          "prompt": "帮我处理我的应用或网站项目。如果还没有打开项目文件夹，先问我项目在哪里。然后浏览一遍，告诉我它用什么做的、怎么运行、主要组成部分，以及任何看起来有问题或没完成的地方。提出三个最有用的下一步，等我选好一个再做任何修改。"
         }
       },
       "code": {
@@ -2950,7 +2955,8 @@
       "messaging": "消息",
       "mcp": "MCP 服务器",
       "skills": "技能",
-      "tools": "工具"
+      "tools": "工具",
+      "templates": "Templates"
     },
     "emptyDescription": "此页面将在后续更新中推出。",
     "connectorDescription": "连接详情将在后续更新中推出。"
@@ -3611,7 +3617,10 @@
       "open": "打开"
     },
     "suggestedTasks": {
-      "label": "点击任务即可运行",
+      "pickOne": "选一个继续",
+      "next": "下一步",
+      "routineLine": "应用打开时按计划运行",
+      "copied": "已复制",
       "copy": "复制“{{text}}”，然后从手机发送",
       "copyFailed": "无法复制"
     },
@@ -5643,6 +5652,76 @@
     },
     "pr": {
       "line": "这里的 PR 收到审查或 CI 失败时提醒我"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
     }
   }
 }

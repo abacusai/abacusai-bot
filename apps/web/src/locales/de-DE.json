@@ -1924,47 +1924,52 @@
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "App für Bestellungen und Buchungen",
-          "detail": "Für einen Laden, ein Fitnessstudio, einen Salon oder einen Dienstleister.",
+          "name": "Bestellungen und Buchungen",
+          "detail": "Für Läden, Studios und Dienste.",
           "prompt": "Ich habe ein kleines Unternehmen. Bau mir auf diesem Computer eine einfache App, mit der ich meine Bestellungen, Buchungen oder Aufträge im Blick behalte: eine Liste, die ich ergänzen, durchsuchen und filtern kann, eine eigene Seite für jeden Eintrag mit Kunde, Datum, Status und Preis sowie eine tägliche Zusammenfassung. Bau sofort eine erste Version mit Beispieldaten für einen typischen kleinen Laden und öffne sie für mich. Frag mich danach in einer kurzen Nachricht, was mein Unternehmen macht und was ich erfassen muss, damit du die App anpassen kannst."
         },
         "business-site": {
           "name": "Website für mein Unternehmen",
-          "detail": "Leistungen, Öffnungszeiten, Bewertungen und ein Kontaktformular.",
+          "detail": "Leistungen, Zeiten, Kontakt.",
           "prompt": "Bau mir eine Website für mein Unternehmen: einen Kopfbereich mit dem Namen des Unternehmens und dem, was es anbietet, einen Bereich mit Leistungen und Preisen, Öffnungszeiten, ein paar Kundenbewertungen, Infos dazu, wo man uns findet, und ein Kontaktformular. Verwende Platzhalter, die ich später austauschen kann, und sorg dafür, dass die Seite auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist, und frag mich dann in einer kurzen Nachricht nach dem Namen meines Unternehmens und danach, was es macht, damit du die Seite an mich anpassen kannst."
         },
         "lead-finder": {
           "name": "Kunden finden",
-          "detail": "Jeden Morgen neue Interessenten, samt Entwurf für die erste E-Mail."
+          "detail": "Leads und erste Mail, täglich."
         },
         "my-game": {
           "name": "An meinem Spiel arbeiten",
-          "detail": "Unity, Godot, Unreal oder Roblox, in deinem Projektordner.",
+          "detail": "Unity, Godot, Unreal oder Roblox.",
           "prompt": "Hilf mir mit meinem Spiel. Wenn kein Projektordner geöffnet ist, frag mich, wo das Projekt meines Spiels liegt. Sieh es dir dann an und sag mir, welche Engine und welche Version es verwendet, welche die wichtigsten Szenen und Skripte sind und was kaputt oder unfertig aussieht. Schlag mir die drei sinnvollsten nächsten Schritte vor und warte, bis ich einen ausgewählt habe, bevor du etwas änderst."
         },
         "morning-inbox": {
-          "name": "Jeden Morgen meine E-Mails beantworten",
-          "detail": "Ein Antwortentwurf für jede E-Mail, die dich braucht."
+          "name": "Morgens E-Mails beantworten",
+          "detail": "Antworten jeden Morgen bereit."
         },
         "portfolio-site": {
           "name": "Portfolio-Website",
-          "detail": "Eine einseitige Website für deine Arbeit.",
+          "detail": "Eine Seite für deine Arbeit.",
           "prompt": "Bau mir eine einseitige Portfolio-Website: oben mein Name mit einem Satz zur Vorstellung, ein Raster mit drei Beispielprojekten, ein Abschnitt über mich und ein Kontaktbereich. Nimm Platzhaltertexte und -bilder, die ich später austauschen kann, gestalte sie klar und modern und sorge dafür, dass sie auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist."
         },
         "numbers-dashboard": {
           "name": "Dashboard für meine Zahlen",
-          "detail": "Umsätze, Kosten und Trends aus deiner Tabelle.",
+          "detail": "Umsatz, Kosten und Trends.",
           "prompt": "Bau mir ein Dashboard für meine Geschäftszahlen: Summen für diesen Monat, ein Diagramm nach Monaten, die wichtigsten Produkte oder Kunden und alles, was auffällig ist. Fang sofort mit realistischen Beispiel-Verkaufsdaten an, damit es funktioniert, und zeig es mir. Frag mich dann nach meiner Tabelle oder CSV-Datei und stell das Dashboard auf meine echten Zahlen um."
         },
         "shop-page": {
           "name": "Shopseite für mein Geschäft",
-          "detail": "Produkte, Preise und ein Warenkorb.",
+          "detail": "Produkte, Preise, Warenkorb.",
           "prompt": "Bau eine einseitige Shopseite für mein kleines Geschäft: oben der Name des Shops, sechs Beispielprodukte mit Fotos, Namen, Preisen und einem Button „In den Warenkorb“, ein einfacher Warenkorb und ein Kontaktbereich. Nimm Platzhalterprodukte, die ich später austauschen kann, und sorge dafür, dass sie auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist."
         },
         "simple-game": {
-          "name": "Ein einfaches Spiel",
-          "detail": "Direkt im Browser spielbar.",
-          "prompt": "Bau ein einfaches Spiel, das ich sofort im Browser spielen kann: ein Snake-Spiel mit Pfeiltasten- und Wischsteuerung, Punktestand, Bestwert und einem Neustart-Button. Alles auf einer Seite, und zeig es mir, wenn es fertig ist."
+          "name": "Ein Spiel zum Spielen",
+          "detail": "In etwa einer Minute spielbar.",
+          "prompt": "Bau mir ein unterhaltsames Spiel, das ich in etwa einer Minute im Browser spielen kann: ein Arcade-Spiel, in dem ich herabfallenden Objekten ausweiche, mit Startbildschirm, Pfeiltasten- und Touch-Steuerung, Punktestand und Bestwert, Game-over-Bildschirm und Neustart-Button. Halte es auf einer Seite, die ins Fenster passt, prüfe, dass jede Steuerung funktioniert, und zeig es mir, wenn es fertig ist. Frag mich dann in einer kurzen Nachricht, was für ein Spiel ich möchte, damit du daraus meins machst."
+        },
+        "my-project": {
+          "name": "Meine App oder Website",
+          "detail": "App oder Website auf diesem PC.",
+          "prompt": "Hilf mir mit meinem App- oder Website-Projekt. Wenn kein Projektordner geöffnet ist, frag mich, wo mein Projekt liegt. Sieh es dir dann an und sag mir, womit es gebaut ist, wie man es startet, welche Hauptteile es hat und was kaputt oder unfertig aussieht. Schlag die drei nützlichsten nächsten Schritte vor und warte, bis ich einen auswähle, bevor du etwas änderst."
         }
       },
       "code": {
@@ -2950,7 +2955,8 @@
       "messaging": "Messaging",
       "mcp": "MCP servers",
       "skills": "Skills",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "This page arrives in a coming update.",
     "connectorDescription": "Connection details arrive in a coming update."
@@ -3611,7 +3617,10 @@
       "open": "Öffnen"
     },
     "suggestedTasks": {
-      "label": "Tippe auf eine Aufgabe, um sie zu starten",
+      "pickOne": "Wähle eins, um weiterzumachen",
+      "next": "Als Nächstes",
+      "routineLine": "Läuft nach Zeitplan, solange die App geöffnet ist",
+      "copied": "Kopiert",
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
       "copyFailed": "Kopieren fehlgeschlagen"
     },
@@ -5643,6 +5652,76 @@
     },
     "pr": {
       "line": "Melde mich, wenn PRs hier ein Review bekommen oder CI fehlschlägt"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
     }
   }
 }

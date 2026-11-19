@@ -188,7 +188,13 @@ describe("deliverables: writes the agent never named", () => {
     expect(
       turnDeliverables(
         turn(
-          liveTool("agent-tools_ppt", { output_path: "/w/deck.html" }),
+          liveTool(
+            "agent-tools_ppt",
+            { output_path: "/w/deck.html" },
+            {
+              content: 'Built a 5-slide deck on template "signal": /w/deck.pdf',
+            }
+          ),
           liveTool("agent-tools_design", { output_dir: "/w/brand" }),
           liveTool(
             "agent-tools_image_generate",

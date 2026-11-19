@@ -1,0 +1,5 @@
+[
+  {"id": "report-journal", "name": "Journal", "blurb": "a magazine feature: masthead bar, large Playfair title, serif text and pull-quote callouts; reports meant to be read"},
+  {"id": "report-boardroom", "name": "Boardroom", "blurb": "a navy title band, blue square-marked headings and banded tables; corporate, quarterly and management reports"},
+  {"id": "report-schematic", "name": "Schematic", "blurb": "graph-paper header, monospaced figures and an orange signal; technical, engineering and data reports"}
+]

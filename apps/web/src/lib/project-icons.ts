@@ -2,6 +2,7 @@
 import {
   ChartColumn,
   ClipboardList,
+  FolderCode,
   Gamepad2,
   Joystick,
   LayoutTemplate,
@@ -22,4 +23,5 @@ export const PROJECT_ICONS: Record<string, LucideIcon> = {
   "numbers-dashboard": ChartColumn,
   "shop-page": ShoppingBag,
   "simple-game": Joystick,
+  "my-project": FolderCode,
 };

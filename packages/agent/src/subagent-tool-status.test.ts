@@ -23,7 +23,14 @@ const stubs = vi.hoisted(() => ({
 
 vi.mock("./deck-task.js", () => ({ runDeckTask: stubs.deck }));
 vi.mock("./design-task.js", () => ({ runDesignTask: stubs.design }));
-vi.mock("./document-task.js", () => ({ runDocumentTask: stubs.document }));
+vi.mock("./document-task.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./document-task.js")>()),
+  runDocumentTask: stubs.document,
+}));
+
+// These are the template runs; the design-system path (on by default) has
+// its own stop handling in docs-system-task.ts.
+process.env.ABACUSAI_BOT_DOCS_SYSTEM = "0";
 
 const { buildDeckTool } = await import("./deck-tool.js");
 const { buildDesignTool } = await import("./design-tool.js");

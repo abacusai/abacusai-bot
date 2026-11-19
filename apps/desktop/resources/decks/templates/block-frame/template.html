@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BlockFrame — Neobrutalist Presentation Template</title>
+  <link rel="stylesheet" href="fonts.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
     :root {
       --pink: #FE90E8;
@@ -1079,7 +1079,7 @@
   <div class="slides-container">
 
     <!-- SLIDE 1: Title Hero -->
-    <section class="slide slide-1 active">
+    <section class="slide slide-1 active" data-label="title: a kicker, a title of up to three short lines, a one-line subtitle and a button word">
       <div class="deco-dots"></div>
       <div class="hero-frame">
         <div class="corner-bracket tl"></div>
@@ -1087,7 +1087,7 @@
         <div class="corner-bracket bl"></div>
         <div class="corner-bracket br"></div>
         <div class="nb-label hero-label">Presentation Template</div>
-        <h1 class="nb-heading-xl hero-title">NEO-<br>BRUTALISM<br>STYLE</h1>
+        <h1 class="nb-heading-xl hero-title">NEO- BRUTALISM STYLE</h1>
         <p class="hero-subtitle">A bold, high-contrast template designed for maximum visual impact and uncompromising clarity.</p>
         <div class="deco-pink-rect"></div>
         <div class="deco-green-circle"></div>
@@ -1096,10 +1096,10 @@
     </section>
 
     <!-- SLIDE 2: Two Column Intro -->
-    <section class="slide slide-2">
+    <section class="slide slide-2" data-label="overview: a heading, a paragraph, two short facts and three cards (goal, scope, outcome)">
       <div class="col-left">
         <div class="nb-label nb-label-yellow">Overview</div>
-        <h2 class="nb-heading-lg">What We<br>Deliver</h2>
+        <h2 class="nb-heading-lg">What We Deliver</h2>
         <p class="nb-body" style="max-width: 480px;">Every project follows a rigorous process that balances creative exploration with systematic execution. The result is work that stands out while remaining fully functional.</p>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
           <span class="stat-pill">12+ Years</span>
@@ -1123,7 +1123,7 @@
     </section>
 
     <!-- SLIDE 3: Three Feature Cards -->
-    <section class="slide slide-3">
+    <section class="slide slide-3" data-label="three cards: a letter, a short title and a sentence each">
       <div class="slide-header">
         <div class="nb-label nb-label-pink">Core Features</div>
       </div>
@@ -1150,7 +1150,7 @@
     </section>
 
     <!-- SLIDE 4: Chart / Data -->
-    <section class="slide slide-4">
+    <section class="slide slide-4" data-label="bar chart" data-deck-skip>
       <div class="slide-header">
         <div class="nb-label nb-label-blue">Performance Data</div>
       </div>
@@ -1227,7 +1227,7 @@
     </section>
 
     <!-- SLIDE 5: Big Statement / Quote -->
-    <section class="slide slide-5">
+    <section class="slide slide-5" data-label="quote or one principle, with who said it">
       <div class="quote-frame">
         <div class="deco-quote-marks">"</div>
         <div class="corner-bracket tl"></div>
@@ -1241,7 +1241,7 @@
     </section>
 
     <!-- SLIDE 6: Split Image + Text -->
-    <section class="slide slide-6">
+    <section class="slide slide-6" data-label="image and numbered list (only with a real image)" data-deck-skip>
       <div class="split-visual">
         <div class="visual-box">
           <span style="color: var(--black); font-family: Inter, sans-serif; font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; padding: 0 24px;">Image Placeholder</span>
@@ -1250,7 +1250,7 @@
       </div>
       <div class="split-content">
         <div class="nb-label nb-label-green">Methodology</div>
-        <h2 class="nb-heading-md">How We Structure<br>Every Project</h2>
+        <h2 class="nb-heading-md">How We Structure Every Project</h2>
         <ul class="content-list">
           <li>
             <span class="list-num">01</span>
@@ -1274,7 +1274,7 @@
     </section>
 
     <!-- SLIDE 7: Timeline / Process -->
-    <section class="slide slide-7">
+    <section class="slide slide-7" data-label="timeline: four numbered phases, each a title and a sentence">
       <div class="slide-header">
         <div class="nb-label nb-label-cream">Roadmap</div>
         <h2 class="nb-heading-lg" style="margin-top: 16px;">Project Timeline</h2>
@@ -1307,7 +1307,7 @@
     </section>
 
     <!-- SLIDE 8: Statistics / Numbers -->
-    <section class="slide slide-8">
+    <section class="slide slide-8" data-label="four big figures with labels under a heading">
       <div class="slide-header">
         <div class="nb-label nb-label-green">By The Numbers</div>
         <h2 class="nb-heading-lg" style="margin-top: 16px;">Impact at a Glance</h2>
@@ -1337,7 +1337,7 @@
     </section>
 
     <!-- SLIDE 9: Team / Grid -->
-    <section class="slide slide-9">
+    <section class="slide slide-9" data-label="team: up to six people, each initials, name, role and one line">
       <div class="slide-header">
         <div class="nb-label nb-label-pink">The Team</div>
         <h2 class="nb-heading-lg" style="margin-top: 16px;">Meet the Crew</h2>
@@ -1383,11 +1383,11 @@
     </section>
 
     <!-- SLIDE 10: Closing -->
-    <section class="slide slide-10">
+    <section class="slide slide-10" data-label="closing: a title of up to two lines, a subtitle and a button word">
       <div class="deco-dots-bottom"></div>
       <div class="close-frame">
         <div class="deco-star"></div>
-        <h2 class="close-title">Let's Build<br>Something Bold</h2>
+        <h2 class="close-title">Let's Build Something Bold</h2>
         <p class="close-subtitle">Ready to start your next project?</p>
         <a class="close-btn" href="#">Get In Touch</a>
       </div>

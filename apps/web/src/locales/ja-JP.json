@@ -1925,26 +1925,26 @@
       "build": {
         "orders-system": {
           "name": "注文・予約管理アプリ",
-          "detail": "お店、ジム、サロン、サービス業向け。",
+          "detail": "店舗・ジム・サロン向け。",
           "prompt": "小さな事業を営んでいます。注文、予約、サービス案件を管理するためのシンプルなアプリを、このパソコン上に作ってください。追加・検索・絞り込みができる一覧と、顧客・日付・ステータス・金額を載せた個別ページ、それに日ごとのサマリーが欲しいです。まずは一般的な小さなお店を想定したサンプルデータで最初のバージョンをすぐに作って、開いて見せてください。そのあと、私の事業内容と管理したいものを短いメッセージ1通で質問して、私に合わせて調整してください。"
         },
         "business-site": {
           "name": "事業用ウェブサイト",
-          "detail": "サービス内容、営業時間、口コミ、お問い合わせフォーム。",
+          "detail": "サービス、営業時間、連絡先。",
           "prompt": "私の事業のウェブサイトを作ってください。事業名と提供内容を載せたヘッダー、料金付きのサービス紹介、営業時間、お客様の口コミをいくつか、アクセス情報、お問い合わせフォームを入れてください。あとで差し替えられる仮の情報を使い、スマートフォンでもきちんと表示されるようにしてください。できあがったらページを見せて、そのあと私に合わせて仕上げられるよう、事業名と事業内容を短いメッセージ1通で質問してください。"
         },
         "lead-finder": {
           "name": "顧客を見つける",
-          "detail": "毎朝新しい見込み客を、最初のメールの下書き付きで。"
+          "detail": "毎朝の見込み客と最初のメール。"
         },
         "my-game": {
           "name": "自分のゲームを開発",
-          "detail": "Unity、Godot、Unreal、Roblox に対応。あなたのプロジェクトフォルダで作業します。",
+          "detail": "Unity、Godot、Unreal、Roblox。",
           "prompt": "私のゲーム作りを手伝ってください。プロジェクトフォルダが開かれていなければ、ゲームのプロジェクトがどこにあるか聞いてください。それから中身を確認して、使っているエンジンとバージョン、主なシーンとスクリプト、壊れていたり未完成に見えたりする部分を教えてください。次にやるべきことで特に役立つものを3つ提案し、私がひとつ選ぶまでは何も変更しないでください。"
         },
         "morning-inbox": {
           "name": "毎朝メールに返信する",
-          "detail": "対応が必要なメールごとに返信の下書きを用意。"
+          "detail": "毎朝、返信を下書き。"
         },
         "portfolio-site": {
           "name": "ポートフォリオサイト",
@@ -1953,7 +1953,7 @@
         },
         "numbers-dashboard": {
           "name": "事業の数字ダッシュボード",
-          "detail": "スプレッドシートから売上、経費、推移をまとめます。",
+          "detail": "売上・コスト・推移。",
           "prompt": "事業の数字をまとめるダッシュボードを作ってください。今月の合計、月別のグラフ、上位の商品や顧客、それにいつもと違う動きがあれば表示してほしいです。まずは動くように、現実的なサンプルの売上データですぐに作って、見せてください。そのあと私にスプレッドシートかCSVファイルを渡すよう頼んで、ダッシュボードを実際の数字に切り替えてください。"
         },
         "shop-page": {
@@ -1962,9 +1962,14 @@
           "prompt": "小さなお店のための 1 ページのショップを作ってください。店名入りのヘッダー、写真・商品名・価格・「カートに入れる」ボタン付きのサンプル商品 6 点、シンプルなカート、連絡先セクションを入れてください。あとで差し替えられる仮の商品を使い、スマホでもきれいに表示されるようにしてください。できたらページを見せてください。"
         },
         "simple-game": {
-          "name": "かんたんなゲーム",
-          "detail": "ブラウザですぐ遊べます。",
-          "prompt": "ブラウザですぐ遊べるかんたんなゲームを作ってください。矢印キーとスワイプで操作するスネークゲームで、スコア、ベストスコア、リスタートボタン付きにしてください。1 ページにまとめて、できたら見せてください。"
+          "name": "遊べるゲーム",
+          "detail": "1分ほどで遊べます。",
+          "prompt": "ブラウザで1分ほどで遊べる楽しいゲームを作ってください。落ちてくる物をよけるアーケードゲームで、スタート画面、矢印キーとタッチの操作、スコアとベストスコア、ゲームオーバー画面、リスタートボタンを付けてください。ウィンドウに収まる1ページにまとめ、すべての操作が動くことを確かめてから見せてください。そのあと、どんなゲームにしたいかを短いメッセージで1つだけ聞いて、私のゲームに仕上げてください。"
+        },
+        "my-project": {
+          "name": "自分のアプリやサイトに取り組む",
+          "detail": "このPCにあるアプリやサイト。",
+          "prompt": "私のアプリまたはウェブサイトのプロジェクトを手伝ってください。プロジェクトのフォルダが開いていなければ、どこにあるか聞いてください。そのあと中身を確認して、何で作られているか、どう起動するか、主な構成、壊れていたり未完成に見えたりする箇所を教えてください。最も役立つ次の3つのステップを提案し、私が1つ選ぶまで何も変更しないでください。"
         }
       },
       "code": {
@@ -2950,7 +2955,8 @@
       "messaging": "Messaging",
       "mcp": "MCP servers",
       "skills": "Skills",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "This page arrives in a coming update.",
     "connectorDescription": "Connection details arrive in a coming update."
@@ -3611,7 +3617,10 @@
       "open": "開く"
     },
     "suggestedTasks": {
-      "label": "タスクをタップして実行",
+      "pickOne": "1つ選んで続けましょう",
+      "next": "次へ",
+      "routineLine": "アプリが開いている間、スケジュールどおりに実行されます",
+      "copied": "コピーしました",
       "copy": "「{{text}}」をコピーしてスマホから送信",
       "copyFailed": "コピーできませんでした"
     },
@@ -5643,6 +5652,76 @@
     },
     "pr": {
       "line": "ここのPRにレビューが付いたりCIが失敗したら知らせる"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
     }
   }
 }

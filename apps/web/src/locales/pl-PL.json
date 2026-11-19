@@ -1946,36 +1946,36 @@
       "recent": "Kontynuuj tam, gdzie skończyłeś w {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "Aplikacja do zamówień i rezerwacji",
-          "detail": "Dla sklepu, siłowni, salonu lub firmy usługowej.",
+          "name": "Zamówienia i rezerwacje",
+          "detail": "Dla sklepów, siłowni i salonów.",
           "prompt": "Prowadzę małą firmę. Zbuduj mi na tym komputerze prostą aplikację do śledzenia zamówień, rezerwacji lub zleceń: listę, do której mogę dodawać pozycje i którą mogę przeszukiwać i filtrować, osobną stronę dla każdej pozycji z klientem, datą, statusem i ceną oraz dzienne podsumowanie. Od razu zbuduj pierwszą wersję z przykładowymi danymi dla typowego małego sklepu i otwórz ją dla mnie. Potem w jednej krótkiej wiadomości zapytaj mnie, czym zajmuje się moja firma i co chcę śledzić, aby dopasować aplikację do moich potrzeb."
         },
         "business-site": {
           "name": "Strona dla mojej firmy",
-          "detail": "Usługi, godziny otwarcia, opinie i formularz kontaktowy.",
+          "detail": "Usługi, godziny i kontakt.",
           "prompt": "Zbuduj stronę internetową dla mojej firmy: nagłówek z nazwą firmy i tym, co oferuje, sekcję z usługami i cenami, godziny otwarcia, kilka opinii klientów, informację, gdzie nas znaleźć, oraz formularz kontaktowy. Użyj przykładowych danych, które później podmienię, i zadbaj o to, żeby strona dobrze wyglądała na telefonie. Pokaż mi ją, gdy będzie gotowa, a potem w jednej krótkiej wiadomości zapytaj mnie o nazwę mojej firmy i o to, czym się zajmuje, aby dopasować stronę do mojej firmy."
         },
         "lead-finder": {
           "name": "Znajdź klientów",
-          "detail": "Nowi potencjalni klienci każdego ranka i gotowy szkic pierwszego maila."
+          "detail": "Nowi klienci i pierwszy e-mail."
         },
         "my-game": {
           "name": "Praca nad moją grą",
-          "detail": "Unity, Godot, Unreal lub Roblox, w folderze twojego projektu.",
+          "detail": "Unity, Godot, Unreal lub Roblox.",
           "prompt": "Pomóż mi z moją grą. Jeśli nie jest otwarty żaden folder projektu, zapytaj mnie, gdzie jest projekt mojej gry. Potem przejrzyj go i powiedz mi, jakiego silnika i której wersji używa, jakie ma główne sceny i skrypty oraz co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i zanim cokolwiek zmienisz, poczekaj, aż wybiorę jeden z nich."
         },
         "morning-inbox": {
-          "name": "Odpowiadaj co rano na moje maile",
-          "detail": "Szkic odpowiedzi na każdy mail, który wymaga twojej uwagi."
+          "name": "Odpowiadaj na maile rano",
+          "detail": "Odpowiedzi gotowe co rano."
         },
         "portfolio-site": {
           "name": "Strona z portfolio",
-          "detail": "Jednostronicowa witryna z twoimi pracami.",
+          "detail": "Jedna strona z twoimi pracami.",
           "prompt": "Zbuduj mi jednostronicową stronę z portfolio: sekcję powitalną z moim imieniem i jednozdaniowym wstępem, siatkę z trzema przykładowymi projektami, sekcję „O mnie” i sekcję kontaktową. Użyj tekstów i obrazów zastępczych, które później podmienię, zadbaj o czysty, nowoczesny wygląd i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
         },
         "numbers-dashboard": {
           "name": "Panel z moimi wynikami",
-          "detail": "Sprzedaż, koszty i trendy z twojego arkusza kalkulacyjnego.",
+          "detail": "Sprzedaż, koszty i trendy.",
           "prompt": "Zbuduj panel z wynikami mojej firmy: sumy za bieżący miesiąc, wykres w podziale na miesiące, najlepsze produkty lub klientów oraz wszystko, co odbiega od normy. Zacznij od razu od realistycznych przykładowych danych sprzedażowych, żeby panel działał, i pokaż mi go. Potem poproś mnie o mój arkusz kalkulacyjny lub plik CSV i przełącz panel na moje prawdziwe dane."
         },
         "shop-page": {
@@ -1984,9 +1984,14 @@
           "prompt": "Zbuduj jednostronicowy sklep dla mojej małej firmy: nagłówek z nazwą sklepu, sześć przykładowych produktów ze zdjęciami, nazwami, cenami i przyciskiem „Dodaj do koszyka”, prosty koszyk oraz sekcję kontaktową. Użyj produktów zastępczych, które później podmienię, i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
         },
         "simple-game": {
-          "name": "Prosta gra",
-          "detail": "Do zagrania w przeglądarce.",
-          "prompt": "Zbuduj prostą grę, w którą od razu zagram w przeglądarce: węża sterowanego strzałkami i przesunięciami palcem, z wynikiem, najlepszym wynikiem i przyciskiem restartu. Zmieść wszystko na jednej stronie i pokaż mi grę, gdy będzie gotowa."
+          "name": "Gra do zagrania",
+          "detail": "Gotowa do gry w około minutę.",
+          "prompt": "Zrób mi zabawną grę, w którą zagram w przeglądarce w około minutę: grę zręcznościową, w której unikam spadających przedmiotów, z ekranem startowym, sterowaniem strzałkami i dotykiem, wynikiem i rekordem, ekranem końca gry i przyciskiem restartu. Zmieść ją na jednej stronie dopasowanej do okna, sprawdź, czy każde sterowanie działa, i pokaż mi ją, gdy będzie gotowa. Potem zapytaj mnie w jednej krótkiej wiadomości, jaką grę chcę, żeby zrobić z niej moją."
+        },
+        "my-project": {
+          "name": "Moja aplikacja lub strona",
+          "detail": "Aplikacja lub strona na tym PC.",
+          "prompt": "Pomóż mi z moim projektem aplikacji lub strony. Jeśli żaden folder projektu nie jest otwarty, zapytaj, gdzie jest mój projekt. Potem przejrzyj go i powiedz mi, z czego jest zbudowany, jak go uruchomić, jakie ma główne części i co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i poczekaj, aż wybiorę jeden, zanim cokolwiek zmienisz."
         }
       },
       "code": {
@@ -2978,7 +2983,8 @@
       "messaging": "Komunikatory",
       "mcp": "Serwery MCP",
       "skills": "Umiejętności",
-      "tools": "Narzędzia"
+      "tools": "Narzędzia",
+      "templates": "Templates"
     },
     "emptyDescription": "Ta strona pojawi się w jednej z kolejnych aktualizacji.",
     "connectorDescription": "Szczegóły połączenia pojawią się w jednej z kolejnych aktualizacji."
@@ -3747,7 +3753,10 @@
       "open": "Otwórz"
     },
     "suggestedTasks": {
-      "label": "Stuknij zadanie, aby je uruchomić",
+      "pickOne": "Wybierz jedno, aby kontynuować",
+      "next": "Dalej",
+      "routineLine": "Działa według harmonogramu, gdy aplikacja jest otwarta",
+      "copied": "Skopiowano",
       "copy": "Skopiuj „{{text}}”, aby wysłać z telefonu",
       "copyFailed": "Nie udało się skopiować"
     },
@@ -5823,6 +5832,76 @@
     },
     "pr": {
       "line": "Daj znać, gdy PR-y tutaj dostaną recenzję albo CI nie przejdzie"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
     }
   }
 }
