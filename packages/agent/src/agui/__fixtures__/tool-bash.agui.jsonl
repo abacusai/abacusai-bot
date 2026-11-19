@@ -15,7 +15,8 @@
 {"type":"TOOL_CALL_END","toolCallId":"call-0-0","metadata":{"tanstack":{"input":{"command":"echo golden"}}}}
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}
 {"type":"CUSTOM","name":"agent.status","value":{"status":"executing-tool"}}
-{"type":"TOOL_CALL_RESULT","messageId":"call-0-0:result","toolCallId":"call-0-0","role":"tool","content":"{\"text\":\"golden\\n\",\"rejected\":false,\"formatted\":\"```console\\ngolden\\n\\n```\"}"}
+{"type":"CUSTOM","name":"tool.output","value":{"toolCallId":"call-0-0","output":"golden\n"}}
+{"type":"TOOL_CALL_RESULT","messageId":"call-0-0:result","toolCallId":"call-0-0","role":"tool","content":"{\"text\":\"golden\\n\",\"rejected\":false,\"terminal\":{\"output\":\"golden\\n\"},\"formatted\":\"```console\\ngolden\\n\\n```\"}"}
 {"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}
 {"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_3>","delta":"All good."}
 {"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}

@@ -7,6 +7,7 @@
 {"type":"event","event":{"type":"text_delta","content":"Let me check.","messageId":"msg-1"}}
 {"type":"event","event":{"type":"status_changed","status":"executing-tool"}}
 {"type":"event","event":{"type":"tool_execution_start","tool":{"id":"call-0-0","name":"bash","type":"bash","input":{"command":"echo golden"},"args":{"command":"echo golden"}}}}
+{"type":"event","event":{"type":"tool_output_update","toolCallId":"call-0-0","output":"golden\n"}}
 {"type":"event","event":{"type":"tool_execution_complete","tool":{"id":"call-0-0","name":"bash","type":"bash","input":{"command":"echo golden"},"args":{"command":"echo golden"}},"result":{"id":"call-0-0","content":"golden\n","rejected":false}}}
 {"type":"event","event":{"type":"text_delta","content":"All good.","messageId":"msg-2"}}
 {"type":"event","event":{"type":"turn_complete","outcome":{"kind":"reply"},"usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"}}}
