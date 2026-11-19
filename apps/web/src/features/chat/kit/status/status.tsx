@@ -1439,10 +1439,11 @@ export const ErrorCard = ({
       </div>
     );
   // The free model is overloaded: a free account's honest card, once its plan
-  // is read (someone who paid must never read the free plan's words).
-  if (freeModelDown(actions) && !paying) {
-    if (providedTier == null && !tierRead) return null;
-    if (tier === "free")
+  // is read (someone who paid must never read the free plan's words). Further
+  // up the chat it is history, one quiet line whatever the plan is now.
+  if (freeModelDown(actions) && (!latest || !paying)) {
+    if (latest && providedTier == null && !tierRead) return null;
+    if (!latest || tier === "free")
       return (
         <div
           role="group"
