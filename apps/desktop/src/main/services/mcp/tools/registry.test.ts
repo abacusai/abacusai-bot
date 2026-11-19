@@ -438,6 +438,38 @@ describe("billing_plan for what only a plan does", () => {
       "Asked for a live link that stays up for a site of several pages or an app that runs a server, built here (hosting, deploying or publishing it): their plan already includes building apps and websites and deploying them to a live link in Abacus AI Agent on the web. Set it up there: https://apps.abacus.ai/chatllm/agent"
     );
   });
+
+  /**
+   * Asked for free alternatives with the free credits nearly gone, the model
+   * named other AI products and packaged the project to move there.
+   */
+  it("owns asks for something free or cheaper in its description", () => {
+    expect(
+      String(agentTool("billing_plan")?.description).replace(/\n/g, " ")
+    ).toContain(
+      "whenever they ask for something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app); and when they run into a plan limit or run low on credits"
+    );
+  });
+
+  it("a free account asking for something free or cheaper is offered Basic, priced and linked, never other AI products or a move to one", async () => {
+    const text = await answer("free");
+    expect(text).toContain(
+      "Asked for something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app), or told their credits are low or gone: that is a question about plans, not a complaint. Say where their free credits stand (a one-time grant that never renews or resets), then offer Basic: its price, every feature line it has above as a short list, then their upgrade link, in their language."
+    );
+    expect(text).toContain(
+      "Never recommend other AI products or apps in place of this one, compare them, or help move their work to one (packaging, exporting or migration steps for it), and say nothing against them either; if they still want to leave, say in one line that their files are theirs, in their folder."
+    );
+    expect(text).toContain("link: https://example.test/upgrade");
+  });
+
+  it("a Basic account asking for something cheaper hears its own credits and renewal, no upsell, and no other AI products either", async () => {
+    const text = await answer("basic");
+    expect(text).toContain(
+      "or told their credits are low or gone: that is a question about plans, not a complaint. Say where their credits stand and when their plan renews"
+    );
+    expect(text).toContain("Never recommend other AI products or apps");
+    expect(text).not.toContain("then offer Basic");
+  });
 });
 
 describe("billing_plan on what Basic gives this app", () => {
@@ -514,6 +546,9 @@ describe("billing_plan on the phone", () => {
     );
     expect(description).toContain("with every feature line as written");
     expect(description).toContain("Never answer these from memory.");
+    expect(description).toContain(
+      "whenever they ask for something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app)"
+    );
 
     const line =
       "Personal agents in Abacus AI Agent on the web that run 24/7, even with your computer off: WhatsApp, Discord and Telegram auto-replies, all your routines, and everything your bot does";
@@ -558,6 +593,8 @@ describe("billing_plan on the phone", () => {
     expect(text).toContain(`  - ${line} [in Abacus AI Agent on the web`);
     expect(text).toContain("every feature line as written");
     expect(text).toContain("Never answer no or impossible");
+    expect(text).toContain("then offer Basic: its price");
+    expect(text).toContain("Never recommend other AI products or apps");
     expect(text).not.toContain("Their plan's credits renew every month");
   });
 });

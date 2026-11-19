@@ -23,6 +23,10 @@
  * its big build, once per chat. A tool that failed along the way does not
  * hold either back: a long build has some.
  *
+ * A turn where the user asked about plans and the agent fetched their
+ * upgrade links (billing_plan with `upgrade: true`) offers the plan's card
+ * ahead of all of them, in the app only, at any point of the free grant.
+ *
  * Never on a routine, a host lane, a turn the app opened itself (a bot's
  * first-run note, a routine's fire), or a turn that showed another card.
  * On every plan, a clean turn also marks whether the chat's latest result
@@ -52,6 +56,7 @@ import {
   type KeepKind,
   keepThingKey,
   pitchCaps,
+  pitchUnderHalfOnly,
   rememberOffered,
   isCleanReply,
   isComplaint,
@@ -104,6 +109,8 @@ interface TurnFacts {
   files: Set<string>;
   /** Something it left on that is not a site: a server or a routine. */
   keep: Keep | null;
+  /** billing_plan went through with `upgrade: true`: the user asked about plans. */
+  planAsked: boolean;
 }
 
 /** Something a turn left on, to keep running. */
@@ -237,6 +244,7 @@ export class SuccessPitchWatch {
         endedOnNextStep: false,
         files: new Set(),
         keep: null,
+        planAsked: false,
       };
       this.turns.set(sessionId, facts);
     }
@@ -317,9 +325,13 @@ export class SuccessPitchWatch {
     }
     if (CARD_TOOLS.some((tool) => isTool(name, tool))) facts.troubled = true;
     facts.tools += 1;
+    const input = event.tool.input;
+    if (isTool(name, "billing_plan")) {
+      if (input.upgrade === true) facts.planAsked = true;
+      return;
+    }
     if (MAIL_TOOL.test(name)) facts.lead ??= "agents";
     if (MEDIA_TOOL.test(name)) facts.lead = "media";
-    const input = event.tool.input;
     const workspace = this.deps.workspacePath(sessionId);
     const resolve = (where: string): string | null =>
       path.isAbsolute(where)
@@ -433,6 +445,9 @@ export class SuccessPitchWatch {
     if (clean && facts.delivered != null)
       this.deps.funnel("result_delivered", facts.delivered);
     const signals: Signal[] = [];
+    // Asked about plans, with nothing else on screen: the plan's card, ahead of the rest.
+    if (facts.planAsked && !facts.troubled && where === "app")
+      signals.push({ trigger: "plan_ask", moment: "plan_ask", lead: null });
     if (settled && where === "app") {
       // A served site is mostly a preview: only a server or a routine is offered.
       const keep = facts.keep;
@@ -620,8 +635,12 @@ export class SuccessPitchWatch {
     const key = creditAccountKey(account);
     const prefs = this.deps.prefs();
     if (key == null || prefs == null) return;
-    // Past half the grant, the credit milestone cards own the pitch.
-    if (!underHalfOfFreeCredits(account.credits_used, account.credits_granted))
+    // Past half the grant, the credit milestone cards own the pitch, but for a plan ask.
+    const underHalf = underHalfOfFreeCredits(
+      account.credits_used,
+      account.credits_granted
+    );
+    if (!underHalf && signals.every((each) => pitchUnderHalfOnly(each.trigger)))
       return;
     const row = prefs.get();
     const marks = row.successPitch ?? {};
@@ -638,6 +657,7 @@ export class SuccessPitchWatch {
       });
     const signal =
       signals.find((each) => {
+        if (!underHalf && pitchUnderHalfOnly(each.trigger)) return false;
         if (each.once != null && mark[each.once.list]?.includes(each.once.item))
           return false;
         return each.trigger === "keep_running"

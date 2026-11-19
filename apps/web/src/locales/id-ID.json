@@ -5726,6 +5726,10 @@
     "routinePromptOnce": "Buat tugas terjadwal bernama “{{name}}” yang tetap berjalan meski komputer saya mati. Yang dilakukannya: {{prompt}}",
     "routinePromptNameOnly": "Buat tugas terjadwal yang berjalan 24/7, seperti rutinitas AbacusAI Bot saya “{{name}}”. Tanyakan kepada saya apa yang harus dilakukan dan kapan."
   },
+  "planAsk": {
+    "title": "Lanjutkan dengan {{plan}}",
+    "line": "Kredit baru setiap bulan, plus semua yang ada di bawah."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: router kami yang dibuat untuk kode, memilih model coding terbaik di setiap langkah",
     "codingAgent": "Agen coding dan CLI",
