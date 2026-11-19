@@ -139,3 +139,89 @@ describe("an owed message with a hold, an expiry and a replace key", () => {
     expect(open(file, clock).outbox.owe(owed("r1", "Report"), 0)).toBe(false);
   });
 });
+
+describe("an agent send kept while the computer is offline", () => {
+  const queued = (id: string, text: string) =>
+    owed(id, text, {
+      toSelf: undefined,
+      chatId: "Qadeer",
+      queuedFrom: { threadId: "t-1", to: "Qadeer" },
+      onceOnly: true as const,
+    });
+
+  it("waits out the outage without a try, then goes exactly once", async () => {
+    const clock = { now: 0 };
+    const up = { value: false };
+    const { outbox, sent, told } = open(tempFile(), clock, up);
+    outbox.owe(queued("q1", "Hi"), 0);
+    await outbox.flush();
+    expect(outbox.queuedSends().map((message) => message.id)).toEqual(["q1"]);
+    up.value = true;
+    await outbox.flush();
+    await outbox.flush();
+    expect(sent).toEqual(["Hi"]);
+    expect(told).toEqual([]);
+    expect(outbox.queuedSends()).toEqual([]);
+    // Owed again (a replayed tool call): already sent, never twice.
+    expect(outbox.owe(queued("q1", "Hi"), 0)).toBe(false);
+  });
+
+  it("is never tried again after a send that failed midway", async () => {
+    const file = tempFile();
+    const unsure: string[] = [];
+    let attempts = 0;
+    const outbox = new ChatOutbox({
+      now: () => 0,
+      read: () => null,
+      write: (state) => fs.writeFileSync(file, JSON.stringify(state)),
+      send: async () => {
+        attempts += 1;
+        throw new Error("WhatsApp did not answer within 30s.");
+      },
+      giveUp: async () => {},
+      unsure: (message) => unsure.push(message.id),
+    });
+    outboxes.push(outbox);
+    outbox.owe(queued("q2", "Hi"), 0);
+    await outbox.flush();
+    await outbox.flush();
+    expect(attempts).toBe(1);
+    expect(unsure).toEqual(["q2"]);
+    expect(outbox.statusOf("q2")).toBe("dropped");
+  });
+
+  it("tries again after a send refused before it began", async () => {
+    const { LinkDownError } = await import("./connector");
+    const file = tempFile();
+    let attempts = 0;
+    const outbox = new ChatOutbox({
+      now: () => 0,
+      read: () => null,
+      write: (state) => fs.writeFileSync(file, JSON.stringify(state)),
+      send: async () => {
+        attempts += 1;
+        if (attempts === 1) throw new LinkDownError("link down");
+        return true;
+      },
+      giveUp: async () => {},
+    });
+    outboxes.push(outbox);
+    outbox.owe(queued("q3", "Hi"), 0);
+    await outbox.flush();
+    await outbox.flush();
+    expect(attempts).toBe(2);
+    expect(outbox.statusOf("q3")).toBe("sent");
+  });
+
+  it("is taken back by Cancel and never goes", async () => {
+    const clock = { now: 0 };
+    const up = { value: false };
+    const { outbox, sent } = open(tempFile(), clock, up);
+    outbox.owe(queued("q4", "Hi"), 0);
+    expect(outbox.cancel("q4")).toBe(true);
+    up.value = true;
+    await outbox.flush();
+    expect(sent).toEqual([]);
+    expect(outbox.statusOf("q4")).toBe("dropped");
+  });
+});

@@ -18,14 +18,17 @@ import {
 } from "@abacus-ai/contract/credit-thresholds";
 import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
+import type { ConnectivitySnapshot } from "@abacus-ai/contract/status";
 import type { UIMessage } from "@tanstack/ai-client";
 import { Store, useStore } from "@tanstack/react-store";
 import {
   AlertTriangle,
   CheckCircle2,
+  CloudOff,
   Loader2,
   CircleStop,
   Info,
+  WifiOff,
   X,
   XCircle,
 } from "lucide-react";
@@ -296,6 +299,65 @@ export const busyLabel = (
   return t("chat.busy.working");
 };
 
+/** m:ss, the way a wait's clock reads. */
+const formatClock = (ms: number): string => {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+};
+
+/**
+ * The turn waits for the network: whose it is (the user's internet, or
+ * AbacusAI while their internet works), for how long, and that nothing is lost.
+ */
+export const NetworkWaitPill = ({
+  since,
+  connectivity,
+}: {
+  since: number;
+  connectivity: ConnectivitySnapshot["state"];
+}) => {
+  const { t } = useTranslation();
+  const now = useSeconds(true);
+  const ours = connectivity === "degraded";
+  return (
+    <div
+      className="flex min-w-0 flex-col items-start gap-1.5"
+      data-slot="network-wait"
+      data-state={connectivity}
+    >
+      <span
+        className={cn(
+          "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
+          ours
+            ? "bg-muted/60 text-foreground"
+            : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
+        )}
+      >
+        {ours ? (
+          <CloudOff aria-hidden className="size-3.5 shrink-0" />
+        ) : (
+          <WifiOff aria-hidden className="size-3.5 shrink-0" />
+        )}
+        <span className="min-w-0 truncate">
+          {t(
+            ours
+              ? "chat.busy.waitingForAbacus"
+              : connectivity === "offline"
+                ? "chat.busy.waitingForInternet"
+                : "chat.busy.waitingForConnection"
+          )}
+        </span>
+        <span className="chat-mono font-normal tabular-nums">
+          · {formatClock(now - since)}
+        </span>
+      </span>
+      <span className="text-muted-foreground text-xs">
+        {t("chat.busy.messageSafe")}
+      </span>
+    </div>
+  );
+};
+
 export const BusyLine = ({
   label,
   startedAt,
@@ -440,6 +502,39 @@ export const RunMarker = ({
   );
 };
 
+/** A wait in whole seconds under a minute, whole minutes past it. */
+const formatWait = (ms: number): string =>
+  ms < 60_000
+    ? `${Math.round(ms / 1000)}s`
+    : ms < 3_600_000
+      ? `${Math.floor(ms / 60_000)}m`
+      : `${Math.floor(ms / 3_600_000)}h ${Math.floor((ms % 3_600_000) / 60_000)}m`;
+
+/** A wait this long is worth naming: the slow reply was not the bot's. */
+const WAIT_WORTH_SAYING_MS = 30_000;
+
+/** "· 5m of it was waiting for your internet", when that took a real share. */
+const WaitedNote = ({ outcome }: { outcome: RunOutcomeRecord }) => {
+  const { t } = useTranslation();
+  const internet = outcome.networkWaitMs ?? 0;
+  const abacus = outcome.abacusWaitMs ?? 0;
+  if (Math.max(internet, abacus) < WAIT_WORTH_SAYING_MS) return null;
+  const ours = abacus > internet;
+  return (
+    <span
+      data-slot="run-network-wait"
+      className={
+        ours ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400"
+      }
+    >
+      {"· "}
+      {t(ours ? "chat.run.waitedAbacus" : "chat.run.waitedInternet", {
+        duration: formatWait(ours ? abacus : internet),
+      })}
+    </span>
+  );
+};
+
 const RunMarkerLine = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   const { t } = useTranslation();
   if (outcome.kind === "cancelled")
@@ -475,6 +570,7 @@ const RunMarkerLine = ({ outcome }: { outcome: RunOutcomeRecord }) => {
         <span className="size-1.5 rounded-full bg-[var(--chat-status-done)]" />
       </span>
       {label}
+      <WaitedNote outcome={outcome} />
     </div>
   );
   if (outcome.usage == null) return marker;

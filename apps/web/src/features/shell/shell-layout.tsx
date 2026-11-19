@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 
 import { PageUpdateNotice } from "#platform/updates";
 import { BotTabAvatar } from "#renderer/components/bot-tab-avatar";
+import { ConnectivityBanner } from "#renderer/components/connectivity";
 import {
   PaneBoundary,
   PaneError,
@@ -97,6 +98,7 @@ const Pane = ({ children }: { children?: ReactNode }) => (
     data-slot="pane"
     className="pane bg-background text-foreground phone:rounded-none relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
   >
+    <ConnectivityBanner />
     <div
       data-slot="pane-scroll"
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto"

@@ -74,3 +74,63 @@ describe("the power clock", () => {
     expect(service.asleepBetween(start, state.now)).toBe(60_000);
   });
 });
+
+describe("whose fault it is", () => {
+  const service = (abacus: boolean, internet: boolean, os = true) => {
+    const asked = { public: 0 };
+    const seen: string[] = [];
+    const connectivity = new ConnectivityService({
+      probe: async () => abacus,
+      publicProbe: async () => {
+        asked.public += 1;
+        return internet;
+      },
+      now: () => 1_000,
+      log: () => {},
+      changed: (snapshot) => seen.push(snapshot.state),
+    });
+    connectivity.start(() => os);
+    return { connectivity, asked, seen };
+  };
+
+  it("says offline when neither Abacus nor the internet answers", async () => {
+    const { connectivity, seen } = service(false, false);
+    await connectivity.check();
+    expect(connectivity.state).toBe("offline");
+    expect(connectivity.snapshot()).toMatchObject({
+      state: "offline",
+      since: 1_000,
+      nextCheckAt: 6_000,
+    });
+    expect(seen.at(-1)).toBe("offline");
+    connectivity.stop();
+  });
+
+  it("says degraded when the internet answers but Abacus does not", async () => {
+    const { connectivity } = service(false, true);
+    await connectivity.check();
+    expect(connectivity.state).toBe("degraded");
+    connectivity.stop();
+  });
+
+  it("asks the public URL only when Abacus is silent", async () => {
+    const { connectivity, asked } = service(true, false);
+    await connectivity.check();
+    expect(connectivity.state).toBe("online");
+    expect(asked.public).toBe(0);
+    expect(connectivity.snapshot()).toEqual({
+      state: "online",
+      since: null,
+      nextCheckAt: null,
+    });
+    connectivity.stop();
+  });
+
+  it("takes the OS's offline without probing anything", async () => {
+    const { connectivity, asked } = service(true, true, false);
+    await connectivity.check();
+    expect(connectivity.state).toBe("offline");
+    expect(asked.public).toBe(0);
+    connectivity.stop();
+  });
+});

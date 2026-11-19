@@ -221,6 +221,28 @@ export type MessagingPlatformInfo = {
   sharedLink?: SharedChannelLink;
   /** Self lanes only: the bot the user's own chat goes to, null while none is. */
   homeBotId?: string | null;
+  /**
+   * Linked, and down only because this computer has no internet: paused,
+   * never "disconnected" or "scan again". Absent otherwise.
+   */
+  pausedOffline?: boolean;
+};
+
+/**
+ * A message the agent was asked to send while this computer was offline:
+ * `queued` goes once, by itself, when the connection is back (Cancel takes
+ * it back); `unsure` failed midway and may or may not have gone.
+ */
+export type QueuedChatSend = {
+  id: string;
+  platform: MessagingPlatformId;
+  /** Who it is for, as the agent named them. */
+  to: string;
+  text: string;
+  /** The chat it was asked from; its card shows there. */
+  threadId: string | null;
+  since: number;
+  status: "queued" | "unsure";
 };
 
 // Pairing is the whole security model: an approved sender can drive an agent
@@ -253,6 +275,8 @@ export type MessagingPairedUser = {
 
 export type MessagingSnapshot = {
   platforms: MessagingPlatformInfo[];
+  /** The agent's sends waiting for the connection (absent from an older main). */
+  queued?: QueuedChatSend[];
   pending: MessagingPairedUser[];
   approved: MessagingPairedUser[];
   /** Every sender a bot answers automatically, paused ones included. */

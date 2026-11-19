@@ -53,6 +53,20 @@ export interface Scenario {
     upgradeDialog?: boolean;
     /** The account's plan, for a card that reads it (the paid-plan card). */
     accountTier?: "free" | "basic";
+    /**
+     * The window as the connectivity owner would have it: the banner over
+     * the chat, the reply's wait pill, the composer, and the sends waiting
+     * in this chat. `backOnline` shows the line that follows.
+     */
+    connectivity?: {
+      state: "offline" | "degraded";
+      backOnline?: boolean;
+      queued?: Array<{
+        to: string;
+        text: string;
+        status?: "queued" | "unsure";
+      }>;
+    };
   };
   /** Canned answer to a send in the gallery (echo + reply). */
   reply?: string;
@@ -1294,7 +1308,132 @@ const migratedHistory = (): UIMessage[] => {
   });
 };
 
+/** A turn waiting for the user's internet, 48 seconds in. */
+const offlineWait = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Write a LinkedIn About section for a builder-founder",
+      Date.now() - 50_000
+    ),
+    b.custom(
+      "agent.retry",
+      {
+        attempt: 4,
+        maxAttempts: 0,
+        delayMs: 16_000,
+        isNetworkError: true,
+        waitingForConnection: true,
+      },
+      { timestamp: Date.now() - 48_000 }
+    ),
+    b.custom(
+      "agent.retry",
+      {
+        attempt: 5,
+        maxAttempts: 0,
+        delayMs: 30_000,
+        isNetworkError: true,
+        waitingForConnection: true,
+      },
+      { timestamp: Date.now() - 2_000 }
+    ),
+  ]);
+
+/** A WhatsApp send asked for while offline: one line, and its card. */
+const offlineQueuedSend = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Send a hi to Qadeer Jan", at(1)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "send_whatsapp_message", "a1", {
+      to: "Qadeer Jan",
+      message: "Hi",
+    }),
+    b.toolResult("c1", { text: "Queued while offline." }),
+    b.textDelta(
+      "a1",
+      "Your internet connection dropped, so WhatsApp can't send right now. Nothing is wrong with your WhatsApp link: no need to scan anything."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(0.9) }),
+  ]);
+
+/** Back: the slow reply says the wait was the internet's. */
+const backOnline = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Send a hi to Qadeer Jan", at(7)),
+    b.textStart("a1"),
+    b.textDelta("a1", 'Sent: "Hi" went to Qadeer Jan on WhatsApp.'),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", {
+      timestamp: at(7) + 342_000,
+      metadata: { abacus: { turnUsage: { networkWaitMs: 312_000 } } },
+    }),
+    ...userTurn(
+      "r2",
+      "u2",
+      "Write a LinkedIn About section for a builder-founder",
+      at(0.5)
+    ),
+    b.textStart("a2"),
+    b.textDelta(
+      "a2",
+      "Here's a LinkedIn About section for a builder-founder..."
+    ),
+    b.textEnd("a2"),
+    b.runFinished("r2", "success", { timestamp: at(0.5) + 12_000 }),
+  ]);
+
 export const SCENARIOS: Scenario[] = [
+  {
+    id: "offline-wait-session",
+    canvas: ["Connectivity", "session"],
+    skin: "session",
+    events: offlineWait,
+    view: { connectivity: { state: "offline" } },
+  },
+  {
+    id: "abacus-down-wait-session",
+    canvas: ["Connectivity", "session"],
+    skin: "session",
+    events: offlineWait,
+    view: { connectivity: { state: "degraded" } },
+  },
+  {
+    id: "offline-queued-send-session",
+    canvas: ["Connectivity", "QueuedSend", "session"],
+    skin: "session",
+    events: offlineQueuedSend,
+    view: {
+      connectivity: {
+        state: "offline",
+        queued: [{ to: "Qadeer Jan", text: "Hi" }],
+      },
+    },
+  },
+  {
+    id: "offline-unsure-send-session",
+    canvas: ["Connectivity", "QueuedSend", "session"],
+    skin: "session",
+    events: offlineQueuedSend,
+    view: {
+      connectivity: {
+        state: "offline",
+        queued: [{ to: "Qadeer Jan", text: "Hi", status: "unsure" }],
+      },
+    },
+  },
+  {
+    id: "back-online-session",
+    canvas: ["Connectivity", "session"],
+    skin: "session",
+    events: backOnline,
+    view: { connectivity: { state: "offline", backOnline: true } },
+  },
   {
     id: "turn-credits-en",
     canvas: ["TurnCredits", "Abacus turn"],

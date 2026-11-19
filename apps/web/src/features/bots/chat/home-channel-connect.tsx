@@ -41,6 +41,8 @@ const homeChannelMissing = (
 ): boolean => {
   if (isMessagingPlatformConnected(snapshot, channel)) return false;
   const platform = snapshot.platforms.find((entry) => entry.id === channel);
+  // Linked and paused for the internet: no Connect card.
+  if (platform?.pausedOffline === true) return false;
   return !(
     platform?.enabled === true && HOME_CHANNEL_RECONNECTING.has(platform.state)
   );

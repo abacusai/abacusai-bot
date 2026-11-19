@@ -1,6 +1,6 @@
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
-import { UndeliverableChatError } from "./connector";
+import { LinkDownError, UndeliverableChatError } from "./connector";
 
 /** The lines a turn the app closed under owes its chat (outcome.channel.*). */
 export type OwedLine = "appClosed" | "contactNeutral" | "contactAppClosed";
@@ -31,6 +31,16 @@ export interface OwedMessage {
   expiresAt?: number;
   /** A later message with the same key drops this one unsent. */
   replaces?: string;
+  /**
+   * The agent's send, kept while this computer was offline: the chat it was
+   * asked from (where its card shows) and the name it was sent to.
+   */
+  queuedFrom?: { threadId: string | null; to: string };
+  /**
+   * Tried at most once past a refused start: an attempt that fails midway
+   * may have landed, and the same message must never reach a person twice.
+   */
+  onceOnly?: true;
 }
 
 /** What the outbox file holds. */
@@ -55,6 +65,10 @@ export interface ChatOutboxOptions {
   waitingOnLink?: (message: OwedMessage) => boolean;
   /** The last attempt failed too: tell the user it never went. */
   giveUp: (message: OwedMessage) => Promise<void>;
+  /** The agent's waiting sends changed (kept, sent, dropped). */
+  changed?: () => void;
+  /** A once-only message failed midway: it may or may not have gone. */
+  unsure?: (message: OwedMessage) => void;
 }
 
 /**
@@ -83,6 +97,8 @@ export class ChatOutbox {
   private flushing: Promise<void> | null = null;
   /** A pass was asked for while one ran: run another once it ends. */
   private again = false;
+  /** The agent's waiting sends at the last save, for `changed`. */
+  private lastOwed = "";
 
   constructor(private readonly options: ChatOutboxOptions) {
     const stored = readStored(options.read());
@@ -98,6 +114,19 @@ export class ChatOutbox {
   /** Whether anything is owed to the user's own chat, on any app. */
   owesSelf(): boolean {
     return this.pending.some((message) => message.toSelf === true);
+  }
+
+  /** The agent's sends still waiting, oldest first. */
+  queuedSends(): OwedMessage[] {
+    return this.pending.filter((message) => message.queuedFrom != null);
+  }
+
+  /** The user took a waiting agent send back: it never goes. False when it already went. */
+  cancel(id: string): boolean {
+    const message = this.pending.find((entry) => entry.id === id);
+    if (message == null) return false;
+    this.finish(message, "dropped");
+    return true;
   }
 
   /** Whether anything is owed on the platform. */
@@ -194,6 +223,16 @@ export class ChatOutbox {
           this.finish(message, "dropped");
           continue;
         }
+        // Failed midway: it may have gone, so it is never tried again.
+        if (message.onceOnly === true && !(error instanceof LinkDownError)) {
+          console.error(
+            `[messaging] ${message.platform} send of a kept message may have landed; not trying it again:`,
+            error
+          );
+          this.finish(message, "dropped");
+          this.options.unsure?.(message);
+          continue;
+        }
         console.error(
           `[messaging] ${message.platform} retry of an undelivered message failed:`,
           error
@@ -257,6 +296,14 @@ export class ChatOutbox {
       });
     } catch (error) {
       console.error("[messaging] could not persist the outbox:", error);
+    }
+    // Only the agent's waiting sends show anywhere; the rest is not news.
+    const owed = this.queuedSends()
+      .map((message) => message.id)
+      .join("\n");
+    if (owed !== this.lastOwed) {
+      this.lastOwed = owed;
+      this.options.changed?.();
     }
   }
 }

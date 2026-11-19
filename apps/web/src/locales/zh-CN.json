@@ -3160,7 +3160,10 @@
         "browser": "正在浏览器中操作",
         "subtask": "正在处理子任务"
       },
-      "longTool": "{{activity}} · {{minutes}} 分钟"
+      "longTool": "{{activity}} · {{minutes}} 分钟",
+      "waitingForInternet": "正在等待你的网络",
+      "waitingForAbacus": "正在等待 AbacusAI",
+      "messageSafe": "你的消息已保存。连接恢复后，机器人会自动继续。"
     },
     "code": {
       "copied": "已复制",
@@ -3233,7 +3236,8 @@
       "includedIn": "包含在 {{plan}} 中",
       "includedInPaid": "包含在付费套餐中",
       "commands": "命令",
-      "commandFailed": "操作没有成功，请重试。"
+      "commandFailed": "操作没有成功，请重试。",
+      "offline": "现在可以输入。你重新上线后会立即发送"
     },
     "day": {
       "today": "今天",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} 积分",
       "creditsLeft_one": "{{credits}} 积分 · 剩余 {{left}}",
       "creditsLeft_other": "{{credits}} 积分 · 剩余 {{left}}",
-      "creditsAction": "{{credits}}。查看你的套餐和积分"
+      "creditsAction": "{{credits}}。查看你的套餐和积分",
+      "waitedInternet": "其中 {{duration}} 在等待你的网络",
+      "waitedAbacus": "其中 {{duration}} 在等待 AbacusAI"
     },
     "subagent": {
       "done_one": "已完成，{{count}} 步，{{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "你已离线。",
+      "offlineBody": "是你的网络连接断开了，不是应用出问题。网络恢复后，一切会自动继续。",
+      "abacusTitle": "AbacusAI 现在没有响应。",
+      "abacusBody": "你的网络正常；我们正在处理。",
+      "checkingIn": "{{seconds}} 秒后再检查",
+      "backTitle": "已恢复在线。",
+      "backSending_one": "正在发送你等待中的消息。",
+      "backSending_other": "正在发送你 {{count}} 条等待中的消息。"
+    },
+    "lanePaused": "已暂停 · 离线",
+    "laneOfflineNote": "此电脑离线时已暂停。链接没问题；网络恢复后会自动继续。",
+    "queued": {
+      "title": "你重新上线后发送",
+      "line": "“{{text}}”发送给 {{to}}，通过 {{app}}。你的网络一恢复，它就会自动发送，且只发送一次。",
+      "cancel": "取消这条消息",
+      "unsureTitle": "可能未发送成功",
+      "unsureLine": "“{{text}}”发送给 {{to}}，通过 {{app}}。发送时你的网络断开了，请先检查聊天，再决定是否重发。",
+      "dismiss": "关闭"
     }
   }
 }

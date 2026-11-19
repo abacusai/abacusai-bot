@@ -1421,6 +1421,16 @@ export class ServiceHost {
    * never appear in the sidebar, so theirs is the bot's visible thread.
    */
   private conversationKeyForSession(sessionId: string): ConversationKey | null {
+    const thread = this.threadOfSession(sessionId);
+    return thread == null
+      ? null
+      : sessionConversationKey(thread.workspaceId, thread.id);
+  }
+
+  /** The chat a session's work shows in: a bot's helper shows in its bot's thread. */
+  private threadOfSession(
+    sessionId: string
+  ): { id: string; workspaceId: string } | null {
     const session = this.agentSessionManagerService.get(sessionId);
     if (session == null) return null;
     const owner = session.owner;
@@ -1430,10 +1440,9 @@ export class ServiceHost {
         .find((bot) => bot.id === owner.botId)?.sessionId;
       const thread =
         forever == null ? null : this.agentSessionManagerService.get(forever);
-      if (thread != null)
-        return sessionConversationKey(thread.workspaceId, thread.id);
+      if (thread != null) return thread;
     }
-    return sessionConversationKey(session.workspaceId, session.id);
+    return session;
   }
 
   private browserRuntime: ElectronBrowserRuntime | null = null;
@@ -2004,6 +2013,10 @@ export class ServiceHost {
     funnel: (step, detail) => reportFunnelStep(step, detail),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
+    threadIdForSession: (sessionId) =>
+      this.threadOfSession(sessionId)?.id ?? null,
+    internetDown: () => this.connectivity.state === "offline",
+    refreshConnectivity: () => this.connectivity.check(),
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     // The hosted computer serves only its live sessions: a call that names
     // none is never taken for an app chat (the phone's words are its own).
@@ -2132,6 +2145,9 @@ export class ServiceHost {
       listChatsDetailed: (query, platform) =>
         this.messagingGatewayService.listKnownChatsDetailed(query, platform),
       livePlatforms: () => this.messagingGatewayService.livePlatforms(),
+      wasLinked: (platform) => this.messagingGatewayService.wasLinked(platform),
+      queueSend: (platform, to, text, threadId) =>
+        this.messagingGatewayService.queueSend(platform, to, text, threadId),
       selfChats: () => this.messagingGatewayService.selfChats(),
       startingPlatforms: () => this.messagingGatewayService.startingPlatforms(),
       awaitReady: (platform) =>
@@ -2208,7 +2224,14 @@ export class ServiceHost {
       this.builtinToolPermissions.flushPending(decision, server),
   });
   /** Whether this machine can reach Abacus; see connectivity-service.ts. */
-  readonly connectivity = new ConnectivityService();
+  readonly connectivity = new ConnectivityService({
+    // The window's banner reads it again (status.connectivity).
+    changed: () =>
+      this.emitEvent({
+        type: "connectivity-updated",
+        emittedAt: new Date().toISOString(),
+      }),
+  });
   /**
    * The one teller of stops (status-board.ts): routines, lanes, runs and the
    * agent report into it; it decides whether and where the user hears.
@@ -3494,6 +3517,9 @@ export class ServiceHost {
         metadata: { kind: "messaging" },
       }),
     status: this.statusBoard,
+    internetDown: () => this.connectivity.state === "offline",
+    networkSuspect: () => this.connectivity.reportFailure(),
+    refreshConnectivity: () => this.connectivity.check(),
     appLanguage: () => this.appLanguage(),
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();
@@ -5013,6 +5039,10 @@ export class ServiceHost {
 
   releaseMessagingLogin(platformId: MessagingPlatformId): void {
     this.messagingGatewayService.releaseLogin(platformId);
+  }
+
+  cancelQueuedChatSend(id: string): MessagingSnapshot {
+    return this.messagingGatewayService.cancelQueuedSend(id);
   }
 
   retryMessagingLane(platformId: MessagingPlatformId): MessagingSnapshot {
@@ -6730,6 +6760,13 @@ export class ServiceHost {
       });
       if (state === "online") void this.cronScheduler.release();
       if (resumed) this.routinesAfterWake();
+      // Chat apps paused for the internet try again; the pane re-reads.
+      if (state === "online") this.messagingGatewayService.internetBack();
+      else
+        this.emitEvent({
+          type: "messaging-updated",
+          emittedAt: new Date().toISOString(),
+        });
     });
     this.cronScheduler.everyMinute(() => {
       // Ticking means awake: a resume the OS never sent must not freeze

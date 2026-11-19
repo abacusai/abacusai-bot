@@ -149,6 +149,13 @@ export type ConnectorCallbacks = {
   onSelfLinked?: () => void;
   /** Diagnostics; surfaced in the main-process log, not the UI. */
   onLog: (line: string) => void;
+  /**
+   * This computer has no internet (the connectivity owner says so): a page
+   * that will not load is that, not a lost link.
+   */
+  internetDown?: () => boolean;
+  /** Ask the connectivity owner again now, before something only the internet could explain is believed. */
+  checkInternet?: () => Promise<void>;
 };
 
 export interface MessagingConnector {
@@ -396,6 +403,12 @@ export class PollScheduler {
  * Final: the send is dropped, never retried and never kept to retry.
  */
 export class UndeliverableChatError extends Error {}
+
+/**
+ * A send refused before it began, because the link was down: nothing went,
+ * so it is safe to keep and send once the link is back.
+ */
+export class LinkDownError extends Error {}
 
 /** What `boundedWait` rejects with when the page took longer than allowed. */
 export class PageStalledError extends Error {}

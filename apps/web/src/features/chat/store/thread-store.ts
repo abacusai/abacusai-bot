@@ -107,6 +107,11 @@ export interface ThreadStoreState {
     status: AgentStatus | null;
     runningTools: number;
     retry: RetryInfo | null;
+    /**
+     * The run's current wait for the network: since when, and its latest
+     * retry. Kept across the retries in between, so its clock runs on.
+     */
+    networkWait?: { since: number; lastAt: number } | null;
   };
   notices: Notice[];
   skills: SkillMetadata[];

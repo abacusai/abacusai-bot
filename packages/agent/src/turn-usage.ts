@@ -31,6 +31,10 @@ export type TurnUsage = {
    * absent with no Abacus request, null when one's charge is unknown.
    */
   credits?: number | null;
+  /** Time the turn spent waiting for the user's internet; absent when none. */
+  networkWaitMs?: number;
+  /** Time it waited while the internet worked and Abacus did not answer. */
+  abacusWaitMs?: number;
 };
 
 type UsageLike = {

@@ -3160,7 +3160,10 @@
         "browser": "Working in the browser",
         "subtask": "Working on a sub-task"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Waiting for your internet",
+      "waitingForAbacus": "Waiting for AbacusAI",
+      "messageSafe": "Your message is safe. The bot continues on its own when the connection is back."
     },
     "code": {
       "copied": "Copied",
@@ -3233,7 +3236,8 @@
       "includedIn": "Included in {{plan}}",
       "includedInPaid": "Included in paid plans",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Type now. It sends as soon as you are back online"
     },
     "day": {
       "today": "Today",
@@ -3422,7 +3426,9 @@
       "credits_other": "{{credits}} credits",
       "creditsLeft_one": "{{credits}} credit · {{left}} left",
       "creditsLeft_other": "{{credits}} credits · {{left}} left",
-      "creditsAction": "{{credits}}. See your plan and credits"
+      "creditsAction": "{{credits}}. See your plan and credits",
+      "waitedInternet": "{{duration}} of it was waiting for your internet",
+      "waitedAbacus": "{{duration}} of it was waiting for AbacusAI"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -5730,6 +5736,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "You are offline.",
+      "offlineBody": "Your internet connection dropped, not the app. Everything picks up again by itself when it is back.",
+      "abacusTitle": "AbacusAI isn't answering right now.",
+      "abacusBody": "Your internet is fine; we're on it.",
+      "checkingIn": "Checking again in {{seconds}}s",
+      "backTitle": "Back online.",
+      "backSending_one": "Sending your waiting message now.",
+      "backSending_other": "Sending your {{count}} waiting messages now."
+    },
+    "lanePaused": "paused · offline",
+    "laneOfflineNote": "Paused while this computer is offline. The link is fine; it picks up by itself when the internet is back.",
+    "queued": {
+      "title": "Sends when you're back online",
+      "line": "\"{{text}}\" to {{to}} on {{app}}. It goes out on its own the moment your internet is back, once only.",
+      "cancel": "Cancel this message",
+      "unsureTitle": "May not have gone through",
+      "unsureLine": "\"{{text}}\" to {{to}} on {{app}}. Your internet dropped while it was sending, so check the chat before sending it again.",
+      "dismiss": "Dismiss"
     }
   }
 }

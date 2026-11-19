@@ -23,6 +23,7 @@ import { useConnectFlow } from "./connect-flow";
 import {
   connectorAdded,
   offeredConnectors,
+  pausedOffline,
   useConnectorStatuses,
 } from "./connector-status";
 
@@ -89,7 +90,13 @@ const ConnectorsPanel = () => {
                         <span className="min-w-0 flex-1 truncate">
                           {e.name}
                         </span>
-                        {inFlight ? null : group && !signIn ? (
+                        {inFlight ? null : pausedOffline(
+                            statuses.data?.[e.id]
+                          ) ? (
+                          <span className="text-muted-foreground shrink-0 text-xs">
+                            {t("connectivity.lanePaused")}
+                          </span>
+                        ) : group && !signIn ? (
                           <Check
                             role="img"
                             aria-label={t("phase5.connected")}

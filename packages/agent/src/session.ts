@@ -1520,7 +1520,7 @@ export class AbacusBotSession {
     this.router.beginTurn();
     this.pendingNetworkFailure = null;
     this.pendingBusyWait = null;
-    this.networkWait.reset();
+    this.networkWait.beginTurn();
     this.busyWait.reset();
     this.networkFailureReported = false;
     this.languageRepairsThisTurn = 0;
@@ -2809,6 +2809,8 @@ export class AbacusBotSession {
           }
         : this.lastTurnUsage;
     const credits = this.turnCreditsSoFar;
+    const waited = this.networkWait.waitedMs;
+    const abacusWaited = this.networkWait.abacusWaitedMs;
     this.lastTurnUsage = null;
     this.turnCreditsSoFar = undefined;
     const end = (outcome?: TurnOutcome): void => {
@@ -2816,7 +2818,14 @@ export class AbacusBotSession {
         type: "turn_complete",
         ...(outcome != null ? { outcome } : {}),
         ...(usage != null
-          ? { usage: credits !== undefined ? { ...usage, credits } : usage }
+          ? {
+              usage: {
+                ...usage,
+                ...(credits !== undefined ? { credits } : {}),
+                ...(waited > 0 ? { networkWaitMs: waited } : {}),
+                ...(abacusWaited > 0 ? { abacusWaitMs: abacusWaited } : {}),
+              },
+            }
           : {}),
       });
       this.emitAgentEvent({

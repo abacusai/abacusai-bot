@@ -25,6 +25,7 @@ import {
   previewMatchesSent,
   normalizeScrapedText,
   type ConnectorCallbacks,
+  LinkDownError,
   type MessagingConnector,
   PageLock,
   type PageLockOptions,
@@ -494,7 +495,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   private async relinkOnce(): Promise<RelinkOutcome> {
     if (!this.running || !this.loggedIn) return "connected";
     this.relinkAttempts += 1;
-    if (!net.isOnline()) return "offline";
+    if (this.internetDown()) return "offline";
     let page = await this.waitForPage(
       this.linkCause === RELOADED ? PAGE_BOOT_WAIT_MS : PAGE_SETTLE_MS
     );
@@ -506,6 +507,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
       await this.reloadPage();
       page = await this.waitForPage(PAGE_BOOT_WAIT_MS);
     }
+    // The internet went while it waited: nothing it saw says anything.
+    if (page !== "linked" && this.internetDown()) return "offline";
     // The chat list or the QR: the page works, so its reloads start over.
     if (page !== "blank") this.stuckReloads = 0;
     if (page === "login") return "needs_relink";
@@ -534,17 +537,18 @@ export class WhatsAppWebConnector implements MessagingConnector {
       return;
     }
     if (outcome === "needs_relink") {
-      this.unlinked();
+      void this.unlinkedUnlessOffline();
       return;
     }
-    if (outcome === "stuck") {
+    if (outcome === "stuck" && !this.internetDown()) {
       this.callbacks.onLog(
         `whatsapp-web: still blank after ${MAX_STUCK_RELOADS} reloads, parking it`
       );
       this.parkUnloaded(STUCK_LOADING);
       return;
     }
-    this.link = outcome === "offline" ? "offline" : "reconnecting";
+    this.link =
+      outcome === "offline" || this.internetDown() ? "offline" : "reconnecting";
     this.linkReported = true;
     this.callbacks.onState("connecting", this.linkMessage());
     if (this.asleep) return;
@@ -581,12 +585,17 @@ export class WhatsAppWebConnector implements MessagingConnector {
     ).catch(() => {});
   }
 
+  /** No internet on this computer: the OS says so, or the connectivity owner does. */
+  private internetDown(): boolean {
+    return !net.isOnline() || this.callbacks.internetDown?.() === true;
+  }
+
   /** The error a call gets while the link is down: what, and what to do. */
   private linkMessage(): string {
     if (this.link === "needs_relink")
       return "WhatsApp needs to be linked again: open Library → Messaging and scan the QR code with the phone.";
-    if (this.link === "offline")
-      return "This computer is offline, so WhatsApp cannot be reached. It reconnects by itself once the network is back.";
+    if (this.link === "offline" || this.internetDown())
+      return "This computer's internet connection is down, so WhatsApp cannot be reached. The WhatsApp link itself is fine; it reconnects by itself once the internet is back.";
     return `WhatsApp is reconnecting ${this.linkCause}. Try again in a moment; nothing needs to be done.`;
   }
 
@@ -603,10 +612,12 @@ export class WhatsAppWebConnector implements MessagingConnector {
     const deadline = Date.now() + this.userDeadlineMs;
     // Parked: no page until Connect or the gateway's restart, so the call fails at once.
     if (this.parkedNote != null)
-      throw new Error(`${this.parkedNote} Connect is in Library → Messaging.`);
+      throw new LinkDownError(
+        `${this.parkedNote} Connect is in Library → Messaging.`
+      );
     if (this.relinking != null)
       await boundedWait(this.relinking, this.userDeadlineMs).catch(() => {});
-    if (this.link !== "connected") throw new Error(this.linkMessage());
+    if (this.link !== "connected") throw new LinkDownError(this.linkMessage());
     if (kind === "send") return this.serialize(work, { user: true });
     return this.serialize(work, {
       user: true,
@@ -630,7 +641,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (await this.bridge.isLive()) return true;
     this.bridgeReady = false;
     this.relink("after the store bridge detached");
-    throw new Error(this.linkMessage());
+    // Asked before any chunk went: nothing was sent.
+    throw new LinkDownError(this.linkMessage());
   }
 
   private logFailure(what: string, error: unknown): void {
@@ -1512,14 +1524,21 @@ export class WhatsAppWebConnector implements MessagingConnector {
     // from the connect dialog, never from a background restart.
     // Believed after a few polls, it is recorded so the next launch loads no page.
     if (!state.loggedIn && !this.loggedIn && state.loginVisible === true) {
-      if (this.qrTicks >= QR_BELIEVED_POLLS) {
-        // A QR where a link was recorded: it ended while the app was closed.
-        if (this.signedInRecord === true) {
-          this.unlinked();
-          return;
-        }
-        this.recordSignedIn(false);
+      // Offline, a recorded link meeting a login screen is the internet's
+      // doing: no QR prompt, nothing recorded; the page is judged once back.
+      if (this.signedInRecord !== false && this.internetDown()) {
+        this.qrTicks = 0;
+        return;
       }
+      // A recorded link is not called lost on a glance: only once the QR is
+      // believed and the internet is checked fresh (a page from cache shows
+      // the QR before anyone knows the computer is offline).
+      if (this.signedInRecord === true) {
+        if (this.qrTicks >= QR_BELIEVED_POLLS)
+          await this.unlinkedUnlessOffline();
+        return;
+      }
+      if (this.qrTicks >= QR_BELIEVED_POLLS) this.recordSignedIn(false);
       this.callbacks.onState(
         "needs_login",
         this.linkLost
@@ -1537,12 +1556,20 @@ export class WhatsAppWebConnector implements MessagingConnector {
       this.signedOutTicks += 1;
       if (this.signedOutTicks < (state.loginVisible === true ? 4 : 40)) return;
       this.signedOutTicks = 0;
-      if (state.loginVisible !== true) {
+      // Offline, a page that cannot reach WhatsApp is not a logout.
+      if (state.loginVisible !== true || this.internetDown()) {
         this.relink("after WhatsApp Web went blank");
         return;
       }
-      this.unlinked();
+      await this.unlinkedUnlessOffline();
     }
+  }
+
+  /** A logout believed: the internet is asked fresh first, so a drop never ends a link. */
+  private async unlinkedUnlessOffline(): Promise<void> {
+    await this.callbacks.checkInternet?.();
+    if (!this.running) return;
+    this.unlinked();
   }
 
   /** See PageBootWatch: a page not booted yet waits, is reloaded, or parks. */
@@ -1551,7 +1578,8 @@ export class WhatsAppWebConnector implements MessagingConnector {
     const busy =
       win != null && !win.isDestroyed() ? pageBusy(win.webContents) : null;
     const verdict = this.boot.stuck(Date.now(), busy ?? "starting");
-    if (verdict === "wait") return;
+    // No internet: a page that cannot boot is waiting for it, not stuck.
+    if (verdict === "wait" || this.internetDown()) return;
     if (verdict === "give_up") {
       this.callbacks.onLog(
         `whatsapp-web: still not loaded after ${BOOT_MAX_RELOADS} reloads, parking it`
@@ -1569,6 +1597,11 @@ export class WhatsAppWebConnector implements MessagingConnector {
 
   /** The phone unlinked this device: say so, and wait for a new link. */
   private unlinked(): void {
+    // Never for want of the internet: the link is kept and checked again.
+    if (this.internetDown()) {
+      this.relink("while this computer is offline");
+      return;
+    }
     if (this.relinkTimer != null) clearTimeout(this.relinkTimer);
     this.relinkTimer = null;
     this.link = "needs_relink";

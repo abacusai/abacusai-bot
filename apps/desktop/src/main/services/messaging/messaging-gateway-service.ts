@@ -116,6 +116,7 @@ import {
   readStoredMessageLog,
   readPlatformAppStopped,
   readPlatformLinkLost,
+  readPlatformSignedIn,
   readStoredOutbox,
   readStoredSeen,
   recordPairingRequest,
@@ -250,6 +251,15 @@ export const RELEASED_LOGIN_MS = 180_000;
 
 type GatewayOptions = {
   platform?: () => HostPlatform;
+  /**
+   * This computer has no internet (the connectivity owner says so): a chat
+   * app that drops now is paused, not unlinked, and sends wait for it.
+   */
+  internetDown?: () => boolean;
+  /** A chat app failed in a way the network may explain: worth a fresh look. */
+  networkSuspect?: () => void;
+  /** Ask the connectivity owner now and wait for its answer. */
+  refreshConnectivity?: () => Promise<void>;
   /** Workspace remote messages run in; null when none is configured. */
   resolveWorkspaceId: () => string | null;
   /** `chatAppSender`: the chat is someone else's, not the user's own. */
@@ -617,7 +627,11 @@ export class MessagingGatewayService {
     read: readStoredOutbox,
     write: writeStoredOutbox,
     send: (message) => this.sendOwed(message),
+    changed: () => this.options.emitChanged(),
+    unsure: (message) => this.noteUnsure(message),
     waitingOnLink: (message) => {
+      // No internet: nothing can go, so nothing is tried or counted.
+      if (this.internetDown()) return true;
       // The user's own chat waits only while no app at all can carry it.
       if (message.toSelf === true)
         return this.ownChat(message.platform) == null;
@@ -646,15 +660,105 @@ export class MessagingGatewayService {
     restart: (id) => this.restartPlatform(id),
     diskSpaceBack,
     report: (id, state, reason) =>
-      state === "running"
-        ? this.options.status?.clear(`lane:${id}`, LANE_RETRY_REASONS)
-        : this.options.status?.report(`lane:${id}`, state, reason, {
-            platform: id,
-          }),
+      // Offline, a lane waiting to retry is paused, not a stop to tell of.
+      state === "waiting" && this.internetDown()
+        ? undefined
+        : state === "running"
+          ? this.options.status?.clear(`lane:${id}`, LANE_RETRY_REASONS)
+          : this.options.status?.report(`lane:${id}`, state, reason, {
+              platform: id,
+            }),
     watchHints: watchLaneHints,
+    internetDown: () => this.internetDown(),
     changed: () => this.options.emitChanged(),
     log: (line) => console.log(`[messaging] ${line}`),
   });
+
+  private internetDown(): boolean {
+    return this.options.internetDown?.() === true;
+  }
+
+  /**
+   * The internet is back: lanes paused for it try now, and what waited for
+   * it goes (each once).
+   */
+  internetBack(): void {
+    this.supervisor.hint("the internet is back");
+    if (this.outbox.size > 0) this.outbox.schedule(0);
+    this.options.emitChanged();
+  }
+
+  /** Agent sends that failed midway while offline: they may have gone. Recent ones only. */
+  private readonly unsureSends: Array<{
+    id: string;
+    platform: MessagingPlatformId;
+    to: string;
+    text: string;
+    threadId: string | null;
+    at: number;
+  }> = [];
+
+  private noteUnsure(message: OwedMessage): void {
+    if (message.queuedFrom == null) return;
+    this.unsureSends.push({
+      id: message.id,
+      platform: message.platform,
+      to: message.queuedFrom.to,
+      text: message.text,
+      threadId: message.queuedFrom.threadId,
+      at: this.options.now?.() ?? Date.now(),
+    });
+    this.unsureSends.splice(0, Math.max(0, this.unsureSends.length - 20));
+    this.options.emitChanged();
+  }
+
+  /**
+   * Whether `platform` was linked before this outage: an offline lane that
+   * was is only paused, and nothing about it needs the user.
+   */
+  wasLinked(platform: MessagingPlatformId): boolean {
+    const state = this.states.get(platform)?.state;
+    if (!this.connectors.has(platform)) return false;
+    if (state == null || state === "needs_login") return false;
+    return readPlatformSignedIn(platform) !== false;
+  }
+
+  /**
+   * The agent's send while this computer is offline: kept, and sent once
+   * when the internet and the lane are back. The id is the card's.
+   */
+  queueSend(
+    platform: MessagingPlatformId,
+    to: string,
+    text: string,
+    threadId: string | null
+  ): string {
+    const id = randomUUID();
+    this.outbox.owe(
+      {
+        id,
+        platform,
+        chatId: this.resolveTarget(platform, to),
+        text: forChat(text, platform),
+        userName: to,
+        firstFailedAt: this.options.now?.() ?? Date.now(),
+        queuedFrom: { threadId, to },
+        onceOnly: true,
+      },
+      OUTBOX_RETRY_MS[0] ?? 0
+    );
+    return id;
+  }
+
+  /** The user's Cancel on a waiting send's card. */
+  cancelQueuedSend(id: string): MessagingSnapshot {
+    if (this.outbox.cancel(id))
+      console.log(`[messaging] a waiting send was cancelled by the user`);
+    const at = this.unsureSends.findIndex((entry) => entry.id === id);
+    if (at >= 0) this.unsureSends.splice(at, 1);
+    this.options.emitChanged();
+    return this.getSnapshot();
+  }
 
   /** A bot that asked to connect a chat app, by the lane it would answer. */
   private readonly linkClaims = new Map<
@@ -969,6 +1073,10 @@ export class MessagingGatewayService {
       onLog: (line: string) => {
         console.log(`[messaging] ${line}`);
       },
+      internetDown: () => this.internetDown(),
+      checkInternet: async () => {
+        await this.options.refreshConnectivity?.();
+      },
       onSelfLinked: () => {
         if (!current()) return;
         // The bot's chat or install page, still up for a link that just landed.
@@ -1015,6 +1123,10 @@ export class MessagingGatewayService {
     // Leaving `connecting` at all (connected, failed, switched off) settles
     // the question the deadline was asking.
     if (state !== "connecting") this.clearConnectDeadline(platformId);
+    // A lane going down or reconnecting may be the internet: the owner
+    // checks, so a drop for want of it is told as such, never as a lost link.
+    if (state === "error" || state === "connecting")
+      this.options.networkSuspect?.();
     // A released login that landed is kept.
     if (state === "connected" || state === "syncing")
       this.clearReleasedLogin(platformId);
@@ -2254,11 +2366,15 @@ export class MessagingGatewayService {
 
   /** Runs `send` after the route's send still going, retries included, so the chat reads them in order. */
   private inRouteOrder(route: Route, send: () => Promise<void>): Promise<void> {
-    const sending = route.sending == null ? send() : route.sending.then(send);
+    // After the one before, whether or not it went: its failure is its own.
+    const sending =
+      route.sending == null ? send() : route.sending.then(send, send);
     route.sending = sending;
-    void sending.finally(() => {
+    // The caller handles the failure; this branch must not float it again.
+    const clear = (): void => {
       if (route.sending === sending) route.sending = null;
-    });
+    };
+    sending.then(clear, clear);
     return sending;
   }
 
@@ -4233,6 +4349,11 @@ export class MessagingGatewayService {
           pendingCount: waiting.filter((row) => row.platform === entry.id)
             .length,
           sharedLink: this.sharedLink(entry.id),
+          ...(this.internetDown() &&
+          this.wasLinked(entry.id) &&
+          this.states.get(entry.id)?.state !== "connected"
+            ? { pausedOffline: true }
+            : {}),
           ...(isSelfLane(entry.id)
             ? { homeBotId: this.options.homeBots?.get(entry.id) ?? null }
             : {}),
@@ -4262,6 +4383,26 @@ export class MessagingGatewayService {
       respondToInbound: settings.respondToInbound,
       workspaceId: settings.workspaceId,
       botId: settings.botId,
+      queued: [
+        ...this.outbox.queuedSends().map((message) => ({
+          id: message.id,
+          platform: message.platform,
+          to: message.queuedFrom?.to ?? message.chatId,
+          text: message.text,
+          threadId: message.queuedFrom?.threadId ?? null,
+          since: message.firstFailedAt,
+          status: "queued" as const,
+        })),
+        ...this.unsureSends.map((entry) => ({
+          id: entry.id,
+          platform: entry.platform,
+          to: entry.to,
+          text: entry.text,
+          threadId: entry.threadId,
+          since: entry.at,
+          status: "unsure" as const,
+        })),
+      ],
     };
   }
 

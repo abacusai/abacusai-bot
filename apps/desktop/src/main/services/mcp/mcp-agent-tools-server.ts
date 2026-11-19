@@ -152,7 +152,7 @@ import {
 } from "../browser/page-errors";
 import { hasCredential } from "../config/settings";
 import type { BotNumberOutcome } from "../messaging/bot-number";
-import { MAX_ATTACHMENT_BYTES } from "../messaging/connector";
+import { LinkDownError, MAX_ATTACHMENT_BYTES } from "../messaging/connector";
 import {
   resolveSender,
   type SenderCandidate,
@@ -398,6 +398,15 @@ export interface McpAgentToolsServerOptions {
    * renderer opens it in that pane and no other. Null for an unknown session.
    */
   conversationKeyForSession?: (sessionId: string) => ConversationKey | null;
+  /** The chat a session's work shows in (a bot's helper: its bot's thread). */
+  threadIdForSession?: (sessionId: string) => string | null;
+  /** This computer has no internet: chat apps cannot send, and their links are fine. */
+  internetDown?: () => boolean;
+  /**
+   * Ask the connectivity owner again now: a chat app that is not up may be
+   * the internet's doing, and that is checked before anything else is said.
+   */
+  refreshConnectivity?: () => Promise<void>;
   /**
    * Where `present_deliverable` keeps "show this" for the conversation's
    * pane, and hears whether a pane showed it.
@@ -530,6 +539,15 @@ export interface McpAgentToolsServerOptions {
     runningPlatforms: () => MessagingPlatformId[];
     /** Platforms whose connection is up, not merely started. */
     livePlatforms?: () => MessagingPlatformId[];
+    /** Linked before the internet went: paused, not lost. */
+    wasLinked?: (platform: MessagingPlatformId) => boolean;
+    /** Keep a send while offline; it goes once when the connection is back. */
+    queueSend?: (
+      platform: MessagingPlatformId,
+      to: string,
+      text: string,
+      threadId: string | null
+    ) => string;
     /** The chat id meaning "me" on each platform. */
     selfChats?: () => Array<{ platform: MessagingPlatformId; chatId: string }>;
     startingPlatforms?: () => MessagingPlatformId[];
@@ -751,6 +769,23 @@ const ROUTINE_EDITOR_TOOLS: ReadonlySet<string> = new Set([
  */
 /** A request checked within this long of going out was only just sent. */
 const JUST_SENT_MS = 60_000;
+
+/** A chat-app send kept while this computer is offline. */
+const QUEUED_OFFLINE =
+  "This computer's internet connection is down, so it was not sent yet; it goes out on its own once when the connection is back (it is queued). " +
+  "Tell the user that in one short line; do not ask them to reconnect or scan anything. Do not send it again.";
+
+/** A send cut off by the internet going: it may have landed. */
+const MAYBE_SENT_OFFLINE =
+  "This computer's internet connection dropped while it was sending, so it may not have gone through. " +
+  "Do not send it again. Tell the user in one short line that it may not have gone through because their internet dropped, " +
+  "and that they can check the chat once they are back online. Do not ask them to reconnect or scan anything.";
+
+/** A chat app that cannot be linked or used until the internet is back. */
+const offlineChatApp = (platform: string): string =>
+  `This computer's internet connection is down, so ${platform} cannot be reached and nothing was sent. ` +
+  `Tell the user that in one short line: the internet dropped, not ${platform} or the app. ` +
+  "Do not put up a Connect card or ask them to scan anything now.";
 
 export class McpAgentToolsServer extends McpHttpServer {
   constructor(private readonly options: McpAgentToolsServerOptions) {
@@ -2693,6 +2728,11 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   // ── Messaging ────────────────────────────────────────────────────────────
 
+  /** No internet on this computer, as the connectivity owner says. */
+  internetDown(): boolean {
+    return this.options.internetDown?.() === true;
+  }
+
   private messagingSetupHint(): ToolResult {
     return this.err(
       "No messaging platform is connected. Connect WhatsApp, Telegram or Discord from Settings → Connectors first."
@@ -2710,6 +2750,8 @@ export class McpAgentToolsServer extends McpHttpServer {
       messaging?.livePlatforms?.() ?? messaging?.runningPlatforms() ?? [];
 
     if (live.includes(platform)) return null;
+    // Offline is the internet's, never the link's: no Connect card.
+    if (this.internetDown()) return this.err(offlineChatApp(platform));
 
     // Named, never a generic "no messaging is set up": the agent must tell
     // "WhatsApp is down" from "you have no platforms".
@@ -2758,6 +2800,37 @@ export class McpAgentToolsServer extends McpHttpServer {
     // The platform being addressed, not "some platform is up". "me" is not
     // one lane: the gateway finds any path to the user's own chat, or owes it.
     const toSelf = isSelfName(to) && attachmentPath.length === 0;
+    // A chat app that is not up: whether the internet is, asked fresh.
+    if (
+      !toSelf &&
+      !(messaging.livePlatforms?.() ?? messaging.runningPlatforms()).includes(
+        platform
+      )
+    )
+      await this.options.refreshConnectivity?.();
+    // Offline: the link is fine and nothing can go; a linked chat app keeps
+    // the words and sends them once, by itself, when the internet is back.
+    if (this.internetDown() && !toSelf) {
+      if (to.length === 0) return this.err('"to" is required.');
+      if (
+        attachmentPath.length > 0 ||
+        messaging.queueSend == null ||
+        messaging.wasLinked?.(platform) !== true
+      )
+        return this.ok(offlineChatApp(platform));
+      if (message.trim().length === 0) return this.err("There is no message.");
+      messaging.queueSend(
+        platform,
+        to,
+        message,
+        callerSession != null
+          ? (this.options.threadIdForSession?.(callerSession) ?? null)
+          : null
+      );
+      if (callerSession != null)
+        this.options.noteRoutinePlatform?.(callerSession, platform);
+      return this.ok(QUEUED_OFFLINE);
+    }
     const unavailable = toSelf ? null : this.notLinked(platform);
     if (unavailable != null) return unavailable;
     if (to.length === 0) return this.err('"to" is required.');
@@ -2818,10 +2891,32 @@ export class McpAgentToolsServer extends McpHttpServer {
       callerSession != null
         ? (this.options.botIdForSession?.(callerSession) ?? undefined)
         : undefined;
-    const result = await messaging.send(platform, to, message, fromBotId);
+    let result: Awaited<ReturnType<typeof messaging.send>>;
+    try {
+      result = await messaging.send(platform, to, message, fromBotId);
+    } catch (error) {
+      if (!this.internetDown()) throw error;
+      // Refused before it began: nothing went, so it is kept and goes once.
+      if (error instanceof LinkDownError && messaging.queueSend != null) {
+        messaging.queueSend(
+          platform,
+          to,
+          message,
+          callerSession != null
+            ? (this.options.threadIdForSession?.(callerSession) ?? null)
+            : null
+        );
+        noteSent();
+        return this.ok(QUEUED_OFFLINE);
+      }
+      noteSent();
+      return this.ok(MAYBE_SENT_OFFLINE);
+    }
     noteSent();
     const went = typeof result === "object" ? result : null;
 
+    if (went != null && went.queued && this.internetDown())
+      return this.ok(QUEUED_OFFLINE);
     if (went != null && went.queued)
       return this.ok(
         "Queued: no chat app reaches the user right now, so it goes by itself, once, as soon as one is back. " +
@@ -2944,6 +3039,16 @@ export class McpAgentToolsServer extends McpHttpServer {
           : {}),
         ...(status.botNumber === true ? { botNumber: true } : {}),
         ...(match.kind === "messaging" ? { platform: match.platform } : {}),
+      };
+
+    // No internet: a chat app cannot link now, and one already linked is
+    // only paused. No Connect card, no QR. Asked fresh, before any card.
+    if (match.kind === "messaging") await this.options.refreshConnectivity?.();
+    if (match.kind === "messaging" && this.internetDown())
+      return {
+        code: "offline",
+        name: match.name,
+        linked: this.options.messaging?.wasLinked?.(match.platform) === true,
       };
 
     if (

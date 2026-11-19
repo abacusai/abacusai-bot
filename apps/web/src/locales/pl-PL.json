@@ -3194,7 +3194,10 @@
         "browser": "Działam w przeglądarce",
         "subtask": "Pracuję nad podzadaniem"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Czekamy na Twój internet",
+      "waitingForAbacus": "Czekamy na AbacusAI",
+      "messageSafe": "Twoja wiadomość jest bezpieczna. Bot sam wznowi działanie, gdy połączenie wróci."
     },
     "code": {
       "copied": "Skopiowano",
@@ -3271,7 +3274,8 @@
       "includedIn": "W ramach planu {{plan}}",
       "includedInPaid": "W ramach płatnych planów",
       "commands": "Polecenia",
-      "commandFailed": "Nie udało się. Spróbuj ponownie."
+      "commandFailed": "Nie udało się. Spróbuj ponownie.",
+      "offline": "Pisz teraz. Wyśle się, gdy tylko wrócisz online"
     },
     "day": {
       "today": "Dzisiaj",
@@ -3480,7 +3484,9 @@
       "creditsLeft_other": "{{credits}} kredytu · zostało {{left}}",
       "creditsLeft_few": "{{credits}} kredyty · zostało {{left}}",
       "creditsLeft_many": "{{credits}} kredytów · zostało {{left}}",
-      "creditsAction": "{{credits}}. Zobacz swój plan i kredyty"
+      "creditsAction": "{{credits}}. Zobacz swój plan i kredyty",
+      "waitedInternet": "{{duration}} z tego to oczekiwanie na Twój internet",
+      "waitedAbacus": "{{duration}} z tego to oczekiwanie na AbacusAI"
     },
     "subagent": {
       "done_one": "Gotowe, {{count}} krok, {{duration}}",
@@ -5910,6 +5916,28 @@
       "invitation": "Invitation",
       "letter": "Letter",
       "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Jesteś offline.",
+      "offlineBody": "Twoje połączenie z internetem zostało przerwane, nie aplikacja. Wszystko wznowi się samo, gdy wróci.",
+      "abacusTitle": "AbacusAI teraz nie odpowiada.",
+      "abacusBody": "Twój internet działa; zajmujemy się tym.",
+      "checkingIn": "Sprawdzimy ponownie za {{seconds}} s",
+      "backTitle": "Znowu online.",
+      "backSending_one": "Wysyłamy teraz Twoją oczekującą wiadomość.",
+      "backSending_other": "Wysyłamy teraz Twoje oczekujące wiadomości: {{count}}."
+    },
+    "lanePaused": "wstrzymano · offline",
+    "laneOfflineNote": "Wstrzymano, bo ten komputer jest offline. Łącze jest w porządku; wznowi się samo, gdy internet wróci.",
+    "queued": {
+      "title": "Wyśle się, gdy wrócisz online",
+      "line": "\"{{text}}\" do {{to}} w {{app}}. Wyśle się samo, gdy tylko Twój internet wróci, tylko raz.",
+      "cancel": "Anuluj tę wiadomość",
+      "unsureTitle": "Mogła nie zostać wysłana",
+      "unsureLine": "\"{{text}}\" do {{to}} w {{app}}. Twój internet przerwał podczas wysyłania, więc sprawdź czat, zanim wyślesz ją ponownie.",
+      "dismiss": "Zamknij"
     }
   }
 }
