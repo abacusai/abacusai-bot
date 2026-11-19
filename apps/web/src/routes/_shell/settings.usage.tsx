@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { UsagePage } from "#renderer/features/settings/account-usage";
+import { UsagePage } from "#renderer/features/settings/usage";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const UsageSettingsRoute = () => {

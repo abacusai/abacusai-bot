@@ -1669,6 +1669,10 @@ export interface AbacusAccountInfo {
   credits_granted: number | null;
   /** The plan's monthly credits, without what was bought on top; absent on a free plan and from older servers. */
   plan_credits?: number;
+  /** When a paid plan's monthly credits renew (ISO time); absent on a free plan and from older servers. */
+  credits_reset_at?: string;
+  /** When a free plan's one-time credits expire (ISO time); absent when they do not, and from older servers. */
+  free_tier_expires_at?: string;
   /** The account was created on the website, before the app was installed. */
   web_signup?: boolean;
   /** The account signs in with Google: the app opens Google's consent after sign-in. */

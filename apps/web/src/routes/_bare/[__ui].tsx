@@ -60,6 +60,11 @@ import {
   GeneralPage,
   NotificationsPage,
 } from "#renderer/features/settings/personal";
+import {
+  USAGE_GALLERY_FIXTURES,
+  UsageGallery,
+  type UsageGalleryFixture,
+} from "#renderer/features/settings/usage-gallery";
 import { TourGallery } from "#renderer/features/tour/gallery";
 import { NewLookCard } from "#renderer/features/tour/new-look";
 import {
@@ -140,6 +145,7 @@ const extension = {
         "credit-card-95-project",
         "upgrade-dialog-task",
         "upgrade-dialog-plain",
+        ...USAGE_GALLERY_FIXTURES,
         ...CODER_GALLERY_FIXTURES,
         ...PAID_CREDIT_GALLERY_VARIANTS.flatMap((variant) => [
           `credit-card-paid-50-${variant}`,
@@ -191,6 +197,8 @@ const extension = {
       <OnboardingGallery step={props.fixture.slice(11) as OnboardingStepId} />
     ) : props.fixture.startsWith("notch-") ? (
       <NotchGallery state={props.fixture.slice(6)} />
+    ) : USAGE_GALLERY_FIXTURES.some((id) => id === props.fixture) ? (
+      <UsageGallery fixture={props.fixture as UsageGalleryFixture} />
     ) : props.fixture.startsWith("coder-") ? (
       <CoderGallery fixture={props.fixture} />
     ) : props.fixture.startsWith("credit-card-paid-") ? (
