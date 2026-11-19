@@ -1492,6 +1492,12 @@
     "stopped": "Link verwijderd",
     "links": "Gedeelde links",
     "linksEmpty": "Nog niets gedeeld. Gebruik Delen bij een bestand dat de bot heeft gemaakt.",
+    "offer": {
+      "title": "Stuur het naar iedereen",
+      "body": "Krijg een link die op elke telefoon of computer opent. Je ziet precies wat zij zien voordat het live gaat.",
+      "getLink": "Link maken",
+      "notNow": "Niet nu"
+    },
     "errors": {
       "TOO_LARGE": "Dit bestand is groter dan de limiet van 5 MB voor links.",
       "TOO_MANY": "Je hebt 50 gedeelde links. Stop met het delen van een link om een nieuwe te maken.",
@@ -1920,47 +1926,52 @@
       "recent": "Ga verder waar je gebleven was in {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "App voor bestellingen en boekingen",
-          "detail": "Voor een winkel, sportschool, salon of dienstverlener.",
+          "name": "Bestellingen en boekingen",
+          "detail": "Voor winkels, gyms en salons.",
           "prompt": "Ik heb een klein bedrijf. Bouw een eenvoudige app op deze computer waarmee ik mijn bestellingen, boekingen of opdrachten kan bijhouden: een lijst waaraan ik dingen kan toevoegen en die ik kan doorzoeken en filteren, een pagina per item met de klant, datum, status en prijs, en een dagelijks overzicht. Bouw meteen een eerste versie met voorbeeldgegevens voor een typische kleine winkel en open die voor me. Vraag me daarna in één kort bericht wat mijn bedrijf doet en wat ik moet bijhouden, zodat je de app op maat kunt maken."
         },
         "business-site": {
           "name": "Website voor mijn bedrijf",
-          "detail": "Diensten, openingstijden, reviews en een contactformulier.",
+          "detail": "Diensten, tijden en contact.",
           "prompt": "Bouw een website voor mijn bedrijf: een kopgedeelte met de naam van het bedrijf en wat het aanbiedt, een sectie met diensten en prijzen, openingstijden, een paar reviews van klanten, waar je ons kunt vinden en een contactformulier. Gebruik voorbeeldgegevens die ik later kan vervangen, en zorg dat de site er goed uitziet op een telefoon. Laat me de pagina zien als die klaar is en vraag me daarna in één kort bericht naar de naam van mijn bedrijf en wat het doet, zodat je de site op maat kunt maken."
         },
         "lead-finder": {
           "name": "Klanten vinden",
-          "detail": "Elke ochtend nieuwe leads, met een concept voor de eerste e-mail."
+          "detail": "Nieuwe leads en een eerste mail."
         },
         "my-game": {
           "name": "Aan mijn game werken",
-          "detail": "Unity, Godot, Unreal of Roblox, in je projectmap.",
+          "detail": "Unity, Godot, Unreal of Roblox.",
           "prompt": "Help me met mijn game. Als er geen projectmap open is, vraag me dan waar het project van mijn game staat. Bekijk het daarna en vertel me welke engine en versie het gebruikt, wat de belangrijkste scènes en scripts zijn en wat er kapot of onaf lijkt. Stel de drie nuttigste volgende stappen voor en wacht tot ik er een kies voordat je iets verandert."
         },
         "morning-inbox": {
-          "name": "Elke ochtend mijn e-mail beantwoorden",
-          "detail": "Een conceptantwoord voor elke e-mail waar jij iets mee moet."
+          "name": "Mijn e-mail beantwoorden",
+          "detail": "Elke ochtend antwoorden klaar."
         },
         "portfolio-site": {
           "name": "Portfoliosite",
-          "detail": "Een site van één pagina voor je werk.",
+          "detail": "Eén pagina voor je werk.",
           "prompt": "Bouw een portfoliowebsite van één pagina voor me: een hero met mijn naam en een intro van één regel, een raster met drie voorbeeldprojecten, een over-mij-sectie en een contactsectie. Gebruik tijdelijke tekst en afbeeldingen die ik later kan vervangen, maak het strak en modern, en zorg dat het er goed uitziet op een telefoon. Laat me de pagina zien als hij klaar is."
         },
         "numbers-dashboard": {
           "name": "Dashboard voor mijn cijfers",
-          "detail": "Omzet, kosten en trends uit je spreadsheet.",
+          "detail": "Omzet, kosten en trends.",
           "prompt": "Bouw een dashboard voor de cijfers van mijn bedrijf: totalen voor deze maand, een grafiek per maand, de beste producten of klanten en alles wat opvalt. Begin meteen met realistische voorbeeldcijfers voor de verkoop zodat het werkt, en laat het me zien. Vraag me daarna om mijn spreadsheet of CSV-bestand en zet het dashboard over op mijn echte cijfers."
         },
         "shop-page": {
           "name": "Winkelpagina voor mijn bedrijf",
-          "detail": "Producten, prijzen en een winkelwagen.",
+          "detail": "Producten, prijzen, winkelwagen.",
           "prompt": "Bouw een winkel van één pagina voor mijn kleine bedrijf: een header met de winkelnaam, zes voorbeeldproducten met foto's, namen, prijzen en een knop In winkelwagen, een eenvoudige winkelwagen en een contactsectie. Gebruik tijdelijke producten die ik later kan vervangen, en zorg dat het er goed uitziet op een telefoon. Laat me de pagina zien als hij klaar is."
         },
         "simple-game": {
-          "name": "Een simpel spel",
-          "detail": "Speelbaar in je browser.",
-          "prompt": "Bouw een simpel spel dat ik meteen in de browser kan spelen: een snake-spel met besturing via pijltjestoetsen en swipen, een score, een beste score en een knop om opnieuw te beginnen. Houd het bij één pagina en laat het me zien als het klaar is."
+          "name": "Een spel om te spelen",
+          "detail": "Binnen een minuut speelbaar.",
+          "prompt": "Maak een leuk spel dat ik binnen ongeveer een minuut in de browser kan spelen: een arcadespel waarin ik vallende voorwerpen ontwijk, met een startscherm, besturing met pijltjestoetsen en aanraking, een score en beste score, een game-overscherm en een knop om opnieuw te beginnen. Houd het op één pagina die in het venster past, controleer dat elke besturing werkt en laat het zien als het klaar is. Vraag me daarna in één kort bericht wat voor spel ik wil, zodat je er mijn spel van maakt."
+        },
+        "my-project": {
+          "name": "Aan mijn app of site werken",
+          "detail": "Een app of site op deze computer.",
+          "prompt": "Help me met mijn app- of websiteproject. Als er geen projectmap open is, vraag me waar mijn project staat. Bekijk het daarna en vertel me waarmee het gebouwd is, hoe je het start, wat de belangrijkste onderdelen zijn en wat er kapot of onaf lijkt. Stel de drie nuttigste volgende stappen voor en wacht tot ik er een kies voordat je iets verandert."
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "Berichten",
       "mcp": "MCP-servers",
       "skills": "Vaardigheden",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "Deze pagina komt in een volgende update.",
     "connectorDescription": "Verbindingsdetails komen in een volgende update."
@@ -3150,7 +3162,10 @@
         "browser": "Bezig in de browser",
         "subtask": "Bezig met een subtaak"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Wachten op je internet",
+      "waitingForAbacus": "Wachten op AbacusAI",
+      "messageSafe": "Je bericht is veilig. De bot gaat vanzelf verder zodra de verbinding terug is."
     },
     "code": {
       "copied": "Gekopieerd",
@@ -3223,7 +3238,8 @@
       "includedIn": "Inbegrepen bij {{plan}}",
       "includedInPaid": "Inbegrepen bij betaalde abonnementen",
       "commands": "Opdrachten",
-      "commandFailed": "Dat is niet gelukt. Probeer het opnieuw."
+      "commandFailed": "Dat is niet gelukt. Probeer het opnieuw.",
+      "offline": "Typ nu. Het wordt verzonden zodra je weer online bent"
     },
     "day": {
       "today": "Vandaag",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} credits",
       "creditsLeft_one": "{{credits}} credit · nog {{left}} over",
       "creditsLeft_other": "{{credits}} credits · nog {{left}} over",
-      "creditsAction": "{{credits}}. Bekijk je abonnement en credits"
+      "creditsAction": "{{credits}}. Bekijk je abonnement en credits",
+      "waitedInternet": "{{duration}} daarvan was wachten op je internet",
+      "waitedAbacus": "{{duration}} daarvan was wachten op AbacusAI"
     },
     "subagent": {
       "done_one": "Klaar, {{count}} stap, {{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "Overgeslagen",
       "askBot": "{{bot}} gevraagd: {{what}}",
       "giveTask": "Taak doorgegeven aan {{bot}}: {{what}}",
-      "memoryUpdated": "Geheugen bijgewerkt: {{name}}"
+      "memoryUpdated": "Geheugen bijgewerkt: {{name}}",
+      "quiet": "Al {{time}} geen uitvoer",
+      "progress": "Voortgang"
     },
     "transcript": {
       "jump": "Naar het einde",
@@ -3607,9 +3627,15 @@
       "open": "Openen"
     },
     "suggestedTasks": {
-      "label": "Tik op een taak om die uit te voeren",
+      "pickOne": "Kies er een om verder te gaan",
+      "next": "Volgende",
+      "routineLine": "Draait volgens schema zolang de app open is",
+      "copied": "Gekopieerd",
       "copy": "Kopieer “{{text}}” om vanaf je telefoon te versturen",
-      "copyFailed": "Kopiëren is niet gelukt"
+      "copyFailed": "Kopiëren is niet gelukt",
+      "formTitle": "Maak het van jou",
+      "formLine": "Een regel of twee is genoeg: ik vervang de voorbeeldtekst.",
+      "notNow": "Niet nu"
     },
     "retryOffer": {
       "title": "Probeer het opnieuw met {{model}}",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "Deze taak is lastig voor het goedkope model. {{model}}, een van de sterkste modellen die er zijn, staat hier voor je open. Het gebruikt je credits sneller.",
       "continue": "Ga verder in een nieuwe chat",
       "paidBody": "Een nieuwe chat gaat verder vanaf een samenvatting van deze, op een topmodel. Die verbruikt credits sneller."
+    },
+    "topModelRetry": {
+      "retry": "Opnieuw met {{model}}",
+      "upgradeRetry": "Upgrade om opnieuw te proberen met {{model}} en andere topmodellen",
+      "dismiss": "Sluiten",
+      "opusBody": "Ons sterkste model pakt dit op in een nieuwe chat, precies waar je was gebleven. Het verbruikt sneller credits.",
+      "dialogBody": "Ons sterkste model voor lastige taken, inbegrepen bij {{plan}}."
     },
     "topModelCard": {
       "title": "Ga door met {{model}} via {{plan}}",
@@ -3718,6 +3751,12 @@
       "newChat": "Verdergaan in een nieuwe chat met {{model}}",
       "here": "Deze chat toch overzetten naar {{model}}",
       "cancel": "Annuleren"
+    },
+    "tasks": {
+      "title": "Bezig",
+      "stop": "Stoppen",
+      "serving": "Biedt {{url}} aan",
+      "stopFailed": "Kon niet stoppen. Probeer het opnieuw."
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "Rond het af in je browser",
     "planLine": "{{plan}}-abonnement · altijd opzegbaar",
     "planTitle": "Alles wat je krijgt met {{plan}}",
+    "planModelTitle": "Voer het opnieuw uit op {{model}} met {{plan}}",
     "startAt": "Vanaf",
     "waitingBody": "Je bericht wordt verstuurd zodra je abonnement actief is.",
     "waitingBodyNoMessage": "Dit sluit zodra je abonnement actief is.",
@@ -5320,6 +5360,23 @@
     "continuing": "Alles na een toolresultaat is een voortzetting van hetzelfde antwoord. Geen tweede begroeting, de missie niet herhalen.",
     "write": "Schrijf in het {{language}}, de taal van de gebruiker, tenzij die je in een andere taal schrijft."
   },
+  "quitGuard": {
+    "title_one": "Je taak loopt nog",
+    "title_other": "{{count}} taken lopen nog",
+    "body_one": "Als je nu afsluit, stopt de taak en gaat wat nog niet af is verloren.",
+    "body_other": "Als je nu afsluit, stoppen de taken en gaat wat nog niet af is verloren.",
+    "wait_one": "Wachten tot hij klaar is",
+    "wait_other": "Wachten tot ze klaar zijn",
+    "quitAnyway": "Toch afsluiten",
+    "cancel": "Annuleren",
+    "unnamed": "Chat zonder titel",
+    "more_one": "en nog {{count}}",
+    "more_other": "en nog {{count}}",
+    "waitingOne": "De app sluit af zodra ‘{{name}}’ klaar is.",
+    "waitingMany_one": "De app sluit af zodra {{count}} taken klaar zijn.",
+    "waitingMany_other": "De app sluit af zodra {{count}} taken klaar zijn.",
+    "dontQuit": "Niet afsluiten"
+  },
   "native": {
     "aboutApp": "Over {{app}}",
     "services": "Voorzieningen",
@@ -5349,11 +5406,13 @@
     "zoom": "Zoomen",
     "front": "Alles naar voorgrond",
     "credits": "Open source onder de MIT-licentie",
-    "keepRunning": "Op de achtergrond laten draaien",
-    "quitAnyway": "Toch afsluiten",
-    "taskRunningTitle": "Er loopt een taak",
-    "taskRunningMessage": "Er loopt nog een taak.",
-    "taskRunningDetail": "Op de achtergrond laten doorlopen, of afsluiten en de taak stoppen?",
+    "quitGuardTitleOne": "Je taak loopt nog",
+    "quitGuardTitleMany": "Er lopen nog taken",
+    "quitGuardDetail": "Als je nu afsluit, gaat wat nog niet af is verloren. Als je wacht, sluit de app vanzelf af zodra het werk klaar is.",
+    "quitGuardWait": "Wachten tot hij klaar is",
+    "quitGuardQuitAnyway": "Toch afsluiten",
+    "quitGuardCancel": "Annuleren",
+    "quitGuardUnnamed": "Chat zonder titel",
     "restart": "Opnieuw starten",
     "quit": "Afsluiten",
     "wait": "Wachten",
@@ -5541,6 +5600,16 @@
     "line": "Maak het af met {{plan}}: {{model}} voor de moeilijke delen, credits voor een project van deze omvang en een openbare link als het klaar is.",
     "lineNoModel": "Maak het af met {{plan}}: topmodellen voor de moeilijke delen, credits voor een project van deze omvang en een openbare link als het klaar is."
   },
+  "freeModelDown": {
+    "title": "Het gratis model is nu overbelast",
+    "line": "Maak dit af op een topmodel (Claude, GPT, Gemini) met {{plan}}:",
+    "upgrade": "Upgraden en afmaken",
+    "retry": "Gratis opnieuw proberen",
+    "retrying": "Opnieuw over {{seconds}} s…",
+    "firstRetrying": "Ik probeer het over {{seconds}} s opnieuw voor je…",
+    "tryNow": "Nu proberen",
+    "history": "Het gratis model was overbelast"
+  },
   "keepRunning": {
     "title": "Laat “{{name}}” 24/7 draaien",
     "titleUnnamed": "Laat het 24/7 draaien",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "Seintje als PR's hier een review krijgen of CI mislukt"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Je bent offline.",
+      "offlineBody": "Je internetverbinding is weggevallen, niet de app. Alles gaat vanzelf weer verder zodra je internet terug is.",
+      "abacusTitle": "AbacusAI reageert nu niet.",
+      "abacusBody": "Je internet werkt; wij zijn ermee bezig.",
+      "checkingIn": "Opnieuw controleren over {{seconds}}s",
+      "backTitle": "Weer online.",
+      "backSending_one": "Je wachtende bericht wordt nu verzonden.",
+      "backSending_other": "Je {{count}} wachtende berichten worden nu verzonden."
+    },
+    "lanePaused": "gepauzeerd · offline",
+    "laneOfflineNote": "Gepauzeerd terwijl deze computer offline is. De koppeling is in orde; alles gaat vanzelf verder zodra je internet terug is.",
+    "queued": {
+      "title": "Wordt verzonden zodra je weer online bent",
+      "line": "\"{{text}}\" naar {{to}} op {{app}}. Het wordt vanzelf één keer verstuurd zodra je internet terug is.",
+      "cancel": "Dit bericht annuleren",
+      "unsureTitle": "Misschien niet aangekomen",
+      "unsureLine": "\"{{text}}\" naar {{to}} op {{app}}. Je internet viel weg tijdens het verzenden, dus controleer de chat voordat je het opnieuw stuurt.",
+      "dismiss": "Sluiten"
     }
   }
 }

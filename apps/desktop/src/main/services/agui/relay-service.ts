@@ -563,6 +563,17 @@ export class AguiRelayService implements AguiSource {
     return false;
   }
 
+  /** The threads `busy` counts: a run open or being admitted. */
+  busyThreadIds(): string[] {
+    const ids = new Set<string>([
+      ...this.#waiting.keys(),
+      ...this.#awaitingStart.keys(),
+    ]);
+    for (const [threadId, thread] of this.#threads)
+      if (thread.activeRunId != null) ids.add(threadId);
+    return Array.from(ids);
+  }
+
   /**
    * Whether one thread needs its agent now: a run open or being admitted, a
    * permission or question waiting on the user, or messages queued behind it.
@@ -1210,6 +1221,11 @@ export class AguiRelayService implements AguiSource {
       threadId,
       runId == null ? { type: "cancel" } : { type: "cancel", runId }
     );
+  }
+
+  async stopTask(input: { threadId: string; id: string }): Promise<void> {
+    this.#requireAgui(input.threadId);
+    this.#write(input.threadId, { type: "task.stop", id: input.id });
   }
 
   async respondPermission(input: AiRespondPermissionInput): Promise<void> {

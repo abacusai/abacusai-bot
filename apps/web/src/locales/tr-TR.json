@@ -1492,6 +1492,12 @@
     "stopped": "Bağlantı kaldırıldı",
     "links": "Paylaşılan bağlantılar",
     "linksEmpty": "Henüz bir şey paylaşılmadı. Botun yaptığı bir dosyada Paylaş'ı kullanın.",
+    "offer": {
+      "title": "Herkese gönder",
+      "body": "Her telefonda ve bilgisayarda açılan bir bağlantı al. Yayına girmeden önce karşı tarafın ne göreceğini tam olarak görürsün.",
+      "getLink": "Bağlantı al",
+      "notNow": "Şimdi değil"
+    },
     "errors": {
       "TOO_LARGE": "Bu dosya bağlantılar için 5 MB sınırını aşıyor.",
       "TOO_MANY": "50 paylaşılan bağlantınız var. Yenisini oluşturmak için birini durdurun.",
@@ -1920,27 +1926,27 @@
       "recent": "{{workspace}} içinde kaldığın yerden devam et",
       "build": {
         "orders-system": {
-          "name": "Sipariş ve rezervasyon uygulaması",
-          "detail": "Dükkân, spor salonu, kuaför veya servis işletmeleri için.",
+          "name": "Sipariş ve rezervasyonlar",
+          "detail": "Dükkân, spor salonu ve hizmetler.",
           "prompt": "Küçük bir işletmem var. Bu bilgisayarda siparişlerimi, rezervasyonlarımı veya servis işlerimi takip edebileceğim basit bir uygulama yap: ekleme yapabileceğim, arayıp filtreleyebileceğim bir liste; her biri için müşteri, tarih, durum ve fiyatın yer aldığı bir sayfa; bir de günlük özet. Tipik bir küçük dükkân için örnek verilerle hemen ilk sürümü oluştur ve benim için aç. Sonra işletmemin ne iş yaptığını ve neleri takip etmem gerektiğini tek bir kısa mesajla sor, böylece uygulamayı bana göre uyarlayabilirsin."
         },
         "business-site": {
           "name": "İşletmem için web sitesi",
-          "detail": "Hizmetler, çalışma saatleri, yorumlar ve iletişim formu.",
+          "detail": "Hizmetler, saatler ve iletişim.",
           "prompt": "İşletmem için bir web sitesi yap: işletmenin adını ve ne sunduğunu gösteren bir üst bölüm, fiyatlarıyla birlikte bir hizmetler bölümü, çalışma saatleri, birkaç müşteri yorumu, bizi nerede bulabileceklerini gösteren bir bölüm ve bir iletişim formu. Sonradan değiştirebileceğim örnek bilgiler kullan ve telefonda da düzgün göründüğünden emin ol. Sayfa hazır olunca bana göster. Sonra işletmemin adını ve ne iş yaptığını tek bir kısa mesajla sor, böylece siteyi bana göre uyarlayabilirsin."
         },
         "lead-finder": {
           "name": "Müşteri bul",
-          "detail": "Her sabah yeni potansiyel müşteriler ve hazır bir ilk e-posta taslağı."
+          "detail": "Yeni müşteriler ve ilk e-posta."
         },
         "my-game": {
           "name": "Oyunum üzerinde çalış",
-          "detail": "Unity, Godot, Unreal veya Roblox, kendi proje klasöründe.",
+          "detail": "Unity, Godot, Unreal veya Roblox.",
           "prompt": "Oyunumda bana yardım et. Açık bir proje klasörü yoksa oyunumun projesinin nerede olduğunu bana sor. Sonra projeyi incele ve bana hangi motoru ve sürümü kullandığını, ana sahnelerini ve betiklerini, ayrıca bozuk ya da yarım kalmış görünen her şeyi söyle. En faydalı üç sonraki adımı öner ve herhangi bir şeyi değiştirmeden önce birini seçmemi bekle."
         },
         "morning-inbox": {
           "name": "Her sabah e-postalarımı yanıtla",
-          "detail": "İlgilenmen gereken her e-posta için hazır bir yanıt taslağı."
+          "detail": "Her sabah hazır yanıtlar."
         },
         "portfolio-site": {
           "name": "Portfolyo sitesi",
@@ -1949,7 +1955,7 @@
         },
         "numbers-dashboard": {
           "name": "Rakamlarım için gösterge paneli",
-          "detail": "E-tablondaki satışlar, maliyetler ve eğilimler.",
+          "detail": "Satış, maliyet ve eğilimler.",
           "prompt": "İşletmemin rakamları için bir gösterge paneli yap: bu ayın toplamları, aylara göre bir grafik, en çok satan ürünler veya en önemli müşteriler ve olağan dışı görünen her şey. Çalışır durumda olması için gerçekçi örnek satış verileriyle hemen başla ve bana göster. Sonra benden e-tablomu veya CSV dosyamı iste ve paneli gerçek rakamlarıma geçir."
         },
         "shop-page": {
@@ -1958,9 +1964,14 @@
           "prompt": "Küçük işletmem için tek sayfalık bir mağaza yap: mağaza adının olduğu bir üst kısım, fotoğraf, ad, fiyat ve Sepete ekle düğmesi olan altı örnek ürün, basit bir sepet ve bir iletişim bölümü. Sonradan değiştirebileceğim örnek ürünler kullan ve telefonda da düzgün görünsün. Hazır olunca sayfayı bana göster."
         },
         "simple-game": {
-          "name": "Basit bir oyun",
-          "detail": "Tarayıcında hemen oynanır.",
-          "prompt": "Tarayıcıda hemen oynayabileceğim basit bir oyun yap: ok tuşları ve kaydırmayla oynanan bir yılan oyunu; skor, en yüksek skor ve yeniden başlat düğmesi olsun. Tek sayfada olsun ve hazır olunca bana göster."
+          "name": "Oynayabileceğim bir oyun",
+          "detail": "Yaklaşık bir dakikada oynanabilir.",
+          "prompt": "Tarayıcıda yaklaşık bir dakikada oynayabileceğim eğlenceli bir oyun yap: düşen nesnelerden kaçtığım bir arcade oyunu; başlangıç ekranı, ok tuşu ve dokunmatik kontroller, skor ve en yüksek skor, oyun bitti ekranı ve yeniden başlat düğmesi olsun. Pencereye sığan tek bir sayfada tut, her kontrolün çalıştığını kontrol et ve hazır olunca bana göster. Sonra hangi oyunu istediğimi kısa bir mesajla sor, böylece onu benim oyunum yapabilirsin."
+        },
+        "my-project": {
+          "name": "Uygulamam ya da sitem",
+          "detail": "Bu bilgisayardaki uygulama/site.",
+          "prompt": "Uygulama veya web sitesi projemde bana yardım et. Açık bir proje klasörü yoksa projemin nerede olduğunu sor. Sonra incele ve neyle yapıldığını, nasıl çalıştırıldığını, ana parçalarını ve bozuk ya da yarım görünen her şeyi söyle. En faydalı üç sonraki adımı öner ve bir şeyi değiştirmeden önce birini seçmemi bekle."
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "Mesajlaşma",
       "mcp": "MCP sunucuları",
       "skills": "Beceriler",
-      "tools": "Araçlar"
+      "tools": "Araçlar",
+      "templates": "Templates"
     },
     "emptyDescription": "Bu sayfa yakında bir güncellemeyle gelecek.",
     "connectorDescription": "Bağlantı ayrıntıları yakında bir güncellemeyle gelecek."
@@ -3150,7 +3162,10 @@
         "browser": "Tarayıcıda çalışılıyor",
         "subtask": "Alt görev üzerinde çalışılıyor"
       },
-      "longTool": "{{activity}} · {{minutes}} dk"
+      "longTool": "{{activity}} · {{minutes}} dk",
+      "waitingForInternet": "İnternetiniz bekleniyor",
+      "waitingForAbacus": "AbacusAI bekleniyor",
+      "messageSafe": "Mesajınız güvende. Bağlantı geri gelince bot kendiliğinden devam eder."
     },
     "code": {
       "copied": "Kopyalandı",
@@ -3223,7 +3238,8 @@
       "includedIn": "{{plan}} planına dahil",
       "includedInPaid": "Ücretli planlara dahil",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Şimdi yazın. Tekrar çevrimiçi olduğunuzda gönderilir"
     },
     "day": {
       "today": "Bugün",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} kredi",
       "creditsLeft_one": "{{credits}} kredi · {{left}} kaldı",
       "creditsLeft_other": "{{credits}} kredi · {{left}} kaldı",
-      "creditsAction": "{{credits}}. Planını ve kredilerini gör"
+      "creditsAction": "{{credits}}. Planını ve kredilerini gör",
+      "waitedInternet": "Bunun {{duration}} kadarı internetinizi beklemekle geçti",
+      "waitedAbacus": "Bunun {{duration}} kadarı AbacusAI beklemekle geçti"
     },
     "subagent": {
       "done_one": "Bitti, {{count}} adım, {{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "Atlandı",
       "askBot": "{{bot}} botuna soruldu: {{what}}",
       "giveTask": "{{bot}} botuna görev verildi: {{what}}",
-      "memoryUpdated": "Bellek güncellendi: {{name}}"
+      "memoryUpdated": "Bellek güncellendi: {{name}}",
+      "quiet": "{{time}} süredir çıktı yok",
+      "progress": "İlerleme"
     },
     "transcript": {
       "jump": "Sona git",
@@ -3607,9 +3627,15 @@
       "open": "Aç"
     },
     "suggestedTasks": {
-      "label": "Başlatmak için bir göreve dokun",
+      "pickOne": "Devam etmek için birini seçin",
+      "next": "Sıradaki",
+      "routineLine": "Uygulama açıkken kendi zamanlamasına göre çalışır",
+      "copied": "Kopyalandı",
       "copy": "Telefondan göndermek için “{{text}}” metnini kopyala",
-      "copyFailed": "Kopyalanamadı"
+      "copyFailed": "Kopyalanamadı",
+      "formTitle": "Kendine göre yap",
+      "formLine": "Bir iki satır yeterli: örnek metni ben değiştiririm.",
+      "notNow": "Şimdi değil"
     },
     "retryOffer": {
       "title": "{{model}} ile yeniden dene",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "Bu görev düşük maliyetli model için zor. Var olan en yetenekli modellerden biri olan {{model}} burada sana açık. Kredilerini daha hızlı kullanır.",
       "continue": "Yeni bir sohbette devam et",
       "paidBody": "Yeni bir sohbet, bu sohbetin özetinden üst düzey bir modelle devam eder. Krediyi daha hızlı harcar."
+    },
+    "topModelRetry": {
+      "retry": "{{model}} ile yeniden dene",
+      "upgradeRetry": "{{model}} ve diğer üst modellerle yeniden denemek için yükselt",
+      "dismiss": "Kapat",
+      "opusBody": "En güçlü modelimiz bunu yeni bir sohbette kaldığın yerden devralır. Kredileri daha hızlı kullanır.",
+      "dialogBody": "Zor görevler için en güçlü modelimiz, {{plan}} planına dahil."
     },
     "topModelCard": {
       "title": "{{plan}} ile {{model}} ile devam et",
@@ -3718,6 +3751,12 @@
       "newChat": "{{model}} ile yeni bir sohbette devam et",
       "here": "Yine de bu sohbeti {{model}} modeline geçir",
       "cancel": "İptal"
+    },
+    "tasks": {
+      "title": "Çalışıyor",
+      "stop": "Durdur",
+      "serving": "{{url}} sunuluyor",
+      "stopFailed": "Durdurulamadı. Tekrar dene."
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "Tarayıcında tamamla",
     "planLine": "{{plan}} plan · istediğin zaman iptal et",
     "planTitle": "{{plan}} ile gelen her şey",
+    "planModelTitle": "{{plan}} ile {{model}} üzerinde yeniden çalıştır",
     "startAt": "Başlangıç fiyatı",
     "waitingBody": "Planın etkinleşir etkinleşmez mesajın gönderilir.",
     "waitingBodyNoMessage": "Planın etkinleşir etkinleşmez bu pencere kapanır.",
@@ -5320,6 +5360,23 @@
     "continuing": "Bir araç sonucundan sonra gelen her şey, devam eden aynı yanıttır. İkinci bir selamlama yok, görevi yeniden anlatmak yok.",
     "write": "Kullanıcının dili olan {{language}} ile yaz; kullanıcı sana başka bir dilde yazarsa o dilde yaz."
   },
+  "quitGuard": {
+    "title_one": "Göreviniz hâlâ çalışıyor",
+    "title_other": "{{count}} görev hâlâ çalışıyor",
+    "body_one": "Şimdi çıkarsanız görev durur ve bitmemiş iş kaybolur.",
+    "body_other": "Şimdi çıkarsanız görevler durur ve bitmemiş iş kaybolur.",
+    "wait_one": "Bitmesini bekle",
+    "wait_other": "Bitmelerini bekle",
+    "quitAnyway": "Yine de çık",
+    "cancel": "İptal",
+    "unnamed": "Başlıksız sohbet",
+    "more_one": "ve {{count}} tane daha",
+    "more_other": "ve {{count}} tane daha",
+    "waitingOne": "Uygulama, “{{name}}” bitince kapanacak.",
+    "waitingMany_one": "Uygulama, {{count}} görev bitince kapanacak.",
+    "waitingMany_other": "Uygulama, {{count}} görev bitince kapanacak.",
+    "dontQuit": "Çıkma"
+  },
   "native": {
     "aboutApp": "{{app}} Hakkında",
     "services": "Hizmetler",
@@ -5349,11 +5406,13 @@
     "zoom": "Büyüt/Küçült",
     "front": "Tümünü Öne Getir",
     "credits": "MIT Lisansı altında açık kaynak",
-    "keepRunning": "Arka planda çalışmaya devam et",
-    "quitAnyway": "Yine de çık",
-    "taskRunningTitle": "Bir görev çalışıyor",
-    "taskRunningMessage": "Bir görev hâlâ çalışıyor.",
-    "taskRunningDetail": "Arka planda çalışmaya devam etsin mi, yoksa çıkıp durdurulsun mu?",
+    "quitGuardTitleOne": "Göreviniz hâlâ çalışıyor",
+    "quitGuardTitleMany": "Çalışan görevler var",
+    "quitGuardDetail": "Şimdi çıkarsanız bitmemiş iş kaybolur. Beklerseniz, iş bitince uygulama kendiliğinden kapanır.",
+    "quitGuardWait": "Bitmesini bekle",
+    "quitGuardQuitAnyway": "Yine de çık",
+    "quitGuardCancel": "İptal",
+    "quitGuardUnnamed": "Başlıksız sohbet",
     "restart": "Yeniden Başlat",
     "quit": "Çık",
     "wait": "Bekle",
@@ -5541,6 +5600,16 @@
     "line": "{{plan}} ile bitir: zor kısımlar için {{model}}, bu boyutta bir iş için kredi ve bittiğinde canlı bir bağlantı.",
     "lineNoModel": "{{plan}} ile bitir: zor kısımlar için en iyi modeller, bu boyutta bir iş için kredi ve bittiğinde canlı bir bağlantı."
   },
+  "freeModelDown": {
+    "title": "Ücretsiz model şu anda aşırı yoğun",
+    "line": "Bunu {{plan}} ile en iyi bir modelde (Claude, GPT, Gemini) bitir:",
+    "upgrade": "Yükselt ve bitir",
+    "retry": "Ücretsiz tekrar dene",
+    "retrying": "{{seconds}} sn içinde tekrar deneniyor…",
+    "firstRetrying": "{{seconds}} sn içinde senin için tekrar deniyorum…",
+    "tryNow": "Şimdi dene",
+    "history": "Ücretsiz model aşırı yoğundu"
+  },
   "keepRunning": {
     "title": "“{{name}}” 7/24 çalışsın",
     "titleUnnamed": "7/24 çalışsın",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "Buradaki PR'lar inceleme alınca ya da CI başarısız olunca haber ver"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Çevrimdışısınız.",
+      "offlineBody": "İnternet bağlantınız koptu, uygulamada sorun yok. İnternet geri gelince her şey kendiliğinden devam eder.",
+      "abacusTitle": "AbacusAI şu anda yanıt vermiyor.",
+      "abacusBody": "İnternetiniz iyi; ilgileniyoruz.",
+      "checkingIn": "{{seconds}} sn içinde tekrar kontrol ediliyor",
+      "backTitle": "Tekrar çevrimiçi.",
+      "backSending_one": "Bekleyen mesajınız şimdi gönderiliyor.",
+      "backSending_other": "Bekleyen {{count}} mesajınız şimdi gönderiliyor."
+    },
+    "lanePaused": "duraklatıldı · çevrimdışı",
+    "laneOfflineNote": "Bu bilgisayar çevrimdışıyken duraklatıldı. Bağlantı tamam; internet geri gelince kendiliğinden devam eder.",
+    "queued": {
+      "title": "Tekrar çevrimiçi olduğunuzda gönderilir",
+      "line": "{{app}} üzerinde {{to}} kişisine \"{{text}}\". İnternetiniz geri gelir gelmez kendiliğinden, yalnızca bir kez gönderilir.",
+      "cancel": "Bu mesajı iptal et",
+      "unsureTitle": "Gitmemiş olabilir",
+      "unsureLine": "{{app}} üzerinde {{to}} kişisine \"{{text}}\". Gönderilirken internetiniz koptu, bu yüzden tekrar göndermeden önce sohbeti kontrol edin.",
+      "dismiss": "Kapat"
     }
   }
 }

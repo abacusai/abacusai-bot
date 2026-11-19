@@ -83,7 +83,7 @@ export const fetchUpgradeUrl = async (
  * (`experiments`): a toss runs, and counts an account, only for a build that
  * lists it.
  */
-const APP_EXPERIMENTS = ["onboarding_offer"];
+const APP_EXPERIMENTS = ["opus_retry", "onboarding_offer"];
 
 export const fetchBillingPlan = async (
   upgrade: boolean,

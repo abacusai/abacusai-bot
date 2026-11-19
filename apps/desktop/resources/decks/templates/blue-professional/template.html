@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Presentation Template</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
 
   <style>
     :root {
@@ -99,7 +97,7 @@
     }
 
     h4 {
-      font-size: clamp(0.85rem, 1.2vw, 1rem);
+      font-size: 1rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -107,7 +105,7 @@
     }
 
     p, li {
-      font-size: clamp(0.85rem, 1.1vw, 1.05rem);
+      font-size: 1rem;
       line-height: 1.6;
       color: var(--text-muted);
     }
@@ -127,7 +125,7 @@
 
     .slide-header .tag {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.75rem;
+      font-size: 1rem;
       font-weight: 500;
       color: var(--primary);
       background: var(--accent-light);
@@ -182,7 +180,7 @@
 
     .slide-counter {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.8rem;
+      font-size: 1rem;
       font-weight: 500;
       color: var(--text-muted);
       letter-spacing: 0.05em;
@@ -244,7 +242,7 @@
 
     .layout-cover .meta {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.8rem;
+      font-size: 1rem;
       color: var(--text-light);
       letter-spacing: 0.05em;
     }
@@ -318,7 +316,7 @@
     }
 
     .agenda-item p {
-      font-size: clamp(0.8rem, 1vw, 0.95rem);
+      font-size: 1rem;
       line-height: 1.5;
     }
 
@@ -333,7 +331,7 @@
 
     .layout-metrics .metrics-row {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
       gap: 1.5rem;
       margin-top: 0.5rem;
       align-items: stretch;
@@ -365,7 +363,7 @@
     }
 
     .metric-card .metric-desc {
-      font-size: clamp(0.78rem, 0.95vw, 0.9rem);
+      font-size: 1rem;
       color: var(--text-muted);
       line-height: 1.5;
     }
@@ -381,7 +379,7 @@
     }
 
     .metric-card .metric-supports li {
-      font-size: clamp(0.75rem, 0.9vw, 0.85rem);
+      font-size: 1rem;
       color: var(--text-muted);
       padding-left: 1rem;
       position: relative;
@@ -400,7 +398,7 @@
       align-items: center;
       gap: 0.3rem;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.78rem;
+      font-size: 1rem;
       font-weight: 600;
       margin-top: 0.3rem;
     }
@@ -451,20 +449,20 @@
     }
 
     .stat-cell .stat-unit {
-      font-size: 0.8rem;
+      font-size: 1rem;
       color: var(--text-light);
       font-weight: 500;
     }
 
     .stat-cell .stat-name {
-      font-size: clamp(0.85rem, 1vw, 0.95rem);
+      font-size: 1rem;
       color: var(--text);
       line-height: 1.35;
       font-weight: 500;
     }
 
     .stat-cell .stat-context {
-      font-size: 0.75rem;
+      font-size: 1rem;
       color: var(--text-light);
       line-height: 1.4;
       padding-top: 0.4rem;
@@ -511,7 +509,7 @@
     .insight-list li {
       position: relative;
       padding-left: 2.6rem;
-      font-size: clamp(0.88rem, 1.05vw, 1rem);
+      font-size: 1rem;
       color: var(--text);
       line-height: 1.55;
       counter-increment: insight;
@@ -523,7 +521,7 @@
       left: 0;
       top: 0;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.78rem;
+      font-size: 1rem;
       font-weight: 600;
       color: var(--primary);
       letter-spacing: 0.05em;
@@ -546,7 +544,7 @@
       display: block;
       margin-top: 0.7rem;
       font-style: normal;
-      font-size: 0.78rem;
+      font-size: 1rem;
       font-weight: 500;
       color: var(--text-muted);
       letter-spacing: 0.04em;
@@ -576,7 +574,7 @@
     }
 
     .mini-stat .mini-label {
-      font-size: 0.72rem;
+      font-size: 1rem;
       color: var(--text-muted);
       margin-top: 0.4rem;
       line-height: 1.35;
@@ -603,7 +601,7 @@
     }
 
     .bar-label {
-      font-size: clamp(0.8rem, 1.1vw, 1rem);
+      font-size: 1rem;
       color: var(--text);
       font-weight: 500;
       line-height: 1.3;
@@ -626,7 +624,7 @@
 
     .bar-pct {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.95rem;
+      font-size: 1rem;
       font-weight: 600;
       color: var(--primary);
       min-width: 45px;
@@ -634,7 +632,7 @@
     }
 
     .bar-note {
-      font-size: 0.75rem;
+      font-size: 1rem;
       color: var(--text-light);
       margin-top: 0.2rem;
     }
@@ -669,7 +667,7 @@
     }
 
     .layout-quote .quote-source {
-      font-size: clamp(0.85rem, 1.1vw, 1rem);
+      font-size: 1rem;
       color: var(--text-muted);
     }
 
@@ -758,7 +756,7 @@
     }
 
     .step-desc {
-      font-size: clamp(0.75rem, 1vw, 0.9rem);
+      font-size: 1rem;
       color: var(--text-muted);
       line-height: 1.5;
       max-width: 220px;
@@ -805,7 +803,7 @@
       position: relative;
       padding-left: 1.1rem;
       padding-bottom: 0.4rem;
-      font-size: clamp(0.78rem, 1vw, 0.9rem);
+      font-size: 1rem;
       line-height: 1.5;
     }
 
@@ -847,7 +845,7 @@
     .layout-closing .cta-btn {
       display: inline-block;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.95rem;
+      font-size: 1rem;
       font-weight: 600;
       color: var(--bg);
       background: var(--primary);
@@ -865,7 +863,7 @@
 
     .layout-closing .closing-contact {
       margin-top: 3rem;
-      font-size: 0.85rem;
+      font-size: 1rem;
       color: var(--text-light);
     }
 
@@ -901,7 +899,7 @@
       bottom: 2.5vh;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 0.7rem;
+      font-size: 1rem;
       color: var(--text-light);
       z-index: 100;
       opacity: 0.6;
@@ -917,14 +915,36 @@
       .bar-item { padding: 0.4rem 0; }
       .detail-block { padding: 0.8rem 1rem; }
     }
-  </style>
+    /* Numerals and quotation marks are drawn, not text a deck fills. */
+    .layout-timeline .timeline-track { counter-reset: step; }
+    .layout-timeline .timeline-step { counter-increment: step; }
+    i.step-circle { font-style: normal; }
+    .step-circle::before { content: counter(step); }
+    .layout-quote .quote-mark::before { content: "\201C"; }
+    /* Screen controls never print. */
+    @media print { .keyboard-hint, .nav-controls, .progress-bar { display: none !important; } }
+    /* Print-size type (review of 17 Nov: a filled deck read as tiny text on big empty slides). */
+  html { font-size: 19px; }
+  /* Master's read, 18 Nov: the cover title sat small in a white slide and contents read tiny. */
+  h1 { font-size: 5.4rem; line-height: 1.05; }
+  h2 { font-size: 3rem; line-height: 1.1; }
+  h3 { font-size: 1.75rem; }
+  p, li { font-size: 1.3rem; line-height: 1.45; }
+  .layout-cover .subtitle { font-size: 1.7rem; }
+  .agenda-num { font-size: 2.6rem; }
+  .agenda-item h3 { font-size: 1.7rem; }
+  .agenda-item p { font-size: 1.25rem; }
+  .step-title { font-size: 1.6rem; }
+  .detail-block h3 { font-size: 1.8rem; }
+  .metric-card .metric-label, .stat-cell .stat-label { font-size: 1.2rem; }
+</style>
 </head>
 <body>
 
   <div class="deck">
 
     <!-- SLIDE 1: Cover -->
-    <div class="slide layout-cover active">
+    <div class="slide layout-cover active" data-label="title, in this order: a title in two lines, a one-sentence subtitle and a small date or audience line">
       <div class="cover-decoration"></div>
       <div class="cover-dots">
         <div class="dot"></div><div class="dot"></div><div class="dot"></div>
@@ -932,13 +952,13 @@
         <div class="dot"></div><div class="dot"></div><div class="dot"></div>
       </div>
       <div class="accent-line"></div>
-      <h1>Market Outlook &amp;<br>Strategic Priorities</h1>
+      <h1>Market Outlook &amp; Strategic Priorities</h1>
       <p class="subtitle">An analytical overview of emerging trends, shifting investor sentiment, and the key decisions shaping the next growth cycle.</p>
       <p class="meta">Q2 2026 &nbsp;&middot;&nbsp; Confidential</p>
     </div>
 
     <!-- SLIDE 2: Agenda -->
-    <div class="slide layout-agenda">
+    <div class="slide layout-agenda" data-label="agenda, in this order: a small heading, a one-word tag, then up to six items, each a two-digit number, a short title and one sentence">
       <div class="slide-header">
         <h4>Table of Contents</h4>
         <span class="tag">Overview</span>
@@ -993,14 +1013,14 @@
     </div>
 
     <!-- SLIDE 3: Key Metrics -->
-    <div class="slide layout-metrics">
+    <div class="slide layout-metrics" data-label="three key figures, in this order: a small heading, a one-word tag, a headline, then three cards, each a figure from the brief, a short label, one sentence and three short bullets">
       <div class="slide-header">
         <h4>Executive Summary</h4>
         <span class="tag">Key Findings</span>
       </div>
       <div class="slide-content">
-        <h2>Sentiment has shifted measurably from the prior quarter</h2>
-        <div class="metrics-row">
+        <h2>Three findings that frame the year ahead</h2>
+        <div class="metrics-row" data-deck-grow>
           <div class="metric-card">
             <div class="metric-value">73%</div>
             <div class="metric-label">Bullish on three-year outlook</div>
@@ -1010,9 +1030,6 @@
               <li>Cross-sector consensus, led by tech and industrials</li>
               <li>Driven by clarity on rate trajectory and AI capex</li>
             </ul>
-            <div class="metric-change positive">
-              <span>&uarr;</span> +11 pts vs. prior quarter
-            </div>
           </div>
           <div class="metric-card">
             <div class="metric-value">55%</div>
@@ -1023,9 +1040,6 @@
               <li>Median timeline pushed from Q2 to Q4</li>
               <li>Severity expectations also moderated meaningfully</li>
             </ul>
-            <div class="metric-change positive">
-              <span>&darr;</span> -36 pts vs. prior quarter
-            </div>
           </div>
           <div class="metric-card">
             <div class="metric-value">4.5%</div>
@@ -1036,16 +1050,13 @@
               <li>Energy disinflation slower than originally modeled</li>
               <li>Long-run anchor steady at 3% for the next decade</li>
             </ul>
-            <div class="metric-change negative">
-              <span>&uarr;</span> +0.3 pts vs. prior quarter
-            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- SLIDE 4: Dashboard -->
-    <div class="slide layout-dashboard">
+    <div class="slide layout-dashboard" data-label="six figures (only when the brief has six real figures), in this order: a small heading, a one-word tag, a headline, then six cards, each a figure, a small unit word (or [remove]), a short label and one sentence">
       <div class="slide-header">
         <h4>Macroeconomic Sentiment</h4>
         <span class="tag">Data Overview</span>
@@ -1106,7 +1117,7 @@
     </div>
 
     <!-- SLIDE 5: Two Column -->
-    <div class="slide layout-split">
+    <div class="slide layout-split" data-label="bullets beside a pull quote, in this order: a small heading, a one-word tag, a headline, five one-sentence bullets, a pull quote, who said it, then three figures each followed by a short label, and a closing sentence">
       <div class="slide-header">
         <h4>Investor Priorities</h4>
         <span class="tag">Analysis</span>
@@ -1142,7 +1153,7 @@
                 <div class="mini-label">Prioritize supply chain stability</div>
               </div>
             </div>
-            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.55; margin: 0;">
+            <p style="font-size: 1rem; color: var(--text-muted); line-height: 1.55; margin: 0;">
               Notably absent from the top of the list: ESG-led capital allocation, which has dropped 24 points year-over-year as investors recalibrate toward returns-first mandates.
             </p>
           </div>
@@ -1151,7 +1162,7 @@
     </div>
 
     <!-- SLIDE 6: Bar Chart -->
-    <div class="slide layout-bars">
+    <div class="slide layout-bars" data-label="bar chart" data-deck-skip>
       <div class="slide-header">
         <h4>Risk Factors</h4>
         <span class="tag">Ranking</span>
@@ -1213,10 +1224,10 @@
     </div>
 
     <!-- SLIDE 7: Quote -->
-    <div class="slide layout-quote">
+    <div class="slide layout-quote" data-label="quote, in this order: the quotation (no quotation marks), who said it (a name or role), then where or when">
       <div class="quote-decoration"></div>
       <div class="quote-decoration-2"></div>
-      <div class="quote-mark">&ldquo;</div>
+      <div class="quote-mark" aria-hidden="true"></div>
       <blockquote>
         In this environment, the companies that will win are those that can balance operational discipline with strategic flexibility.
       </blockquote>
@@ -1224,31 +1235,31 @@
     </div>
 
     <!-- SLIDE 8: Timeline -->
-    <div class="slide layout-timeline">
+    <div class="slide layout-timeline" data-label="four-step roadmap or process, in this order: a small heading, a one-word tag, a headline, then four steps, each a short title and one sentence (the numbers are drawn for you)">
       <div class="slide-header">
         <h4>Strategic Roadmap</h4>
         <span class="tag">Process</span>
       </div>
       <div class="slide-content">
         <h2>Recommended approach to navigating the current cycle</h2>
-        <div class="timeline-track">
+        <div class="timeline-track" data-deck-grow>
           <div class="timeline-step">
-            <div class="step-circle">1</div>
+            <i class="step-circle" aria-hidden="true"></i>
             <div class="step-title">Assess Resilience</div>
             <div class="step-desc">Evaluate balance sheet strength and operational buffers under stress scenarios.</div>
           </div>
           <div class="timeline-step">
-            <div class="step-circle">2</div>
+            <i class="step-circle" aria-hidden="true"></i>
             <div class="step-title">Protect Core Revenue</div>
             <div class="step-desc">Defend market position and pricing power in segments with durable demand.</div>
           </div>
           <div class="timeline-step">
-            <div class="step-circle">3</div>
+            <i class="step-circle" aria-hidden="true"></i>
             <div class="step-title">Optimize Costs</div>
             <div class="step-desc">Streamline overhead while preserving capacity for high-return investments.</div>
           </div>
           <div class="timeline-step">
-            <div class="step-circle">4</div>
+            <i class="step-circle" aria-hidden="true"></i>
             <div class="step-title">Selective Growth</div>
             <div class="step-desc">Deploy capital toward opportunities with clear path to profitability.</div>
           </div>
@@ -1257,7 +1268,7 @@
     </div>
 
     <!-- SLIDE 9: Detail -->
-    <div class="slide layout-detail">
+    <div class="slide layout-detail" data-label="six topic cards, in this order: a small heading, a short tag, a headline, then six cards, each a short heading and three short bullets">
       <div class="slide-header">
         <h4>Deep Dive</h4>
         <span class="tag">Detailed Analysis</span>
@@ -1322,7 +1333,7 @@
     </div>
 
     <!-- SLIDE 10: Closing -->
-    <div class="slide layout-closing">
+    <div class="slide layout-closing" data-label="closing, in this order: a short sign-off, one sentence, a button label, and a contact line">
       <div class="closing-decoration"></div>
       <div class="closing-decoration-2"></div>
       <div class="accent-line" style="margin: 0 auto 1.5rem;"></div>

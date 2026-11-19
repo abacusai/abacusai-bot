@@ -11,7 +11,20 @@ import { modelPath } from "@abacus-ai/agent/model-path";
 
 import { resourcePath } from "#main/resources";
 
+import { docsSystemBrief } from "./docs-system/source";
+import { keepsCover, withoutCoverPage } from "./document-cover";
+import {
+  type DocumentForm,
+  FORM_KINDS,
+  formArticle,
+  formPage,
+  tooLong,
+  missingFields,
+  unreadableNumbers,
+  escape as escapeHtml,
+} from "./document-forms";
 import { localiseImages, rewriteImageSources } from "./document-images";
+import { labelsFor, languageOf } from "./document-labels";
 import { exportDocumentPdf } from "./document-pdf";
 
 /** More than this is a book, not a brief. */
@@ -129,6 +142,10 @@ export type RenderDocumentRequest = {
   textSize?: DocumentTextSize;
   /** Visual identity, from `documentTemplates`. */
   template?: string;
+  /** A fixed-layout document (see FORM_KINDS) in place of sections. */
+  form?: DocumentForm;
+  /** The document's language ("tr", "de-DE"): its labels, dates and money. */
+  language?: string;
 };
 
 export type RenderDocumentResult = {
@@ -293,13 +310,6 @@ const dropEchoedHeading = (body: string, heading: string): string => {
 // Creating
 // ---------------------------------------------------------------------------
 
-const escapeHtml = (value: string): string =>
-  value.replace(
-    /[&<>"]/g,
-    (ch) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch] ?? ch
-  );
-
 /**
  * A model-chosen output path may be a file the user already has. Our own
  * output is recognised by the sibling source directory and the file inside
@@ -340,14 +350,39 @@ export const renderDocument = async (
   const title = request.title.trim().slice(0, 160);
   if (title.length === 0) throw new Error("A document needs a title.");
 
-  const sections = request.sections
+  const form =
+    request.form != null &&
+    (FORM_KINDS as readonly string[]).includes(request.form.kind)
+      ? {
+          kind: request.form.kind,
+          data: (request.form.data ?? {}) as Record<string, unknown>,
+        }
+      : null;
+  if (form != null) {
+    const missing = missingFields(form);
+    if (missing.length > 0)
+      throw new Error(`The ${form.kind} is missing: ${missing.join(", ")}.`);
+    const unreadable = unreadableNumbers(form);
+    if (unreadable.length > 0)
+      throw new Error(
+        `These are not plain numbers: ${unreadable.join(", ")}. Write each as a plain number such as 1200.50 (a currency sign is fine; a percentage goes in tax_percent, not discount).`
+      );
+    // Too long for its place: sent back to be shortened, never cut silently.
+    const long = tooLong(form);
+    if (long.length > 0)
+      throw new Error(
+        `Too long for this ${form.kind}, so nothing was printed. Shorten each, or split a long list:\n${long.map((each) => `- ${each}`).join("\n")}`
+      );
+  }
+
+  const sections = (request.sections ?? [])
     .filter(
       (section) =>
         typeof section?.heading === "string" &&
         typeof section?.html === "string"
     )
     .slice(0, MAX_SECTIONS);
-  if (sections.length === 0)
+  if (sections.length === 0 && form == null)
     throw new Error("A document needs at least one section.");
 
   const style: DocumentStyle = (
@@ -382,7 +417,9 @@ export const renderDocument = async (
   await fs.mkdir(workDir, { recursive: true });
   await fs.writeFile(
     path.join(workDir, "styles.css"),
-    await stylesheetFor(resources, template),
+    form == null
+      ? await stylesheetFor(resources, template)
+      : `${await stylesheetFor(resources, template)}\n\n${await fs.readFile(path.join(resources, "templates", "_forms.css"), "utf8")}`,
     "utf8"
   );
   await copyFonts(resources, workDir);
@@ -401,15 +438,16 @@ export const renderDocument = async (
     )
   );
 
-  const dateLine = new Date().toLocaleDateString("en-GB", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const language = languageOf(request.language);
+  const labels = labelsFor(language);
+  const dateLine = new Date().toLocaleDateString(
+    language === "en" ? "en-GB" : language,
+    { year: "numeric", month: "long", day: "numeric" }
+  );
   // The HTML comment is for whoever edits the source and reprints: the body
   // classes and the role of `bleed` cannot be guessed from the markup.
   const html = `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(language)}">
 <!--
   Edit this file and reprint it (pdf action "reprint") to change the document.
 
@@ -432,16 +470,20 @@ export const renderDocument = async (
 <title>${escapeHtml(title)}</title>
 <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="${bodyClasses(style, theme, textSize)}">
-<article class="doc">
+<body class="${bodyClasses(form == null ? style : "report", theme, textSize)}">
+${
+  form != null
+    ? formArticle(form, language)
+    : `<article class="doc">
   <header class="cover${style === "memo" ? " compact" : ""}">
-    <div class="eyebrow">${escapeHtml(style === "memo" ? "Memo" : "Document")}</div>
+    <div class="eyebrow">${escapeHtml(style === "memo" ? labels.memo : labels.document)}</div>
     <h1>${escapeHtml(title)}</h1>
     ${standfirst.length > 0 ? `<p class="standfirst">${escapeHtml(standfirst)}</p>` : ""}
     <div class="meta"><span>${escapeHtml(dateLine)}</span></div>
   </header>
 ${sections.map((section, index) => `  <section>\n    <h2>${escapeHtml(section.heading)}</h2>\n${bodies[index]}\n  </section>`).join("\n")}
-</article>
+</article>`
+}
 </body>
 </html>
 `;
@@ -450,15 +492,24 @@ ${sections.map((section, index) => `  <section>\n    <h2>${escapeHtml(section.he
   await fs.writeFile(htmlPath, html, "utf8");
 
   // The HTML is already openable, so a failed export says where it is.
-  const exported = await exportDocumentPdf({
-    htmlPath,
-    outputPath: pdfPath,
-    ...(theme === "dark" ? { fullBleed: true } : {}),
-  }).catch((error: unknown) => {
-    throw new Error(
-      `the document was written to ${modelPath(htmlPath)} but the PDF export failed: ${(error as Error)?.message ?? "unknown error"}`
-    );
-  });
+  const print = () =>
+    exportDocumentPdf({
+      htmlPath,
+      outputPath: pdfPath,
+      ...(theme === "dark" ? { fullBleed: true } : {}),
+      ...(form != null ? formPage(form.kind) : {}),
+    }).catch((error: unknown) => {
+      throw new Error(
+        `the document was written to ${modelPath(htmlPath)} but the PDF export failed: ${(error as Error)?.message ?? "unknown error"}`
+      );
+    });
+  let exported = await print();
+
+  // Too short for a cover page: printed again with the cover as a header.
+  if (form == null && style !== "memo" && !keepsCover(exported.pages)) {
+    await fs.writeFile(htmlPath, withoutCoverPage(html), "utf8");
+    exported = await print();
+  }
 
   return {
     pdfPath: exported.pdfPath,
@@ -547,6 +598,44 @@ export const reprintPdf = async (request: {
           "or choose a path that does not exist yet."
       );
     }
+  }
+
+  // A design-system page goes back through its make step, so the sums,
+  // charts, fitting and checks run again (live F: a raw reprint printed the
+  // quiz's marks empty).
+  const kept = await docsSystemBrief(htmlPath);
+  if (kept != null) {
+    const { makeDocument } = await import("./docs-system/make");
+    const { readAsk } = await import("./docs-system/ask");
+    const deck = /<section[^>]*class="[^"]*\bslide\b/.test(
+      await fs.readFile(htmlPath, "utf8")
+    );
+    const ask = readAsk(kept);
+    if (deck) ask.formats = ["pptx"];
+    const made = await makeDocument({
+      htmlPath,
+      outBase: pdfPath.replace(/\.pdf$/i, ""),
+      kind: deck ? "deck" : "doc",
+      ask,
+      brief: kept,
+      today: new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    });
+    const bytes = await fs
+      .stat(pdfPath)
+      .then((s) => s.size)
+      .catch(() => 0);
+    return {
+      pdfPath,
+      htmlPath,
+      previewPath: null,
+      pages: made.pages,
+      bytes,
+      seconds: Math.round((Date.now() - startedAt) / 1000),
+    };
   }
 
   const exported = await exportDocumentPdf({

@@ -96,6 +96,7 @@ import { joinLabels, toolRunCounts, toolRunKind } from "./tool-run";
 import { useRunOpen } from "./tool-run-state";
 import { isMemoryTool } from "./tools/memory-tool";
 import { toolInput } from "./tools/normalize";
+import { PaidFeatureToolCard } from "./tools/paid-feature";
 import { RunLiveOutput } from "./tools/tool-line";
 
 type Loose = Record<string, unknown>;
@@ -532,6 +533,77 @@ export const turnEndOf = (
   return { text, id: message.id };
 };
 
+type Part = UIMessage["parts"][number];
+
+const isPlanCard = (part: Part): boolean =>
+  part.type === "tool-call" && isPaidFeatureTool(part.name);
+
+/**
+ * Where a turn's plan cards show: paid_feature is called before the reply,
+ * yet its card reads after it, under the reply's buttons. Only the turn's
+ * last row shows them, all of them, last; a row a later row of its turn
+ * follows (`carried`) shows none. Both skins draw them this way.
+ */
+export const turnPlanCards = (
+  messages: readonly UIMessage[],
+  message: UIMessage
+): { carried: boolean; cards: Part[] } => {
+  const none = { carried: false, cards: [] };
+  if (message.role !== "assistant") return none;
+  const index = messageIndexOf(messages, message.id);
+  if (index < 0) return none;
+  const folded = new Set(coalescedIds(message));
+  let next = index + 1;
+  while (
+    next < messages.length &&
+    (folded.has(messages[next]!.id) || messages[next]!.role === "system")
+  )
+    next++;
+  if (messages[next]?.role === "assistant") return { carried: true, cards: [] };
+  let start = index;
+  while (start > 0 && messages[start - 1]!.role !== "user") start--;
+  const cards = messages
+    .slice(start, next)
+    .filter((item) => item.role === "assistant")
+    .flatMap((item) => item.parts.filter(isPlanCard));
+  return { carried: false, cards };
+};
+
+const useTurnPlanCards = (message: UIMessage) => {
+  const { session } = useChatView();
+  return useHost(
+    session,
+    (state) => turnPlanCards(state.messages, message),
+    (a, b) =>
+      a.carried === b.carried &&
+      a.cards.length === b.cards.length &&
+      a.cards.every((card, index) => card === b.cards[index])
+  );
+};
+
+/** The message without its plan cards, which `PlanCards` draws instead. */
+const withoutPlanCards = (message: UIMessage): UIMessage => {
+  const calls = new Set(
+    message.parts.filter(isPlanCard).map((part) => (part as { id: string }).id)
+  );
+  if (calls.size === 0) return message;
+  return {
+    ...message,
+    parts: message.parts.filter(
+      (part) =>
+        !isPlanCard(part) &&
+        !(part.type === "tool-result" && calls.has(part.toolCallId))
+    ),
+  };
+};
+
+const PlanCards = ({ cards }: { cards: readonly Part[] }) =>
+  cards.map((card) =>
+    card.type === "tool-call" ? (
+      <PaidFeatureToolCard key={card.id} part={card as never} />
+    ) : null
+  );
+
 const useTurnEnd = (
   message: UIMessage
 ): { text: string; id: string } | null => {
@@ -557,10 +629,13 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
     session,
     (state) => state.runs.active != null
   );
+  const plan = useTurnPlanCards(message);
   const visible = botVisibleMessage(message, messages, runActive);
   if (visible !== message) return <BotUI.Message message={visible} />;
+  const bare = withoutPlanCards(message);
+  if (bare !== message) return <BotUI.Message message={bare} />;
   if (
-    isEmptyAssistant(message) ||
+    (isEmptyAssistant(message) && plan.cards.length === 0) ||
     (decoration?.hidden === true &&
       !message.parts.some((part) => part.type === "tool-call"))
   )
@@ -597,6 +672,7 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
           {message.parts.some((part) => part.type === "subagent") ? (
             <StepControls side="more" />
           ) : null}
+          <PlanCards cards={plan.cards} />
           <Credits message={message} />
           {decoration?.after}
         </div>
@@ -787,6 +863,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             return true;
           }),
         };
+  const plan = useTurnPlanCards(message);
   const results = new Map<string, ToolResult>();
   for (const part of selectedMessage.parts)
     if (part.type === "tool-result") results.set(part.toolCallId, part);
@@ -823,11 +900,12 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             !visibleUnits.has(`${scope}\0${part.part.id}`)
           )
             continue;
-          // A card the reply points at (the upgrade, a place in the app),
-          // and a memory change, stand on their own: folded into a closed
-          // run, nobody saw them.
+          // Drawn after the reply and its buttons (turnPlanCards).
+          if (isPaidFeatureTool(part.part.name)) continue;
+          // A card the reply points at (a place in the app), and a memory
+          // change, stand on their own: folded into a closed run, nobody saw
+          // them.
           if (
-            isPaidFeatureTool(part.part.name) ||
             isBotHelpTool(part.part.name) ||
             isSuggestTasksTool(part.part.name) ||
             isMemoryTool(part.part.name)
@@ -846,7 +924,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           }
         }
         flush();
-        return blocks.map((block) => {
+        const rendered = blocks.map((block) => {
           if (!block.run)
             return (
               <SessionUI.Part
@@ -885,6 +963,12 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
             </ToolRun>
           );
         });
+        return (
+          <>
+            {rendered}
+            <PlanCards cards={plan.cards} />
+          </>
+        );
       }}
     </SessionUI.Message>
   );

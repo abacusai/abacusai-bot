@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   PROGRESS_UPDATES_PROMPT,
   ATTACHMENTS_PROMPT,
+  CONNECTION_PROMPT,
   DELIVERABLE_QUALITY_PROMPT,
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
@@ -96,7 +97,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -130,8 +131,13 @@ describe("questions about the app itself", () => {
   it("send 'keep working with the computer off' and 'put it online' to billing_plan, free part first, never another company's service", () => {
     expect(PLAN_ASKS_PROMPT).toMatch(/computer is off or asleep/);
     expect(PLAN_ASKS_PROMPT).toMatch(
-      /a live, public or shareable link for something they built/
+      /a live link that stays up for a site of several pages/
     );
+    // One file needs no plan: Share, without a billing_plan call.
+    expect(PLAN_ASKS_PROMPT).toMatch(
+      /that needs no plan: do not call billing_plan/
+    );
+    expect(PLAN_ASKS_PROMPT).toMatch(/press Share/);
     expect(PLAN_ASKS_PROMPT).toMatch(
       /call billing_plan with upgrade: true before you answer/
     );

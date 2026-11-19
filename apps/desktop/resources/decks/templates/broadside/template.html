@@ -4,15 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Broadside Presentation</title>
+  <link rel="stylesheet" href="fonts.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Broadside fonts: Barlow (the workhorse grotesque), IBM Plex Mono (chrome),
          Noto Sans SC (CJK fallback for all roles) -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700;800;900&family=IBM+Plex+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@400;500;700;900&display=swap"
-      rel="stylesheet"
-    />
 
     <style>
       /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -37,8 +32,8 @@
         --c-bg-orange: #e85d26;
 
         --c-fg: #f0ece5; /* primary text on dark slides                 */
-        --c-fg-2: #888880; /* secondary / muted text on dark              */
-        --c-fg-3: #505048; /* tertiary / hint text on dark                */
+        --c-fg-2: #a3a39a; /* secondary / muted text on dark              */
+        --c-fg-3: #7d7d74; /* tertiary / hint text on dark                */
 
         /* Text colours for orange slides — ink on fire */
         --c-fg-light: #111111; /* primary text on orange                */
@@ -70,11 +65,11 @@
         --sz-display: 13vw; /* the whole point — nearly abstract at full size */
         --sz-h1: 7.5vw; /* chapter title — still enormous                */
         --sz-h2: 4.5vw; /* slide headline                                */
-        --sz-h3: 2.8vw; /* sub-headline                                  */
-        --sz-lead: 1.6vw; /* lead paragraph                                */
-        --sz-body: 1.2vw; /* body text                                     */
-        --sz-caption: 0.9vw; /* captions, footnotes                           */
-        --sz-label: 0.72vw; /* chrome labels, slide numbers, metadata        */
+        --sz-h3: 3vw; /* sub-headline                                  */
+        --sz-lead: 2vw; /* lead paragraph                                */
+        --sz-body: 1.65vw; /* body text                                     */
+        --sz-caption: 1.45vw; /* captions, footnotes                           */
+        --sz-label: 1.3vw; /* chrome labels, slide numbers, metadata        */
 
         /* ── Spacing ─────────────────────────────────────────────────────── */
         --pad-x: 5.5vw; /* tighter than skeleton — type fills the space  */
@@ -288,9 +283,9 @@
         bottom: 20px;
         right: 28px;
         font-family: var(--f-mono);
-        font-size: 10px;
+        font-size: 16px;
         letter-spacing: 0.12em;
-        color: rgba(255, 255, 255, 0.25);
+        color: var(--c-fg-2);
         z-index: 100;
         user-select: none;
       }
@@ -389,7 +384,7 @@
         color: rgba(17, 17, 17, 0.75);
       }
       .orange .label {
-        color: rgba(17, 17, 17, 0.55);
+        color: rgba(17, 17, 17, 0.7);
       }
       /* On orange, .accent still means "the contrast pop" — use sparingly */
       .orange .accent {
@@ -752,7 +747,7 @@
         color: var(--c-accent);
       }
       .orange .kicker {
-        color: rgba(17, 17, 17, 0.55);
+        color: rgba(17, 17, 17, 0.7);
       }
 
       /* Bordered tag */
@@ -786,10 +781,10 @@
          Inspired by SPACE10 deck: "01" in small mono, top-left, low opacity. */
       .broadside-num {
         font-family: var(--f-mono);
-        font-size: 1.1vw;
+        font-size: 1.35vw;
         font-weight: 500;
         letter-spacing: 0.1em;
-        color: rgba(17, 17, 17, 0.45); /* dark ink on orange */
+        color: rgba(17, 17, 17, 0.65); /* dark ink on orange */
       }
       /* On dark slides the number uses muted fg */
       .dark .broadside-num {
@@ -802,7 +797,7 @@
         font-size: var(--sz-label);
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: rgba(17, 17, 17, 0.4);
+        color: rgba(17, 17, 17, 0.65);
       }
       .dark .corner-label {
         color: var(--c-fg-3);
@@ -867,7 +862,7 @@
         color: rgba(17, 17, 17, 0.65);
       }
       .orange .stat-note {
-        color: rgba(17, 17, 17, 0.4);
+        color: rgba(17, 17, 17, 0.65);
       }
       .orange .stat-card {
         border-top-color: rgba(17, 17, 17, 0.22);
@@ -993,7 +988,7 @@
         margin-top: var(--gap-sm);
       }
       .orange .chart-source {
-        color: rgba(17, 17, 17, 0.4);
+        color: rgba(17, 17, 17, 0.65);
       }
 
       /* ── DIAGRAM ────────────────────────────────────────────────────────── */
@@ -1045,7 +1040,7 @@
         font-weight: 400;
       }
       .orange .flow-desc {
-        color: rgba(17, 17, 17, 0.6);
+        color: rgba(17, 17, 17, 0.78);
       }
       .flow-arrow {
         display: flex;
@@ -1312,6 +1307,15 @@
         align-items: center;
         justify-content: center;
       }
+          .flow-arrow::before,
+      .cycle-arrow::before {
+        content: attr(data-arrow);
+      }
+      @media print {
+        #nav-dots {
+          display: none !important;
+        }
+      }
     </style>
   </head>
 
@@ -1324,11 +1328,11 @@
      section label top-right. Massive weight-900 lowercase title.
      Tiny mono subtitle. Author + date in bottom corners.
      ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide slide--cover orange">
+      <section class="slide slide--cover orange" data-label="title: a corner label, the title set huge in two or three lines, a one-line subtitle, and an author and a date line at the foot">
         <!-- Top chrome: slide number left, section label right -->
         <div class="broadside-top-chrome">
           <span class="broadside-num" data-anim="fade-in" data-delay="0"
-            >01</span
+            >01 / 16</span
           >
           <span class="corner-label" data-anim="fade-in" data-delay="0"
             >Broadside</span
@@ -1362,7 +1366,7 @@
           <span class="broadside-num">[Year] · Context</span>
         </div>
       </section>
-      <section class="slide slide--chapter orange">
+      <section class="slide slide--chapter orange" data-label="chapter opener: a chapter label, the chapter title in up to two lines and one framing sentence">
         <!-- Chapter number: top-left, same small mono as cover -->
         <div
           class="broadside-num"
@@ -1370,7 +1374,7 @@
           data-delay="0"
           style="margin-bottom: var(--gap-lg)"
         >
-          02 / Chapter
+          <span>02 / 16</span><span style="margin-left: 1.2em">Chapter</span>
         </div>
 
         <h2 class="h1" data-anim="fade-up" data-delay="1">
@@ -1386,10 +1390,10 @@
           One optional sentence that frames what this section is about.
         </p>
       </section>
-      <section class="slide slide--statement dark">
+      <section class="slide slide--statement dark" data-label="statement: a section label, a kicker and one bold claim of under ten words in orange">
         <header class="slide-chrome">
           <span class="label muted">The Argument</span>
-          <span class="label muted">03</span>
+          <span class="label muted">03 / 16</span>
         </header>
 
         <div class="statement-body">
@@ -1416,10 +1420,10 @@
           <span class="label muted">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--split dark">
+      <section class="slide slide--split dark" data-label="text beside an image placeholder: a heading, a sentence, three bullets and an image caption" data-deck-skip>
         <header class="slide-chrome">
           <span class="label muted">Details</span>
-          <span class="label muted">04</span>
+          <span class="label muted">04 / 16</span>
         </header>
 
         <div class="slide-body">
@@ -1462,13 +1466,13 @@
           <span class="label muted">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--stats orange">
+      <section class="slide slide--stats orange" data-label="three big figures, each a short figure (like $3.5B, 3× or #1), a sentence and a source note">
         <header class="slide-chrome">
-          <span class="broadside-num">05</span>
+          <span class="broadside-num">05 / 16</span>
           <span class="corner-label">By the numbers</span>
         </header>
         <div class="slide-body">
-          <div class="stats-grid" data-anim="fade-up" data-delay="1">
+          <div class="stats-grid" data-anim="fade-up" data-delay="1" data-deck-grow>
             <div class="stat-card">
               <div class="stat-value" data-anim="scale-in" data-delay="1">
                 $3.5B
@@ -1499,14 +1503,14 @@
           </div>
         </div>
         <footer class="slide-foot">
-          <span class="broadside-num" style="opacity: 0.4">Broadside</span>
-          <span class="broadside-num" style="opacity: 0.4">[Author Name]</span>
+          <span class="broadside-num" style="opacity: 0.65">Broadside</span>
+          <span class="broadside-num" style="opacity: 0.65">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--fadelist orange">
+      <section class="slide slide--fadelist orange" data-label="section divider: three one-word phases fading out top right (like Before, During, After) and a two-word title set huge">
         <div class="fadelist-top">
           <span class="broadside-num" data-anim="fade-in" data-delay="0"
-            >01</span
+            >Section</span
           >
           <div class="fadelist-items" data-anim="fade-up" data-delay="1">
             <span class="fadelist-item">Before</span>
@@ -1526,22 +1530,22 @@
             border-top: 1px solid rgba(17, 17, 17, 0.15);
           "
         >
-          <span class="broadside-num" style="opacity: 0.4"
+          <span class="broadside-num" style="opacity: 0.65"
             >[Studio X] Guidelines</span
           >
-          <span class="broadside-num" style="opacity: 0.4">06 / 10</span>
+          <span class="broadside-num" style="opacity: 0.65">06 / 16</span>
         </div>
       </section>
-      <section class="slide slide--list dark">
+      <section class="slide slide--list dark" data-label="list: a kicker, a heading in two short lines and four one-line points">
         <header class="slide-chrome">
           <span class="label muted">The Framework</span>
-          <span class="label muted">07</span>
+          <span class="label muted">07 / 16</span>
         </header>
         <div class="slide-body">
           <div class="list-head">
             <p class="kicker" data-anim="fade-in" data-delay="0">Four rules</p>
             <h2 class="h2" data-anim="fade-up" data-delay="1">
-              what separates<br />signal from noise
+              what separates signal from noise
             </h2>
           </div>
           <ul class="bullet-list" data-anim="fade-up" data-delay="2">
@@ -1562,7 +1566,7 @@
           <span class="label muted">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--quote dark">
+      <section class="slide slide--quote dark" data-label="quote: a kicker, a quote of one or two sentences, the speaker and the source">
         <p
           class="kicker accent"
           data-anim="fade-in"
@@ -1580,10 +1584,10 @@
           <span class="label muted">[Source] · [Year]</span>
         </div>
       </section>
-      <section class="slide slide--compare dark">
+      <section class="slide slide--compare dark" data-label="before and after comparison, two panels each a label, a heading, a sentence and three short bullets">
         <header class="slide-chrome">
           <span class="label muted">Before · After</span>
-          <span class="label muted">09</span>
+          <span class="label muted">09 / 16</span>
         </header>
         <div class="slide-body">
           <div class="compare-panel left">
@@ -1601,7 +1605,7 @@
               class="bullet-list"
               data-anim="fade-up"
               data-delay="3"
-              style="--sz-lead: 1.2vw"
+              style="--sz-lead: 1.65vw"
             >
               <li>Waterfall planning, quarterly roadmaps</li>
               <li>User testing at the end, not the start</li>
@@ -1633,7 +1637,7 @@
               class="bullet-list"
               data-anim="fade-up"
               data-delay="3"
-              style="--sz-lead: 1.2vw"
+              style="--sz-lead: 1.65vw"
             >
               <li>Weekly user sessions, continuous discovery</li>
               <li>Metrics reviewed daily, not quarterly</li>
@@ -1646,10 +1650,10 @@
           <span class="label muted">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--chart dark">
+      <section class="slide slide--chart dark" data-label="bar chart, four bars of sample data" data-deck-skip>
         <header class="slide-chrome">
           <span class="label muted">Growth Metrics</span>
-          <span class="label muted">11</span>
+          <span class="label muted">10 / 16</span>
         </header>
         <div class="slide-body">
           <div class="chart-header">
@@ -1694,9 +1698,9 @@
           <span class="label muted">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--diagram orange">
+      <section class="slide slide--diagram orange" data-label="four-step process left to right, each a number, a one-word title and a sentence">
         <header class="slide-chrome">
-          <span class="broadside-num">12</span>
+          <span class="broadside-num">11 / 16</span>
           <span class="corner-label">The Process</span>
         </header>
         <div class="slide-body">
@@ -1708,7 +1712,7 @@
           >
             how it works
           </h2>
-          <div class="flow" data-anim="fade-up" data-delay="1">
+          <div class="flow" data-anim="fade-up" data-delay="1" data-deck-grow>
             <div class="flow-step">
               <div class="flow-num">01</div>
               <div class="flow-title">Discover</div>
@@ -1717,7 +1721,7 @@
                 what the team assumes.
               </div>
             </div>
-            <div class="flow-arrow">→</div>
+            <div class="flow-arrow" aria-hidden="true" data-arrow="→"></div>
             <div class="flow-step">
               <div class="flow-num">02</div>
               <div class="flow-title">Define</div>
@@ -1726,7 +1730,7 @@
                 hypothesis, not a feature request.
               </div>
             </div>
-            <div class="flow-arrow">→</div>
+            <div class="flow-arrow" aria-hidden="true" data-arrow="→"></div>
             <div class="flow-step">
               <div class="flow-num">03</div>
               <div class="flow-title">Design</div>
@@ -1735,7 +1739,7 @@
                 hypothesis. Skip the polish.
               </div>
             </div>
-            <div class="flow-arrow">→</div>
+            <div class="flow-arrow" aria-hidden="true" data-arrow="→"></div>
             <div class="flow-step">
               <div class="flow-num">04</div>
               <div class="flow-title">Deploy</div>
@@ -1747,14 +1751,14 @@
           </div>
         </div>
         <footer class="slide-foot" style="border-color: rgba(17, 17, 17, 0.15)">
-          <span class="broadside-num" style="opacity: 0.4">Broadside</span>
-          <span class="broadside-num" style="opacity: 0.4">[Author Name]</span>
+          <span class="broadside-num" style="opacity: 0.65">Broadside</span>
+          <span class="broadside-num" style="opacity: 0.65">[Author Name]</span>
         </footer>
       </section>
-      <section class="slide slide--pie dark">
+      <section class="slide slide--pie dark" data-label="donut chart of sample market shares with a four-row legend" data-deck-skip>
         <header class="slide-chrome">
           <span class="label muted">Market Share</span>
-          <span class="label muted">13</span>
+          <span class="label muted">12 / 16</span>
         </header>
         <div class="slide-body">
           <h2
@@ -1814,10 +1818,10 @@
           <span class="label muted">[Year]</span>
         </footer>
       </section>
-      <section class="slide slide--pyramid dark">
+      <section class="slide slide--pyramid dark" data-label="pyramid of five levels, top to bottom, each a one-word name and a short phrase">
         <header class="slide-chrome">
           <span class="label muted">The Hierarchy</span>
-          <span class="label muted">14</span>
+          <span class="label muted">13 / 16</span>
         </header>
         <div class="slide-body">
           <h2
@@ -1856,15 +1860,15 @@
           <span class="label muted">[Year]</span>
         </footer>
       </section>
-      <section class="slide slide--vtimeline dark">
+      <section class="slide slide--vtimeline dark" data-label="vertical timeline of four events, each a date, a short title and a sentence">
         <header class="slide-chrome">
           <span class="label muted">The Story</span>
-          <span class="label muted">15</span>
+          <span class="label muted">14 / 16</span>
         </header>
         <div class="vt-hl" data-anim="fade-up" data-delay="0">
           how we got here
         </div>
-        <div class="vtimeline" data-anim="fade-up" data-delay="1">
+        <div class="vtimeline" data-anim="fade-up" data-delay="1" data-deck-grow>
           <!-- Event 1 -->
           <div class="vt-date">[Year −3]</div>
           <div class="vt-spine"></div>
@@ -1904,13 +1908,13 @@
         </div>
         <footer class="slide-foot">
           <span class="label muted">[Author] / [Year]</span>
-          <span class="label muted">15</span>
+          <span class="label muted">[Year]</span>
         </footer>
       </section>
-      <section class="slide slide--cycle dark">
+      <section class="slide slide--cycle dark" data-label="four-step loop in a two-by-two grid, each a number, a one-word title and a sentence">
         <header class="slide-chrome">
           <span class="label muted">The Loop</span>
-          <span class="label muted">16</span>
+          <span class="label muted">15 / 16</span>
         </header>
         <div class="slide-body">
           <h2
@@ -1930,7 +1934,7 @@
                 Ship the smallest version that could prove the idea wrong.
               </div>
             </div>
-            <div class="cycle-arrow">→</div>
+            <div class="cycle-arrow" aria-hidden="true" data-arrow="→"></div>
             <div class="cycle-step">
               <div class="cycle-num">02</div>
               <div class="cycle-title">measure</div>
@@ -1939,9 +1943,9 @@
               </div>
             </div>
             <!-- Row 2: arrows -->
-            <div class="cycle-arrow">↓</div>
+            <div class="cycle-arrow" aria-hidden="true" data-arrow="↓"></div>
             <div></div>
-            <div class="cycle-arrow">↓</div>
+            <div class="cycle-arrow" aria-hidden="true" data-arrow="↓"></div>
             <!-- Row 3 (reversed: left=04, right=03 to form clockwise loop) -->
             <div class="cycle-step">
               <div class="cycle-num">04</div>
@@ -1950,7 +1954,7 @@
                 Update the hypothesis. Kill what didn't work. Double what did.
               </div>
             </div>
-            <div class="cycle-arrow">←</div>
+            <div class="cycle-arrow" aria-hidden="true" data-arrow="←"></div>
             <div class="cycle-step">
               <div class="cycle-num">03</div>
               <div class="cycle-title">decide</div>
@@ -1963,13 +1967,13 @@
         </div>
         <footer class="slide-foot">
           <span class="label muted">[Author] / [Year]</span>
-          <span class="label muted">16</span>
+          <span class="label muted">[Year]</span>
         </footer>
       </section>
-      <section class="slide slide--end orange">
+      <section class="slide slide--end orange" data-label="closing: a two-word sign-off set huge, a contact line, and a name and a date at the foot">
         <div class="broadside-top-chrome">
           <span class="broadside-num" data-anim="fade-in" data-delay="0"
-            >10</span
+            >16 / 16</span
           >
           <span class="corner-label" data-anim="fade-in" data-delay="0"
             >End</span
@@ -1986,7 +1990,7 @@
             letter-spacing: -0.04em;
           "
         >
-          let's<br />talk.
+          let's talk.
         </h1>
         <div
           style="display: flex; flex-direction: column; gap: var(--gap-sm)"
@@ -2007,8 +2011,8 @@
             border-top: 1px solid rgba(17, 17, 17, 0.15);
           "
         >
-          <span class="broadside-num" style="opacity: 0.4">[Author Name]</span>
-          <span class="broadside-num" style="opacity: 0.4">[Year]</span>
+          <span class="broadside-num" style="opacity: 0.65">[Author Name]</span>
+          <span class="broadside-num" style="opacity: 0.65">[Year]</span>
         </div>
       </section>
     </div>

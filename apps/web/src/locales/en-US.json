@@ -1492,6 +1492,12 @@
     "stopped": "Link removed",
     "links": "Shared links",
     "linksEmpty": "Nothing shared yet. Use Share on a file the bot made.",
+    "offer": {
+      "title": "Send it to anyone",
+      "body": "Get a link that opens on any phone or computer. You see exactly what they will see before it goes live.",
+      "getLink": "Get a link",
+      "notNow": "Not now"
+    },
     "errors": {
       "TOO_LARGE": "This file is over the 5 MB limit for links.",
       "TOO_MANY": "You have 50 shared links. Stop sharing one to make another.",
@@ -1921,26 +1927,26 @@
       "build": {
         "orders-system": {
           "name": "Orders and bookings app",
-          "detail": "For a shop, gym, salon or service business.",
+          "detail": "For shops, gyms and salons.",
           "prompt": "I run a small business. Build me a simple app on this computer to keep track of my orders, bookings or service jobs: a list I can add to, search and filter, a page for each one with the customer, date, status and price, and a daily summary. Build a first version right away with sample data for a typical small shop and open it for me. Then ask me in one short message what my business does and what I need to track, so you can tailor it."
         },
         "business-site": {
           "name": "Website for my business",
-          "detail": "Services, hours, reviews and a contact form.",
+          "detail": "Services, hours, reviews, contact.",
           "prompt": "Build a website for my business: a header with the business name and what it offers, a services section with prices, opening hours, a few customer reviews, where to find us and a contact form. Use placeholder details I can swap later, and make sure it looks right on a phone. Show me the page when it is ready, then ask me in one short message for my business's name and what it does, so you can make it mine."
         },
         "lead-finder": {
           "name": "Find customers",
-          "detail": "New leads each morning, with a first email drafted."
+          "detail": "New leads daily, first email drafted."
         },
         "my-game": {
           "name": "Work on my game",
-          "detail": "Unity, Godot, Unreal or Roblox, in your project folder.",
+          "detail": "Unity, Godot, Unreal or Roblox.",
           "prompt": "Help me with my game. If no project folder is open, ask me where my game's project is. Then look through it and tell me which engine and version it uses, its main scenes and scripts, and anything that looks broken or unfinished. Suggest the three most useful next steps, and wait for me to pick one before changing anything."
         },
         "morning-inbox": {
           "name": "Answer my email every morning",
-          "detail": "A reply drafted for each email that needs you."
+          "detail": "Replies drafted every morning."
         },
         "portfolio-site": {
           "name": "Portfolio site",
@@ -1949,7 +1955,7 @@
         },
         "numbers-dashboard": {
           "name": "Dashboard for my numbers",
-          "detail": "Sales, costs and trends from your spreadsheet.",
+          "detail": "Sales, costs and trends.",
           "prompt": "Build a dashboard for my business numbers: totals for this month, a chart by month, the top products or clients, and anything unusual. Start right away with realistic sample sales data so it works, and show it to me. Then ask me for my spreadsheet or CSV file, and switch the dashboard to my real numbers."
         },
         "shop-page": {
@@ -1958,9 +1964,14 @@
           "prompt": "Build a one-page shop for my small business: a header with the shop name, six sample products with photos, names, prices and an Add to cart button, a simple cart, and a contact section. Use placeholder products I can swap later, and make sure it looks right on a phone. Show me the page when it is ready."
         },
         "simple-game": {
-          "name": "A simple game",
-          "detail": "Playable in your browser.",
-          "prompt": "Build a simple game I can play in the browser right away: a snake game with arrow-key and swipe controls, a score, a best score and a restart button. Keep it to one page and show it to me when it is ready."
+          "name": "A game I can play",
+          "detail": "Playable in about a minute.",
+          "prompt": "Build me a fun game I can play in the browser in about a minute: an arcade game where I dodge falling objects, with a start screen, arrow-key and touch controls, a score and best score, a game over screen and a restart button. Keep it to one page that fits the window, check that every control works, and show it to me when it is ready. Then ask me in one short message what game I want, so you can turn it into mine."
+        },
+        "my-project": {
+          "name": "Work on my app or site",
+          "detail": "An app or site on this computer.",
+          "prompt": "Help me with my app or website project. If no project folder is open, ask me where my project is. Then look through it and tell me what it is built with, how to run it, its main parts, and anything that looks broken or unfinished. Suggest the three most useful next steps, and wait for me to pick one before changing anything."
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "Messaging",
       "mcp": "MCP servers",
       "skills": "Skills",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "This page arrives in a coming update.",
     "connectorDescription": "Connection details arrive in a coming update."
@@ -3150,7 +3162,10 @@
         "browser": "Working in the browser",
         "subtask": "Working on a sub-task"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Waiting for your internet",
+      "waitingForAbacus": "Waiting for AbacusAI",
+      "messageSafe": "Your message is safe. The bot continues on its own when the connection is back."
     },
     "code": {
       "copied": "Copied",
@@ -3223,7 +3238,8 @@
       "includedIn": "Included in {{plan}}",
       "includedInPaid": "Included in paid plans",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Type now. It sends as soon as you are back online"
     },
     "day": {
       "today": "Today",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} credits",
       "creditsLeft_one": "{{credits}} credit · {{left}} left",
       "creditsLeft_other": "{{credits}} credits · {{left}} left",
-      "creditsAction": "{{credits}}. See your plan and credits"
+      "creditsAction": "{{credits}}. See your plan and credits",
+      "waitedInternet": "{{duration}} of it was waiting for your internet",
+      "waitedAbacus": "{{duration}} of it was waiting for AbacusAI"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "Skipped",
       "askBot": "Asked {{bot}}: {{what}}",
       "giveTask": "Passed a task to {{bot}}: {{what}}",
-      "memoryUpdated": "Memory updated: {{name}}"
+      "memoryUpdated": "Memory updated: {{name}}",
+      "quiet": "No output for {{time}}",
+      "progress": "Progress"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3607,9 +3627,15 @@
       "open": "Open"
     },
     "suggestedTasks": {
-      "label": "Tap a task to run it",
+      "pickOne": "Pick one to keep going",
+      "next": "Next",
+      "routineLine": "Runs on its schedule while the app is open",
+      "copied": "Copied",
       "copy": "Copy “{{text}}” to send from your phone",
-      "copyFailed": "Couldn't copy that"
+      "copyFailed": "Couldn't copy that",
+      "formTitle": "Make it yours",
+      "formLine": "A line or two is enough: I'll swap out the sample text.",
+      "notNow": "Not now"
     },
     "retryOffer": {
       "title": "Try this again on {{model}}",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "This task is hard for the low-cost model. {{model}}, one of the most capable models there is, is open to you here. It uses your credits faster.",
       "continue": "Continue in a new chat",
       "paidBody": "A new chat picks up from a summary of this one, on a top model. It uses credits faster."
+    },
+    "topModelRetry": {
+      "retry": "Retry with {{model}}",
+      "upgradeRetry": "Upgrade to retry with {{model}} and other top models",
+      "dismiss": "Close",
+      "opusBody": "Our strongest model takes this on in a new chat, picking up where you left off. It uses credits faster.",
+      "dialogBody": "Our strongest model for hard tasks, included in {{plan}}."
     },
     "topModelCard": {
       "title": "Keep going on {{model}} with {{plan}}",
@@ -3718,6 +3751,12 @@
       "newChat": "Continue in a new chat with {{model}}",
       "here": "Switch this chat to {{model}} anyway",
       "cancel": "Cancel"
+    },
+    "tasks": {
+      "title": "Running",
+      "stop": "Stop",
+      "serving": "Serving {{url}}",
+      "stopFailed": "Couldn't stop it. Try again."
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "Finish in your browser",
     "planLine": "{{plan}} plan · cancel anytime",
     "planTitle": "Everything {{plan}} gives you",
+    "planModelTitle": "Run it again on {{model}} with {{plan}}",
     "startAt": "Start at",
     "waitingBody": "Your message sends as soon as your plan is active.",
     "waitingBodyNoMessage": "This closes as soon as your plan is active.",
@@ -5320,6 +5360,23 @@
     "continuing": "Everything after a tool result is the same reply continuing. No second greeting, no restating the mission.",
     "write": "Write in {{language}}, the user's language, unless they write to you in another."
   },
+  "quitGuard": {
+    "title_one": "Your task is still running",
+    "title_other": "{{count}} tasks are still running",
+    "body_one": "If you quit now, it stops and the work it hasn't finished is lost.",
+    "body_other": "If you quit now, they stop and the work they haven't finished is lost.",
+    "wait_one": "Wait for it to finish",
+    "wait_other": "Wait for them to finish",
+    "quitAnyway": "Quit anyway",
+    "cancel": "Cancel",
+    "unnamed": "Untitled chat",
+    "more_one": "and {{count}} more",
+    "more_other": "and {{count}} more",
+    "waitingOne": "The app will quit when “{{name}}” finishes.",
+    "waitingMany_one": "The app will quit when {{count}} tasks finish.",
+    "waitingMany_other": "The app will quit when {{count}} tasks finish.",
+    "dontQuit": "Don't quit"
+  },
   "native": {
     "aboutApp": "About {{app}}",
     "services": "Services",
@@ -5349,11 +5406,13 @@
     "zoom": "Zoom",
     "front": "Bring All to Front",
     "credits": "Open source under the MIT License",
-    "keepRunning": "Keep running in background",
-    "quitAnyway": "Quit anyway",
-    "taskRunningTitle": "A task is running",
-    "taskRunningMessage": "A task is still running.",
-    "taskRunningDetail": "Keep it running in the background, or quit and stop it?",
+    "quitGuardTitleOne": "Your task is still running",
+    "quitGuardTitleMany": "Some tasks are still running",
+    "quitGuardDetail": "If you quit now, the work that hasn't finished is lost. If you wait, the app quits by itself when the work is done.",
+    "quitGuardWait": "Wait for it to finish",
+    "quitGuardQuitAnyway": "Quit anyway",
+    "quitGuardCancel": "Cancel",
+    "quitGuardUnnamed": "Untitled chat",
     "restart": "Restart",
     "quit": "Quit",
     "wait": "Wait",
@@ -5541,6 +5600,16 @@
     "line": "Finish it on {{plan}}: {{model}} for the hard parts, credits for a build this size, and a live link when it's done.",
     "lineNoModel": "Finish it on {{plan}}: top models for the hard parts, credits for a build this size, and a live link when it's done."
   },
+  "freeModelDown": {
+    "title": "The free model is overloaded right now",
+    "line": "Finish this on a top model (Claude, GPT, Gemini) with {{plan}}:",
+    "upgrade": "Upgrade and finish this",
+    "retry": "Try free again",
+    "retrying": "Trying again in {{seconds}}s…",
+    "firstRetrying": "Trying it again for you in {{seconds}}s…",
+    "tryNow": "Try now",
+    "history": "The free model was overloaded"
+  },
   "keepRunning": {
     "title": "Keep “{{name}}” running 24/7",
     "titleUnnamed": "Keep it running 24/7",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "Ping me when PRs here get a review or CI fails"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document designs",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "You are offline.",
+      "offlineBody": "Your internet connection dropped, not the app. Everything picks up again by itself when it is back.",
+      "abacusTitle": "AbacusAI isn't answering right now.",
+      "abacusBody": "Your internet is fine; we're on it.",
+      "checkingIn": "Checking again in {{seconds}}s",
+      "backTitle": "Back online.",
+      "backSending_one": "Sending your waiting message now.",
+      "backSending_other": "Sending your {{count}} waiting messages now."
+    },
+    "lanePaused": "paused · offline",
+    "laneOfflineNote": "Paused while this computer is offline. The link is fine; it picks up by itself when the internet is back.",
+    "queued": {
+      "title": "Sends when you're back online",
+      "line": "\"{{text}}\" to {{to}} on {{app}}. It goes out on its own the moment your internet is back, once only.",
+      "cancel": "Cancel this message",
+      "unsureTitle": "May not have gone through",
+      "unsureLine": "\"{{text}}\" to {{to}} on {{app}}. Your internet dropped while it was sending, so check the chat before sending it again.",
+      "dismiss": "Dismiss"
     }
   }
 }

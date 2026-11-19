@@ -7,6 +7,10 @@ import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type CSSProperties } from "react";
 
+import {
+  ConnectivityBanner,
+  ConnectivityPreview,
+} from "#renderer/components/connectivity";
 import { GALLERY_BILLING } from "#renderer/components/credits-card/threshold-gallery";
 import { ShareDialogHost } from "#renderer/components/share/share-dialog";
 import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
@@ -44,6 +48,7 @@ const GALLERY_GROUPS: Array<{
     match: (s) =>
       [
         "session-running",
+        "session-long-work",
         "session-golden-tool-bash",
         "session-golden-plan",
       ].includes(s.id),
@@ -260,33 +265,72 @@ const View = ({
           {scenario.canvas.join(", ")}
         </span>
       </div>
-      <div
-        className="bg-background h-[calc(100dvh-180px)] min-h-64 overflow-hidden rounded-xl border"
-        style={
-          scenario.skin === "bot"
-            ? (botAccentStyle(BOT_AVATAR_COLORS[0]!) as CSSProperties)
-            : undefined
-        }
+      <ConnectivityPreview
+        value={connectivityPreview(scenario, runtime.threadId)}
       >
-        <ChatView
-          threadId={runtime.threadId}
-          skin={scenario.skin}
-          runtime={runtime.runtime}
-          workspaceRoot={
-            scenario.skin === "session" ? "/Users/me/code/abacusai-bot" : null
+        <div
+          className="bg-background flex h-[calc(100dvh-180px)] min-h-64 flex-col overflow-hidden rounded-xl border"
+          style={
+            scenario.skin === "bot"
+              ? (botAccentStyle(BOT_AVATAR_COLORS[0]!) as CSSProperties)
+              : undefined
           }
-          composer={composerFor(scenario, { value: model, set: setModel })}
-          slots={gallerySlots(scenario, runtime.threadId)}
-          onOpenSubagent={() => {}}
-          notchEnabled={scenario.skin === "bot"}
-        />
-      </div>
+        >
+          {scenario.view?.connectivity != null && (
+            <ConnectivityBanner
+              preview={{
+                snapshot: connectivityPreview(scenario, runtime.threadId)!
+                  .snapshot,
+                backOnline: scenario.view.connectivity.backOnline === true,
+                waiting: 1,
+              }}
+            />
+          )}
+          <div className="min-h-0 flex-1">
+            <ChatView
+              threadId={runtime.threadId}
+              skin={scenario.skin}
+              runtime={runtime.runtime}
+              workspaceRoot={
+                scenario.skin === "session"
+                  ? "/Users/me/code/abacusai-bot"
+                  : null
+              }
+              composer={composerFor(scenario, { value: model, set: setModel })}
+              slots={gallerySlots(scenario, runtime.threadId)}
+              onOpenSubagent={() => {}}
+              notchEnabled={scenario.skin === "bot"}
+            />
+          </div>
+        </div>
+      </ConnectivityPreview>
       {/* The success pitch's Upgrade and the turn's credits open the upgrade dialog, as in the shell. */}
       {(scenario.view?.successPitch != null ||
         scenario.view?.upgradeDialog === true) && <UpgradeDialogHost />}
       {scenario.view?.deliverables === true && <ShareDialogHost />}
     </div>
   );
+};
+
+/** The scenario's connectivity, as the owner would report it: next check in 8 s. */
+const connectivityPreview = (scenario: Scenario, threadId: string) => {
+  const view = scenario.view?.connectivity;
+  if (view == null) return null;
+  const now = Date.now();
+  return {
+    snapshot: view.backOnline
+      ? { state: "online" as const, since: null, nextCheckAt: null }
+      : { state: view.state, since: now - 60_000, nextCheckAt: now + 8_000 },
+    queued: (view.queued ?? []).map((send, index) => ({
+      id: `gallery-send-${index}`,
+      platform: "whatsapp" as const,
+      to: send.to,
+      text: send.text,
+      threadId,
+      since: now - 60_000,
+      status: send.status ?? ("queued" as const),
+    })),
+  };
 };
 
 const GALLERY_DELIVERABLES: SessionDeliverablesOptions = {
@@ -312,12 +356,22 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
   ...(scenario.view?.deliverableOffer === true && {
     deliverableOfferPreview: true,
   }),
+  ...(scenario.view?.shareOffer === true && { shareOfferPreview: true }),
   ...(scenario.view?.retryOffer != null && {
     retryOfferPreview: scenario.view.retryOffer,
+  }),
+  ...(scenario.view?.topModelRetry != null && {
+    topModelRetryPreview: scenario.view.topModelRetry,
   }),
   ...(scenario.view?.topModelCard != null && {
     topModelCardPreview: {
       ...scenario.view.topModelCard,
+      billing: GALLERY_BILLING,
+    },
+  }),
+  ...(scenario.view?.freeModelDown != null && {
+    freeModelDownPreview: {
+      ...scenario.view.freeModelDown,
       billing: GALLERY_BILLING,
     },
   }),

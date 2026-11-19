@@ -1,0 +1,17 @@
+[
+  {
+    "id": "resume-harbour",
+    "name": "Harbour",
+    "blurb": "a dark full-height sidebar for skills and education, the name in a heavy grotesque; modern professional and technical CVs"
+  },
+  {
+    "id": "resume-folio",
+    "name": "Folio",
+    "blurb": "an editorial serif CV with a centred name and claret headings; law, academia, the arts and senior roles"
+  },
+  {
+    "id": "resume-signal",
+    "name": "Beacon",
+    "blurb": "a bold coloured band with the name in tall capitals and a timeline of jobs; creative, marketing and early-career CVs"
+  }
+]

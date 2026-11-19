@@ -9,6 +9,7 @@ import type {
 import {
   contextTokensOf,
   creditsOf,
+  networkWaitOf,
   freeLaneOf,
   type AiNotice,
   type RunOutcomeRecord,
@@ -128,6 +129,7 @@ export interface RelayStats {
   send: AiSendInput[];
   cancel: Array<{ runId?: string }>;
   respond: Array<{ lineage: unknown; decision: unknown }>;
+  stopTask: string[];
   queue: Array<{ command: string; input: Record<string, unknown> }>;
   openIterators: number;
 }
@@ -210,6 +212,7 @@ interface Folded {
   queue: QueueEntry[];
   agent: AgentState | null;
   skills: AiHydration["abacus"]["skills"];
+  backgroundTasks: AiHydration["abacus"]["backgroundTasks"];
   activity: AiHydration["abacus"]["activity"];
   notices: AiNotice[];
   outcomes: RunOutcomeRecord[];
@@ -239,6 +242,7 @@ const fold = (
   let queue: QueueEntry[] = [];
   let agent: AgentState | null = null;
   let skills: Folded["skills"] = [];
+  let backgroundTasks: Folded["backgroundTasks"] = [];
   let activity: Folded["activity"] = {
     status: AgentStatus.Idle,
     runningTools: 0,
@@ -296,6 +300,10 @@ const fold = (
       else if (name === "skills.loaded")
         skills = Array.isArray(value.skills)
           ? (value.skills as Folded["skills"])
+          : [];
+      else if (name === "background.tasks")
+        backgroundTasks = Array.isArray(value.tasks)
+          ? (value.tasks as Folded["backgroundTasks"])
           : [];
       else if (name === "agent.status" && typeof value.status === "string")
         activity = { ...activity, status: value.status as AgentStatus };
@@ -361,6 +369,7 @@ const fold = (
       const messages = processor.getMessages();
       const value = record(event);
       const contextTokens = contextTokensOf(value.metadata);
+      const waits = networkWaitOf(value.metadata);
       const base = {
         runId: run.runId,
         startedAt: run.startedAt,
@@ -368,6 +377,7 @@ const fold = (
         steps: run.steps,
         afterMessageId: messages.at(-1)?.id ?? null,
         ...(contextTokens != null ? { contextTokens } : {}),
+        ...waits,
       };
       if (event.type === "RUN_ERROR") {
         const error = record(record(record(value.metadata).abacus).error);
@@ -421,6 +431,7 @@ const fold = (
     queue: queue.filter((entry) => entry.hidden !== true),
     agent,
     skills,
+    backgroundTasks,
     activity,
     notices,
     outcomes,
@@ -441,6 +452,7 @@ export class FakeRelay {
     send: [],
     cancel: [],
     respond: [],
+    stopTask: [],
     queue: [],
     openIterators: 0,
   };
@@ -558,6 +570,7 @@ export class FakeRelay {
         queue: folded.queue,
         agent: folded.agent,
         skills: folded.skills,
+        backgroundTasks: folded.backgroundTasks,
         activity: folded.activity,
         notices: folded.notices,
         runOutcomes: folded.outcomes,
@@ -776,6 +789,9 @@ export class FakeRelay {
         decision: input.decision,
       });
       this.#options.onRespond?.(input, this);
+    },
+    stopTask: async (input) => {
+      this.stats.stopTask.push(input.id);
     },
     queue: {
       enqueue: async (threadId, message) =>

@@ -81,3 +81,68 @@ export type ArtifactAccess = (typeof ARTIFACT_ACCESS)[number];
 export type ArtifactPublished =
   | { ok: true; url: string; access: ArtifactAccess; updated: boolean }
   | { ok: false; code: ShareRefusal };
+
+/** Where Share was opened: a files card row, the chat's header, or the card under a reply. */
+export const SHARE_ENTRIES = ["row", "header", "card"] as const;
+export type ShareEntry = (typeof SHARE_ENTRIES)[number];
+
+/**
+ * The one file a chat offers to share, from its files oldest first: the
+ * latest artifact page, else the latest html page, else the latest document
+ * or image. A page is what people most often want to send.
+ */
+export const preferredShare = (paths: readonly string[]): string | null => {
+  const shareable = paths.filter(isShareableFile);
+  return (
+    shareable.findLast(isArtifactPage) ??
+    shareable.findLast((path) =>
+      ["html", "htm"].includes(shareExtension(path))
+    ) ??
+    shareable.at(-1) ??
+    null
+  );
+};
+
+/**
+ * The "Send it to anyone" card under a reply that made something shareable
+ * (prefs `dismissals.shareOffer`). Once per chat: a chat it showed in never
+ * gets it again.
+ */
+export interface ShareOfferCard {
+  /** The reply it last showed under (its message id), and where it was. */
+  shownOffer: string | null;
+  shownThread: string | null;
+  /** The reply whose card was answered (Get a link, Not now, or a link made). */
+  answered: string | null;
+  /** Chats it has shown in, newest last. */
+  threads: string[];
+}
+
+export const EMPTY_SHARE_OFFER_CARD: ShareOfferCard = {
+  shownOffer: null,
+  shownThread: null,
+  answered: null,
+  threads: [],
+};
+
+/** Chats remembered; an older one could show it again, which is harmless. */
+export const SHARE_OFFER_KEPT_THREADS = 100;
+
+/** Whether the card may show under the reply `offerId` of `threadId`. */
+export const shareOfferAllowed = (
+  card: ShareOfferCard | null | undefined,
+  offer: { id: string; threadId: string }
+): boolean =>
+  card == null ||
+  (card.shownOffer === offer.id
+    ? card.answered !== offer.id
+    : !card.threads.includes(offer.threadId));
+
+/** The card's chats with `threadId` added, newest last. */
+export const shareOfferThreads = (
+  card: ShareOfferCard,
+  threadId: string
+): string[] =>
+  [...card.threads.filter((id) => id !== threadId), threadId].slice(
+    -SHARE_OFFER_KEPT_THREADS
+  );

@@ -21,6 +21,16 @@ const LOCAL_URL_CHECK = [
   "served again when it is opened after a restart.",
 ].join("\n");
 
+/**
+ * Share works on a file's row of the files card, so a page served here needs
+ * its file listed too. What to tell someone asking how others can see it is
+ * the system prompt's (plan-asks.ts).
+ */
+const SHARE_ROW = [
+  "For a page served on this computer, list its html file here as well as its URL, so the",
+  "file's row has Share, the public link to send.",
+].join("\n");
+
 /** What `present_deliverable` does with a file before it presents one. */
 const FILE_CHECK = [
   "A file is opened first: an office file (xlsx, docx, pptx, pdf, csv, jsonl) that does not",
@@ -97,7 +107,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             ]
           : [
               "Then hand the URL to present_deliverable: that is what opens the preview pane. A URL",
-              "in prose is not previewed and not recorded.",
+              "in prose is not previewed and not recorded. The URL opens on this computer only. A",
+              "page meant to be seen by others is best one html file, its styles and scripts inside.",
             ]),
         "",
         "Actions:",
@@ -168,6 +179,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             LOCAL_URL_CHECK,
             "",
             FILE_CHECK,
+            "",
+            SHARE_ROW,
           ].join("\n"),
     inputSchema: (channel) => ({
       type: "object",

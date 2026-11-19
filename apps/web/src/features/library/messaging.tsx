@@ -120,7 +120,9 @@ const DesktopMessagingPage = () => {
               id={p.id}
               title={t(`messaging.platforms.${p.nameKey}`)}
               detail={
-                p.recovery != null ? (
+                p.pausedOffline === true ? (
+                  t("connectivity.laneOfflineNote")
+                ) : p.recovery != null ? (
                   // What is wrong, then what the app is doing about it.
                   <>
                     {p.errorMessage}
@@ -142,8 +144,12 @@ const DesktopMessagingPage = () => {
             >
               <ConnectorMark id={p.id} size={36} />
               <StatusDot item={laneStop(p.id)} />
-              <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>
-              {p.recovery != null && (
+              <StatePill>
+                {p.pausedOffline === true
+                  ? t("connectivity.lanePaused")
+                  : t(`messaging.states.${p.state}`)}
+              </StatePill>
+              {p.recovery != null && p.pausedOffline !== true && (
                 <Button
                   size="sm"
                   variant="secondary"
@@ -154,16 +160,19 @@ const DesktopMessagingPage = () => {
                   {t("messaging.recovery.tryNow")}
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="secondary"
-                data-messaging-channel={p.id}
-                onClick={() => void dialog.open(p.id)}
-              >
-                {t(
-                  p.state === "connected" ? "phase5.manage" : "phase5.connect"
-                )}
-              </Button>
+              {/* Paused for the internet: the link is fine, nothing to connect. */}
+              {p.pausedOffline !== true && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-messaging-channel={p.id}
+                  onClick={() => void dialog.open(p.id)}
+                >
+                  {t(
+                    p.state === "connected" ? "phase5.manage" : "phase5.connect"
+                  )}
+                </Button>
+              )}
             </SettingRow>
           ))}
       </GroupCard>

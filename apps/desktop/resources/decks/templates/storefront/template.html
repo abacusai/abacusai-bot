@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storefront</title>
+  <link rel="stylesheet" href="fonts.css">
+  <style>
+    :root { --bg: #FFF8F0; --ink: #2B1B17; --muted: #6B5A52; --primary: #C2410C; --accent: #F2C14E; --card: #F7EBDD; --line: #E8D8C6; --display-font: 'DM Serif Display', Georgia, serif; --body-font: 'DM Sans', system-ui, sans-serif; }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--body-font); }
+    .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+    .slide { position: absolute; inset: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column;
+      padding: 5.5vh 5vw 9vh 5vw; opacity: 0; pointer-events: none; transition: opacity .4s ease; overflow: hidden; background: var(--bg); }
+    .slide.active { opacity: 1; pointer-events: all; z-index: 10; }
+    h1, h2, h3 { font-family: var(--display-font); line-height: 1.08; letter-spacing: -0.015em; }
+    h1 { font-size: clamp(2.6rem, 5.4vw, 4.6rem); font-weight: 700; }
+    h2 { font-size: clamp(2rem, 3.6vw, 3.2rem); font-weight: 650; margin-bottom: 3.2vh; }
+    h3 { font-size: clamp(1rem, 1.55vw, 1.35rem); font-weight: 650; margin-bottom: .6vh; }
+    p, li { font-size: clamp(1rem, 1.55vw, 1.4rem); line-height: 1.5; color: var(--muted); }
+    .kicker { font-size: clamp(.7rem, .95vw, .82rem); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); margin-bottom: 1.6vh; }
+    .grow { flex: 1; min-height: 0; }
+    .body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    /* A grid that fills the slide starts under the heading with full, readable cards rather than stretched empty columns. */
+    .grid.grow, .why.grow, .how.grow { align-content: start; margin-top: 2vh; }
+    .grid.grow > .card { min-height: 0; display: flex; flex-direction: column; padding: 4.4vh 2vw; }
+    .card h3 { font-size: clamp(1.15rem, 1.9vw, 1.65rem); margin-bottom: 1.2vh; }
+    .card p, .card li { font-size: clamp(.95rem, 1.4vw, 1.2rem); }
+    .why.grow { row-gap: 9vh; margin-top: 5vh; } .why h3 { font-size: clamp(1.15rem, 1.9vw, 1.6rem); } .why p { font-size: clamp(.95rem, 1.4vw, 1.2rem); }
+    .grid { display: grid; gap: 2.2vw; }
+    .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 2.6vh 1.6vw; min-width: 0; }
+    .num { font-family: var(--display-font); font-weight: 700; color: var(--primary); font-size: clamp(2rem, 4.2vw, 3.6rem); line-height: 1; margin-bottom: 1vh; }
+    .slide-counter { position: fixed; left: 5vw; bottom: 3.2vh; font-size: .78rem; color: var(--muted); z-index: 20; font-variant-numeric: tabular-nums; }
+    .nav-controls { position: fixed; right: 5vw; bottom: 2.6vh; display: flex; gap: 8px; z-index: 20; }
+    .nav-controls button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+    .nav-controls button:disabled { opacity: .35; cursor: default; }
+    .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--primary); z-index: 20; transition: width .3s ease; }
+
+
+    .cover { background: var(--bg); display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 4vw; }
+    .cover h1 { color: var(--ink); }
+    .cover p { margin-top: 2.4vh; font-size: clamp(1rem, 1.6vw, 1.35rem); }
+    .cover .art { height: 100%; border-radius: 28px; background: radial-gradient(circle at 30% 30%, var(--accent) 0 22%, transparent 23%), radial-gradient(circle at 70% 65%, var(--primary) 0 30%, transparent 31%), var(--card); }
+    .cover .tag { display: inline-block; margin-top: 5vh; padding: 1.2vh 1.6vw; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: .9rem; }
+    .statement { justify-content: center; background: var(--primary); }
+    .statement .kicker { color: var(--bg); opacity: .8; }
+    .statement h2 { color: var(--bg); font-size: clamp(2rem, 4.2vw, 3.6rem); max-width: 80%; margin: 0; }
+    .statement p { color: var(--bg); opacity: .9; margin-top: 3vh; font-size: clamp(1rem, 1.5vw, 1.3rem); max-width: 60%; }
+    .offer { border-top: 6px solid var(--primary); }
+    .offer:nth-child(2) { border-top-color: var(--accent); } .offer:nth-child(3) { border-top-color: var(--ink); }
+    .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4vw; counter-reset: s; }
+    .how .card { position: relative; padding-top: 6vh; }
+    .how .card:before { counter-increment: s; content: counter(s); position: absolute; top: -2.6vh; left: 1.6vw; width: 5.2vh; height: 5.2vh; border-radius: 50%; background: var(--primary); color: var(--bg); display: grid; place-items: center; font-family: var(--display-font); font-size: 1.4rem; }
+    .why { display: grid; grid-template-columns: 1fr 1fr; gap: 2.6vh 3vw; }
+    .why div { border-left: 4px solid var(--accent); padding-left: 1.2vw; }
+    .price { text-align: left; display: flex; flex-direction: column; }
+    .price .amt { font-family: var(--display-font); font-size: clamp(2rem, 3.8vw, 3.2rem); color: var(--ink); margin: 1.4vh 0; }
+    .price li { margin: 0 0 1vh 1.1vw; }
+    .price.best { background: var(--ink); border-color: var(--ink); }
+    .price.best h3, .price.best .amt, .price.best li, .price.best p { color: var(--bg); }
+    .quote { justify-content: center; align-items: center; text-align: center; }
+    .quote blockquote { font-family: var(--display-font); font-size: clamp(1.7rem, 3.3vw, 2.9rem); line-height: 1.25; color: var(--ink); max-width: 80%; }
+    .quote .mark { font-family: var(--display-font); font-size: 9rem; color: var(--accent); line-height: .6; }
+    .quote p { margin-top: 3vh; font-weight: 600; color: var(--primary); }
+    .stats .card { justify-content: space-between; }
+    .stats .num { font-size: clamp(3.2rem, 6.4vw, 5.6rem); color: var(--primary); }
+    .cta { background: var(--ink); justify-content: center; }
+    .cta h2 { color: var(--bg); font-size: clamp(2rem, 4vw, 3.4rem); max-width: 75%; }
+    .cta p { color: var(--bg); opacity: .85; font-size: clamp(1rem, 1.5vw, 1.3rem); max-width: 60%; }
+    .cta .btn { display: inline-block; margin-top: 4vh; background: var(--accent); color: var(--ink); padding: 1.8vh 2.4vw; border-radius: 999px; font-weight: 700; }
+    .contact { display: grid; grid-template-columns: 1fr 1fr; gap: 4vw; align-items: center; }
+    .contact .lines div { padding: 2vh 0; border-bottom: 1px solid var(--line); }
+    .contact .lines span { display: block; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .contact .lines b { font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--ink); font-weight: 600; }
+
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <section class="slide cover" data-label="title (business name and tagline)">
+      <div><div class="kicker">Brewly Coffee Co.</div><h1>Fresh coffee for your office, every week</h1><p>Locally roasted beans and a machine that just works, delivered to your door.</p><span class="tag">Office plans from $49 a month</span></div>
+      <div class="art"></div>
+    </section>
+    <section class="slide statement" data-label="the problem (big statement)">
+      <div class="kicker">The problem</div>
+      <h2>Office coffee is either expensive or awful.</h2>
+      <div class="body" data-deck-grow>
+      <p>Teams waste time on coffee runs, and the machine in the kitchen is always broken.</p>
+      </div>
+    </section>
+    <section class="slide" data-label="three offerings">
+      <div class="kicker">What we offer</div>
+      <h2>Three ways to keep your team caffeinated</h2>
+      <div class="body" data-deck-grow>
+      <div class="grid g3 grow">
+        <div class="card offer"><h3>Bean subscription</h3><p>Two fresh roasts a week, ground for your machine.</p></div>
+        <div class="card offer"><h3>Machine and service</h3><p>A commercial machine with free repairs and cleaning.</p></div>
+        <div class="card offer"><h3>Barista mornings</h3><p>A trained barista at your office for team events.</p></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide" data-label="how it works (three steps)">
+      <div class="kicker">How it works</div>
+      <h2>Up and running in a week</h2>
+      <div class="body" data-deck-grow>
+      <div class="how grow">
+        <div class="card"><h3>Pick a plan</h3><p>Choose the plan that fits your team size.</p></div>
+        <div class="card"><h3>We install</h3><p>Our team sets up the machine and trains you.</p></div>
+        <div class="card"><h3>Enjoy weekly</h3><p>Fresh beans arrive every Monday morning.</p></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide" data-label="why us (four reasons)">
+      <div class="kicker">Why Brewly</div>
+      <h2>Why teams choose us</h2>
+      <div class="body" data-deck-grow>
+      <div class="why grow">
+        <div><h3>Roasted locally</h3><p>Every bag is roasted less than a week before delivery.</p></div>
+        <div><h3>No contracts</h3><p>Pause or cancel your plan any month you like.</p></div>
+        <div><h3>Free repairs</h3><p>If the machine breaks, we fix it within a day.</p></div>
+        <div><h3>Fair prices</h3><p>Less than one coffee a day per person.</p></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide" data-label="pricing (three tiers)">
+      <div class="kicker">Pricing</div>
+      <h2>Simple plans for every team</h2>
+      <div class="body" data-deck-grow>
+      <div class="grid g3 grow">
+        <div class="card price"><h3>Starter</h3><div class="amt">$49</div><p>per month</p><ul><li>Up to 10 people</li><li>One roast a week</li></ul></div>
+        <div class="card price best"><h3>Team</h3><div class="amt">$129</div><p>per month</p><ul><li>Up to 40 people</li><li>Machine included</li></ul></div>
+        <div class="card price"><h3>Office</h3><div class="amt">$299</div><p>per month</p><ul><li>Up to 120 people</li><li>Barista monthly</li></ul></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide quote" data-label="testimonial quote">
+      <div class="mark">&ldquo;</div>
+      <blockquote>Our team finally stopped leaving the office for coffee. It paid for itself in a month.</blockquote>
+      <p>Dana Ortiz, Office Manager at Fieldline</p>
+    </section>
+    <section class="slide" data-label="three numbers / proof">
+      <div class="kicker">In numbers</div>
+      <h2>Trusted by local teams</h2>
+      <div class="body" data-deck-grow>
+      <div class="grid g3 grow stats">
+        <div class="card"><div class="num">140</div><h3>Offices served</h3><p>Across the city and suburbs.</p></div>
+        <div class="card"><div class="num">98%</div><h3>Stay after a year</h3><p>Most teams never switch back.</p></div>
+        <div class="card"><div class="num">24h</div><h3>Repair promise</h3><p>A working machine the next day.</p></div>
+      </div>
+      </div>
+    </section>
+    <section class="slide cta" data-label="offer / call to action">
+      <div class="kicker" style="color:var(--accent)">Limited offer</div>
+      <h2>Your first month is free</h2>
+      <div class="body" data-deck-grow>
+      <p>Sign up before the end of the month and try any plan for four weeks at no cost.</p>
+      <div><span class="btn">Book a free tasting</span></div>
+      </div>
+    </section>
+    <section class="slide contact" data-label="contact (closing)">
+      <div><div class="kicker">Get in touch</div><h1>Let's talk coffee</h1></div>
+      <div class="lines"><div><span data-deck-label>Email</span><b>hello@brewly.co</b></div><div><span data-deck-label>Phone</span><b>(555) 014-2290</b></div><div><span data-deck-label>Visit</span><b>18 Mill Street, Riverside</b></div></div>
+    </section>
+  </div>
+  <div class="slide-counter"><span id="current">1</span> / <span id="total">10</span></div>
+  <div class="progress" id="progress"></div>
+  <div class="nav-controls"><button id="prevBtn" aria-label="Previous slide">&#8249;</button><button id="nextBtn" aria-label="Next slide">&#8250;</button></div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const currentEl = document.getElementById('current');
+    const totalEl = document.getElementById('total');
+    const progressEl = document.getElementById('progress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    let current = 0;
+    const total = slides.length;
+    totalEl.textContent = total;
+    function updateSlide() {
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+      currentEl.textContent = current + 1;
+      progressEl.style.width = ((current + 1) / total * 100) + '%';
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === total - 1;
+    }
+    function changeSlide(dir) { const next = current + dir; if (next >= 0 && next < total) { current = next; updateSlide(); } }
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); changeSlide(1); }
+      else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); changeSlide(-1); }
+      else if (e.key === 'Home') { current = 0; updateSlide(); }
+      else if (e.key === 'End') { current = total - 1; updateSlide(); }
+    });
+    prevBtn.addEventListener('click', () => changeSlide(-1));
+    nextBtn.addEventListener('click', () => changeSlide(1));
+    updateSlide();
+  </script>
+
+</body>
+</html>

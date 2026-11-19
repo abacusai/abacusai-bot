@@ -9,6 +9,8 @@ import { oneLine, type Note, type NoteType } from "./notes.js";
 
 export const MAX_NOTE_CHARS = 1_500;
 export const MAX_CARD_CHARS = 3_000;
+/** One finished task, as models write it: 800-900 characters. A recalled line costs no more than a note. */
+export const MAX_JOURNAL_CHARS = 1_000;
 /** What one scope may put in the prompt: full rules and preferences plus one line per other note. */
 export const MAX_SCOPE_CORE_CHARS = 3_000;
 const MAX_DESCRIPTION_CHARS = 150;

@@ -44,6 +44,11 @@ export type ConnectOutcome =
       name: string;
       reason: "not-signed-in" | "not-offered" | "other-os" | "unreachable";
     }
+  /**
+   * A chat app asked for while this computer has no internet: no card went
+   * up. `linked`: it was linked before, and that link is fine.
+   */
+  | { code: "offline"; name: string; linked: boolean }
   /** An account service this surface does not connect; no link was made. */
   | { code: "not_here"; name: string }
   /**

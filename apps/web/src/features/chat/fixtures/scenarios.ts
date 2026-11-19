@@ -43,12 +43,34 @@ export interface Scenario {
     /** The retry offer on this model, without its caps. */
     retryOffer?: { label: string; plan: string; freeTop?: boolean };
     topModelCard?: { label: string };
+    /** The "Send it to anyone" card, without its once-per-chat rule. */
+    shareOffer?: boolean;
+    /** The card under a reply for a top model, in an opus_retry arm. */
+    topModelRetry?: { label: string; plan: string; arm: "opus" | "dialog" };
+    /** The free-model card on the gallery's plan; `first` for a chat's first message. */
+    freeModelDown?: { first?: boolean };
     /** The composer's top-model hint on a paying plan, without its caps. */
     topModels?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
     deliverables?: boolean;
     /** The shell's upgrade dialog, for a line or card in the chat that opens it. */
     upgradeDialog?: boolean;
+    /** The account's plan, for a card that reads it (the paid-plan card). */
+    accountTier?: "free" | "basic";
+    /**
+     * The window as the connectivity owner would have it: the banner over
+     * the chat, the reply's wait pill, the composer, and the sends waiting
+     * in this chat. `backOnline` shows the line that follows.
+     */
+    connectivity?: {
+      state: "offline" | "degraded";
+      backOnline?: boolean;
+      queued?: Array<{
+        to: string;
+        text: string;
+        status?: "queued" | "unsure";
+      }>;
+    };
   };
   /** Canned answer to a send in the gallery (echo + reply). */
   reply?: string;
@@ -321,6 +343,70 @@ const sessionRunning = (): RelayEvent[] =>
     }),
   ]);
 
+const sessionLongWork = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "DEFAULT"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Install Flutter and set up a new app in this folder.",
+      at(4)
+    ),
+    b.textStart("a1"),
+    b.textDelta(
+      "a1",
+      "Flutter's Windows bundle is about 1.8 GB, so this takes a few minutes. The Android tools install in the background meanwhile."
+    ),
+    ...b.toolCall("c1", "bash", "a1", {
+      command:
+        "curl -L -o flutter.zip https://storage.example.com/flutter_windows_3.50.0-stable.zip",
+      label: "Downloading Flutter (1.8 GB)",
+    }),
+    b.custom("tool.output", {
+      toolCallId: "c1",
+      output:
+        "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n" +
+        "                                 Dload  Upload   Total   Spent    Left  Speed\n" +
+        "\r 12 1781M   12  213M    0     0  10.1M      0  0:02:56  0:00:21  0:02:35 10.4M" +
+        "\r 45 1781M   45  801M    0     0  10.2M      0  0:02:54  0:01:18  0:01:36 11.5M",
+    }),
+    b.custom("agent.status", { status: "executing-tool" }),
+    b.custom("background.tasks", {
+      tasks: [
+        {
+          id: "bg-1",
+          kind: "job",
+          label: "Installing Android command-line tools",
+          command: "sdkmanager --install platform-tools build-tools;35.0.0",
+          startedAt: at(3),
+          lastOutputAt: Date.now() - 5_000,
+          lastLine: "[=========                ] 37% Unzipping... build-tools",
+          progress: 37,
+        },
+        {
+          id: "bg-2",
+          kind: "job",
+          label: "Accepting Android licences",
+          command: "yes | sdkmanager --licenses",
+          startedAt: at(2.5),
+          lastOutputAt: at(2),
+          lastLine: "Review licenses that have not been accepted (y/N)?",
+          progress: null,
+        },
+        {
+          id: "serve:4173",
+          kind: "serve",
+          label: null,
+          command: "http://localhost:4173",
+          startedAt: null,
+          lastOutputAt: null,
+          lastLine: "",
+          progress: null,
+        },
+      ],
+    }),
+  ]);
+
 const sessionReview = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "ACCEPTEDITS"),
@@ -426,6 +512,15 @@ const OUTCOME_ERRORS: Record<
     cause: "model_unavailable",
     detail: "410 status code (no body)",
     actions: [OWN_KEY_GONE],
+  },
+  // The free model overloaded on a free account (turn-outcome.ts
+  // freeModelOverloaded): one card however the turn ended on it.
+  "free-model-down": {
+    message:
+      "The free model is overloaded right now. Try it again in a minute, or upgrade to finish this on a top model.",
+    cause: "rate_limited",
+    detail: "",
+    actions: [{ type: "free-pool-out", cause: "busy" }, { type: "retry" }],
   },
   "credits-exhausted": {
     message:
@@ -545,6 +640,159 @@ const nextStepStore = (): RelayEvent[] =>
     b.toolResult("c2", { text: "The user sees 2 buttons under your reply." }),
     b.textEnd("a1"),
     b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
+/** A plain offer: three tasks, the last long enough to wrap. */
+const tasksOffer = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make printable pages for a 36x48 trifold about Apollo 11",
+      at(3)
+    ),
+    b.textStart("a1"),
+    b.textDelta(
+      "a1",
+      "Here's the first page, the **center title panel**. Next I'd build the other four in the same style. One question before I go on: should the **timeline** be a tall vertical column, or a strip across the bottom?"
+    ),
+    ...b.toolCall("c1", "suggest_tasks", "a1", {
+      tasks: [
+        { text: "Build the rest with a vertical timeline" },
+        { text: "Build the rest with a timeline strip" },
+        {
+          text: "Build the rest, you pick the timeline, and add a QR code that links to the mission page",
+        },
+      ],
+    }),
+    b.toolResult("c1", { text: "The user sees 3 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
+/** A bot's offer with a copy task, for the user to send from their phone. */
+const tasksCopy = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Set up my Telegram bot", at(3)),
+    b.textStart("a1"),
+    b.textDelta(
+      "a1",
+      "Your bot is connected. Send it a message from your phone to see it answer."
+    ),
+    ...b.toolCall("c1", "suggest_tasks", "a1", {
+      tasks: [
+        { text: "What can you do?", copy: true },
+        { text: "Change how the bot greets people" },
+      ],
+    }),
+    b.toolResult("c1", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
+/** A free plan's video ask, as a real model answered it: the script, then the plan, its buttons and card. */
+const paidFeatureFreePart = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make a 30-second TikTok video for my bakery's new croissant",
+      at(3)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "paid_feature", "a1", {
+      feature: "video_gen",
+      prompt: "A 30-second TikTok video for a bakery's new croissant",
+    }),
+    b.toolResult("c1", {
+      text: "Video generation is not on this account's free plan.",
+    }),
+    b.textEnd("a1"),
+    b.textStart("a2"),
+    b.textDelta(
+      "a2",
+      [
+        "Here's your 30-second script, ready to shoot:",
+        "",
+        '**"The New Croissant" — 30 seconds, vertical 9:16**',
+        "",
+        '- **0:00–0:04** — Close-up: golden croissants pulled hot from the oven, steam rising. "Something new just came out of the oven…"',
+        '- **0:04–0:10** — Slow pan over the tray, butter sheen glinting. "72 layers. Real butter. Baked at 6 a.m."',
+        '- **0:10–0:16** — Hands lift one, gentle squeeze; flakes fall. "Listen to that crunch."',
+        '- **0:16–0:23** — The bite, pulled apart to show the honeycomb crumb. "Flaky outside. Buttery, airy inside."',
+        '- **0:23–0:28** — Croissant on the counter with a coffee, shop name in frame. "The New Croissant — in store this week only."',
+        '- **0:28–0:30** — Logo card. "Come early. They go fast."',
+        "",
+        "Caption: The croissant you'll set an alarm for 🥐✨ In store now — #croissant #bakerytok #freshbaked #smallbusiness #fyp",
+        "",
+        "Basic gives you video generation in Abacus AI Agent on the web: $7 for the first month (30% off the usual $10/mo), then $10/mo.",
+        "",
+        "https://apps.abacus.ai/bot/link/upgrade?src=paid_feature",
+      ].join("\n")
+    ),
+    ...b.toolCall("c2", "suggest_tasks", "a2", {
+      tasks: [{ text: "Write 3 more hooks" }, { text: "Caption in Spanish" }],
+    }),
+    b.toolResult("c2", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a2"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
+const PORTFOLIO_SAMPLE =
+  "Build me a one-page portfolio website: a hero with my name and a one-line intro, a grid of three sample projects, an about section and a contact section. Use placeholder text and images I can swap later, make it clean and modern, and make sure it looks right on a phone. Show me the page when it is ready.";
+
+const PORTFOLIO_FORM_MESSAGE =
+  "Put my details in\nYour name: Ana Ribeiro\nWhat you do, in a few words: Wedding photographer in Lisbon";
+
+/** The first-run portfolio sample, built on placeholder text: a form asks for the user's own. */
+const nextStepFormPortfolio = (sent: boolean) => (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", PORTFOLIO_SAMPLE, at(3)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", {
+      file_path: "/Users/me/portfolio/index.html",
+    }),
+    b.toolResult("c1", { text: "Wrote index.html" }),
+    b.textDelta(
+      "a1",
+      "Your portfolio page is ready in the preview: a hero, three project cards, an about section and a contact form, all with sample text for now. Want me to put your own details in?"
+    ),
+    ...b.toolCall("c2", "suggest_tasks", "a1", {
+      after_result: true,
+      tasks: [{ text: "Put my details in" }],
+      fields: [
+        { label: "Your name", placeholder: "Ana Ribeiro" },
+        {
+          label: "What you do, in a few words",
+          placeholder: "Wedding photographer in Lisbon",
+        },
+      ],
+    }),
+    b.toolResult("c2", {
+      text: "The user sees a form under your reply: Your name, What you do, in a few words.",
+    }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+    ...(sent
+      ? [
+          ...userTurn("r2", "u2", PORTFOLIO_FORM_MESSAGE, at(1)),
+          b.textStart("a2"),
+          ...b.toolCall("c3", "edit", "a2", {
+            file_path: "/Users/me/portfolio/index.html",
+          }),
+          b.toolResult("c3", { text: "Edited index.html" }),
+          b.textDelta(
+            "a2",
+            "Done: the hero now reads Hi, I'm Ana Ribeiro, wedding photographer in Lisbon, and the about section and project cards talk about weddings and Lisbon."
+          ),
+          b.textEnd("a2"),
+          b.runFinished("r2", "success", { timestamp: at(0) }),
+        ]
+      : []),
   ]);
 
 const successSite = (): RelayEvent[] =>
@@ -837,6 +1085,45 @@ const offerScenarios = (locale: string, words: OfferWords): Scenario[] =>
     view: { deliverableOffer: true, ...view },
   }));
 
+// ─── share ──────────────────────────────────────────────────────────────
+
+const SITE_DIR = "/Users/me/Sites/ana-portfolio";
+
+/** A one-page site handed over with its photo: the files card offers Share on both. */
+const sharedSite = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make my portfolio site. I'm Ana, a wedding photographer in Lisbon",
+      at(3)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", {
+      path: `${SITE_DIR}/index.html`,
+      content: "<!doctype html>",
+    }),
+    b.toolResult("c1", { text: "Wrote index.html" }),
+    ...b.toolCall("c2", "agent-tools_present_deliverable", "a1", {
+      items: [
+        { path: `${SITE_DIR}/index.html` },
+        {
+          path: `${SITE_DIR}/wedding-in-sintra-golden-hour-portrait-of-the-couple.jpg`,
+        },
+      ],
+    }),
+    b.toolResult("c2", {
+      text: `[artifact] ${SITE_DIR}/index.html\n[artifact] ${SITE_DIR}/wedding-in-sintra-golden-hour-portrait-of-the-couple.jpg`,
+    }),
+    b.textDelta(
+      "a1",
+      "Your page is ready in the preview: your name, three galleries, an about section and a contact form."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
 interface CreditWords {
   ask: string;
   answer: string;
@@ -1088,7 +1375,132 @@ const migratedHistory = (): UIMessage[] => {
   });
 };
 
+/** A turn waiting for the user's internet, 48 seconds in. */
+const offlineWait = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Write a LinkedIn About section for a builder-founder",
+      Date.now() - 50_000
+    ),
+    b.custom(
+      "agent.retry",
+      {
+        attempt: 4,
+        maxAttempts: 0,
+        delayMs: 16_000,
+        isNetworkError: true,
+        waitingForConnection: true,
+      },
+      { timestamp: Date.now() - 48_000 }
+    ),
+    b.custom(
+      "agent.retry",
+      {
+        attempt: 5,
+        maxAttempts: 0,
+        delayMs: 30_000,
+        isNetworkError: true,
+        waitingForConnection: true,
+      },
+      { timestamp: Date.now() - 2_000 }
+    ),
+  ]);
+
+/** A WhatsApp send asked for while offline: one line, and its card. */
+const offlineQueuedSend = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Send a hi to Qadeer Jan", at(1)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "send_whatsapp_message", "a1", {
+      to: "Qadeer Jan",
+      message: "Hi",
+    }),
+    b.toolResult("c1", { text: "Queued while offline." }),
+    b.textDelta(
+      "a1",
+      "Your internet connection dropped, so WhatsApp can't send right now. Nothing is wrong with your WhatsApp link: no need to scan anything."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(0.9) }),
+  ]);
+
+/** Back: the slow reply says the wait was the internet's. */
+const backOnline = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", "Send a hi to Qadeer Jan", at(7)),
+    b.textStart("a1"),
+    b.textDelta("a1", 'Sent: "Hi" went to Qadeer Jan on WhatsApp.'),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", {
+      timestamp: at(7) + 342_000,
+      metadata: { abacus: { turnUsage: { networkWaitMs: 312_000 } } },
+    }),
+    ...userTurn(
+      "r2",
+      "u2",
+      "Write a LinkedIn About section for a builder-founder",
+      at(0.5)
+    ),
+    b.textStart("a2"),
+    b.textDelta(
+      "a2",
+      "Here's a LinkedIn About section for a builder-founder..."
+    ),
+    b.textEnd("a2"),
+    b.runFinished("r2", "success", { timestamp: at(0.5) + 12_000 }),
+  ]);
+
 export const SCENARIOS: Scenario[] = [
+  {
+    id: "offline-wait-session",
+    canvas: ["Connectivity", "session"],
+    skin: "session",
+    events: offlineWait,
+    view: { connectivity: { state: "offline" } },
+  },
+  {
+    id: "abacus-down-wait-session",
+    canvas: ["Connectivity", "session"],
+    skin: "session",
+    events: offlineWait,
+    view: { connectivity: { state: "degraded" } },
+  },
+  {
+    id: "offline-queued-send-session",
+    canvas: ["Connectivity", "QueuedSend", "session"],
+    skin: "session",
+    events: offlineQueuedSend,
+    view: {
+      connectivity: {
+        state: "offline",
+        queued: [{ to: "Qadeer Jan", text: "Hi" }],
+      },
+    },
+  },
+  {
+    id: "offline-unsure-send-session",
+    canvas: ["Connectivity", "QueuedSend", "session"],
+    skin: "session",
+    events: offlineQueuedSend,
+    view: {
+      connectivity: {
+        state: "offline",
+        queued: [{ to: "Qadeer Jan", text: "Hi", status: "unsure" }],
+      },
+    },
+  },
+  {
+    id: "back-online-session",
+    canvas: ["Connectivity", "session"],
+    skin: "session",
+    events: backOnline,
+    view: { connectivity: { state: "offline", backOnline: true } },
+  },
   {
     id: "turn-credits-en",
     canvas: ["TurnCredits", "Abacus turn"],
@@ -1135,6 +1547,24 @@ export const SCENARIOS: Scenario[] = [
     view: { topModelCard: { label: "Claude Opus 5.5" } },
   },
   {
+    id: "top-model-retry-opus",
+    canvas: ["TopModelRetry", "opus arm"],
+    skin: "session",
+    events: headerAnswered,
+    view: {
+      topModelRetry: { label: "Claude Opus 5.5", plan: "Basic", arm: "opus" },
+    },
+  },
+  {
+    id: "top-model-retry-dialog",
+    canvas: ["TopModelRetry", "dialog arm"],
+    skin: "session",
+    events: headerAnswered,
+    view: {
+      topModelRetry: { label: "Claude Opus 5.5", plan: "Basic", arm: "dialog" },
+    },
+  },
+  {
     id: "retry-offer-bot",
     canvas: ["RetryOffer", "bot"],
     skin: "bot",
@@ -1142,6 +1572,24 @@ export const SCENARIOS: Scenario[] = [
     view: {
       placeholder: "Message your bot...",
       retryOffer: { label: "Claude Opus 5.5", plan: "Basic" },
+    },
+  },
+  {
+    id: "share-offer-session",
+    canvas: ["ShareOffer", "session"],
+    skin: "session",
+    events: sharedSite,
+    view: { deliverables: true, shareOffer: true },
+  },
+  {
+    id: "share-offer-bot",
+    canvas: ["ShareOffer", "bot"],
+    skin: "bot",
+    events: sharedSite,
+    view: {
+      placeholder: "Message your bot...",
+      deliverables: true,
+      shareOffer: true,
     },
   },
   {
@@ -1163,6 +1611,49 @@ export const SCENARIOS: Scenario[] = [
     skin: "bot",
     events: nextStepStore,
     view: { placeholder: "Message your bot..." },
+  },
+  {
+    id: "tasks-offer-session",
+    canvas: ["SuggestedTasks", "session"],
+    skin: "session",
+    events: tasksOffer,
+  },
+  {
+    id: "tasks-copy-bot",
+    canvas: ["SuggestedTasks", "copy"],
+    skin: "bot",
+    events: tasksCopy,
+    view: { placeholder: "Message your bot..." },
+  },
+  {
+    id: "paid-feature-free-part",
+    canvas: ["PaidFeatureCard", "free plan"],
+    skin: "session",
+    events: paidFeatureFreePart,
+    view: { accountTier: "free", upgradeDialog: true },
+  },
+  {
+    id: "paid-feature-free-part-bot",
+    canvas: ["PaidFeatureCard", "free plan", "bot"],
+    skin: "bot",
+    events: paidFeatureFreePart,
+    view: {
+      accountTier: "free",
+      upgradeDialog: true,
+      placeholder: "Message your bot...",
+    },
+  },
+  {
+    id: "next-step-form-session",
+    canvas: ["NextStep", "form"],
+    skin: "session",
+    events: nextStepFormPortfolio(false),
+  },
+  {
+    id: "next-step-form-sent",
+    canvas: ["NextStep", "form sent"],
+    skin: "session",
+    events: nextStepFormPortfolio(true),
   },
   {
     id: "success-site",
@@ -1416,6 +1907,13 @@ export const SCENARIOS: Scenario[] = [
     view: { model: "RouteLLM" },
   },
   {
+    id: "session-long-work",
+    canvas: ["SessionRunning"],
+    skin: "session",
+    events: sessionLongWork,
+    view: { model: "RouteLLM" },
+  },
+  {
     id: "session-new",
     canvas: ["Main", "MainCollapsed"],
     skin: "session",
@@ -1462,8 +1960,18 @@ export const SCENARIOS: Scenario[] = [
     canvas: [],
     skin: "session" as const,
     events: sessionOutcome(kind),
-    view: { model: kind.startsWith("own-key") ? "Gemini" : "Abacus.AI" },
+    view: {
+      model: kind.startsWith("own-key") ? "Gemini" : "Abacus.AI",
+      ...(kind === "free-model-down" && { freeModelDown: {} }),
+    },
   })),
+  {
+    id: "session-outcome-free-model-down-first",
+    canvas: [],
+    skin: "session",
+    events: sessionOutcome("free-model-down"),
+    view: { model: "Abacus.AI", freeModelDown: { first: true } },
+  },
   {
     id: "session-sandbox-refused",
     canvas: ["SessionBrowser"],

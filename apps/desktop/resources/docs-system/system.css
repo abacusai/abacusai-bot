@@ -1,0 +1,736 @@
+/*
+ * The documents and decks design system.
+ *
+ * The model writes the content and picks components; this sheet owns type,
+ * spacing, colour and fonts. Code (docs-system/*.ts) fills sums, draws charts,
+ * fits pages and reads the printed file back.
+ *
+ * Every face is registered under its own family name. Registering a script
+ * face (Devanagari) under a Latin family's name made any weight without an
+ * exact Latin face fall back to a system font: 10 of 12 deck templates printed
+ * Liberation or DejaVu headings that way.
+ */
+@import url("designs.css");
+@font-face { font-family: "Inter"; font-weight: 400; src: url("fonts/inter-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("fonts/inter-latin-600-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-weight: 700; src: url("fonts/inter-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-weight: 800; src: url("fonts/inter-latin-800-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-weight: 400; src: url("fonts/inter-latin-ext-400-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("fonts/inter-latin-ext-600-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Inter"; font-weight: 700 800; src: url("fonts/inter-latin-ext-700-normal.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+/* Greek (Δ, α, μ in teaching material), in Inter. */
+@font-face { font-family: "Inter"; font-weight: 400; src: url("fonts/inter-greek-400-normal.woff2") format("woff2"); unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("fonts/inter-greek-600-normal.woff2") format("woff2"); unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: "Inter"; font-weight: 700; src: url("fonts/inter-greek-700-normal.woff2") format("woff2"); unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: "Source Serif 4"; font-weight: 400; src: url("fonts/source-serif-4-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 400; font-style: italic; src: url("fonts/source-serif-4-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 600 700; src: url("fonts/source-serif-4-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Bengali"; font-weight: 400; src: url("fonts/noto-sans-bengali-bengali-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Bengali"; font-weight: 600 800; src: url("fonts/noto-sans-bengali-bengali-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Devanagari"; font-weight: 400; src: url("fonts/noto-sans-devanagari-devanagari-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Devanagari"; font-weight: 600 800; src: url("fonts/noto-sans-devanagari-devanagari-700-normal.woff2") format("woff2"); }
+/* Arrows, maths, ticks, boxes and circles: their own families, last in every stack (live F: → ✓ ○ fell to VM fonts). */
+@font-face { font-family: "Noto Sans Math"; font-weight: 100 900; src: url("fonts/noto-sans-math-math-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Symbols 2"; font-weight: 100 900; src: url("fonts/noto-sans-symbols-2-symbols-400-normal.woff2") format("woff2"); }
+
+:root {
+  --sans: "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --serif: "Source Serif 4", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", serif;
+  --mono: "JetBrains Mono", "Noto Sans Math", "Noto Sans Symbols 2", monospace;
+  --ink: #17191c;
+  --muted: #5b616b;
+  --line: #d9dce1;
+  --soft: #f3f5f7;
+  --accent: #0f6e6a;
+  --accent-soft: #e3f1f0;
+  --good: #1d7a46;
+  --bad: #b3261e;
+  --fit: 1; /* set by the fit pass; scales the whole type scale */
+}
+html[data-accent="indigo"] { --accent: #3a3fb0; --accent-soft: #e8e9fa; }
+html[data-accent="green"] { --accent: #2f7a3d; --accent-soft: #e5f2e7; }
+html[data-accent="orange"] { --accent: #b4521c; --accent-soft: #fbece2; }
+html[data-accent="plum"] { --accent: #7a2e6b; --accent-soft: #f5e6f2; }
+html[data-accent="slate"] { --accent: #2f4a64; --accent-soft: #e6edf3; }
+html[data-accent="red"] { --accent: #a3262a; --accent-soft: #f9e5e5; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { color: var(--ink); background: #fff; font-family: var(--sans); font-variant-numeric: tabular-nums; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.serif { font-family: var(--serif); }
+td.num, th.num, .data .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.muted { color: var(--muted); }
+.up { color: var(--good); }
+.down { color: var(--bad); }
+
+/* ------------------------------------------------------------------ */
+/* Documents: A4, printed with 15 mm margins and a page number.        */
+/* ------------------------------------------------------------------ */
+body.doc { font-size: calc(10.5pt * var(--fit)); line-height: 1.5; }
+body.doc h1 { font-size: calc(24pt * var(--fit)); line-height: 1.15; margin: 0 0 3mm; font-weight: 700; letter-spacing: -0.01em; }
+body.doc h2 { font-size: calc(15pt * var(--fit)); line-height: 1.25; margin: 7mm 0 2.5mm; font-weight: 700; color: var(--accent); }
+body.doc h3 { font-size: calc(11.5pt * var(--fit)); line-height: 1.3; margin: 4mm 0 1.5mm; font-weight: 600; }
+body.doc h2,
+body.doc h3 {
+  break-after: avoid;
+}
+body.doc p { margin: 0 0 2.5mm; }
+body.doc ul, body.doc ol { margin: 0 0 3mm; padding-left: 5.5mm; }
+body.doc li { margin: 0 0 1.2mm; }
+body.doc small, body.doc .small { font-size: calc(9pt * var(--fit)); }
+.kicker { font-size: calc(9pt * var(--fit)); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin: 0 0 2mm; }
+.lead { font-size: calc(12.5pt * var(--fit)); line-height: 1.45; color: var(--muted); margin: 0 0 5mm; }
+.rule { height: 0; border-top: 1.5pt solid var(--accent); margin: 4mm 0; }
+
+/* Header block for documents without a cover: title left, meta right. */
+.doc-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm; padding-bottom: 4mm; border-bottom: 1.5pt solid var(--accent); margin-bottom: 6mm; }
+.doc-head .meta { text-align: right; font-size: calc(9.5pt * var(--fit)); color: var(--muted); line-height: 1.45; }
+
+/* Cover: a whole first page. */
+body.doc .cover { min-height: 255mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; padding: 10mm 0 0; }
+body.doc .cover .top { border-top: 4pt solid var(--accent); padding-top: 8mm; }
+body.doc .cover h1 { font-size: calc(32pt * var(--fit)); margin: 30mm 0 4mm; }
+body.doc .cover .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; border-top: 0.75pt solid var(--line); border-bottom: 0.75pt solid var(--line); padding: 4mm 0; margin: 8mm 0; }
+body.doc .cover .meta-grid div span { display: block; font-size: calc(9pt * var(--fit)); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+body.doc .cover .meta-grid div b { font-size: calc(12pt * var(--fit)); }
+
+/* Write-in fields (name, class, date) and answer lines. */
+.fields { display: grid; gap: 7mm; margin: 6mm 0; }
+.fields .field { display: grid; grid-template-columns: 22mm 1fr; align-items: end; font-weight: 600; }
+.fields .field::after { content: ""; border-bottom: 0.75pt solid var(--ink); height: 6mm; }
+.answer-lines { margin: 2mm 0 4mm; }
+.answer-lines i { display: block; height: 8mm; border-bottom: 0.6pt solid #9aa0a8; }
+
+/* Key-figure tiles. */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(36mm, 1fr)); gap: 3mm; margin: 4mm 0 6mm; break-inside: avoid; }
+.tile { background: var(--accent-soft); border-radius: 2mm; padding: 4mm; }
+.tile .value { display: block; font-size: calc(20pt * var(--fit)); font-weight: 700; line-height: 1.1; color: var(--accent); }
+.tile .label { display: block; font-size: calc(9pt * var(--fit)); color: var(--ink); margin-top: 1.5mm; }
+.tile .delta { display: block; font-size: calc(9pt * var(--fit)); font-weight: 600; margin-top: 1mm; }
+
+/* Tables. */
+table.data { width: 100%; border-collapse: collapse; margin: 2mm 0 5mm; font-size: calc(10pt * var(--fit)); }
+table.data th { text-align: left; font-weight: 600; font-size: calc(9pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); border-bottom: 1.2pt solid var(--accent); padding: 2mm 2.5mm; }
+table.data td { border-bottom: 0.5pt solid var(--line); padding: 2mm 2.5mm; vertical-align: top; }
+table.data tr { break-inside: avoid; }
+table.data tr.total td, table.data tr[data-role="total"] td { font-weight: 700; border-top: 1.2pt solid var(--ink); border-bottom: 0; font-size: calc(11.5pt * var(--fit)); }
+table.data tr[data-role="subtotal"] td, table.data tr[data-role="discount"] td, table.data tr[data-role="tax"] td { border-bottom: 0; color: var(--muted); }
+table.data caption { caption-side: bottom; text-align: left; font-size: calc(9pt * var(--fit)); color: var(--muted); padding-top: 1.5mm; }
+
+/* Callouts. */
+.callout { border-left: 3pt solid var(--accent); background: var(--accent-soft); padding: 3mm 4mm; margin: 4mm 0; break-inside: avoid; }
+.callout.warn { border-color: #b4521c; background: #fbece2; }
+.callout > :last-child { margin-bottom: 0; }
+
+/* Steps and timeline. */
+ol.steps { list-style: none; padding: 0; counter-reset: step; margin: 3mm 0 5mm; }
+ol.steps > li { counter-increment: step; position: relative; padding-left: 10mm; margin-bottom: 3mm; break-inside: avoid; }
+ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 7mm; height: 7mm; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: calc(9.5pt * var(--fit)); }
+body.doc .timeline { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3mm; border-top: 1.5pt solid var(--accent); padding-top: 3mm; margin: 4mm 0 6mm; }
+body.doc .timeline .when { font-weight: 700; color: var(--accent); font-size: calc(9.5pt * var(--fit)); }
+
+/* Two and three columns. */
+.cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+
+/* Questions with marks (quizzes, worksheets). */
+.section-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1.2pt solid var(--accent); margin: 6mm 0 3mm; break-after: avoid; }
+.section-head h2 { margin: 0; }
+.question { break-inside: avoid; margin: 0 0 4.5mm; }
+.question .q { display: flex; gap: 3mm; justify-content: space-between; font-weight: 600; }
+.marks { white-space: nowrap; font-weight: 400; color: var(--muted); font-size: calc(9pt * var(--fit)); }
+.options { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5mm 6mm; margin: 2mm 0 0 4mm; }
+.options span::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; border: 1px solid currentColor; border-radius: 50%; margin-right: 0.5em; vertical-align: -0.1em; }
+.word-bank { border: 0.75pt solid var(--line); border-radius: 2mm; padding: 2mm 3mm; margin: 2mm 0; }
+
+/* Letters. */
+.letter { font-family: var(--serif); font-size: calc(11pt * var(--fit)); line-height: 1.5; }
+.letter .from { text-align: right; margin-bottom: 8mm; }
+.letter .to { margin-bottom: 6mm; }
+.letter .date { margin-bottom: 6mm; }
+.letter .subject { font-weight: 700; margin: 0 0 4mm; }
+.letter .closing { break-inside: avoid; break-before: avoid; margin-top: 4mm; }
+.letter .signature { margin-top: 12mm; }
+
+/* Posters: flyers and notices (body.bleed, one A4 page to the edge). */
+body.bleed .poster { width: 210mm; height: 297mm; overflow: hidden; display: flex; flex-direction: column; font-size: calc(14pt * var(--fit)); line-height: 1.35; }
+body.bleed .poster .band { background: var(--accent); color: #fff; padding: 16mm 16mm 12mm; }
+body.bleed .poster .band .kicker { color: #fff; opacity: 0.85; font-size: calc(12pt * var(--fit)); }
+body.bleed .poster h1 { font-size: calc(54pt * var(--fit)); line-height: 1.02; margin: 0 0 4mm; font-weight: 800; letter-spacing: -0.02em; }
+body.bleed .poster .when { font-size: calc(22pt * var(--fit)); font-weight: 700; }
+body.bleed .poster .body { padding: 10mm 16mm; flex: 1; display: flex; flex-direction: column; gap: 6mm; }
+body.bleed .poster .big { font-size: calc(20pt * var(--fit)); font-weight: 700; }
+body.bleed .poster .foot { background: var(--ink); color: #fff; padding: 8mm 16mm; font-size: calc(15pt * var(--fit)); }
+body.bleed .poster table.data { font-size: calc(15pt * var(--fit)); }
+body.bleed .poster .tile .value { font-size: calc(28pt * var(--fit)); }
+body.bleed .poster .tile .label { font-size: calc(12pt * var(--fit)); }
+
+/* Charts and diagrams: <figure class="chart" data-chart="..."> are drawn by code. */
+figure.chart { margin: 4mm 0 6mm; break-inside: avoid; }
+figure.chart svg { width: 100%; height: auto; display: block; }
+figure.chart figcaption { font-size: calc(9pt * var(--fit)); color: var(--muted); margin-top: 1.5mm; }
+
+/* ------------------------------------------------------------------ */
+/* Decks: 1280 x 720 slides.                                           */
+/* ------------------------------------------------------------------ */
+body.deck { background: #fff; }
+section.slide { width: 1280px; height: 720px; overflow: hidden; position: relative; padding: 72px 88px 64px; display: flex; flex-direction: column; font-size: calc(26px * var(--fit)); line-height: 1.35; background: #fff; }
+section.slide h1 { font-size: calc(68px * var(--fit)); line-height: 1.05; margin: 0 0 20px; font-weight: 800; letter-spacing: -0.02em; }
+section.slide h2 { font-size: calc(46px * var(--fit)); line-height: 1.12; margin: 0 0 28px; font-weight: 700; letter-spacing: -0.01em; }
+section.slide h3 { font-size: calc(28px * var(--fit)); margin: 0 0 8px; font-weight: 700; }
+section.slide p { margin: 0 0 14px; }
+section.slide ul, section.slide ol { margin: 0; padding-left: 30px; }
+section.slide li { margin: 0 0 12px; }
+section.slide .kicker { font-size: calc(18px * var(--fit)); margin-bottom: 14px; }
+section.slide .lead { font-size: calc(30px * var(--fit)); margin-bottom: 24px; }
+section.slide .small, section.slide small { font-size: calc(18px * var(--fit)); }
+section.slide .tiles { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin: 8px 0 0; }
+section.slide .tile { padding: 28px; border-radius: 10px; }
+section.slide .tile .value { font-size: calc(64px * var(--fit)); }
+section.slide .tile .label { font-size: calc(20px * var(--fit)); margin-top: 10px; }
+section.slide table.data { font-size: calc(22px * var(--fit)); }
+section.slide table.data th { font-size: calc(18px * var(--fit)); padding: 10px 14px; }
+section.slide table.data td { padding: 12px 14px; }
+section.slide .callout { padding: 20px 26px; font-size: calc(24px * var(--fit)); }
+section.slide ol.steps > li { padding-left: 64px; margin-bottom: 22px; }
+section.slide ol.steps > li::before { width: 44px; height: 44px; font-size: calc(20px * var(--fit)); }
+section.slide .timeline { padding-top: 18px; gap: 20px; }
+section.slide .timeline .when { font-size: calc(20px * var(--fit)); }
+section.slide .cols-2 { gap: 48px; }
+section.slide .cols-3 { gap: 32px; }
+section.slide .card { background: var(--soft); border-radius: 10px; padding: 26px; }
+section.slide .foot { position: absolute; left: 88px; right: 88px; bottom: 28px; display: flex; justify-content: space-between; font-size: 18px; color: var(--muted); }
+section.slide.title { background: var(--accent); color: #fff; justify-content: center; }
+section.slide.title .kicker, section.slide.title .lead { color: #fff; opacity: 0.9; }
+section.slide.title h1 { font-size: calc(80px * var(--fit)); }
+section.slide.statement { justify-content: center; }
+section.slide.statement h2 { font-size: calc(58px * var(--fit)); max-width: 980px; }
+section.slide.big-number .value { font-size: calc(150px * var(--fit)); font-weight: 800; color: var(--accent); line-height: 1; }
+section.slide figure.chart { flex: 1; margin: 0; }
+
+/* ================================================================== */
+/* Round 3: layouts that fill the space. Larger type, and a .body that */
+/* takes the room under the title so content is placed, not stacked.  */
+/* ================================================================== */
+section.slide { padding: 64px 88px 72px; font-size: calc(30px * var(--fit)); }
+section.slide h2 { font-size: calc(56px * var(--fit)); margin-bottom: 30px; }
+section.slide .kicker { font-size: calc(20px * var(--fit)); }
+section.slide .lead { font-size: calc(34px * var(--fit)); line-height: 1.3; }
+section.slide > .body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+section.slide .tiles { flex: 1; align-items: stretch; max-height: 420px; }
+section.slide .tile { display: flex; flex-direction: column; justify-content: center; padding: 32px 36px; border-radius: 14px; }
+section.slide .tile .value { font-size: calc(84px * var(--fit)); letter-spacing: -0.02em; }
+section.slide .tile .label { font-size: calc(24px * var(--fit)); }
+section.slide .tile .delta { font-size: calc(22px * var(--fit)); }
+section.slide table.data { font-size: calc(26px * var(--fit)); }
+section.slide table.data td { padding: 18px 16px; }
+section.slide figure.chart { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+section.slide figure.chart svg { max-height: 100%; }
+section.slide figure.chart figcaption { font-size: calc(20px * var(--fit)); }
+section.slide .foot { font-size: 18px; }
+
+/* Cover and closing: full-bleed accent, no decoration (round 4: the circles were "not appealing"). */
+section.slide.cover, section.slide.closing { background: var(--accent); color: #fff; justify-content: flex-end; padding: 88px 96px; overflow: hidden; }
+section.slide.cover h1 { font-size: calc(104px * var(--fit)); line-height: 0.98; letter-spacing: -0.03em; margin-bottom: 26px; max-width: 980px; }
+section.slide.cover .lead, section.slide.closing .lead { color: #fff; opacity: 0.92; max-width: 900px; }
+section.slide.cover .kicker, section.slide.closing .kicker { color: #fff; opacity: 0.85; }
+section.slide.cover .meta { display: flex; gap: 48px; margin-top: 40px; padding-top: 24px; border-top: 2px solid rgba(255,255,255,0.35); font-size: calc(22px * var(--fit)); }
+section.slide.cover .meta span b { display: block; font-size: calc(30px * var(--fit)); }
+section.slide.closing { justify-content: center; }
+section.slide.closing h2 { font-size: calc(80px * var(--fit)); color: #fff; max-width: 1000px; }
+
+/* Hero: one big number in a full-height panel, its meaning beside it. */
+section.slide.hero { padding: 0; display: grid; grid-template-columns: 5fr 6fr; }
+section.slide.hero .panel { background: var(--accent); color: #fff; display: flex; flex-direction: column; justify-content: center; padding: 64px 56px 64px 88px; }
+section.slide.hero .panel .value { font-size: calc(150px * var(--fit)); font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; }
+section.slide.hero .panel .label { font-size: calc(28px * var(--fit)); margin-top: 18px; opacity: 0.92; }
+section.slide.hero .side { display: flex; flex-direction: column; justify-content: center; padding: 64px 88px 64px 64px; }
+section.slide.hero .side h2 { font-size: calc(50px * var(--fit)); }
+
+/* Split: text on one side, a chart or figure filling the other. */
+section.slide.split > .body { display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: center; }
+section.slide.split > .body > .text { display: flex; flex-direction: column; gap: 18px; }
+section.slide.split > .body > figure.chart { height: 100%; }
+
+/* Compare: columns side by side, the user's own highlighted. */
+section.slide.compare > .body { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 24px; align-items: stretch; justify-content: stretch; }
+section.slide.compare .col { background: var(--soft); border-radius: 14px; padding: 32px; display: flex; flex-direction: column; gap: 14px; }
+section.slide.compare .col h3 { font-size: calc(32px * var(--fit)); }
+section.slide.compare .col .value { font-size: calc(64px * var(--fit)); font-weight: 800; color: var(--accent); line-height: 1; }
+section.slide.compare .col.us { background: var(--accent); color: #fff; }
+section.slide.compare .col.us .value { color: #fff; }
+
+/* Timeline across the slide. */
+section.slide.timeline > .body { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 28px; align-items: start; justify-content: stretch; border-top: 6px solid var(--accent); padding-top: 36px; }
+section.slide.timeline .when { font-size: calc(40px * var(--fit)); font-weight: 800; color: var(--accent); line-height: 1.05; margin-bottom: 12px; }
+section.slide.timeline .step { font-size: calc(26px * var(--fit)); }
+
+/* Grid of cards that stretch to fill. */
+section.slide.grid > .body { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 26px; align-items: stretch; }
+section.slide.grid .card { display: flex; flex-direction: column; gap: 12px; padding: 36px; border-radius: 14px; background: var(--soft); border-top: 8px solid var(--accent); }
+/* The number sits left, on the title's line (round 4: "the numbers sit at the far right, why"). */
+section.slide.grid .card { display: grid; grid-template-columns: auto 1fr; column-gap: 18px; row-gap: 12px; align-content: start; }
+section.slide.grid .card > * { grid-column: 1 / -1; margin: 0; }
+section.slide.grid .card > .num { grid-column: 1; text-align: left; font-size: calc(40px * var(--fit)); font-weight: 800; color: var(--accent); line-height: 1.1; align-self: baseline; }
+section.slide.grid .card > .num + h3 { grid-column: 2; align-self: baseline; }
+section.slide.grid .card h3 { font-size: calc(34px * var(--fit)); }
+
+/* Statement. */
+section.slide.statement h2 { font-size: calc(66px * var(--fit)); border-left: 12px solid var(--accent); padding-left: 40px; }
+
+/* ------------------------------------------------------------------ */
+/* Documents, round 3: larger type, a stronger cover, page layouts.     */
+/* ------------------------------------------------------------------ */
+body.doc { font-size: calc(11pt * var(--fit)); }
+body.doc h1 { font-size: calc(28pt * var(--fit)); }
+body.doc h2 { font-size: calc(17pt * var(--fit)); }
+body.doc .cover { justify-content: flex-start; }
+body.doc .cover .top { border-top: 0; background: var(--accent); color: #fff; padding: 22mm 12mm 14mm; margin: 0 0 10mm; border-radius: 0 0 3mm 3mm; }
+body.doc .cover .top .kicker, body.doc .cover .top .lead { color: #fff; opacity: 0.9; }
+body.doc .cover .top h1 { margin: 8mm 0 4mm; font-size: calc(36pt * var(--fit)); color: #fff; }
+.summary-band { background: var(--accent-soft); border-radius: 3mm; padding: 6mm 7mm; margin: 0 0 7mm; break-inside: avoid; }
+.summary-band .lead { color: var(--ink); margin-bottom: 4mm; }
+.summary-band .tiles { margin: 0; }
+.summary-band .tile { background: #fff; }
+body.doc .split { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; align-items: center; break-inside: avoid; margin: 3mm 0 6mm; }
+body.doc .split > figure.chart { margin: 0; }
+.hero-figure { display: grid; grid-template-columns: auto 1fr; gap: 7mm; align-items: center; border-top: 1.5pt solid var(--accent); border-bottom: 1.5pt solid var(--accent); padding: 5mm 0; margin: 5mm 0 7mm; break-inside: avoid; }
+.hero-figure .value { font-size: calc(40pt * var(--fit)); font-weight: 800; color: var(--accent); line-height: 1; letter-spacing: -0.02em; }
+.tile .value { font-size: calc(22pt * var(--fit)); }
+
+/* Posters: spread down the page, bigger lines. */
+body.bleed .poster .body { justify-content: space-evenly; gap: 8mm; }
+body.bleed .poster .big { font-size: calc(24pt * var(--fit)); line-height: 1.3; }
+body.bleed .poster h1 { font-size: calc(64pt * var(--fit)); }
+/* Forms keep round 2's body size so a quote or letter fits its page. */
+body.doc.genre-form { font-size: calc(10.5pt * var(--fit)); }
+body.doc.genre-form h1 { font-size: calc(24pt * var(--fit)); }
+body.doc.genre-form h2 { font-size: calc(15pt * var(--fit)); }
+/* Posters keep their own title size even when they are forms (round 3). */
+body.doc.genre-form.bleed h1 { font-size: inherit; }
+body.doc.bleed .poster h1 { font-size: calc(64pt * var(--fit)); }
+/* A timeline row never splits across pages (round 3: fragments on page 3). */
+body.doc .timeline { break-inside: avoid; }
+/* Page balance (live F2): charts have a height limit the fit pass can lower, and
+   big blocks may break across pages when one would leave a page under 40% full. */
+body.doc figure.chart svg { max-height: calc(95mm * var(--chart-fit, 1)); }
+body.doc.relaxed .split, body.doc.relaxed .timeline, body.doc.relaxed .cols-2, body.doc.relaxed .cols-3, body.doc.relaxed .summary-band, body.doc.relaxed .callout { break-inside: auto; }
+/* Tiles never widen past their column, so a big value shrinks to fit (live F2: "£186,400" ran into the next tile). */
+.tiles > .tile { min-width: 0; overflow: hidden; }
+/* A marks total stays with the last question (live F2: "Total: 30 marks" alone on a page before the answer key). */
+body.doc p:has([data-ref="total-marks"]) { break-before: avoid; }
+/* Speaker notes are for the speaker: never on the slide or the page; the .pptx carries them (live F2: notes printed over the cards). */
+.notes { display: none !important; }
+/* Two values or a two-part whole print as numbers, not a chart (round 4). */
+figure.chart .figures { display: flex; flex-wrap: wrap; gap: 4mm 10mm; padding: 3mm 0; border-top: 0.75pt solid var(--line); border-bottom: 0.75pt solid var(--line); }
+figure.chart .figures .value { display: block; font-size: calc(22pt * var(--fit)); font-weight: 700; color: var(--accent); line-height: 1.1; }
+figure.chart .figures .label { display: block; font-size: calc(9.5pt * var(--fit)); color: var(--muted); }
+section.slide figure.chart .figures { gap: 28px 64px; padding: 24px 0; justify-content: center; align-content: center; }
+section.slide figure.chart .figures .value { font-size: calc(84px * var(--fit)); }
+section.slide figure.chart .figures .label { font-size: calc(24px * var(--fit)); }
+/* A split whose chart was left out uses the whole width. */
+section.slide.split > .body:not(:has(> figure)) { grid-template-columns: 1fr; }
+body.doc .split:not(:has(> figure)) { display: block; }
+/* Page flow (round 4): a short table never splits (u05: one row alone at the top
+   of page 3), and a chart stays with the text before it, never alone on a page. */
+body.doc table.data:not(:has(tr:nth-child(13))) { break-inside: avoid; }
+body.doc figure.chart { break-before: avoid; }
+/* When a page would be left part empty, a table may split, but never leaving
+   one or two rows on their own. */
+body.doc.relaxed table.data { break-inside: auto; }
+body.doc table.data tr:nth-child(-n+2) { break-after: avoid; }
+body.doc table.data tr:nth-last-child(-n+2) { break-before: avoid; }
+body.doc.relaxed .question:has(table) { break-inside: auto; }
+/* Papers to fill in (quiz, worksheet, test): plain and clear (round 4). Black
+   ink and thin rules; no coloured bands, tiles or boxes. */
+body.doc.plain { --accent: var(--ink); --accent-soft: #fff; --soft: #fff; }
+body.doc.plain .cover .top { background: none; color: var(--ink); border-top: 1.5pt solid var(--ink); border-radius: 0; padding: 8mm 0 6mm; }
+body.doc.plain .cover .top h1, body.doc.plain .cover .top .kicker, body.doc.plain .cover .top .lead { color: var(--ink); opacity: 1; }
+body.doc.plain .cover .top h1 { font-size: calc(28pt * var(--fit)); margin-top: 4mm; }
+body.doc.plain .tile, body.doc.plain .summary-band, body.doc.plain .callout { background: none; border: 0.75pt solid var(--line); border-radius: 0; }
+body.doc.plain .callout { border-left: 2pt solid var(--ink); }
+body.doc.plain h2 { color: var(--ink); }
+body.doc.plain ol.steps > li::before { background: none; color: var(--ink); border: 1pt solid var(--ink); }
+/* The closing slide's meta line is laid out like the cover's (round 5: "Presented byGroup 4"). */
+section.slide.closing .meta { display: flex; gap: 48px; margin-top: 40px; padding-top: 24px; border-top: 2px solid rgba(255,255,255,0.35); font-size: calc(22px * var(--fit)); }
+section.slide.closing .meta span b { display: block; font-size: calc(30px * var(--fit)); }
+/* A short list stays on one page (round 5: plan item 3 alone at the top of page 4). */
+body.doc ol:not(:has(> li:nth-child(7))), body.doc ul:not(:has(> li:nth-child(7))) { break-inside: avoid; }
+
+/* ================================================================== */
+/* More layouts (showcase, 17 Nov): the five weakest looks made        */
+/* stronger, and layouts for asks the showcase had no answer for.      */
+/* ================================================================== */
+
+/* Posters: the band takes a third of the page and the body reads from a
+   distance (showcase flyer: half the page empty, a small timetable). */
+body.bleed .poster .band { min-height: 92mm; display: flex; flex-direction: column; justify-content: flex-end; padding: 18mm 16mm 12mm; }
+body.bleed .poster .body { padding: 12mm 16mm; }
+body.bleed .poster table.data { font-size: calc(19pt * var(--fit)); margin: 0; }
+body.bleed .poster table.data th { font-size: calc(11pt * var(--fit)); }
+body.bleed .poster table.data td { padding: 3.2mm 2.5mm; }
+body.bleed .poster table.data td:first-child { font-weight: 800; color: var(--accent); white-space: nowrap; width: 1%; padding-right: 8mm; }
+body.bleed .poster .offers { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5mm; }
+body.bleed .poster .offers > * { background: var(--accent-soft); border-radius: 3mm; padding: 6mm; margin: 0; font-size: calc(17pt * var(--fit)); font-weight: 700; line-height: 1.25; }
+body.bleed .poster .foot { padding: 10mm 16mm; font-size: calc(18pt * var(--fit)); font-weight: 700; }
+
+/* A cover page that fills its page: a tall accent band with the logo and
+   title, the details at the foot (showcase: a logo over an empty half page). */
+body.doc .cover .top { min-height: 140mm; display: flex; flex-direction: column; justify-content: flex-end; }
+body.doc .cover .logo { margin: 0 0 auto; }
+body.doc .cover .logo img { height: 24mm; width: auto; display: block; }
+body.doc .cover .meta-grid { margin-top: auto; }
+body.doc .cover > :last-child { margin-bottom: 0; }
+body.doc.plain .cover .top { min-height: 0; margin-top: 30mm; }
+body.doc.plain .cover .fields { gap: 10mm; margin: 14mm 0; }
+body.doc.plain .cover .fields .field { grid-template-columns: 26mm 1fr; font-size: calc(13pt * var(--fit)); }
+
+/* Résumé / CV: name across the top, experience by date, a side column for
+   skills and education (showcase: one plain column, the bottom third empty). */
+.cv-head { border-bottom: 3pt solid var(--accent); padding-bottom: 5mm; margin-bottom: 6mm; }
+.cv-head h1 { font-size: calc(32pt * var(--fit)) !important; margin: 0 0 1mm !important; letter-spacing: -0.02em; }
+.cv-head .role { font-size: calc(14pt * var(--fit)); color: var(--accent); font-weight: 600; margin: 0 0 2mm; }
+.cv-head .contact { font-size: calc(9.5pt * var(--fit)); color: var(--muted); margin: 0; }
+.cv-body { display: grid; grid-template-columns: 1fr 58mm; gap: 8mm; min-height: 215mm; }
+.cv-body > aside { background: var(--accent-soft); border-radius: 3mm; padding: 6mm 5mm; }
+.cv-body h2 { font-size: calc(11pt * var(--fit)) !important; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 3mm !important; color: var(--accent); }
+.cv-body > * > h2:not(:first-child) { margin-top: 7mm !important; }
+.cv-body .job { display: grid; grid-template-columns: 24mm 1fr; gap: 4mm; margin: 0 0 5mm; break-inside: avoid; }
+.cv-body .job .when { font-size: calc(9pt * var(--fit)); color: var(--muted); font-weight: 600; padding-top: 0.8mm; }
+.cv-body .job h3 { margin: 0 !important; font-size: calc(11.5pt * var(--fit)); }
+.cv-body .job .org { color: var(--muted); margin: 0 0 1.5mm; font-size: calc(10pt * var(--fit)); }
+.cv-body .job ul { margin: 0; }
+.cv-body aside ul { list-style: none; padding: 0; margin: 0 0 2mm; }
+.cv-body aside li { margin: 0 0 1.6mm; font-size: calc(10pt * var(--fit)); }
+.cv-body aside p { font-size: calc(10pt * var(--fit)); }
+
+/* Questions answered (an assignment, an FAQ): each question in a band, its
+   answer below with room to read (showcase u04: a wall of small text). */
+.qa { margin: 0 0 7mm; }
+.qa > .q { display: grid; grid-template-columns: 11mm 1fr; background: var(--accent-soft); border-left: 3pt solid var(--accent); padding: 3mm 4mm; font-weight: 600; break-after: avoid; break-inside: avoid; }
+.qa > .q .n { color: var(--accent); font-weight: 800; }
+.qa > .a { padding: 3.5mm 2mm 0 15mm; }
+.qa > .a > :last-child { margin-bottom: 0; }
+.qa .word-count { font-size: calc(9pt * var(--fit)); color: var(--muted); }
+
+/* A one-page report with charts: panels on a grid. */
+.dash { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin: 0 0 5mm; }
+.dash > .panel { border: 0.75pt solid var(--line); border-radius: 3mm; padding: 4mm 5mm; break-inside: avoid; min-width: 0; }
+.dash > .panel.wide { grid-column: 1 / -1; }
+.dash > .panel h3 { margin: 0 0 2mm; font-size: calc(10.5pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.dash > .panel figure.chart { margin: 0; }
+.dash > .panel .tiles { margin: 0; }
+.dash > .panel > :last-child { margin-bottom: 0; }
+
+/* Certificate: one A4 sheet turned sideways (body class "doc bleed landscape"). */
+body.bleed.landscape .certificate { width: 297mm; height: 210mm; padding: 12mm; overflow: hidden; }
+.certificate .frame { height: 100%; border: 2.5pt solid var(--accent); outline: 0.75pt solid var(--accent); outline-offset: -4mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 14mm 24mm; gap: 3mm; }
+.certificate .logo img { height: 20mm; width: auto; }
+.certificate .kicker { font-size: calc(13pt * var(--fit)); letter-spacing: 0.25em; margin: 0; }
+.certificate h1 { font-family: var(--serif); font-size: calc(40pt * var(--fit)) !important; font-weight: 600; margin: 2mm 0 !important; color: var(--ink); }
+.certificate .presented { font-size: calc(12pt * var(--fit)); color: var(--muted); margin: 3mm 0 0; }
+.certificate .name { font-family: var(--serif); font-size: calc(36pt * var(--fit)); font-style: italic; color: var(--accent); border-bottom: 0.75pt solid var(--line); padding: 0 12mm 2mm; margin: 1mm 0 3mm; }
+.certificate .for { font-size: calc(13pt * var(--fit)); max-width: 190mm; line-height: 1.45; margin: 0; }
+.certificate .signs { display: flex; gap: 30mm; margin-top: 10mm; }
+.certificate .signs > div { min-width: 60mm; border-top: 0.75pt solid var(--ink); padding-top: 2mm; font-size: calc(10.5pt * var(--fit)); }
+.certificate .signs > div span { display: block; color: var(--muted); font-size: calc(9pt * var(--fit)); }
+
+/* Menu or price list: sections of items with dotted leaders to the price. */
+.menu { columns: 2; column-gap: 12mm; }
+.menu > section { break-inside: avoid; margin: 0 0 7mm; }
+.menu > section > h2 { margin: 0 0 3mm !important; border-bottom: 1.5pt solid var(--accent); padding-bottom: 1.5mm; }
+.menu .item { display: grid; grid-template-columns: auto 1fr auto; column-gap: 2mm; margin: 0 0 3mm; break-inside: avoid; }
+.menu .item::before { content: ""; grid-column: 2; grid-row: 1; border-bottom: 1.5pt dotted #b9bec6; align-self: end; margin-bottom: 1.4mm; }
+.menu .item .name { grid-column: 1; grid-row: 1; font-weight: 700; }
+.menu .item .price { grid-column: 3; grid-row: 1; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.menu .item .desc { grid-column: 1 / -1; color: var(--muted); font-size: 0.88em; margin: 0.5mm 0 0; }
+body.bleed .poster .menu { font-size: calc(14pt * var(--fit)); }
+
+/* Deck covers, two more looks: light (white, an accent bar) and split
+   (title on the accent, the key figures beside it). Showcase: every deck
+   opened on the same solid block. */
+section.slide.cover.light, section.slide.closing.light { background: #fff; color: var(--ink); border-left: 28px solid var(--accent); }
+section.slide.cover.light .kicker, section.slide.closing.light .kicker { color: var(--accent); opacity: 1; }
+section.slide.cover.light .lead, section.slide.closing.light .lead { color: var(--muted); opacity: 1; }
+section.slide.closing.light h2 { color: var(--ink); }
+section.slide.cover.light .meta { border-top-color: var(--line); }
+section.slide.cover.light .meta span b { color: var(--accent); }
+section.slide.cover.split { display: grid; grid-template-columns: 7fr 4fr; padding: 0; }
+section.slide.cover.split > .title { background: var(--accent); color: #fff; display: flex; flex-direction: column; justify-content: flex-end; padding: 88px 72px 88px 96px; }
+section.slide.cover.split > .title .kicker, section.slide.cover.split > .title .lead { color: #fff; opacity: 0.9; }
+section.slide.cover.split > .meta { background: #fff; color: var(--ink); display: flex; flex-direction: column; justify-content: center; gap: 36px; margin: 0; padding: 72px 64px; border: 0; font-size: calc(22px * var(--fit)); }
+section.slide.cover.split > .meta span { color: var(--muted); }
+section.slide.cover.split > .meta span b { color: var(--accent); font-size: calc(48px * var(--fit)); line-height: 1.05; }
+
+/* Agenda: the parts of the talk, numbered, in two columns when long. */
+section.slide.agenda > .body > ol { list-style: none; padding: 0; margin: 0; counter-reset: part; display: grid; grid-auto-flow: column; grid-template-rows: repeat(4, auto); gap: 22px 64px; align-content: center; }
+section.slide.agenda > .body > ol > li { counter-increment: part; display: grid; grid-template-columns: 72px 1fr; align-items: baseline; margin: 0; font-size: calc(34px * var(--fit)); font-weight: 600; border-bottom: 2px solid var(--line); padding-bottom: 16px; }
+section.slide.agenda > .body > ol > li::before { content: counter(part, decimal-leading-zero); color: var(--accent); font-weight: 800; font-size: calc(30px * var(--fit)); }
+
+/* A picture with its point: the user's own photo or a slide they gave. */
+section.slide.picture { padding: 0; display: grid; grid-template-columns: 7fr 5fr; }
+section.slide.picture > figure { margin: 0; background: var(--soft); display: flex; flex-direction: column; min-height: 0; }
+section.slide.picture > figure img { flex: 1; min-height: 0; width: 100%; object-fit: cover; display: block; }
+section.slide.picture > figure figcaption { font-size: calc(18px * var(--fit)); color: var(--muted); padding: 12px 24px; }
+section.slide.picture > .side { display: flex; flex-direction: column; justify-content: center; padding: 64px 72px 64px 56px; }
+section.slide.picture > .side h2 { font-size: calc(48px * var(--fit)); }
+
+/* Roadmap: workstreams as lanes, each phase a bar across its periods. */
+section.slide.roadmap > .body { justify-content: center; gap: 18px; --n: 4; }
+section.slide.roadmap > .body:has(> .scale > span:nth-child(5)) { --n: 5; }
+section.slide.roadmap > .body:has(> .scale > span:nth-child(6)) { --n: 6; }
+section.slide.roadmap > .body:has(> .scale > span:nth-child(4):last-child) { --n: 4; }
+section.slide.roadmap > .body:has(> .scale > span:nth-child(3):last-child) { --n: 3; }
+section.slide.roadmap .scale, section.slide.roadmap .lane { display: grid; grid-template-columns: 210px repeat(var(--n), 1fr); column-gap: 10px; align-items: center; }
+section.slide.roadmap .scale > span { font-size: calc(20px * var(--fit)); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 3px solid var(--accent); padding-bottom: 8px; }
+section.slide.roadmap .scale > span:first-child { grid-column: 2; }
+section.slide.roadmap .lane > h3 { grid-column: 1; grid-row: 1; margin: 0; font-size: calc(24px * var(--fit)); }
+section.slide.roadmap .lane > .bar { grid-row: 1; background: var(--accent); color: #fff; border-radius: 10px; padding: 14px 18px; font-size: calc(20px * var(--fit)); font-weight: 600; line-height: 1.2; }
+section.slide.roadmap .lane > .bar.soft { background: var(--accent-soft); color: var(--ink); }
+section.slide.roadmap .lane > .bar[data-from="1"] { grid-column-start: 2; }
+section.slide.roadmap .lane > .bar[data-from="2"] { grid-column-start: 3; }
+section.slide.roadmap .lane > .bar[data-from="3"] { grid-column-start: 4; }
+section.slide.roadmap .lane > .bar[data-from="4"] { grid-column-start: 5; }
+section.slide.roadmap .lane > .bar[data-from="5"] { grid-column-start: 6; }
+section.slide.roadmap .lane > .bar[data-from="6"] { grid-column-start: 7; }
+section.slide.roadmap .lane > .bar[data-to="1"] { grid-column-end: 3; }
+section.slide.roadmap .lane > .bar[data-to="2"] { grid-column-end: 4; }
+section.slide.roadmap .lane > .bar[data-to="3"] { grid-column-end: 5; }
+section.slide.roadmap .lane > .bar[data-to="4"] { grid-column-end: 6; }
+section.slide.roadmap .lane > .bar[data-to="5"] { grid-column-end: 7; }
+section.slide.roadmap .lane > .bar[data-to="6"] { grid-column-end: 8; }
+/* Checked as page images (overnight): the cover band runs down to the
+   details, the logo sits on a white tile, questions read larger, a short CV
+   breathes, a menu reads across the room. */
+body.doc:not(.plain) .cover .top { flex: 1 1 auto; border-radius: 0 0 3mm 3mm; }
+body.doc .cover .logo img { background: #fff; border-radius: 3mm; padding: 2.5mm; box-sizing: content-box; }
+.qa > .q { font-size: calc(12pt * var(--fit)); }
+.cv-body > main { font-size: calc(11.5pt * var(--fit)); }
+.cv-body > main > h2:not(:first-child) { margin-top: 9mm !important; }
+.cv-body .job { margin-bottom: 7mm; }
+body.bleed .poster .menu { font-size: calc(17pt * var(--fit)); column-gap: 14mm; }
+body.bleed .poster .menu > section > h2 { font-size: calc(22pt * var(--fit)); }
+body.bleed .poster .menu .item { margin-bottom: 4.5mm; }
+/* Roadmap lanes share the slide's height; agenda items read across the room. */
+section.slide.roadmap > .body { justify-content: space-evenly; gap: 0; }
+section.slide.roadmap .lane { min-height: 96px; border-bottom: 2px solid var(--line); }
+section.slide.roadmap .lane > h3 { font-size: calc(30px * var(--fit)); }
+section.slide.roadmap .lane > .bar { font-size: calc(24px * var(--fit)); padding: 20px 20px; }
+section.slide.roadmap .scale > span { font-size: calc(24px * var(--fit)); }
+section.slide.agenda > .body > ol > li { font-size: calc(42px * var(--fit)); padding-bottom: 20px; }
+section.slide.agenda > .body > ol > li::before { font-size: calc(34px * var(--fit)); }
+/* The agenda's numbers are text the print writes in (numberAgenda), not a counter. */
+section.slide.agenda > .body > ol > li::before { content: none; }
+section.slide.agenda > .body > ol > li > .n { color: var(--accent); font-weight: 800; font-size: calc(34px * var(--fit)); }
+/* A cover (or closing) with the user's photo: the photo fills a side panel
+   (overnight, bot photo deck: a photo in the cover overflowed the slide). */
+section.slide.cover:not(.split) > figure, section.slide.closing > figure { position: absolute; top: 0; right: 0; bottom: 0; width: 44%; margin: 0; }
+section.slide.cover:not(.split):has(> figure) > :not(figure), section.slide.closing:has(> figure) > :not(figure) { max-width: 52%; }
+section.slide.cover:not(.split):has(> figure) h1 { font-size: calc(80px * var(--fit)); }
+section.slide.cover.split:has(> figure) { grid-template-columns: 5fr 3fr 4fr; }
+section.slide.cover > figure img, section.slide.closing > figure img { width: 100%; height: 100%; object-fit: cover; display: block; }
+section.slide.cover > figure figcaption, section.slide.closing > figure figcaption { display: none; }
+section.slide.cover.split > figure { margin: 0; min-height: 0; overflow: hidden; }
+section.slide.cover:not(.split):has(> figure) > :not(figure), section.slide.closing:has(> figure) > :not(figure) { max-width: calc(56% - 136px); }
+/* Beside a photo the title keeps its size: grown by the fit pass, a long word ran under the photo. */
+section.slide.cover:not(.split):has(> figure) h1 { font-size: 76px; }
+section.slide.cover:not(.split):has(> figure) .lead { font-size: 30px; }
+/* A split cover with a photo and no figures: title and photo, side by side (overnight, chat photo deck). */
+section.slide.cover.split:has(> figure):not(:has(> .meta)) { grid-template-columns: 7fr 5fr; }
+/* A picture never sets its column's width: the user's 1280px slide in a
+   split squeezed the text beside it into a sliver (final round, bot O3). */
+body.doc .split > * { min-width: 0; }
+body.doc img { max-width: 100%; height: auto; }
+
+/* ================================================================== */
+/* Review of 17 Nov: pages that looked broken.                         */
+/* ================================================================== */
+/* A CV with no side column uses the whole width (code moves education and
+   skills into one when it can). */
+.cv-body:not(:has(> aside)) { grid-template-columns: 1fr; }
+.cv-body > aside { font-size: calc(10.5pt * var(--fit)); }
+.cv-body > aside li, .cv-body > aside p { font-size: calc(10.5pt * var(--fit)); }
+.cv-head h1 { font-size: calc(36pt * var(--fit)) !important; }
+.cv-head .role { font-size: calc(15pt * var(--fit)); }
+.cv-head .contact { font-size: calc(10.5pt * var(--fit)); }
+/* A letter: the sender as a letterhead, paragraphs with room between them. */
+.letter { font-size: calc(11.5pt * var(--fit)); line-height: 1.6; }
+.letter .from { text-align: left; font-family: var(--sans); font-size: calc(9.5pt * var(--fit)); color: var(--muted); line-height: 1.5; border-bottom: 2pt solid var(--accent); padding-bottom: 5mm; margin-bottom: 12mm; }
+.letter .from::first-line { font-size: calc(20pt * var(--fit)); font-weight: 700; color: var(--ink); line-height: 1.6; }
+.letter .to { margin-bottom: 8mm; }
+.letter p { margin: 0 0 4.5mm; }
+.letter .subject { font-family: var(--sans); color: var(--accent); margin: 2mm 0 6mm; }
+.letter .signature { margin-top: 16mm; font-weight: 600; }
+/* Questions answered: answers that read, not walls of text. */
+.qa { margin: 0 0 9mm; }
+.qa > .a { font-size: calc(11.5pt * var(--fit)); line-height: 1.65; max-width: 165mm; }
+.qa > .a p { margin: 0 0 3.5mm; }
+/* A timeline sits in the middle of the slide's room, not at its top. */
+section.slide.timeline > .body { flex: 0 0 auto; margin: auto 0; }
+section.slide.timeline .step { font-size: calc(28px * var(--fit)); }
+/* A notice's plain lines read as poster lines, not body text. */
+body.bleed .poster .body > p, body.bleed .poster .body > div > p { font-size: calc(19pt * var(--fit)); line-height: 1.4; margin: 0; }
+body.bleed .poster .body > div:not(.offers):not(.tiles):not(.menu):not(:last-child) { border-left: 2.5mm solid var(--accent); padding: 2mm 0 2mm 6mm; }
+
+/* ================================================================== */
+/* Document looks (review of 17 Nov: the old five looked alike).       */
+/* <html data-look="…"> changes type pairing, headings, the cover and  */
+/* boxes at a glance; CSS only, so a look switches with a reprint.     */
+/* Default (no data-look): "classic", the sheet above.                 */
+/* ================================================================== */
+
+/* Editorial: serif throughout, a white cover with a large serif title
+   between rules, small-caps labels, quiet boxes. */
+html[data-look="editorial"] body.doc { font-family: var(--serif); }
+html[data-look="editorial"] body.doc h1, html[data-look="editorial"] body.doc h2, html[data-look="editorial"] body.doc h3 { font-family: var(--serif); font-weight: 600; letter-spacing: 0; }
+html[data-look="editorial"] body.doc h2 { color: var(--ink); font-size: calc(19pt * var(--fit)); border-bottom: 0.75pt solid var(--ink); padding-bottom: 1.5mm; }
+html[data-look="editorial"] .kicker { font-family: var(--serif); font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.08em; font-size: calc(11pt * var(--fit)); font-weight: 600; }
+html[data-look="editorial"] .lead { font-style: italic; font-size: calc(13.5pt * var(--fit)); }
+html[data-look="editorial"] body.doc:not(.plain) .cover .top { background: none; color: var(--ink); border-top: 3pt double var(--ink); border-bottom: 0.75pt solid var(--ink); border-radius: 0; padding: 14mm 0 10mm; justify-content: center; text-align: center; }
+html[data-look="editorial"] body.doc .cover .top h1 { color: var(--ink); font-size: calc(42pt * var(--fit)); }
+html[data-look="editorial"] body.doc .cover .top .kicker, html[data-look="editorial"] body.doc .cover .top .lead { color: var(--muted); opacity: 1; }
+html[data-look="editorial"] .tile, html[data-look="editorial"] .summary-band, html[data-look="editorial"] .callout { background: none; border: 0; border-top: 0.75pt solid var(--ink); border-radius: 0; }
+html[data-look="editorial"] .tile .value { font-family: var(--serif); color: var(--ink); font-weight: 600; }
+html[data-look="editorial"] table.data th { color: var(--ink); border-bottom-color: var(--ink); font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.06em; }
+html[data-look="editorial"] .doc-head { border-bottom: 3pt double var(--ink); }
+html[data-look="editorial"] .qa > .q { background: none; border-left: 0; border-bottom: 0.75pt solid var(--ink); font-family: var(--serif); }
+html[data-look="editorial"] .cv-body > aside { background: none; border-left: 0.75pt solid var(--ink); border-radius: 0; }
+html[data-look="editorial"] .cv-head { text-align: center; border-bottom: 3pt double var(--ink); }
+
+/* Bold: heavy sans, headings set in a solid bar, a dark cover with the
+   accent as its signal colour, dark figure tiles. */
+html[data-look="bold"] body.doc h1 { font-weight: 800; letter-spacing: -0.03em; }
+html[data-look="bold"] body.doc h2 { background: var(--accent); color: #fff; padding: 2mm 4mm; font-size: calc(15pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.04em; border-radius: 1mm; }
+html[data-look="bold"] body.doc:not(.plain) .cover .top { background: var(--ink); border-radius: 0; border-left: 8mm solid var(--accent); }
+html[data-look="bold"] body.doc .cover .top h1 { font-size: calc(44pt * var(--fit)); text-transform: uppercase; letter-spacing: -0.02em; }
+html[data-look="bold"] .kicker { color: var(--accent); }
+html[data-look="bold"] .tile { background: var(--ink); color: #fff; border-radius: 0; }
+html[data-look="bold"] .tile .value { color: #fff; font-size: calc(26pt * var(--fit)); }
+html[data-look="bold"] .tile .label { color: #fff; opacity: 0.85; }
+html[data-look="bold"] .summary-band { background: none; border: 2pt solid var(--ink); border-radius: 0; }
+html[data-look="bold"] .summary-band .tile { background: var(--ink); }
+html[data-look="bold"] .callout { background: none; border: 2pt solid var(--accent); border-radius: 0; }
+html[data-look="bold"] table.data th { background: var(--ink); color: #fff; border: 0; }
+html[data-look="bold"] .doc-head { border-bottom: 5pt solid var(--ink); }
+html[data-look="bold"] .qa > .q { background: var(--ink); color: #fff; border-left: 6pt solid var(--accent); }
+html[data-look="bold"] .qa > .q .n { color: var(--accent); }
+html[data-look="bold"] .cv-head { border-bottom: 6pt solid var(--ink); }
+html[data-look="bold"] .cv-body > aside { background: var(--ink); color: #fff; border-radius: 0; }
+html[data-look="bold"] .cv-body > aside h2 { background: none; color: var(--accent); padding: 0; }
+
+/* Minimal: lots of white, monospaced labels and numbers, hairlines, the
+   accent used only for figures. */
+html[data-look="minimal"] body.doc { font-size: calc(10.5pt * var(--fit)); line-height: 1.6; }
+html[data-look="minimal"] body.doc h1 { font-weight: 600; letter-spacing: -0.02em; }
+html[data-look="minimal"] body.doc h2 { font-family: var(--mono); font-weight: 400; font-size: calc(10pt * var(--fit)); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); border-top: 0.5pt solid var(--line); padding-top: 3mm; margin-top: 10mm; }
+html[data-look="minimal"] .kicker { font-family: var(--mono); font-weight: 400; color: var(--muted); letter-spacing: 0.14em; }
+html[data-look="minimal"] body.doc:not(.plain) .cover .top { background: none; color: var(--ink); border-radius: 0; border-top: 0.5pt solid var(--ink); padding: 60mm 0 10mm; }
+html[data-look="minimal"] body.doc .cover .top h1 { color: var(--ink); font-weight: 400; font-size: calc(40pt * var(--fit)); letter-spacing: -0.03em; }
+html[data-look="minimal"] body.doc .cover .top .kicker, html[data-look="minimal"] body.doc .cover .top .lead { color: var(--muted); opacity: 1; }
+html[data-look="minimal"] .tile, html[data-look="minimal"] .summary-band, html[data-look="minimal"] .callout { background: none; border: 0.5pt solid var(--line); border-radius: 0; }
+html[data-look="minimal"] .tile .value { font-family: var(--mono); font-weight: 400; }
+html[data-look="minimal"] table.data th { font-family: var(--mono); font-weight: 400; border-bottom: 0.5pt solid var(--ink); }
+html[data-look="minimal"] table.data td { border-bottom-color: #eceef1; }
+html[data-look="minimal"] .doc-head { border-bottom: 0.5pt solid var(--ink); }
+html[data-look="minimal"] .qa > .q { background: none; border-left: 0; padding-left: 0; font-weight: 600; }
+html[data-look="minimal"] .qa > .q .n { font-family: var(--mono); font-weight: 400; }
+html[data-look="minimal"] .cv-head { border-bottom: 0.5pt solid var(--ink); }
+html[data-look="minimal"] .cv-body > aside { background: none; border-left: 0.5pt solid var(--line); border-radius: 0; }
+html[data-look="minimal"] .cv-body h2 { font-family: var(--mono); font-weight: 400; color: var(--muted) !important; }
+
+/* Warm: serif headings over sans text, a cream cover with a terracotta
+   accent, rounded soft boxes. */
+html[data-look="warm"] { --accent: #b5532d; --accent-soft: #f8ebe2; --soft: #faf5ef; }
+html[data-look="warm"] body.doc h1, html[data-look="warm"] body.doc h2, html[data-look="warm"] body.doc h3 { font-family: var(--serif); font-weight: 600; }
+html[data-look="warm"] body.doc h2 { font-size: calc(19pt * var(--fit)); }
+html[data-look="warm"] body.doc h2::after { content: ""; display: block; width: 14mm; border-bottom: 2pt solid var(--accent); margin-top: 1.5mm; }
+html[data-look="warm"] body.doc:not(.plain) .cover .top { background: #f6efe6; color: var(--ink); border-radius: 6mm; }
+html[data-look="warm"] body.doc .cover .top h1 { color: var(--ink); font-family: var(--serif); font-size: calc(42pt * var(--fit)); }
+html[data-look="warm"] body.doc .cover .top .kicker { color: var(--accent); opacity: 1; }
+html[data-look="warm"] body.doc .cover .top .lead { color: var(--muted); opacity: 1; }
+html[data-look="warm"] .tile, html[data-look="warm"] .summary-band, html[data-look="warm"] .callout { border-radius: 4mm; }
+html[data-look="warm"] .tile .value { font-family: var(--serif); }
+html[data-look="warm"] .qa > .q { border-radius: 3mm; border-left: 0; }
+html[data-look="warm"] .cv-body > aside { border-radius: 5mm; background: #f6efe6; }
+
+/* Midnight: a navy cover page, monospaced kicker, a cyan signal colour,
+   headings with a side bar. */
+html[data-look="midnight"] { --accent: #0e7fa8; --accent-soft: #e4f3f9; }
+html[data-look="midnight"] body.doc:not(.plain) .cover .top { background: #0f1b2d; border-radius: 0; }
+html[data-look="midnight"] body.doc .cover .top .kicker { font-family: var(--mono); color: #5fd0f3; opacity: 1; }
+html[data-look="midnight"] body.doc h2 { color: #0f1b2d; border-left: 4pt solid var(--accent); padding-left: 3mm; }
+html[data-look="midnight"] .kicker { font-family: var(--mono); font-weight: 400; }
+html[data-look="midnight"] .tile { background: #0f1b2d; color: #fff; }
+html[data-look="midnight"] .tile .value { color: #5fd0f3; }
+html[data-look="midnight"] .tile .label { color: #fff; opacity: 0.85; }
+html[data-look="midnight"] table.data th { color: #0f1b2d; border-bottom: 2pt solid #0f1b2d; }
+html[data-look="midnight"] .doc-head { border-bottom: 2pt solid #0f1b2d; }
+html[data-look="midnight"] .qa > .q { background: #0f1b2d; color: #fff; border-left-color: #5fd0f3; }
+html[data-look="midnight"] .qa > .q .n { color: #5fd0f3; }
+html[data-look="midnight"] .cv-head { border-bottom: 3pt solid #0f1b2d; }
+html[data-look="midnight"] .cv-body > aside { background: #0f1b2d; color: #fff; }
+html[data-look="midnight"] .cv-body > aside h2 { color: #5fd0f3 !important; }
+/* The first page's header carries the look too (most documents have no cover). */
+html[data-look="bold"] .doc-head, html[data-look="midnight"] .doc-head { background: var(--ink); color: #fff; padding: 7mm 8mm 6mm; border: 0; border-left: 6mm solid var(--accent); }
+html[data-look="midnight"] .doc-head { background: #0f1b2d; border-left: 0; border-bottom: 2.5mm solid #5fd0f3; }
+html[data-look="bold"] .doc-head h1, html[data-look="midnight"] .doc-head h1 { color: #fff; }
+html[data-look="bold"] .doc-head .meta, html[data-look="midnight"] .doc-head .meta, html[data-look="bold"] .doc-head .lead, html[data-look="midnight"] .doc-head .lead { color: #fff; opacity: 0.85; }
+html[data-look="midnight"] .doc-head .kicker { color: #5fd0f3; }
+html[data-look="warm"] .doc-head { background: #f6efe6; border: 0; border-radius: 5mm; padding: 7mm 8mm 6mm; }
+html[data-look="warm"] .doc-head h1 { font-family: var(--serif); }
+html[data-look="editorial"] .doc-head { display: block; text-align: center; padding-bottom: 6mm; }
+html[data-look="editorial"] .doc-head h1 { font-size: calc(32pt * var(--fit)); }
+html[data-look="editorial"] .doc-head .meta { text-align: center; margin-top: 2mm; }
+html[data-look="minimal"] .doc-head { padding: 14mm 0 8mm; }
+html[data-look="minimal"] .doc-head h1 { font-weight: 400; font-size: calc(32pt * var(--fit)); }
+/* A picture slide carries no footer: the picture runs to the slide's foot,
+   and a footer there was drawn over it, failing the print (deck-speed.md:
+   the fault behind most failed reprints of own-file decks). */
+section.slide.picture > .foot, section.slide.cover > .foot { display: none; }
+section.slide.picture > figure { position: relative; z-index: 1; }
+section.slide.split > .body > figure:has(img) { min-height: 0; overflow: hidden; }
+section.slide.split > .body > figure img { max-height: 100%; object-fit: contain; }
+/* A one-page CV fills its page (review: tiny type, the lower half empty). */
+.cv-head h1 { font-size: calc(38pt * var(--fit)) !important; }
+.cv-head .role { font-size: calc(17pt * var(--fit)); }
+.cv-head .contact { font-size: calc(12pt * var(--fit)); }
+.cv-head { padding-bottom: 7mm; margin-bottom: 9mm; }
+.cv-body { min-height: 218mm; gap: 9mm; grid-template-columns: 1fr 62mm; }
+.cv-body:not(:has(> aside)) { grid-template-columns: 1fr; }
+.cv-body > main { font-size: calc(12pt * var(--fit)); line-height: 1.55; display: flex; flex-direction: column; }
+.cv-body > main > h2:not(:first-child) { margin-top: 9mm !important; }
+.cv-body h2 { font-size: calc(13pt * var(--fit)) !important; margin-bottom: 4mm !important; }
+.cv-body .job { margin-bottom: 6mm; grid-template-columns: 28mm 1fr; }
+.cv-body .job .when { font-size: calc(10.5pt * var(--fit)); }
+.cv-body .job h3 { font-size: calc(13pt * var(--fit)) !important; }
+.cv-body .job .org { font-size: calc(12pt * var(--fit)); }
+.cv-body li { margin-bottom: 1.5mm; }
+.cv-body > aside { padding: 8mm 6mm; font-size: calc(12pt * var(--fit)); }
+.cv-body > aside li, .cv-body > aside p { font-size: calc(12pt * var(--fit)); line-height: 1.5; }
+.cv-body > aside > h2:not(:first-child) { margin-top: 10mm !important; }
+
+/* A detail the user has not given yet: a ruled line to fill in, the small label under it. */
+.blank { display: inline-flex; flex-direction: column; align-items: center; vertical-align: bottom; font-family: var(--text, inherit); font-size: 6.5pt !important; font-weight: 500; font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; color: inherit; opacity: 0.75; line-height: 1.2; }
+.blank::before { content: ""; align-self: stretch; min-width: 14em; height: 1.9em; border-bottom: 0.75pt solid currentColor; margin-bottom: 0.25em; }
+h1 .blank, h2 .blank, .certificate .blank { font-size: 7.5pt !important; }
+h1 .blank::before { min-width: 24em; height: 3.6em; }
+/* A bare line: no label of its own (a signature line under its caption, a "____" run). */
+.blank.bare::before { min-width: 50mm; margin-bottom: 0; }
+/* A quiz or worksheet starts on page 1: its cover is a compact header (school, title, name/class/date lines) with the questions under it (master's read, u02). */
+body.doc.plain .cover { min-height: 0 !important; break-after: auto !important; justify-content: flex-start; padding: 0; margin: 0 0 7mm; }
+body.doc.plain .cover .top { margin-top: 0 !important; padding: 4mm 0 3mm; }
+body.doc.plain .cover .top h1 { font-size: calc(22pt * var(--fit)); margin: 2mm 0 1mm; }
+body.doc.plain .cover .fields { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6mm; margin: 5mm 0 3mm; }
+body.doc.plain .cover .fields .field { grid-template-columns: auto 1fr; gap: 2mm; font-size: calc(11pt * var(--fit)); }
+body.doc.plain .cover .meta-grid { margin: 2mm 0; }
+/* A placeholder inside a sentence: the bracketed words, highlighted, for the user to replace. */
+.blank.inline { display: inline; vertical-align: baseline; font-size: inherit !important; font-family: inherit; font-weight: 600; text-transform: none; letter-spacing: 0; line-height: inherit; color: var(--accent); opacity: 1; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 2px; padding: 0 0.15em; }
+.blank.inline::before { content: "["; min-width: 0; height: auto; border: 0; margin: 0; align-self: auto; }
+.blank.inline::after { content: "]"; }
+/* A blank with no label, inside a sentence or a tile: a short line, not an empty box. */
+.blank:empty::before { min-width: 3.2em; height: 1.1em; margin-bottom: 0; }
+.blank:empty { vertical-align: baseline; }
+
+/* A running header the user asked for: Word's page header, a small line at the top of the PDF. */
+body.doc .running { font-size: calc(9pt * var(--fit)); color: var(--muted); text-align: center; letter-spacing: 0.06em; margin: 0 0 4mm; }

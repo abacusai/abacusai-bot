@@ -97,6 +97,11 @@ export function phoneConnectResult(
               : ""
         }. Say so plainly, and do whatever part of the task does not need it.`
       );
+    case "offline":
+      return host.ok(
+        `${outcome.name} cannot be reached right now: the computer it runs on has lost its internet connection. ` +
+          "Nothing about the link is wrong. Say so plainly in one short line, in the user's language."
+      );
     case "not_here":
       return host.ok(
         `${outcome.name} cannot be connected from WhatsApp. No link was made: send none, and promise no date. ` +

@@ -124,17 +124,20 @@ const BotRowContainer = ({
     stops.find((item) => item.key === `lane:${bot.homeChannel}`) ??
     stops.find((item) => item.detail.botId === bot.id) ??
     null;
+  // Down only for the internet: paused, never "retrying" or "lost".
   const channelNote =
-    lane?.recovery != null
-      ? recoveryLine(
-          lane.recovery,
-          t(`messaging.platforms.${lane.nameKey}`),
-          now,
-          t
-        )
-      : status != null
-        ? statusLine(status, t)
-        : null;
+    lane?.pausedOffline === true
+      ? t("connectivity.lanePaused")
+      : lane?.recovery != null
+        ? recoveryLine(
+            lane.recovery,
+            t(`messaging.platforms.${lane.nameKey}`),
+            now,
+            t
+          )
+        : status != null
+          ? statusLine(status, t)
+          : null;
   const items = botMenuItems({
     pinned,
     unread: sources.unread.has(bot.id),

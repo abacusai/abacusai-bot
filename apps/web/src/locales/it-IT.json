@@ -1492,6 +1492,12 @@
     "stopped": "Link rimosso",
     "links": "Link condivisi",
     "linksEmpty": "Ancora nulla di condiviso. Usa Condividi su un file creato dal bot.",
+    "offer": {
+      "title": "Invialo a chiunque",
+      "body": "Ottieni un link che si apre su qualsiasi telefono o computer. Vedi esattamente cosa vedranno prima che sia pubblico.",
+      "getLink": "Ottieni un link",
+      "notNow": "Non ora"
+    },
     "errors": {
       "TOO_LARGE": "Questo file supera il limite di 5 MB per i link.",
       "TOO_MANY": "Hai 50 link condivisi. Interrompine uno per crearne un altro.",
@@ -1921,35 +1927,35 @@
       "build": {
         "orders-system": {
           "name": "App per ordini e prenotazioni",
-          "detail": "Per un negozio, una palestra, un salone o un'attività di servizi.",
+          "detail": "Per negozi, palestre e servizi.",
           "prompt": "Ho una piccola attività. Creami su questo computer una semplice app per tenere traccia di ordini, prenotazioni o interventi: un elenco in cui posso aggiungere, cercare e filtrare, una pagina per ciascuno con cliente, data, stato e prezzo, e un riepilogo giornaliero. Crea subito una prima versione con dati di esempio per un tipico piccolo negozio e aprimela. Poi chiedimi in un breve messaggio di cosa si occupa la mia attività e cosa devo monitorare, così puoi adattarla."
         },
         "business-site": {
           "name": "Sito web per la mia attività",
-          "detail": "Servizi, orari, recensioni e un modulo di contatto.",
+          "detail": "Servizi, orari e contatti.",
           "prompt": "Crea un sito web per la mia attività: un'intestazione con il nome dell'attività e cosa offre, una sezione servizi con i prezzi, gli orari di apertura, alcune recensioni dei clienti, dove trovarci e un modulo di contatto. Usa dati segnaposto che posso sostituire in seguito e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta, poi chiedimi in un breve messaggio il nome della mia attività e di cosa si occupa, così puoi personalizzarlo."
         },
         "lead-finder": {
           "name": "Trova clienti",
-          "detail": "Nuovi potenziali clienti ogni mattina, con una prima email già pronta."
+          "detail": "Nuovi contatti e prima email."
         },
         "my-game": {
           "name": "Lavora al mio gioco",
-          "detail": "Unity, Godot, Unreal o Roblox, nella cartella del tuo progetto.",
+          "detail": "Unity, Godot, Unreal o Roblox.",
           "prompt": "Aiutami con il mio gioco. Se non è aperta nessuna cartella di progetto, chiedimi dove si trova il progetto del mio gioco. Poi esaminalo e dimmi quale motore e quale versione usa, quali sono le scene e gli script principali e tutto ciò che sembra non funzionare o incompleto. Suggeriscimi i tre passi successivi più utili e aspetta che ne scelga uno prima di modificare qualsiasi cosa."
         },
         "morning-inbox": {
-          "name": "Rispondi alle mie email ogni mattina",
-          "detail": "Una bozza di risposta per ogni email che richiede la tua attenzione."
+          "name": "Rispondi alle mie email",
+          "detail": "Risposte pronte ogni mattina."
         },
         "portfolio-site": {
           "name": "Sito portfolio",
-          "detail": "Un sito di una pagina per il tuo lavoro.",
+          "detail": "Una pagina per il tuo lavoro.",
           "prompt": "Creami un sito portfolio di una sola pagina: un'intestazione con il mio nome e una frase di presentazione, una griglia con tre progetti di esempio, una sezione chi sono e una sezione contatti. Usa testi e immagini segnaposto che potrò sostituire, con uno stile pulito e moderno, e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta."
         },
         "numbers-dashboard": {
           "name": "Dashboard dei miei numeri",
-          "detail": "Vendite, costi e andamenti dal tuo foglio di calcolo.",
+          "detail": "Vendite, costi e tendenze.",
           "prompt": "Crea una dashboard per i numeri della mia attività: i totali di questo mese, un grafico per mese, i prodotti o i clienti principali e qualsiasi dato insolito. Inizia subito con dati di vendita di esempio realistici, così funziona, e mostramela. Poi chiedimi il mio foglio di calcolo o file CSV e aggiorna la dashboard con i miei numeri reali."
         },
         "shop-page": {
@@ -1958,9 +1964,14 @@
           "prompt": "Crea un negozio di una sola pagina per la mia piccola attività: un'intestazione con il nome del negozio, sei prodotti di esempio con foto, nomi, prezzi e un pulsante Aggiungi al carrello, un carrello semplice e una sezione contatti. Usa prodotti segnaposto che potrò sostituire e assicurati che si veda bene sul telefono. Mostrami la pagina quando è pronta."
         },
         "simple-game": {
-          "name": "Un gioco semplice",
-          "detail": "Da giocare nel browser.",
-          "prompt": "Crea un gioco semplice a cui posso giocare subito nel browser: il gioco del serpente con comandi da frecce e swipe, punteggio, record e un pulsante per ricominciare. Tutto in una sola pagina, e mostramelo quando è pronto."
+          "name": "Un gioco da giocare",
+          "detail": "Giocabile in circa un minuto.",
+          "prompt": "Creami un gioco divertente a cui posso giocare nel browser in circa un minuto: un gioco arcade in cui schivo oggetti che cadono, con schermata iniziale, comandi con le frecce e touch, punteggio e record, schermata di game over e un pulsante per ricominciare. Tienilo in una sola pagina che entra nella finestra, controlla che ogni comando funzioni e mostramelo quando è pronto. Poi chiedimi in un breve messaggio che gioco voglio, così lo trasformi nel mio."
+        },
+        "my-project": {
+          "name": "Lavora alla mia app o al mio sito",
+          "detail": "App o sito su questo computer.",
+          "prompt": "Aiutami con il mio progetto di app o sito web. Se non è aperta nessuna cartella di progetto, chiedimi dove si trova. Poi esaminalo e dimmi con cosa è fatto, come si avvia, le sue parti principali e tutto ciò che sembra rotto o incompleto. Suggerisci i tre passi successivi più utili e aspetta che ne scelga uno prima di cambiare qualsiasi cosa."
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "Messaging",
       "mcp": "MCP servers",
       "skills": "Skills",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "This page arrives in a coming update.",
     "connectorDescription": "Connection details arrive in a coming update."
@@ -3150,7 +3162,10 @@
         "browser": "Lavoro nel browser",
         "subtask": "Lavoro su un'attività secondaria"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "In attesa della tua connessione internet",
+      "waitingForAbacus": "In attesa di AbacusAI",
+      "messageSafe": "Il tuo messaggio è al sicuro. Il bot continua da solo quando la connessione torna."
     },
     "code": {
       "copied": "Copied",
@@ -3223,7 +3238,8 @@
       "includedIn": "Incluso in {{plan}}",
       "includedInPaid": "Incluso nei piani a pagamento",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Scrivi ora. Verrà inviato appena torni online"
     },
     "day": {
       "today": "Today",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} crediti",
       "creditsLeft_one": "{{credits}} credito · {{left}} rimasti",
       "creditsLeft_other": "{{credits}} crediti · {{left}} rimasti",
-      "creditsAction": "{{credits}}. Vedi il tuo piano e i crediti"
+      "creditsAction": "{{credits}}. Vedi il tuo piano e i crediti",
+      "waitedInternet": "{{duration}} di attesa della tua connessione internet",
+      "waitedAbacus": "{{duration}} di attesa di AbacusAI"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "Skipped",
       "askBot": "Chiesto a {{bot}}: {{what}}",
       "giveTask": "Attività assegnata a {{bot}}: {{what}}",
-      "memoryUpdated": "Memoria aggiornata: {{name}}"
+      "memoryUpdated": "Memoria aggiornata: {{name}}",
+      "quiet": "Nessun output da {{time}}",
+      "progress": "Avanzamento"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3607,9 +3627,15 @@
       "open": "Apri"
     },
     "suggestedTasks": {
-      "label": "Tocca un'attività per avviarla",
+      "pickOne": "Scegline una per continuare",
+      "next": "Prossimo passo",
+      "routineLine": "Si avvia secondo la sua pianificazione mentre l'app è aperta",
+      "copied": "Copiato",
       "copy": "Copia “{{text}}” per inviarlo dal telefono",
-      "copyFailed": "Impossibile copiare"
+      "copyFailed": "Impossibile copiare",
+      "formTitle": "Rendilo tuo",
+      "formLine": "Bastano una o due righe: sostituisco io il testo di esempio.",
+      "notNow": "Non ora"
     },
     "retryOffer": {
       "title": "Riprova con {{model}}",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "Questo compito è difficile per il modello economico. {{model}}, uno dei modelli più capaci in assoluto, qui è a tua disposizione. Consuma i crediti più in fretta.",
       "continue": "Continua in una nuova chat",
       "paidBody": "Una nuova chat riparte da un riassunto di questa, su un modello di punta. Consuma i crediti più in fretta."
+    },
+    "topModelRetry": {
+      "retry": "Riprova con {{model}}",
+      "upgradeRetry": "Passa a un piano superiore per riprovare con {{model}} e altri modelli top",
+      "dismiss": "Chiudi",
+      "opusBody": "Il nostro modello più potente riprende da qui in una nuova chat, dal punto in cui ti eri fermato. Consuma crediti più in fretta.",
+      "dialogBody": "Il nostro modello più potente per i compiti difficili, incluso in {{plan}}."
     },
     "topModelCard": {
       "title": "Continua con {{model}} con {{plan}}",
@@ -3718,6 +3751,12 @@
       "newChat": "Continua in una nuova chat con {{model}}",
       "here": "Passa comunque questa chat a {{model}}",
       "cancel": "Annulla"
+    },
+    "tasks": {
+      "title": "In corso",
+      "stop": "Ferma",
+      "serving": "Pubblica {{url}}",
+      "stopFailed": "Impossibile fermarlo. Riprova."
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "Completa nel browser",
     "planLine": "Piano {{plan}} · disdici quando vuoi",
     "planTitle": "Tutto ciò che ti offre {{plan}}",
+    "planModelTitle": "Rieseguilo su {{model}} con {{plan}}",
     "startAt": "A partire da",
     "waitingBody": "Il tuo messaggio partirà appena il piano sarà attivo.",
     "waitingBodyNoMessage": "Si chiuderà appena il piano sarà attivo.",
@@ -5320,6 +5360,23 @@
     "continuing": "Tutto ciò che segue il risultato di uno strumento è la stessa risposta che continua. Niente secondo saluto, niente ripetizione della missione.",
     "write": "Scrivi in {{language}}, la lingua dell'utente, a meno che non ti scriva in un'altra."
   },
+  "quitGuard": {
+    "title_one": "La tua attività è ancora in corso",
+    "title_other": "{{count}} attività sono ancora in corso",
+    "body_one": "Se esci ora, si interrompe e il lavoro non finito va perso.",
+    "body_other": "Se esci ora, si interrompono e il lavoro non finito va perso.",
+    "wait_one": "Attendi che finisca",
+    "wait_other": "Attendi che finiscano",
+    "quitAnyway": "Esci comunque",
+    "cancel": "Annulla",
+    "unnamed": "Chat senza titolo",
+    "more_one": "e {{count}} altra",
+    "more_other": "e altre {{count}}",
+    "waitingOne": "L'app si chiuderà quando «{{name}}» sarà finita.",
+    "waitingMany_one": "L'app si chiuderà quando {{count}} attività saranno finite.",
+    "waitingMany_other": "L'app si chiuderà quando {{count}} attività saranno finite.",
+    "dontQuit": "Non uscire"
+  },
   "native": {
     "aboutApp": "Informazioni su {{app}}",
     "services": "Servizi",
@@ -5349,11 +5406,13 @@
     "zoom": "Zoom",
     "front": "Porta tutto in primo piano",
     "credits": "Open source sotto la licenza MIT",
-    "keepRunning": "Continua in background",
-    "quitAnyway": "Esci comunque",
-    "taskRunningTitle": "Un'attività è in esecuzione",
-    "taskRunningMessage": "Un'attività è ancora in esecuzione.",
-    "taskRunningDetail": "Continuarlo a funzionare in background o chiuderlo e interromperlo?",
+    "quitGuardTitleOne": "La tua attività è ancora in corso",
+    "quitGuardTitleMany": "Alcune attività sono ancora in corso",
+    "quitGuardDetail": "Se esci ora, il lavoro non finito va perso. Se attendi, l'app si chiuderà da sola quando il lavoro sarà finito.",
+    "quitGuardWait": "Attendi che finisca",
+    "quitGuardQuitAnyway": "Esci comunque",
+    "quitGuardCancel": "Annulla",
+    "quitGuardUnnamed": "Chat senza titolo",
     "restart": "Riavvia",
     "quit": "Esci",
     "wait": "Attendi",
@@ -5541,6 +5600,16 @@
     "line": "Completalo con {{plan}}: {{model}} per le parti difficili, crediti per un progetto di queste dimensioni e un link pubblico quando è pronto.",
     "lineNoModel": "Completalo con {{plan}}: i modelli migliori per le parti difficili, crediti per un progetto di queste dimensioni e un link pubblico quando è pronto."
   },
+  "freeModelDown": {
+    "title": "Il modello gratuito è sovraccarico in questo momento",
+    "line": "Completa questo su un modello top (Claude, GPT, Gemini) con {{plan}}:",
+    "upgrade": "Fai l’upgrade e completa",
+    "retry": "Riprova gratis",
+    "retrying": "Nuovo tentativo tra {{seconds}} s…",
+    "firstRetrying": "Riprovo per te tra {{seconds}} s…",
+    "tryNow": "Riprova ora",
+    "history": "Il modello gratuito era sovraccarico"
+  },
   "keepRunning": {
     "title": "Tieni “{{name}}” attivo 24/7",
     "titleUnnamed": "Tienilo attivo 24/7",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "Avvisami quando le PR di qui ricevono una revisione o la CI fallisce"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Sei offline.",
+      "offlineBody": "La tua connessione internet è caduta, non l'app. Tutto riprende da solo quando torna.",
+      "abacusTitle": "AbacusAI non risponde ora.",
+      "abacusBody": "La tua connessione va bene; ce ne occupiamo noi.",
+      "checkingIn": "Nuovo controllo tra {{seconds}} s",
+      "backTitle": "Di nuovo online.",
+      "backSending_one": "Invio ora il tuo messaggio in attesa.",
+      "backSending_other": "Invio ora i tuoi {{count}} messaggi in attesa."
+    },
+    "lanePaused": "in pausa · offline",
+    "laneOfflineNote": "In pausa mentre questo computer è offline. Il collegamento va bene; riprende da solo quando internet torna.",
+    "queued": {
+      "title": "Viene inviato quando torni online",
+      "line": "\"{{text}}\" a {{to}} su {{app}}. Parte da solo appena la tua connessione internet torna, una sola volta.",
+      "cancel": "Annulla questo messaggio",
+      "unsureTitle": "Potrebbe non essere stato inviato",
+      "unsureLine": "\"{{text}}\" a {{to}} su {{app}}. La tua connessione internet è caduta durante l'invio, quindi controlla la chat prima di inviarlo di nuovo.",
+      "dismiss": "Ignora"
     }
   }
 }

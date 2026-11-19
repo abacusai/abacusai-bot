@@ -163,6 +163,12 @@ export const FUNNEL_STEPS = [
   "keep_running_not_now",
   "keep_running_withdrawn",
   "keep_running_move",
+  // A free account's turn ended because the free model is overloaded (the
+  // free-model card); the detail is the turn's cause, or `first` for the
+  // chat's first message, which tries the free model again before the card.
+  "free_model_down_shown",
+  "free_model_down_upgrade",
+  "free_model_down_retry",
   // The offer to turn a long answer into a document (deliverable-offer.ts);
   // the detail is the button (doc or report) and the chat's skin.
   "deliverable_offer_shown",
@@ -218,14 +224,17 @@ export const FUNNEL_STEPS = [
   "site_deploy_cancel",
   "site_deploy_retry",
   "site_deploy_dismissed",
-  // A public link to a file the bot made (share.ts); share_failed's detail is
-  // the refusal.
+  // A public link to a file the bot made (share.ts); share_opened's detail is
+  // where it was opened (row, header or card), share_failed's the refusal.
+  // The "Send it to anyone" card under a reply: shown and Not now.
   "share_opened",
   "share_created",
   "share_copied",
   "share_link_opened",
   "share_unshared",
   "share_failed",
+  "share_card_shown",
+  "share_card_not_now",
   // A coding routine starter (coding-routines.ts): its row or section shown
   // (detail: where), a starter opened and a routine started (detail: which).
   "code_routine_shown",
@@ -245,6 +254,11 @@ export const FUNNEL_STEPS = [
   "github_watch_fix_done",
   "github_watch_upsell_shown",
   "github_watch_upsell_tapped",
+  // The "Retry with <top model>" card under a finished reply (top-model-retry.tsx),
+  // shown, tapped and closed; detail: the opus_retry arm.
+  "top_model_retry_shown",
+  "top_model_retry_tapped",
+  "top_model_retry_closed",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

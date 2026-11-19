@@ -1492,6 +1492,12 @@
     "stopped": "Link entfernt",
     "links": "Geteilte Links",
     "linksEmpty": "Noch nichts geteilt. Nutze Teilen bei einer Datei, die der Bot erstellt hat.",
+    "offer": {
+      "title": "An alle senden",
+      "body": "Hol dir einen Link, der auf jedem Handy und Computer funktioniert. Du siehst vorher genau, was andere sehen werden.",
+      "getLink": "Link erstellen",
+      "notNow": "Nicht jetzt"
+    },
     "errors": {
       "TOO_LARGE": "Diese Datei überschreitet das Limit von 5 MB für Links.",
       "TOO_MANY": "Du hast 50 geteilte Links. Beende einen, um einen neuen zu erstellen.",
@@ -1920,47 +1926,52 @@
       "recent": "Pick up where you left off in {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "App für Bestellungen und Buchungen",
-          "detail": "Für einen Laden, ein Fitnessstudio, einen Salon oder einen Dienstleister.",
+          "name": "Bestellungen und Buchungen",
+          "detail": "Für Läden, Studios und Dienste.",
           "prompt": "Ich habe ein kleines Unternehmen. Bau mir auf diesem Computer eine einfache App, mit der ich meine Bestellungen, Buchungen oder Aufträge im Blick behalte: eine Liste, die ich ergänzen, durchsuchen und filtern kann, eine eigene Seite für jeden Eintrag mit Kunde, Datum, Status und Preis sowie eine tägliche Zusammenfassung. Bau sofort eine erste Version mit Beispieldaten für einen typischen kleinen Laden und öffne sie für mich. Frag mich danach in einer kurzen Nachricht, was mein Unternehmen macht und was ich erfassen muss, damit du die App anpassen kannst."
         },
         "business-site": {
           "name": "Website für mein Unternehmen",
-          "detail": "Leistungen, Öffnungszeiten, Bewertungen und ein Kontaktformular.",
+          "detail": "Leistungen, Zeiten, Kontakt.",
           "prompt": "Bau mir eine Website für mein Unternehmen: einen Kopfbereich mit dem Namen des Unternehmens und dem, was es anbietet, einen Bereich mit Leistungen und Preisen, Öffnungszeiten, ein paar Kundenbewertungen, Infos dazu, wo man uns findet, und ein Kontaktformular. Verwende Platzhalter, die ich später austauschen kann, und sorg dafür, dass die Seite auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist, und frag mich dann in einer kurzen Nachricht nach dem Namen meines Unternehmens und danach, was es macht, damit du die Seite an mich anpassen kannst."
         },
         "lead-finder": {
           "name": "Kunden finden",
-          "detail": "Jeden Morgen neue Interessenten, samt Entwurf für die erste E-Mail."
+          "detail": "Leads und erste Mail, täglich."
         },
         "my-game": {
           "name": "An meinem Spiel arbeiten",
-          "detail": "Unity, Godot, Unreal oder Roblox, in deinem Projektordner.",
+          "detail": "Unity, Godot, Unreal oder Roblox.",
           "prompt": "Hilf mir mit meinem Spiel. Wenn kein Projektordner geöffnet ist, frag mich, wo das Projekt meines Spiels liegt. Sieh es dir dann an und sag mir, welche Engine und welche Version es verwendet, welche die wichtigsten Szenen und Skripte sind und was kaputt oder unfertig aussieht. Schlag mir die drei sinnvollsten nächsten Schritte vor und warte, bis ich einen ausgewählt habe, bevor du etwas änderst."
         },
         "morning-inbox": {
-          "name": "Jeden Morgen meine E-Mails beantworten",
-          "detail": "Ein Antwortentwurf für jede E-Mail, die dich braucht."
+          "name": "Morgens E-Mails beantworten",
+          "detail": "Antworten jeden Morgen bereit."
         },
         "portfolio-site": {
           "name": "Portfolio-Website",
-          "detail": "Eine einseitige Website für deine Arbeit.",
+          "detail": "Eine Seite für deine Arbeit.",
           "prompt": "Bau mir eine einseitige Portfolio-Website: oben mein Name mit einem Satz zur Vorstellung, ein Raster mit drei Beispielprojekten, ein Abschnitt über mich und ein Kontaktbereich. Nimm Platzhaltertexte und -bilder, die ich später austauschen kann, gestalte sie klar und modern und sorge dafür, dass sie auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist."
         },
         "numbers-dashboard": {
           "name": "Dashboard für meine Zahlen",
-          "detail": "Umsätze, Kosten und Trends aus deiner Tabelle.",
+          "detail": "Umsatz, Kosten und Trends.",
           "prompt": "Bau mir ein Dashboard für meine Geschäftszahlen: Summen für diesen Monat, ein Diagramm nach Monaten, die wichtigsten Produkte oder Kunden und alles, was auffällig ist. Fang sofort mit realistischen Beispiel-Verkaufsdaten an, damit es funktioniert, und zeig es mir. Frag mich dann nach meiner Tabelle oder CSV-Datei und stell das Dashboard auf meine echten Zahlen um."
         },
         "shop-page": {
           "name": "Shopseite für mein Geschäft",
-          "detail": "Produkte, Preise und ein Warenkorb.",
+          "detail": "Produkte, Preise, Warenkorb.",
           "prompt": "Bau eine einseitige Shopseite für mein kleines Geschäft: oben der Name des Shops, sechs Beispielprodukte mit Fotos, Namen, Preisen und einem Button „In den Warenkorb“, ein einfacher Warenkorb und ein Kontaktbereich. Nimm Platzhalterprodukte, die ich später austauschen kann, und sorge dafür, dass sie auf dem Handy gut aussieht. Zeig mir die Seite, wenn sie fertig ist."
         },
         "simple-game": {
-          "name": "Ein einfaches Spiel",
-          "detail": "Direkt im Browser spielbar.",
-          "prompt": "Bau ein einfaches Spiel, das ich sofort im Browser spielen kann: ein Snake-Spiel mit Pfeiltasten- und Wischsteuerung, Punktestand, Bestwert und einem Neustart-Button. Alles auf einer Seite, und zeig es mir, wenn es fertig ist."
+          "name": "Ein Spiel zum Spielen",
+          "detail": "In etwa einer Minute spielbar.",
+          "prompt": "Bau mir ein unterhaltsames Spiel, das ich in etwa einer Minute im Browser spielen kann: ein Arcade-Spiel, in dem ich herabfallenden Objekten ausweiche, mit Startbildschirm, Pfeiltasten- und Touch-Steuerung, Punktestand und Bestwert, Game-over-Bildschirm und Neustart-Button. Halte es auf einer Seite, die ins Fenster passt, prüfe, dass jede Steuerung funktioniert, und zeig es mir, wenn es fertig ist. Frag mich dann in einer kurzen Nachricht, was für ein Spiel ich möchte, damit du daraus meins machst."
+        },
+        "my-project": {
+          "name": "Meine App oder Website",
+          "detail": "App oder Website auf diesem PC.",
+          "prompt": "Hilf mir mit meinem App- oder Website-Projekt. Wenn kein Projektordner geöffnet ist, frag mich, wo mein Projekt liegt. Sieh es dir dann an und sag mir, womit es gebaut ist, wie man es startet, welche Hauptteile es hat und was kaputt oder unfertig aussieht. Schlag die drei nützlichsten nächsten Schritte vor und warte, bis ich einen auswähle, bevor du etwas änderst."
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "Messaging",
       "mcp": "MCP servers",
       "skills": "Skills",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "This page arrives in a coming update.",
     "connectorDescription": "Connection details arrive in a coming update."
@@ -3150,7 +3162,10 @@
         "browser": "Arbeite im Browser",
         "subtask": "Arbeite an einer Teilaufgabe"
       },
-      "longTool": "{{activity}} · {{minutes}} Min."
+      "longTool": "{{activity}} · {{minutes}} Min.",
+      "waitingForInternet": "Warten auf dein Internet",
+      "waitingForAbacus": "Warten auf AbacusAI",
+      "messageSafe": "Deine Nachricht ist sicher. Der Bot macht von selbst weiter, sobald die Verbindung wieder da ist."
     },
     "code": {
       "copied": "Copied",
@@ -3223,7 +3238,8 @@
       "includedIn": "In {{plan}} enthalten",
       "includedInPaid": "In bezahlten Tarifen enthalten",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "Jetzt tippen. Wird gesendet, sobald du wieder online bist"
     },
     "day": {
       "today": "Today",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} Credits",
       "creditsLeft_one": "{{credits}} Credit · {{left}} übrig",
       "creditsLeft_other": "{{credits}} Credits · {{left}} übrig",
-      "creditsAction": "{{credits}}. Tarif und Credits ansehen"
+      "creditsAction": "{{credits}}. Tarif und Credits ansehen",
+      "waitedInternet": "{{duration}} davon wurde auf dein Internet gewartet",
+      "waitedAbacus": "{{duration}} davon wurde auf AbacusAI gewartet"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "Skipped",
       "askBot": "{{bot}} gefragt: {{what}}",
       "giveTask": "Aufgabe an {{bot}} übergeben: {{what}}",
-      "memoryUpdated": "Speicher aktualisiert: {{name}}"
+      "memoryUpdated": "Speicher aktualisiert: {{name}}",
+      "quiet": "Seit {{time}} keine Ausgabe",
+      "progress": "Fortschritt"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3607,9 +3627,15 @@
       "open": "Öffnen"
     },
     "suggestedTasks": {
-      "label": "Tippe auf eine Aufgabe, um sie zu starten",
+      "pickOne": "Wähle eins, um weiterzumachen",
+      "next": "Als Nächstes",
+      "routineLine": "Läuft nach Zeitplan, solange die App geöffnet ist",
+      "copied": "Kopiert",
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
-      "copyFailed": "Kopieren fehlgeschlagen"
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "formTitle": "Mach es zu deinem",
+      "formLine": "Ein, zwei Zeilen reichen: Ich ersetze den Beispieltext.",
+      "notNow": "Nicht jetzt"
     },
     "retryOffer": {
       "title": "Versuch es noch einmal mit {{model}}",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "Diese Aufgabe ist für das günstige Modell schwer. {{model}}, eines der stärksten Modelle überhaupt, steht dir hier offen. Es verbraucht deine Credits schneller.",
       "continue": "In einem neuen Chat weitermachen",
       "paidBody": "Ein neuer Chat setzt mit einer Zusammenfassung dieses Chats auf einem Top-Modell fort. Er verbraucht Credits schneller."
+    },
+    "topModelRetry": {
+      "retry": "Mit {{model}} wiederholen",
+      "upgradeRetry": "Upgraden, um es mit {{model}} und anderen Top-Modellen erneut zu versuchen",
+      "dismiss": "Schließen",
+      "opusBody": "Unser stärkstes Modell übernimmt das in einem neuen Chat, genau dort, wo du aufgehört hast. Es verbraucht Credits schneller.",
+      "dialogBody": "Unser stärkstes Modell für schwierige Aufgaben, enthalten in {{plan}}."
     },
     "topModelCard": {
       "title": "Mit {{plan}} weiter mit {{model}}",
@@ -3718,6 +3751,12 @@
       "newChat": "In einem neuen Chat mit {{model}} weitermachen",
       "here": "Diesen Chat trotzdem auf {{model}} umstellen",
       "cancel": "Abbrechen"
+    },
+    "tasks": {
+      "title": "Läuft",
+      "stop": "Stoppen",
+      "serving": "Stellt {{url}} bereit",
+      "stopFailed": "Konnte nicht gestoppt werden. Versuch es noch einmal."
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "Schließe den Kauf in deinem Browser ab",
     "planLine": "{{plan}}-Plan · jederzeit kündbar",
     "planTitle": "Alles, was {{plan}} dir bietet",
+    "planModelTitle": "Mit {{plan}} noch einmal auf {{model}} ausführen",
     "startAt": "Ab",
     "waitingBody": "Deine Nachricht wird gesendet, sobald dein Plan aktiv ist.",
     "waitingBodyNoMessage": "Das schließt sich, sobald dein Plan aktiv ist.",
@@ -5320,6 +5360,23 @@
     "continuing": "Alles nach einem Tool-Ergebnis ist dieselbe Antwort, die weitergeht. Keine zweite Begrüßung, keine Wiederholung der Mission.",
     "write": "Schreib auf {{language}}, der Sprache des Nutzers, es sei denn, er schreibt dir in einer anderen."
   },
+  "quitGuard": {
+    "title_one": "Ihre Aufgabe läuft noch",
+    "title_other": "{{count}} Aufgaben laufen noch",
+    "body_one": "Wenn Sie jetzt beenden, wird sie gestoppt und alles Unfertige geht verloren.",
+    "body_other": "Wenn Sie jetzt beenden, werden sie gestoppt und alles Unfertige geht verloren.",
+    "wait_one": "Warten, bis sie fertig ist",
+    "wait_other": "Warten, bis sie fertig sind",
+    "quitAnyway": "Trotzdem beenden",
+    "cancel": "Abbrechen",
+    "unnamed": "Chat ohne Titel",
+    "more_one": "und {{count}} weitere",
+    "more_other": "und {{count}} weitere",
+    "waitingOne": "Die App wird beendet, sobald „{{name}}“ fertig ist.",
+    "waitingMany_one": "Die App wird beendet, sobald {{count}} Aufgaben fertig sind.",
+    "waitingMany_other": "Die App wird beendet, sobald {{count}} Aufgaben fertig sind.",
+    "dontQuit": "Nicht beenden"
+  },
   "native": {
     "aboutApp": "Über {{app}}",
     "services": "Dienste",
@@ -5349,11 +5406,13 @@
     "zoom": "Zoomen",
     "front": "Alles nach vorne bringen",
     "credits": "Open Source unter der MIT-Lizenz",
-    "keepRunning": "Im Hintergrund weiterlaufen lassen",
-    "quitAnyway": "Trotzdem beenden",
-    "taskRunningTitle": "Eine Aufgabe wird ausgeführt",
-    "taskRunningMessage": "Eine Aufgabe läuft noch.",
-    "taskRunningDetail": "Lassen Sie es im Hintergrund laufen oder beenden Sie es und stoppen Sie es?",
+    "quitGuardTitleOne": "Ihre Aufgabe läuft noch",
+    "quitGuardTitleMany": "Es laufen noch Aufgaben",
+    "quitGuardDetail": "Wenn Sie jetzt beenden, geht alles Unfertige verloren. Wenn Sie warten, beendet sich die App von selbst, sobald alles fertig ist.",
+    "quitGuardWait": "Warten, bis sie fertig ist",
+    "quitGuardQuitAnyway": "Trotzdem beenden",
+    "quitGuardCancel": "Abbrechen",
+    "quitGuardUnnamed": "Chat ohne Titel",
     "restart": "Neu starten",
     "quit": "Beenden",
     "wait": "Warten",
@@ -5541,6 +5600,16 @@
     "line": "Stell es mit {{plan}} fertig: {{model}} für die schwierigen Teile, Credits für ein Projekt dieser Größe und ein öffentlicher Link, wenn es fertig ist.",
     "lineNoModel": "Stell es mit {{plan}} fertig: Top-Modelle für die schwierigen Teile, Credits für ein Projekt dieser Größe und ein öffentlicher Link, wenn es fertig ist."
   },
+  "freeModelDown": {
+    "title": "Das kostenlose Modell ist gerade überlastet",
+    "line": "Mach das mit {{plan}} auf einem Top-Modell (Claude, GPT, Gemini) fertig:",
+    "upgrade": "Upgraden und fertigstellen",
+    "retry": "Kostenlos erneut versuchen",
+    "retrying": "Neuer Versuch in {{seconds}} s…",
+    "firstRetrying": "Ich versuche es in {{seconds}} s noch einmal für dich…",
+    "tryNow": "Jetzt versuchen",
+    "history": "Das kostenlose Modell war überlastet"
+  },
   "keepRunning": {
     "title": "„{{name}}“ rund um die Uhr laufen lassen",
     "titleUnnamed": "Rund um die Uhr laufen lassen",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "Melde mich, wenn PRs hier ein Review bekommen oder CI fehlschlägt"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Du bist offline.",
+      "offlineBody": "Deine Internetverbindung ist abgebrochen, nicht die App. Alles läuft von selbst weiter, sobald sie wieder da ist.",
+      "abacusTitle": "AbacusAI antwortet gerade nicht.",
+      "abacusBody": "Dein Internet ist in Ordnung; wir kümmern uns darum.",
+      "checkingIn": "Erneuter Versuch in {{seconds}} s",
+      "backTitle": "Wieder online.",
+      "backSending_one": "Deine wartende Nachricht wird jetzt gesendet.",
+      "backSending_other": "Deine {{count}} wartenden Nachrichten werden jetzt gesendet."
+    },
+    "lanePaused": "pausiert · offline",
+    "laneOfflineNote": "Pausiert, während dieser Computer offline ist. Die Verbindung ist in Ordnung; es läuft von selbst weiter, sobald das Internet wieder da ist.",
+    "queued": {
+      "title": "Wird gesendet, wenn du wieder online bist",
+      "line": "\"{{text}}\" an {{to}} in {{app}}. Wird von selbst gesendet, sobald dein Internet wieder da ist, nur einmal.",
+      "cancel": "Diese Nachricht abbrechen",
+      "unsureTitle": "Wurde vielleicht nicht gesendet",
+      "unsureLine": "\"{{text}}\" an {{to}} in {{app}}. Dein Internet ist beim Senden abgebrochen. Prüfe daher den Chat, bevor du sie erneut sendest.",
+      "dismiss": "Ausblenden"
     }
   }
 }

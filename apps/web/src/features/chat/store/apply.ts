@@ -1,6 +1,7 @@
 import {
   contextTokensOf,
   creditsOf,
+  networkWaitOf,
   freeLaneOf,
 } from "@abacus-ai/contract/contract/ai-thread";
 /**
@@ -48,6 +49,7 @@ const SESSION_CUSTOM: ReadonlySet<string> = new Set([
   "queue.command_rejected",
   "abacus.notice",
   "skills.loaded",
+  "background.tasks",
   "mcp.servers",
   "mcp.server_logs",
 ]);
@@ -94,6 +96,9 @@ const subagentOf = (event: StreamChunk): string | undefined => {
   const id = (event as { subagentRunId?: unknown }).subagentRunId;
   return typeof id === "string" ? id : undefined;
 };
+
+/** Retries this close are one wait (the agent's longest backoff is 30s). */
+const NETWORK_WAIT_GAP_MS = 60_000;
 
 const clearsRetry = (event: StreamChunk): boolean =>
   event.type.startsWith("TEXT_MESSAGE") ||
@@ -273,6 +278,13 @@ const applySessionCustom = (
           ? (value.skills as ThreadStoreState["skills"])
           : [],
       };
+    case "background.tasks":
+      return {
+        ...state,
+        backgroundTasks: Array.isArray(value.tasks)
+          ? (value.tasks as ThreadStoreState["backgroundTasks"])
+          : [],
+      };
     default:
       return state;
   }
@@ -292,6 +304,7 @@ const applyRunCustom = (
         tools: {
           ...state.tools,
           output: { ...state.tools.output, [key]: String(value.output ?? "") },
+          outputAt: { ...state.tools.outputAt, [key]: Date.now() },
         },
       };
     }
@@ -309,20 +322,30 @@ const applyRunCustom = (
         },
       };
     }
-    case "agent.retry":
+    case "agent.retry": {
+      const at = eventTime(event, Date.now());
+      const waiting = value.waitingForConnection === true;
+      const previous = state.activity.networkWait;
       return {
         ...state,
         activity: {
           ...state.activity,
+          // A provider's own quick retry in between keeps the wait's clock.
+          networkWait: !waiting
+            ? previous
+            : previous != null && at - previous.lastAt <= NETWORK_WAIT_GAP_MS
+              ? { since: previous.since, lastAt: at }
+              : { since: at, lastAt: at },
           retry: {
             attempt: Number(value.attempt ?? 0),
             maxAttempts: Number(value.maxAttempts ?? 0),
             delayMs: Number(value.delayMs ?? 0),
             isNetworkError: value.isNetworkError === true,
-            waitingForConnection: value.waitingForConnection === true,
+            waitingForConnection: waiting,
           },
         },
       };
+    }
     default:
       return state;
   }
@@ -410,8 +433,8 @@ export const applyEvent = (
             serverInitiated: meta?.abacus?.serverInitiated === true,
           },
         },
-        tools: { output: {}, display: {} },
-        activity: { ...next.activity, retry: null },
+        tools: { output: {}, outputAt: {}, display: {} },
+        activity: { ...next.activity, retry: null, networkWait: null },
       };
     }
     case "TEXT_MESSAGE_START":
@@ -499,6 +522,7 @@ export const recordTerminal = (
   const freeLane = freeLaneOf(typed.metadata);
   const credits = creditsOf(typed.metadata);
   const contextTokens = contextTokensOf(typed.metadata);
+  const waits = networkWaitOf(typed.metadata);
   const kind: RunOutcomeRecord["kind"] =
     event.type === "RUN_ERROR"
       ? "error"
@@ -519,6 +543,7 @@ export const recordTerminal = (
     ...(freeLane != null ? { freeLane } : {}),
     ...(kind === "success" && credits != null ? { credits } : {}),
     ...(contextTokens != null ? { contextTokens } : {}),
+    ...waits,
     ...(kind === "error"
       ? {
           error: {
@@ -532,6 +557,6 @@ export const recordTerminal = (
   return {
     ...state,
     runs: { active: null, outcomes: [...state.runs.outcomes, record] },
-    activity: { ...state.activity, retry: null },
+    activity: { ...state.activity, retry: null, networkWait: null },
   };
 };

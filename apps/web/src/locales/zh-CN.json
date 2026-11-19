@@ -1492,6 +1492,12 @@
     "stopped": "链接已移除",
     "links": "已分享的链接",
     "linksEmpty": "还没有分享任何内容。在机器人生成的文件上使用“分享”。",
+    "offer": {
+      "title": "发给任何人",
+      "body": "获取一个在任何手机或电脑上都能打开的链接。发布前，你能看到对方看到的完全一样的内容。",
+      "getLink": "获取链接",
+      "notNow": "以后再说"
+    },
     "errors": {
       "TOO_LARGE": "此文件超过了链接的 5 MB 限制。",
       "TOO_MANY": "你已有 50 个分享链接。停止分享其中一个才能再创建。",
@@ -1921,26 +1927,26 @@
       "build": {
         "orders-system": {
           "name": "订单和预约应用",
-          "detail": "适合商店、健身房、美容美发店或服务类生意。",
+          "detail": "适合商店、健身房、沙龙。",
           "prompt": "我在做小生意。请在这台电脑上帮我做一个简单的应用，用来管理我的订单、预约或服务工单：要有一个可以添加、搜索和筛选的列表，每一条都有单独的页面，显示客户、日期、状态和价格，还要有每日汇总。请马上用一家典型小店的示例数据做出第一版，并帮我打开。然后用一条简短的消息问我做的是什么生意、需要记录哪些内容，好让你按我的情况调整。"
         },
         "business-site": {
           "name": "我的生意网站",
-          "detail": "服务项目、营业时间、客户评价和联系表单。",
+          "detail": "服务、营业时间、联系方式。",
           "prompt": "请帮我的生意做一个网站：顶部写上店名和主营内容，有一个带价格的服务板块，还要有营业时间、几条客户评价、店铺位置和联系表单。先用示例信息占位，之后我再替换，并确保在手机上显示正常。做好后给我看看页面，然后用一条简短的消息问我店名和做的是什么生意，好让你按我的情况调整。"
         },
         "lead-finder": {
           "name": "寻找客户",
-          "detail": "每天早上提供新的潜在客户，并起草好第一封邮件。"
+          "detail": "每天新客户，附首封邮件草稿。"
         },
         "my-game": {
           "name": "开发我的游戏",
-          "detail": "Unity、Godot、Unreal 或 Roblox，直接在你的项目文件夹里。",
+          "detail": "Unity、Godot、Unreal 或 Roblox。",
           "prompt": "请帮我做我的游戏。如果还没有打开项目文件夹，先问我游戏项目在哪里。然后看一遍项目，告诉我它用的是哪个引擎和版本、主要的场景和脚本，以及看起来有问题或没做完的地方。给我建议三个最有用的下一步，等我选好一个再动手修改。"
         },
         "morning-inbox": {
           "name": "每天早上回复我的邮件",
-          "detail": "为每封需要你处理的邮件起草回复。"
+          "detail": "每天早上起草回复。"
         },
         "portfolio-site": {
           "name": "作品集网站",
@@ -1949,7 +1955,7 @@
         },
         "numbers-dashboard": {
           "name": "我的数据看板",
-          "detail": "根据你的电子表格查看销售额、成本和趋势。",
+          "detail": "销售、成本和趋势。",
           "prompt": "请帮我做一个业务数据看板：显示本月合计、按月的图表、排名靠前的产品或客户，以及任何异常情况。请马上用逼真的示例销售数据做出能用的版本，并给我看看。然后向我要电子表格或 CSV 文件，把看板换成我的真实数据。"
         },
         "shop-page": {
@@ -1958,9 +1964,14 @@
           "prompt": "为我的小生意做一个单页商店：页头放店名，六件示例商品，每件有照片、名称、价格和“加入购物车”按钮，再加一个简单的购物车和一个联系方式板块。使用之后可以替换的占位商品，并确保在手机上显示正常。做好后把页面展示给我。"
         },
         "simple-game": {
-          "name": "一个简单的游戏",
-          "detail": "在浏览器中就能玩。",
-          "prompt": "做一个我马上就能在浏览器里玩的简单游戏：贪吃蛇，支持方向键和滑动操作，有分数、最高分和重新开始按钮。只用一个页面，做好后展示给我。"
+          "name": "能玩的小游戏",
+          "detail": "大约一分钟就能玩。",
+          "prompt": "帮我做一个大约一分钟就能在浏览器里玩的有趣小游戏：一个躲避掉落物体的街机游戏，要有开始界面、方向键和触屏操作、分数和最高分、游戏结束界面和重新开始按钮。做成适合窗口大小的单个页面，确认每个操作都能用，做好后给我看。然后用一条简短消息问我想要什么样的游戏，把它改成我的游戏。"
+        },
+        "my-project": {
+          "name": "处理我的应用或网站",
+          "detail": "这台电脑上的应用或网站。",
+          "prompt": "帮我处理我的应用或网站项目。如果还没有打开项目文件夹，先问我项目在哪里。然后浏览一遍，告诉我它用什么做的、怎么运行、主要组成部分，以及任何看起来有问题或没完成的地方。提出三个最有用的下一步，等我选好一个再做任何修改。"
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "消息",
       "mcp": "MCP 服务器",
       "skills": "技能",
-      "tools": "工具"
+      "tools": "工具",
+      "templates": "Templates"
     },
     "emptyDescription": "此页面将在后续更新中推出。",
     "connectorDescription": "连接详情将在后续更新中推出。"
@@ -3150,7 +3162,10 @@
         "browser": "正在浏览器中操作",
         "subtask": "正在处理子任务"
       },
-      "longTool": "{{activity}} · {{minutes}} 分钟"
+      "longTool": "{{activity}} · {{minutes}} 分钟",
+      "waitingForInternet": "正在等待你的网络",
+      "waitingForAbacus": "正在等待 AbacusAI",
+      "messageSafe": "你的消息已保存。连接恢复后，机器人会自动继续。"
     },
     "code": {
       "copied": "已复制",
@@ -3223,7 +3238,8 @@
       "includedIn": "包含在 {{plan}} 中",
       "includedInPaid": "包含在付费套餐中",
       "commands": "命令",
-      "commandFailed": "操作没有成功，请重试。"
+      "commandFailed": "操作没有成功，请重试。",
+      "offline": "现在可以输入。你重新上线后会立即发送"
     },
     "day": {
       "today": "今天",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} 积分",
       "creditsLeft_one": "{{credits}} 积分 · 剩余 {{left}}",
       "creditsLeft_other": "{{credits}} 积分 · 剩余 {{left}}",
-      "creditsAction": "{{credits}}。查看你的套餐和积分"
+      "creditsAction": "{{credits}}。查看你的套餐和积分",
+      "waitedInternet": "其中 {{duration}} 在等待你的网络",
+      "waitedAbacus": "其中 {{duration}} 在等待 AbacusAI"
     },
     "subagent": {
       "done_one": "已完成，{{count}} 步，{{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "已跳过",
       "askBot": "询问了 {{bot}}：{{what}}",
       "giveTask": "把任务交给了 {{bot}}：{{what}}",
-      "memoryUpdated": "记忆已更新：{{name}}"
+      "memoryUpdated": "记忆已更新：{{name}}",
+      "quiet": "已 {{time}} 无输出",
+      "progress": "进度"
     },
     "transcript": {
       "jump": "跳到末尾",
@@ -3607,9 +3627,15 @@
       "open": "打开"
     },
     "suggestedTasks": {
-      "label": "点击任务即可运行",
+      "pickOne": "选一个继续",
+      "next": "下一步",
+      "routineLine": "应用打开时按计划运行",
+      "copied": "已复制",
       "copy": "复制“{{text}}”，然后从手机发送",
-      "copyFailed": "无法复制"
+      "copyFailed": "无法复制",
+      "formTitle": "换成你的内容",
+      "formLine": "写一两行就够了：我来替换示例文字。",
+      "notNow": "暂不"
     },
     "retryOffer": {
       "title": "用 {{model}} 再试一次",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "这个任务对低成本模型来说很难。{{model}} 是目前最强的模型之一，在这里可以直接使用。它消耗点数更快。",
       "continue": "在新对话中继续",
       "paidBody": "新对话会基于本对话的摘要，由顶级模型继续。消耗点数更快。"
+    },
+    "topModelRetry": {
+      "retry": "用 {{model}} 重试",
+      "upgradeRetry": "升级后用 {{model}} 等顶级模型重试",
+      "dismiss": "关闭",
+      "opusBody": "我们最强的模型会在新对话中接着处理，从你停下的地方继续。它消耗额度更快。",
+      "dialogBody": "我们处理难题最强的模型，包含在 {{plan}} 中。"
     },
     "topModelCard": {
       "title": "升级 {{plan}}，继续使用 {{model}}",
@@ -3718,6 +3751,12 @@
       "newChat": "在新对话中使用 {{model}} 继续",
       "here": "仍将此对话切换到 {{model}}",
       "cancel": "取消"
+    },
+    "tasks": {
+      "title": "运行中",
+      "stop": "停止",
+      "serving": "正在提供 {{url}}",
+      "stopFailed": "无法停止，请重试。"
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "请在浏览器中完成",
     "planLine": "{{plan}} 套餐 · 随时取消",
     "planTitle": "{{plan}} 为你提供的全部内容",
+    "planModelTitle": "使用 {{plan}}，在 {{model}} 上重新运行",
     "startAt": "起价",
     "waitingBody": "套餐一生效，你的消息就会发送。",
     "waitingBodyNoMessage": "套餐一生效，此窗口就会关闭。",
@@ -5320,6 +5360,23 @@
     "continuing": "工具结果之后的所有内容都是同一条回复的延续。不要再次问候，也不要重述使命。",
     "write": "使用 {{language}}（用户的语言）书写，除非用户用其他语言给你写消息。"
   },
+  "quitGuard": {
+    "title_one": "你的任务仍在运行",
+    "title_other": "{{count}} 个任务仍在运行",
+    "body_one": "现在退出，任务会被停止，未完成的工作将丢失。",
+    "body_other": "现在退出，这些任务会被停止，未完成的工作将丢失。",
+    "wait_one": "等待完成",
+    "wait_other": "等待完成",
+    "quitAnyway": "仍然退出",
+    "cancel": "取消",
+    "unnamed": "未命名聊天",
+    "more_one": "还有 {{count}} 个",
+    "more_other": "还有 {{count}} 个",
+    "waitingOne": "“{{name}}”完成后应用将退出。",
+    "waitingMany_one": "{{count}} 个任务完成后应用将退出。",
+    "waitingMany_other": "{{count}} 个任务完成后应用将退出。",
+    "dontQuit": "不退出"
+  },
   "native": {
     "aboutApp": "关于 {{app}}",
     "services": "服务",
@@ -5349,11 +5406,13 @@
     "zoom": "缩放",
     "front": "全部置于顶层",
     "credits": "基于 MIT 许可证开源",
-    "keepRunning": "继续在后台运行",
-    "quitAnyway": "仍然退出",
-    "taskRunningTitle": "有任务正在运行",
-    "taskRunningMessage": "有任务仍在运行。",
-    "taskRunningDetail": "让它继续在后台运行，还是退出并停止任务？",
+    "quitGuardTitleOne": "你的任务仍在运行",
+    "quitGuardTitleMany": "仍有任务在运行",
+    "quitGuardDetail": "现在退出，未完成的工作将丢失。选择等待，工作完成后应用会自动退出。",
+    "quitGuardWait": "等待完成",
+    "quitGuardQuitAnyway": "仍然退出",
+    "quitGuardCancel": "取消",
+    "quitGuardUnnamed": "未命名聊天",
     "restart": "重启",
     "quit": "退出",
     "wait": "等待",
@@ -5541,6 +5600,16 @@
     "line": "用 {{plan}} 完成它：难点交给 {{model}}，积分够这种规模的项目用，完成后还有公开链接。",
     "lineNoModel": "用 {{plan}} 完成它：难点交给顶级模型，积分够这种规模的项目用，完成后还有公开链接。"
   },
+  "freeModelDown": {
+    "title": "免费模型当前负载过高",
+    "line": "升级到 {{plan}}，用顶级模型（Claude、GPT、Gemini）完成这项任务：",
+    "upgrade": "升级并完成",
+    "retry": "免费重试",
+    "retrying": "{{seconds}} 秒后重试…",
+    "firstRetrying": "{{seconds}} 秒后为你重试…",
+    "tryNow": "立即重试",
+    "history": "免费模型当时负载过高"
+  },
   "keepRunning": {
     "title": "让“{{name}}”全天候运行",
     "titleUnnamed": "让它全天候运行",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "这里的 PR 收到审查或 CI 失败时提醒我"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "你已离线。",
+      "offlineBody": "是你的网络连接断开了，不是应用出问题。网络恢复后，一切会自动继续。",
+      "abacusTitle": "AbacusAI 现在没有响应。",
+      "abacusBody": "你的网络正常；我们正在处理。",
+      "checkingIn": "{{seconds}} 秒后再检查",
+      "backTitle": "已恢复在线。",
+      "backSending_one": "正在发送你等待中的消息。",
+      "backSending_other": "正在发送你 {{count}} 条等待中的消息。"
+    },
+    "lanePaused": "已暂停 · 离线",
+    "laneOfflineNote": "此电脑离线时已暂停。链接没问题；网络恢复后会自动继续。",
+    "queued": {
+      "title": "你重新上线后发送",
+      "line": "“{{text}}”发送给 {{to}}，通过 {{app}}。你的网络一恢复，它就会自动发送，且只发送一次。",
+      "cancel": "取消这条消息",
+      "unsureTitle": "可能未发送成功",
+      "unsureLine": "“{{text}}”发送给 {{to}}，通过 {{app}}。发送时你的网络断开了，请先检查聊天，再决定是否重发。",
+      "dismiss": "关闭"
     }
   }
 }

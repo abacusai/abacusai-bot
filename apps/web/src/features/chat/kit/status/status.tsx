@@ -3,6 +3,7 @@
  * bubble, run outcome markers, the error card with its action table (and
  * the upgrade variant), and notices.
  */
+import { progressOf } from "@abacus-ai/agent/terminal-progress";
 import { toolActivity } from "@abacus-ai/agent/tool-display";
 import {
   type BillingPlan,
@@ -17,14 +18,17 @@ import {
 } from "@abacus-ai/contract/credit-thresholds";
 import { OPENLLM_ID } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
+import type { ConnectivitySnapshot } from "@abacus-ai/contract/status";
 import type { UIMessage } from "@tanstack/ai-client";
 import { Store, useStore } from "@tanstack/react-store";
 import {
   AlertTriangle,
   CheckCircle2,
+  CloudOff,
   Loader2,
   CircleStop,
   Info,
+  WifiOff,
   X,
   XCircle,
 } from "lucide-react";
@@ -94,15 +98,17 @@ import {
 } from "#renderer/ui/hover-card";
 import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
-import type {
-  Notice,
-  RunOutcomeRecord,
-  ThreadStoreState,
+import {
+  type Notice,
+  type RunOutcomeRecord,
+  type ThreadStoreState,
+  toolKey,
 } from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
+import { FreeModelDown, freeModelDown } from "../free-model-down";
 import { openModelPicker } from "../open-model-picker";
-import { toolTitle } from "../tools/tool-line";
+import { ProgressMeter, QUIET_AFTER_MS, toolTitle } from "../tools/tool-line";
 import {
   creditsExpired,
   useCreditWallTask,
@@ -155,7 +161,13 @@ const OUTCOME_CAUSES = new Set([
   "unknown",
 ]);
 
-type RunningCall = { id: string; name: string; title: string };
+/** `labelled`: the agent named what it does, so its title is already plain words. */
+type RunningCall = {
+  id: string;
+  name: string;
+  title: string;
+  labelled: boolean;
+};
 
 /** The tool calls of the active run still waiting on a result. */
 const runningCalls = (messages: readonly UIMessage[]): RunningCall[] => {
@@ -172,15 +184,15 @@ const runningCalls = (messages: readonly UIMessage[]): RunningCall[] => {
       part.type === "tool-call" &&
       !results.has(part.id) &&
       part.output == null
-    )
+    ) {
+      const input = (part.input as Record<string, unknown> | undefined) ?? {};
       calls.push({
         id: part.id,
         name: part.name,
-        title: toolTitle(
-          part.name,
-          (part.input as Record<string, unknown> | undefined) ?? {}
-        ),
+        title: toolTitle(part.name, input),
+        labelled: typeof input.label === "string" && input.label.trim() !== "",
       });
+    }
   return calls;
 };
 
@@ -232,12 +244,34 @@ export const longToolLabel = (
   const call = calls[0]!;
   const seenAt = callSeenAt.get(thread)?.get(call.id);
   if (seenAt == null || now - seenAt < LONG_TOOL_MS) return null;
-  const activity = toolActivity(call.name);
+  const activity = call.labelled ? null : toolActivity(call.name);
   return t("chat.busy.longTool", {
     activity:
       activity == null ? call.title : t(`chat.busy.activity.${activity}`),
     minutes: Math.floor((now - seenAt) / 60_000),
   });
+};
+
+/**
+ * How far the one running command says it has got, and since when it has
+ * been silent, for the busy line: the line the user sees while the group is
+ * collapsed. Null while several run or the one running is not a command.
+ */
+export const runningCommandProgress = (
+  state: ThreadStoreState,
+  thread: string,
+  messages: readonly UIMessage[]
+): { progress: number | null; quietSince: number } | null => {
+  const calls = runningCalls(messages);
+  if (calls.length !== 1 || calls[0]!.name !== "bash") return null;
+  const call = calls[0]!;
+  const seenAt = callSeenAt.get(thread)?.get(call.id);
+  if (seenAt == null) return null;
+  const key = toolKey(null, call.id);
+  return {
+    progress: progressOf(state.tools.output[key] ?? ""),
+    quietSince: Math.max(seenAt, state.tools.outputAt[key] ?? seenAt),
+  };
 };
 
 export const busyLabel = (
@@ -266,13 +300,75 @@ export const busyLabel = (
   return t("chat.busy.working");
 };
 
+/** m:ss, the way a wait's clock reads. */
+const formatClock = (ms: number): string => {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+};
+
+/**
+ * The turn waits for the network: whose it is (the user's internet, or
+ * AbacusAI while their internet works), for how long, and that nothing is lost.
+ */
+export const NetworkWaitPill = ({
+  since,
+  connectivity,
+}: {
+  since: number;
+  connectivity: ConnectivitySnapshot["state"];
+}) => {
+  const { t } = useTranslation();
+  const now = useSeconds(true);
+  const ours = connectivity === "degraded";
+  return (
+    <div
+      className="flex min-w-0 flex-col items-start gap-1.5"
+      data-slot="network-wait"
+      data-state={connectivity}
+    >
+      <span
+        className={cn(
+          "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
+          ours
+            ? "bg-muted/60 text-foreground"
+            : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
+        )}
+      >
+        {ours ? (
+          <CloudOff aria-hidden className="size-3.5 shrink-0" />
+        ) : (
+          <WifiOff aria-hidden className="size-3.5 shrink-0" />
+        )}
+        <span className="min-w-0 truncate">
+          {t(
+            ours
+              ? "chat.busy.waitingForAbacus"
+              : connectivity === "offline"
+                ? "chat.busy.waitingForInternet"
+                : "chat.busy.waitingForConnection"
+          )}
+        </span>
+        <span className="chat-mono font-normal tabular-nums">
+          · {formatClock(now - since)}
+        </span>
+      </span>
+      <span className="text-muted-foreground text-xs">
+        {t("chat.busy.messageSafe")}
+      </span>
+    </div>
+  );
+};
+
 export const BusyLine = ({
   label,
   startedAt,
+  command = null,
 }: {
   label: string;
   startedAt: number;
+  command?: ReturnType<typeof runningCommandProgress>;
 }) => {
+  const { t } = useTranslation();
   const now = useSeconds(true);
   return (
     <div
@@ -288,6 +384,16 @@ export const BusyLine = ({
         <span className="size-1.5 rounded-full bg-[var(--chat-status-running)]" />
       </span>
       <span className="shimmer min-w-0 truncate">{label}</span>
+      {command?.progress != null ? (
+        <ProgressMeter value={command.progress} />
+      ) : null}
+      {command != null && now - command.quietSince >= QUIET_AFTER_MS ? (
+        <span data-busy-quiet>
+          {t("chat.tool.quiet", {
+            time: formatElapsed(now - command.quietSince),
+          })}
+        </span>
+      ) : null}
       <span className="chat-mono font-normal">
         {formatElapsed(now - startedAt)}
       </span>
@@ -397,6 +503,39 @@ export const RunMarker = ({
   );
 };
 
+/** A wait in whole seconds under a minute, whole minutes past it. */
+const formatWait = (ms: number): string =>
+  ms < 60_000
+    ? `${Math.round(ms / 1000)}s`
+    : ms < 3_600_000
+      ? `${Math.floor(ms / 60_000)}m`
+      : `${Math.floor(ms / 3_600_000)}h ${Math.floor((ms % 3_600_000) / 60_000)}m`;
+
+/** A wait this long is worth naming: the slow reply was not the bot's. */
+const WAIT_WORTH_SAYING_MS = 30_000;
+
+/** "· 5m of it was waiting for your internet", when that took a real share. */
+const WaitedNote = ({ outcome }: { outcome: RunOutcomeRecord }) => {
+  const { t } = useTranslation();
+  const internet = outcome.networkWaitMs ?? 0;
+  const abacus = outcome.abacusWaitMs ?? 0;
+  if (Math.max(internet, abacus) < WAIT_WORTH_SAYING_MS) return null;
+  const ours = abacus > internet;
+  return (
+    <span
+      data-slot="run-network-wait"
+      className={
+        ours ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400"
+      }
+    >
+      {"· "}
+      {t(ours ? "chat.run.waitedAbacus" : "chat.run.waitedInternet", {
+        duration: formatWait(ours ? abacus : internet),
+      })}
+    </span>
+  );
+};
+
 const RunMarkerLine = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   const { t } = useTranslation();
   if (outcome.kind === "cancelled")
@@ -432,6 +571,7 @@ const RunMarkerLine = ({ outcome }: { outcome: RunOutcomeRecord }) => {
         <span className="size-1.5 rounded-full bg-[var(--chat-status-done)]" />
       </span>
       {label}
+      <WaitedNote outcome={outcome} />
     </div>
   );
   if (outcome.usage == null) return marker;
@@ -459,12 +599,15 @@ const RunMarkerLine = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   );
 };
 
-/** A busy free pool sells a plan to a free account only; a paying one switches. */
-const wantsUpgradeCard = (actions?: ErrorAction[], paying = false): boolean =>
+/**
+ * The credits card: the wall, or a free pool every source refused. A busy
+ * free model has its own card (FreeModelDown), and a paying plan switches.
+ */
+const wantsUpgradeCard = (actions?: ErrorAction[]): boolean =>
   actions?.some(
     (action) =>
       action.type === "upgrade-abacus" ||
-      (action.type === "free-pool-out" && !(paying && action.cause === "busy"))
+      (action.type === "free-pool-out" && action.cause !== "busy")
   ) === true;
 
 /** The picked model that cannot serve the turn, when that is why it ended. */
@@ -1113,7 +1256,7 @@ export const ErrorCard = ({
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
-  const upgrade = wantsUpgradeCard(actions, paying);
+  const upgrade = wantsUpgradeCard(actions);
   // A paid plan at the wall: its offer picks the card. Basic's (the next plan
   // alone) is the free plan's one line, its dialog carrying the pitch.
   const paidAtWall =
@@ -1295,6 +1438,24 @@ export const ErrorCard = ({
         />
       </div>
     );
+  // The free model is overloaded: a free account's honest card, once its plan
+  // is read (someone who paid must never read the free plan's words). Further
+  // up the chat it is history, one quiet line whatever the plan is now.
+  if (freeModelDown(actions) && (!latest || !paying)) {
+    if (latest && providedTier == null && !tierRead) return null;
+    if (!latest || tier === "free")
+      return (
+        <div
+          role="group"
+          aria-label={t("chat.error.label")}
+          className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
+          data-slot="error-card"
+          data-variant="free-model-down"
+        >
+          <FreeModelDown outcome={outcome} latest={latest} />
+        </div>
+      );
+  }
   if (upgrade) {
     const ready =
       slots.renderDeliverables == null

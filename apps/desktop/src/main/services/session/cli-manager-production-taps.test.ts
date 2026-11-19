@@ -159,6 +159,8 @@ for (const transport of ["fd", "inline"] as const) {
         ABACUSAI_BOT_MCP_CONFIG: path.join(home, "mcp.json"),
         PI_OFFLINE: "1",
         ABACUSAI_BOT_EXCLUDED_TOOLS: "browser_task",
+        // The template path, whose host catalog this tap scripts.
+        ABACUSAI_BOT_DOCS_SYSTEM: "0",
       });
       const compat: DesktopEvent[] = [];
       const productionTap = options.emitNdjson;

@@ -105,6 +105,8 @@ export const EMPTY_REPLY_FAILURE = "model returned an empty reply";
 export const stallFailure = (seconds: number): string =>
   `no reply in ${seconds}s`;
 
+const STALL_FAILURE = /^no reply in [\d.]+s$/;
+
 /** The turn's last call answered with no text and no tool call. */
 export function endedEmpty(messages: readonly unknown[]): boolean {
   const last = [...messages]
@@ -146,6 +148,7 @@ export function classifyAttempt(
   if (provider === "abacus" && isPlanRejection(raw)) return "not_in_plan";
 
   if (raw === EMPTY_REPLY_FAILURE) return "empty";
+  if (STALL_FAILURE.test(raw)) return "stalled";
 
   if (isStreamCut(raw, provider)) return "stream_cut";
 
@@ -287,6 +290,19 @@ export class TurnChain {
     return this.attempts.some((attempt) => attempt.cause != null);
   }
 
+  /**
+   * Whether a call on Abacus this turn failed busy (a rate limit, an
+   * overloaded or unreachable upstream: `503 no healthy upstream`) or went
+   * silent: the free model's own outage, whatever the turn went on to.
+   */
+  get abacusBusy(): boolean {
+    return this.attempts.some(
+      (attempt) =>
+        attempt.provider === "abacus" &&
+        (attempt.cause === "rate_limited" || attempt.cause === "stalled")
+    );
+  }
+
   /** Whether this turn met a full disk: its own write, or a tool's (extensions/disk-full.ts). */
   get diskFull(): boolean {
     return this.attempts.some((attempt) => attempt.cause === "disk_full");
@@ -332,6 +348,12 @@ export interface FailureContext {
   abacus: "credits" | "out" | null;
   /** The account is on a paying plan: its catalog lists the plan's router. */
   paying?: boolean;
+  /**
+   * A call on Abacus this turn failed busy or went silent (TurnChain
+   * abacusBusy, or the stall the turn ends on): with the free model, the
+   * turn is the free model's outage (freeModelOverloaded).
+   */
+  abacusBusy?: boolean;
   /**
    * The model the user picked, for a card about it (one outside the plan, or
    * off Abacus); `free` when it costs nothing on its provider.
@@ -662,6 +684,47 @@ const cutOffActions = (
   ];
 };
 
+/**
+ * What a turn can end on after the free model's outage that is still that
+ * outage: busy, silent, empty or unexplained, or the pool's fallback after
+ * it (the user's own key at its quota, a model that refused) failing too.
+ * A dropped connection, a refused key, a full disk or an Abacus refusal keep
+ * their own cards.
+ */
+const OVERLOAD_ENDINGS: ReadonlySet<FailureCause> = new Set([
+  "rate_limited",
+  "stalled",
+  "empty",
+  "unknown",
+  "own_key_quota",
+  "model_unavailable",
+]);
+
+/**
+ * A free account's turn that ended because the free model on Abacus is
+ * overloaded: on the pool, or on the free model picked by hand, with Abacus
+ * credits left. One outcome however it reached the turn's end (all busy, the
+ * picked model "down", or the pool's fallback onto the user's own key failing
+ * after it), so the user hears what happened, not the last call's error. The
+ * card offers the plan's top model to finish it, or the free model again. A
+ * paying plan, an account at the credit wall and a model the user chose off
+ * Abacus keep their own cards.
+ */
+export const freeModelOverloaded = (
+  failure: TurnFailure,
+  context: FailureContext
+): boolean =>
+  context.abacusBusy === true &&
+  context.paying !== true &&
+  context.abacus === "credits" &&
+  !context.onFreeLane &&
+  (context.routed || context.model?.free === true) &&
+  OVERLOAD_ENDINGS.has(failure.cause);
+
+/** The free model is overloaded, in the app's words; the card shows its own. */
+export const FREE_MODEL_OVERLOADED_MESSAGE =
+  "The free model is overloaded right now. Try it again in a minute, or upgrade to finish this on a top model.";
+
 /** The actions a cause offers; see NotificationAction for how each renders. */
 const failureActions = (
   failure: TurnFailure,
@@ -836,6 +899,14 @@ export function presentFailure(
   failure: TurnFailure,
   context: FailureContext
 ): FailurePayload {
+  // The free model's outage, however the turn ended on it: one card.
+  if (freeModelOverloaded(failure, context))
+    return {
+      message: FREE_MODEL_OVERLOADED_MESSAGE,
+      code: "turn_failed",
+      cause: failure.cause,
+      actions: [{ type: "free-pool-out", cause: "busy" }, { type: "retry" }],
+    };
   // On the free lane a failed turn comes back to the credit wall's card:
   // the way past a free model that cannot do it is the plan, not a wait.
   // A dropped connection or an outgrown chat keep their own way out.

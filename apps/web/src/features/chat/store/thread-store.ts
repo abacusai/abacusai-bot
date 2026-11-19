@@ -1,6 +1,7 @@
 import type { ToolDisplayData } from "@abacus-ai/contract/agent-types";
 import type {
   AgentStatus,
+  BackgroundTask,
   QueueEntry,
   SkillMetadata,
 } from "@abacus-ai/contract/agent-types";
@@ -22,6 +23,7 @@ import { Store } from "@tanstack/react-store";
 
 export type {
   AgentState,
+  BackgroundTask,
   PermissionDescriptor,
   QueueEntry,
   RunOutcomeRecord,
@@ -97,15 +99,24 @@ export interface ThreadStoreState {
   runs: { active: ActiveRun | null; outcomes: RunOutcomeRecord[] };
   tools: {
     output: Record<ToolKey, string>;
+    /** When each tool's output last changed, for "no output for 2 min". */
+    outputAt: Record<ToolKey, number>;
     display: Record<ToolKey, ToolDisplayData>;
   };
   activity: {
     status: AgentStatus | null;
     runningTools: number;
     retry: RetryInfo | null;
+    /**
+     * The run's current wait for the network: since when, and its latest
+     * retry. Kept across the retries in between, so its clock runs on.
+     */
+    networkWait?: { since: number; lastAt: number } | null;
   };
   notices: Notice[];
   skills: SkillMetadata[];
+  /** What still runs past its turn: background jobs and served pages. */
+  backgroundTasks: BackgroundTask[];
   /** Messages whose first chunk arrived live (not hydrated, not replayed). */
   fresh: Record<string, true>;
 }
@@ -119,10 +130,11 @@ export const emptyThreadState = (cursor = 0): ThreadStoreState => ({
   queue: [],
   queueCommands: {},
   runs: { active: null, outcomes: [] },
-  tools: { output: {}, display: {} },
+  tools: { output: {}, outputAt: {}, display: {} },
   activity: { status: null, runningTools: 0, retry: null },
   notices: [],
   skills: [],
+  backgroundTasks: [],
   fresh: {},
 });
 
@@ -172,6 +184,8 @@ export const stateFromSnapshot = (
     },
     notices: [...notices.values()],
     skills: snapshot.skills,
+    // Optional: a renderer bundle can update ahead of the main that serves it.
+    backgroundTasks: snapshot.backgroundTasks ?? [],
   };
 };
 

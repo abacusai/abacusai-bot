@@ -91,6 +91,13 @@ const statusOf = (
         return { state: "connected" };
       if (connector.platform === "whatsapp" && inputs.botNumber === true)
         return { state: "connected", botNumber: true };
+      // Linked and down only for want of the internet: nothing to connect.
+      if (
+        inputs.messaging?.platforms.find(
+          (entry) => entry.id === connector.platform
+        )?.pausedOffline === true
+      )
+        return { state: "pending", reason: "offline" };
       // Enabled and configured but not live: a broken link, or a shared-bot
       // lane still to be linked. Attached, in other words, but not usable.
       return isMessagingPlatformInstalled(inputs.messaging, connector.platform)

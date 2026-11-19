@@ -3,10 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <title>Sakura Chroma — Slide Template</title>
+  <link rel="stylesheet" href="fonts.css">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Albert+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet" />
 <style>
   :root {
     --paper:    #F1E6CB;   /* warm cream paper canvas */
@@ -94,7 +92,7 @@
     right: clamp(24px, 2.2vw, 44px);
     bottom: clamp(20px, 2.2vh, 36px);
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(11px, 0.82vw, 13px);
+    font-size: clamp(16px, 1.07vw, 16.9px);
     color: var(--ink);
     letter-spacing: 0.06em;
     z-index: 9;
@@ -106,7 +104,7 @@
     left: clamp(20px, 2vw, 36px);
     bottom: clamp(16px, 2vh, 28px);
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(10px, 0.75vw, 12px);
+    font-size: clamp(13px, 0.98vw, 15.6px);
     color: var(--ink);
     letter-spacing: 0.08em;
     opacity: 0.36;
@@ -218,7 +216,7 @@
     margin-top: 4px;
     font-family: 'Albert Sans', sans-serif;
     font-weight: 600;
-    font-size: clamp(15px, 1.1vw, 20px);
+    font-size: clamp(19.5px, 1.43vw, 26px);
     color: var(--ink);
     letter-spacing: 0.02em;
   }
@@ -295,7 +293,7 @@
   .s-cover .spec {
     font-family: 'Albert Sans', sans-serif;
     font-weight: 700;
-    font-size: clamp(14px, 1.1vw, 20px);
+    font-size: clamp(18.2px, 1.43vw, 26px);
     color: var(--ink);
     letter-spacing: 0.04em;
     display: flex; align-items: center; gap: 10px;
@@ -340,7 +338,7 @@
   .s-cover .cfooter .made {
     font-family: 'Albert Sans', sans-serif;
     font-weight: 600;
-    font-size: clamp(13px, 0.9vw, 15px);
+    font-size: clamp(16.9px, 1.17vw, 19.5px);
     color: var(--ink);
     letter-spacing: 0.04em;
   }
@@ -353,7 +351,7 @@
     display: flex; gap: 18px; align-items: center;
     font-family: 'Albert Sans', sans-serif;
     font-weight: 700;
-    font-size: clamp(13px, 0.9vw, 15px);
+    font-size: clamp(16.9px, 1.17vw, 19.5px);
     color: var(--ink);
     letter-spacing: 0.06em;
   }
@@ -373,7 +371,7 @@
     display: grid; place-items: center;
     font-family: 'Big Shoulders Display', sans-serif;
     font-weight: 900;
-    font-size: clamp(20px, 1.8vw, 30px);
+    font-size: clamp(26px, 2.34vw, 39px);
     line-height: 1;
   }
   .s-cover .cfooter .stamp {
@@ -382,7 +380,7 @@
     padding: 6px 14px;
     font-family: 'Big Shoulders Display', sans-serif;
     font-weight: 900;
-    font-size: clamp(14px, 1.1vw, 20px);
+    font-size: clamp(18.2px, 1.43vw, 26px);
     transform: none;
     line-height: 1;
     letter-spacing: 0.02em;
@@ -391,7 +389,7 @@
   .s-cover .cfooter .stamp .lab2 {
     font-family: 'Albert Sans', sans-serif;
     font-weight: 700;
-    font-size: clamp(11px, 0.7vw, 12px);
+    font-size: 16px;
     letter-spacing: 0.18em;
     line-height: 1;
   }
@@ -438,7 +436,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.32em;
-    font-size: clamp(12px, 0.92vw, 14px);
+    font-size: clamp(16px, 1.2vw, 18.2px);
     color: var(--ink);
     z-index: 6;
   }
@@ -447,7 +445,9 @@
   .s-catalogue { background: var(--paper); }
   .s-catalogue .frame {
     position: absolute; inset: clamp(36px, 3.6vw, 72px) clamp(36px, 3.6vw, 72px) clamp(72px, 7vh, 110px);
-    display: grid; grid-template-rows: auto 1fr; gap: clamp(20px, 2.2vh, 36px);
+    /* minmax(0, 1fr): the cards stay inside the slide and clip, so a long
+       fill is shrunk to fit them rather than pushing them off the page. */
+    display: grid; grid-template-rows: auto minmax(0, 1fr); gap: clamp(20px, 2.2vh, 36px);
     z-index: 4;
   }
   .s-catalogue .topbar {
@@ -470,13 +470,16 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.17vw, 18.2px);
     color: var(--ink);
     text-align: right;
   }
   .s-catalogue .grid {
+    min-height: 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* As many equal columns as cards, so a dropped card leaves no gap. */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     gap: clamp(16px, 1.6vw, 26px);
   }
   .s-catalogue .card {
@@ -521,7 +524,7 @@
   }
   .s-catalogue .card .desc {
     font-family: 'Albert Sans', sans-serif;
-    font-size: clamp(14px, 0.95vw, 15px);
+    font-size: clamp(16px, 1.25vw, 20px);
     line-height: 1.4;
     color: var(--ink);
     flex: 1;
@@ -531,13 +534,15 @@
     padding-top: clamp(8px, 1vh, 14px);
     display: flex; flex-direction: column; gap: 4px;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(11px, 0.78vw, 12px);
+    font-size: 16px;
     color: var(--ink);
     letter-spacing: 0.02em;
   }
   .s-catalogue .card .specs .row {
-    display: flex; justify-content: space-between; gap: 8px;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 8px;
+    letter-spacing: 0;
   }
+  .s-catalogue .card .specs .row > span:last-child { margin-left: auto; text-align: right; }
   .s-catalogue .card .specs .row .k { opacity: 0.7; }
 
   /* ─── SLIDE 4 — DIAGONAL STRIPE SPREAD ───────────────────────── */
@@ -582,7 +587,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.2em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.17vw, 18.2px);
     color: var(--ink);
   }
   .s-stripe .qbody {
@@ -604,7 +609,7 @@
     color: var(--paper);
     padding: clamp(8px, 1vh, 14px) clamp(14px, 1.4vw, 22px);
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(12px, 0.85vw, 14px);
+    font-size: clamp(16px, 1.1vw, 18.2px);
     letter-spacing: 0.04em;
   }
 
@@ -634,7 +639,7 @@
   .s-data .topbar .lab {
     font-family: 'Albert Sans', sans-serif; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.17vw, 18.2px);
     color: var(--ink); text-align: right;
   }
   .s-data .body {
@@ -661,12 +666,12 @@
   .s-data .stat .lab-tag {
     font-family: 'Albert Sans', sans-serif; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.16em;
-    font-size: clamp(13px, 0.95vw, 15px);
+    font-size: clamp(16.9px, 1.23vw, 19.5px);
     color: var(--ink); margin-top: 6px;
   }
   .s-data .stat .desc {
     font-family: 'Albert Sans', sans-serif;
-    font-size: clamp(14px, 1vw, 17px);
+    font-size: clamp(18.2px, 1.3vw, 22.1px);
     line-height: 1.5;
     color: var(--ink);
     max-width: 30ch;
@@ -717,7 +722,7 @@
   }
   .s-data .eq .ticks .ticklab {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(11px, 0.8vw, 12px);
+    font-size: clamp(14.3px, 1.04vw, 15.6px);
     color: var(--ink);
     letter-spacing: 0.04em;
     text-align: center;
@@ -752,7 +757,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.2em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.17vw, 18.2px);
     color: var(--red);
     margin-bottom: clamp(14px, 1.6vh, 24px);
   }
@@ -777,12 +782,12 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    font-size: clamp(13px, 0.92vw, 15px);
+    font-size: clamp(16.9px, 1.2vw, 19.5px);
     color: var(--ink);
   }
   .s-quote .qattr-row .meta-tag {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(12px, 0.85vw, 14px);
+    font-size: clamp(16px, 1.1vw, 18.2px);
     color: var(--ink);
     letter-spacing: 0.04em;
     opacity: 0.78;
@@ -812,21 +817,23 @@
   .s-cal .topbar .lab {
     font-family: 'Albert Sans', sans-serif; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.18em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.17vw, 18.2px);
     color: var(--ink); text-align: right;
   }
   .s-cal .ledger { display: flex; flex-direction: column; gap: 0; flex: 1; }
-  .s-cal .row {
-    display: grid;
-    grid-template-columns: 96px 1.4fr 0.9fr 0.6fr 64px;
-    gap: clamp(12px, 1.4vw, 24px);
-    align-items: center;
-    padding: clamp(10px, 1.2vh, 18px) 0;
+  /* A real table sized from its content: every row keeps its cells in
+     their columns, and a column emptied in every row shrinks to nothing. */
+  .s-cal .cal { width: 100%; border-collapse: collapse; table-layout: auto; }
+  .s-cal .cal th, .s-cal .cal td {
+    text-align: left; vertical-align: middle;
+    padding: clamp(10px, 1.2vh, 18px) clamp(6px, 0.7vw, 12px);
     border-bottom: 1px solid rgba(58,37,22,0.22);
   }
-  .s-cal .row.headrow { border-bottom: 1.5px solid var(--ink); padding: 8px 0; }
-  .s-cal .row.headrow > div { font-family: 'Albert Sans', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px, 0.75vw, 12px); color: var(--ink); }
-  .s-cal .date-tag { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: clamp(14px, 0.95vw, 16px); color: var(--ink); letter-spacing: 0.02em; }
+  .s-cal .cal th:first-child, .s-cal .cal td:first-child { padding-left: 0; }
+  .s-cal .cal th:last-child, .s-cal .cal td:last-child { padding-right: 0; text-align: right; }
+  .s-cal .cal th:empty, .s-cal .cal td:empty { padding-left: 0; padding-right: 0; }
+  .s-cal .cal thead th { border-bottom: 1.5px solid var(--ink); padding-top: 8px; padding-bottom: 8px; font-family: 'Albert Sans', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; font-size: 16px; color: var(--ink); white-space: nowrap; }
+  .s-cal .date-tag { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: clamp(18.2px, 1.23vw, 20.8px); color: var(--ink); letter-spacing: 0.02em; }
   .s-cal .ttl-row {
     font-family: 'Big Shoulders Display', sans-serif;
     font-weight: 700;
@@ -836,12 +843,12 @@
     letter-spacing: -0.005em;
   }
   .s-cal .ttl-row em { color: var(--red); font-style: normal; }
-  .s-cal .ven { font-family: 'Albert Sans', sans-serif; font-size: clamp(14px, 0.95vw, 15px); color: var(--ink); }
+  .s-cal .ven { font-family: 'Albert Sans', sans-serif; font-size: clamp(18.2px, 1.23vw, 19.5px); color: var(--ink); }
   .s-cal .chip {
     display: inline-flex; align-items: center; justify-content: center;
     padding: 4px 10px;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: clamp(11px, 0.75vw, 12px);
+    font-size: 16px;
     font-weight: 500;
     letter-spacing: 0.06em;
     color: var(--paper);
@@ -853,15 +860,6 @@
   .s-cal .chip.c-orange { background: var(--orange); }
   .s-cal .chip.c-blue   { background: var(--blue); }
   .s-cal .chip.c-green  { background: var(--green); }
-  .s-cal .nr-cell {
-    display: flex; gap: 6px; justify-content: end;
-  }
-  .s-cal .nr-cell .b {
-    width: 14px; height: 14px;
-    border: 1.5px solid var(--ink);
-    background: var(--paper);
-  }
-  .s-cal .nr-cell .b.fill { background: var(--ink); }
 
   /* ─── SLIDE 8 — COLOPHON / CLOSING (mirror of cover) ────────── */
   .s-colophon { background: var(--paper); }
@@ -906,14 +904,16 @@
     left: clamp(36px, 3.6vw, 72px);
     top: clamp(40px, 5vh, 96px);
     z-index: 5;
-    max-width: 92%;
+    /* Clear of the seal and stamp at top right: a long sign-off wraps
+       instead of running under them. */
+    right: clamp(170px, 16vw, 300px);
   }
   .s-colophon .ktag {
     font-family: 'Albert Sans', sans-serif;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.22em;
-    font-size: clamp(12px, 0.9vw, 14px);
+    font-size: clamp(16px, 1.17vw, 18.2px);
     color: var(--ink);
     margin-bottom: clamp(14px, 1.6vh, 24px);
   }
@@ -945,13 +945,13 @@
   }
   .s-colophon .col-footer .ftag {
     text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
-    font-size: clamp(11px, 0.78vw, 13px);
+    font-size: clamp(16px, 1.01vw, 16.9px);
     margin-bottom: 6px;
     color: var(--ink);
   }
   .s-colophon .col-footer .ftxt {
     font-family: 'Albert Sans', sans-serif;
-    font-size: clamp(14px, 0.95vw, 15px);
+    font-size: clamp(18.2px, 1.23vw, 19.5px);
     line-height: 1.5;
     color: var(--ink);
   }
@@ -981,11 +981,20 @@
     padding: clamp(8px, 1vh, 14px) clamp(14px, 1.4vw, 22px);
     font-family: 'Big Shoulders Display', sans-serif;
     font-weight: 900;
-    font-size: clamp(20px, 1.6vw, 28px);
+    font-size: clamp(26px, 2.08vw, 36.4px);
     line-height: 1;
     letter-spacing: 0.02em;
     transform: rotate(-3deg);
   }
+  /* The keyboard hint is for the screen, not the page. */
+  @media print { .nav-hint { display: none !important; } }
+  /* Cassette-sleeve marks on the cover: drawn, not text a deck must fill. */
+  .s-catalogue .topstrip { display: block; }
+  .s-cover .cfooter .made::before { content: "限定版"; font-family: 'Noto Sans JP', sans-serif; font-weight: 500; margin-right: 12px; }
+  .s-cover .cfooter .nr i { font-style: normal; }
+  .s-cover .nr-lab::before { content: "N.R. :"; }
+  .s-cover .nr-on::after { content: "ON"; }
+  .s-cover .nr-off::after { content: "OFF"; }
 </style>
 </head>
 <body>
@@ -994,7 +1003,7 @@
   <div class="stage">
 
     <!-- 1. COVER ─────────────────────────────────────────────── -->
-    <section class="slide s-cover active">
+    <section class="slide s-cover active" data-label="title, in this order: a small name in two short lines, a small line under it, a big name or code (up to six characters, e.g. a trip code), a subtitle of one or two words, four one-word tags, a small note (e.g. where or when), a badge of two characters (e.g. a year), and a red stamp of two short lines (a short phrase, then one word)">
       <!-- petal cluster top-left -->
       <div class="petals" aria-hidden="true">
         <div class="petal p1"></div>
@@ -1033,11 +1042,11 @@
 
       <!-- footer -->
       <div class="cfooter">
-        <div class="made caption"><span class="jp caption">限定版</span>made in matsumoto</div>
+        <div class="made caption">made in matsumoto</div>
         <div class="nr caption">
-          <span class="caption">N.R. :</span>
-          <span class="opt"><span class="b fill"></span><span class="caption">ON</span></span>
-          <span class="opt"><span class="b"></span><span class="caption">OFF</span></span>
+          <i class="caption nr-lab" aria-hidden="true"></i>
+          <i class="opt nr-on" aria-hidden="true"><i class="b fill"></i></i>
+          <i class="opt nr-off" aria-hidden="true"><i class="b"></i></i>
         </div>
         <div class="seal caption">26</div>
         <div class="stamp caption">
@@ -1050,7 +1059,7 @@
     </section>
 
     <!-- 2. MANIFESTO ─────────────────────────────────────────── -->
-    <section class="slide s-manifesto">
+    <section class="slide s-manifesto" data-label="statement: a kicker and one big statement of at most 12 words (why this trip, what it is for)">
       <div class="kicker caption">A short letter from the studio, January 2026</div>
       <div class="blob b-red"   aria-hidden="true"></div>
       <div class="blob b-orange" aria-hidden="true"></div>
@@ -1065,7 +1074,7 @@
     </section>
 
     <!-- 3. CATALOGUE GRID ────────────────────────────────────── -->
-    <section class="slide s-catalogue">
+    <section class="slide s-catalogue" data-label="four cards: a heading and a small note, then four days, stops or places, each a short code, a name, a paragraph and three label/value rows (label, then value)">
       <div class="frame">
         <div class="topbar">
           <div class="ttl">The 2026 Catalogue</div>
@@ -1073,70 +1082,50 @@
         </div>
         <div class="grid">
           <div class="card c-red">
-            <div class="topstrip"></div>
+            <i class="topstrip" aria-hidden="true"></i>
             <div class="body">
               <div class="nm">SC-01<br/>BLOOM&nbsp;PEDAL</div>
               <div class="desc">A tape-saturation pedal voiced after the late-70s consumer cassette decks we grew up listening to. Three knobs, one switch, one extremely warm output that turns any clean signal into something that sounds like a memory.</div>
-              <div class="extras">
-                <div>Hand-wired in our Matsumoto workshop, one batch at a time, with a small cream rosette stamped on the bottom plate.</div>
-              </div>
               <div class="specs">
                 <div class="row"><span class="k caption">FORMAT</span><span class="caption">9V pedal</span></div>
                 <div class="row"><span class="k caption">CHANNELS</span><span class="caption">Mono · TRS</span></div>
                 <div class="row"><span class="k caption">CASE</span><span class="caption">Powder-coat steel</span></div>
-                <div class="row"><span class="k caption">PRICE</span><span class="caption">¥38,000</span></div>
-                <div class="row"><span class="k caption">SHIPS</span><span class="caption">14 March 2026</span></div>
               </div>
             </div>
           </div>
           <div class="card c-pink">
-            <div class="topstrip"></div>
+            <i class="topstrip" aria-hidden="true"></i>
             <div class="body">
               <div class="nm">SC-02<br/>CHROMA&nbsp;DECK</div>
               <div class="desc">A studio cassette deck reissued from our 1981 design. Quartz-locked transport, switchable bias for ferric and chrome tape, and a single oversized VU meter that still works after twenty years on the shelf.</div>
-              <div class="extras">
-                <div>Each unit ships with a numbered plate, a hand-cut sleeve, and a letter explaining how to wear it in slowly.</div>
-              </div>
               <div class="specs">
                 <div class="row"><span class="k caption">FORMAT</span><span class="caption">Hardware deck</span></div>
                 <div class="row"><span class="k caption">EDITION</span><span class="caption">Limited · 320 units</span></div>
                 <div class="row"><span class="k caption">FINISH</span><span class="caption">Cream &amp; brushed steel</span></div>
-                <div class="row"><span class="k caption">PRICE</span><span class="caption">¥184,000</span></div>
-                <div class="row"><span class="k caption">SHIPS</span><span class="caption">02 May 2026</span></div>
               </div>
             </div>
           </div>
           <div class="card c-orange">
-            <div class="topstrip"></div>
+            <i class="topstrip" aria-hidden="true"></i>
             <div class="body">
               <div class="nm">SC-03<br/>SUPER&nbsp;TAPE</div>
               <div class="desc">A box of seven C-60 cassettes, each tape labelled with a colour, a season and a side. Drawn-by-hand inserts on cream stock, sealed with a single sticker bearing the date the box was packed.</div>
-              <div class="extras">
-                <div>Refill packs ship four times a year. Subscribers get a small note from the studio with each delivery.</div>
-              </div>
               <div class="specs">
                 <div class="row"><span class="k caption">FORMAT</span><span class="caption">7 × C-60 set</span></div>
                 <div class="row"><span class="k caption">EDITION</span><span class="caption">Open · refilled monthly</span></div>
                 <div class="row"><span class="k caption">PACKAGING</span><span class="caption">Letterpress sleeve</span></div>
-                <div class="row"><span class="k caption">PRICE</span><span class="caption">¥7,200 / box</span></div>
-                <div class="row"><span class="k caption">SHIPS</span><span class="caption">14 June 2026</span></div>
               </div>
             </div>
           </div>
           <div class="card c-blue">
-            <div class="topstrip"></div>
+            <i class="topstrip" aria-hidden="true"></i>
             <div class="body">
               <div class="nm">SC-04<br/>MIX&nbsp;CHAIR</div>
               <div class="desc">A listening chair upholstered in cassette-loop fabric, woven from our own studio off-cuts in our Matsumoto workshop. Sells out before we finish photographing it; we keep making it anyway, slowly, one at a time.</div>
-              <div class="extras">
-                <div>Each chair is signed on the underside by the maker and dated to the day it left the workshop.</div>
-              </div>
               <div class="specs">
                 <div class="row"><span class="k caption">FORMAT</span><span class="caption">Furniture · 1 piece</span></div>
                 <div class="row"><span class="k caption">FRAME</span><span class="caption">Solid ash</span></div>
                 <div class="row"><span class="k caption">UPHOLSTERY</span><span class="caption">Recycled tape weave</span></div>
-                <div class="row"><span class="k caption">PRICE</span><span class="caption">¥420,000</span></div>
-                <div class="row"><span class="k caption">SHIPS</span><span class="caption">22 August 2026</span></div>
               </div>
             </div>
           </div>
@@ -1146,7 +1135,7 @@
     </section>
 
     <!-- 4. STRIPE SPREAD ─────────────────────────────────────── -->
-    <section class="slide s-stripe">
+    <section class="slide s-stripe" data-label="a note or rule: a small kicker, one sentence on a card, and who said it on one line">
       <div class="ribbon-stack" aria-hidden="true">
         <div class="rib r1"></div>
         <div class="rib r2"></div>
@@ -1163,7 +1152,7 @@
     </section>
 
     <!-- 5. DATA / EQUALIZER ──────────────────────────────────── -->
-    <section class="slide s-data">
+    <section class="slide s-data" data-label="bar chart" data-deck-skip>
       <div class="frame">
         <div class="topbar">
           <div class="ttl">Output, by year</div>
@@ -1236,7 +1225,7 @@
     </section>
 
     <!-- 6. QUOTE + PETALS ────────────────────────────────────── -->
-    <section class="slide s-quote">
+    <section class="slide s-quote" data-label="quote, in this order: a small kicker that does not name the speaker, the quotation, the speaker's name, and one line about them">
       <div class="qpetals" aria-hidden="true">
         <div class="petal p1"></div>
         <div class="petal p2"></div>
@@ -1256,76 +1245,34 @@
     </section>
 
     <!-- 7. RELEASE SCHEDULE ──────────────────────────────────── -->
-    <section class="slide s-cal">
+    <section class="slide s-cal" data-label="schedule table: a heading, a small note, then a table of exactly 4 columns (date, what happens, a detail such as the place, a one-word tag): first the 4 column headings, then up to seven rows of 4 cells each, row by row. Drop a column you have no facts for by sending [remove] for its heading and every cell in it">
       <div class="frame">
         <div class="topbar">
           <div class="ttl">Release schedule</div>
           <div class="lab caption">Spring &amp; summer · 2026</div>
         </div>
-        <div class="ledger">
-          <div class="row headrow">
-            <div class="caption">Date</div>
-            <div class="caption">Title</div>
-            <div class="caption">Edition</div>
-            <div class="caption">Track</div>
-            <div class="caption">N.R.</div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">14.03</div>
-            <div class="ttl-row">SC-01 Bloom Pedal · first run</div>
-            <div class="ven">Open edition · 600 units</div>
-            <div><span class="chip c-red caption">PEDAL</span></div>
-            <div class="nr-cell"><span class="b fill"></span><span class="b"></span></div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">02.05</div>
-            <div class="ttl-row">SC-02 Chroma Deck · numbered run</div>
-            <div class="ven">Limited · 320 units</div>
-            <div><span class="chip c-pink caption">DECK</span></div>
-            <div class="nr-cell"><span class="b fill"></span><span class="b"></span></div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">14.06</div>
-            <div class="ttl-row">SC-03 Super Tape boxset</div>
-            <div class="ven">Open · refilled monthly</div>
-            <div><span class="chip c-orange caption">TAPE</span></div>
-            <div class="nr-cell"><span class="b"></span><span class="b fill"></span></div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">12.07</div>
-            <div class="ttl-row">SC-03b Summer side · 4 cassettes</div>
-            <div class="ven">Refill kit</div>
-            <div><span class="chip c-orange caption">TAPE</span></div>
-            <div class="nr-cell"><span class="b"></span><span class="b fill"></span></div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">22.08</div>
-            <div class="ttl-row">SC-04 Mix Chair · workshop run</div>
-            <div class="ven">Single piece</div>
-            <div><span class="chip c-blue caption">CHAIR</span></div>
-            <div class="nr-cell"><span class="b fill"></span><span class="b"></span></div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">03.10</div>
-            <div class="ttl-row">Open studio &amp; listening night</div>
-            <div class="ven">Matsumoto workshop</div>
-            <div><span class="chip c-green caption">EVENT</span></div>
-            <div class="nr-cell"><span class="b"></span><span class="b fill"></span></div>
-          </div>
-          <div class="row">
-            <div class="date-tag caption">14.11</div>
-            <div class="ttl-row">Catalogue No. 8 · early preview</div>
-            <div class="ven">Subscribers only</div>
-            <div><span class="chip c-pink caption">PREVIEW</span></div>
-            <div class="nr-cell"><span class="b fill"></span><span class="b"></span></div>
-          </div>
+        <div class="ledger" data-deck-grow>
+          <table class="cal">
+            <thead>
+              <tr class="headrow"><th class="caption">Date</th><th class="caption">Title</th><th class="caption">Edition</th><th class="caption">Track</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="date-tag caption">14.03</td><td class="ttl-row">SC-01 Bloom Pedal · first run</td><td class="ven">Open edition · 600 units</td><td class="tag"><span class="chip c-red caption">PEDAL</span></td></tr>
+              <tr><td class="date-tag caption">02.05</td><td class="ttl-row">SC-02 Chroma Deck · numbered run</td><td class="ven">Limited · 320 units</td><td class="tag"><span class="chip c-pink caption">DECK</span></td></tr>
+              <tr><td class="date-tag caption">14.06</td><td class="ttl-row">SC-03 Super Tape boxset</td><td class="ven">Open · refilled monthly</td><td class="tag"><span class="chip c-orange caption">TAPE</span></td></tr>
+              <tr><td class="date-tag caption">12.07</td><td class="ttl-row">SC-03b Summer side · 4 cassettes</td><td class="ven">Refill kit</td><td class="tag"><span class="chip c-orange caption">TAPE</span></td></tr>
+              <tr><td class="date-tag caption">22.08</td><td class="ttl-row">SC-04 Mix Chair · workshop run</td><td class="ven">Single piece</td><td class="tag"><span class="chip c-blue caption">CHAIR</span></td></tr>
+              <tr><td class="date-tag caption">03.10</td><td class="ttl-row">Open studio &amp; listening night</td><td class="ven">Matsumoto workshop</td><td class="tag"><span class="chip c-green caption">EVENT</span></td></tr>
+              <tr><td class="date-tag caption">14.11</td><td class="ttl-row">Catalogue No. 8 · early preview</td><td class="ven">Subscribers only</td><td class="tag"><span class="chip c-pink caption">PREVIEW</span></td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
       <div class="pagenum">07 / 08</div>
     </section>
 
     <!-- 8. COLOPHON / CLOSING ───────────────────────────────── -->
-    <section class="slide s-colophon">
+    <section class="slide s-colophon" data-label="closing, in this order: a seal of two tiny lines (a three-letter word, then a two-digit number), a one-word red stamp, a small line, a big sign-off line, then three notes, each a short label and one sentence (who, where, what next)">
       <div class="ribbons" aria-hidden="true">
         <div class="ribbon r-blue"   style="bottom: 0%;   height: 18%; transform: rotate(22deg);"></div>
         <div class="ribbon r-green"  style="bottom: 18%;  height: 16%; transform: rotate(22deg);"></div>
@@ -1354,11 +1301,11 @@
       <div class="col-footer">
         <div>
           <div class="ftag caption">Studio</div>
-          <div class="ftxt">Tape Garden · Matsumoto<br/>est. 2018</div>
+          <div class="ftxt">Tape Garden · Matsumoto · est. 2018</div>
         </div>
         <div>
           <div class="ftag caption">Designed</div>
-          <div class="ftxt">In a small room beside the<br/>tape archive · over six months</div>
+          <div class="ftxt">In a small room beside the tape archive, over six months</div>
         </div>
         <div>
           <div class="ftag caption">Until next year</div>

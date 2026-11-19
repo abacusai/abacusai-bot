@@ -10,13 +10,20 @@ import path from "path";
 import { modelPath } from "@abacus-ai/agent/model-path";
 import { BrowserWindow } from "electron";
 
-import { exportDeckPptx } from "./deck-pptx-export";
+import { GROW_SLIDES } from "./deck-grow";
+import { exportDeckPptx, SHOW_ANIMATED_TEXT } from "./deck-pptx-export";
+import { pinViewport } from "./deck-viewport";
 
 export type DeckPdfOptions = {
   /** Absolute path to the deck's HTML file. */
   htmlPath: string;
   /** Where to write the PDF; defaults to the HTML path with a .pdf suffix. */
   outputPath?: string;
+  /**
+   * The words a filler wrote into a template: any of them drawn over another
+   * is reported back (overlaps), as the design system's prints are.
+   */
+  filled?: string[];
   /** Overrides the detected slide size, in CSS pixels. */
   widthPx?: number;
   heightPx?: number;
@@ -31,6 +38,10 @@ export type DeckPdfResult = {
   /** The editable .pptx, or null: a finished PDF must not be lost over it. */
   pptxPath: string | null;
   pptxError?: string | null;
+  /** The cover's largest text as printed. */
+  coverTitle?: string;
+  /** Filled text drawn over other filled text, slide by slide. */
+  overlaps?: string[];
 };
 
 /** Slide size assumed when a deck gives no usable hint (16:9 at 720p). */
@@ -161,10 +172,92 @@ const MARK_DECK = `(() => {
 })()`;
 
 /**
+ * A table column whose body cells the filler left empty goes, header and all:
+ * a three-column brief in a four-column template table printed an empty
+ * column (retired raw-grid, neo-grid-bold, sakura-chroma).
+ */
+const DROP_EMPTY_COLUMNS = `(() => {
+  let dropped = 0;
+  for (const table of document.querySelectorAll('*[data-deck-slide] table')) {
+    const rows = [...table.rows];
+    const body = rows.filter((row) => !row.closest('thead') && [...row.cells].every((c) => c.tagName === 'TD'));
+    if (body.length === 0) continue;
+    const width = Math.max(...rows.map((row) => row.cells.length));
+    for (let col = width - 1; col >= 0; col--) {
+      const empty = body.every((row) => !(row.cells[col]?.textContent || '').replace(/[\\s\\u2063]/g, ''));
+      if (!empty || rows.some((row) => row.cells.length !== width)) continue;
+      for (const row of rows) row.cells[col]?.remove();
+      dropped++;
+    }
+  }
+  return dropped;
+})()`;
+
+/**
+ * A card left with only its number ("04") when the filler had fewer items
+ * than the slide has cards (bug hunt f12: boxes 04 and 05 printed empty).
+ * Only among three or more like siblings. Self-contained page script.
+ */
+const DROP_EMPTY_CARDS = `(() => {
+  let dropped = 0;
+  for (const slide of document.querySelectorAll('[data-deck-slide]'))
+    for (const el of [...slide.querySelectorAll('*')]) {
+      const parent = el.parentElement;
+      if (!parent || el.children.length === 0) continue;
+      const like = [...parent.children].filter((c) => c.tagName === el.tagName && c.className === el.className);
+      if (like.length < 3) continue;
+      const text = (el.textContent || '').replace(/[\\s\\u2063]/g, '');
+      if (/^0?\\d{1,2}$/.test(text) && !el.querySelector('img, svg, canvas')) {
+        el.remove();
+        dropped++;
+      }
+    }
+  return dropped;
+})()`;
+
+/**
+ * Text a filler wrote, drawn over other text it wrote, on the printed slide.
+ * Only filled text counts: templates lay their own decoration (a big numeral,
+ * a watermark word) under text on purpose. Self-contained page script.
+ */
+const FILLED_OVERLAPS = (filled: string[]): string => `(() => {
+  const norm = (t) => t.replace(/\\s+/g, ' ').trim();
+  const filled = new Set(${JSON.stringify(filled)}.map(norm).filter((t) => t.length > 1));
+  const short = (t) => (t.length > 48 ? t.slice(0, 45) + '…' : t);
+  const out = [];
+  [...document.querySelectorAll('[data-deck-slide]')].forEach((slide, i) => {
+    const items = [];
+    const walker = document.createTreeWalker(slide, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const text = norm(n.textContent || '');
+      const el = n.parentElement;
+      if (!el || !filled.has(text) || el.closest('svg')) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const r of range.getClientRects())
+        if (r.width > 0.5 && r.height > 0.5) items.push({ el, text, r });
+    }
+    for (let a = 0; a < items.length; a++)
+      for (let b = a + 1; b < items.length; b++) {
+        const x = items[a], y = items[b];
+        if (x.el === y.el || x.el.contains(y.el) || y.el.contains(x.el)) continue;
+        const w = Math.min(x.r.right, y.r.right) - Math.max(x.r.left, y.r.left);
+        const h = Math.min(x.r.bottom, y.r.bottom) - Math.max(x.r.top, y.r.top);
+        if (w <= 3 || h <= Math.max(3, Math.min(x.r.height, y.r.height) * 0.35)) continue;
+        const line = 'slide ' + (i + 1) + ': "' + short(y.text) + '" is drawn over "' + short(x.text) + '"';
+        if (!out.includes(line)) out.push(line);
+      }
+  });
+  return out;
+})()`;
+
+/**
  * Print stylesheet for the measured design size: containers back to block
  * flow, slides pinned to the box and made visible, one slide per page.
  */
-const printStyles = (widthPx: number, heightPx: number): string => `
+export const printStyles = (widthPx: number, heightPx: number): string => `
 @page { size: ${widthPx}px ${heightPx}px; margin: 0; }
 @media print {
   html, body {
@@ -230,6 +323,9 @@ const printStyles = (widthPx: number, heightPx: number): string => `
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
+  /* Some templates hide [data-anim] text until its slide is the active one
+     on screen; printed, no slide is, so every slide's text would be blank. */
+  ${SHOW_ANIMATED_TEXT}
   /* Without this the final break emits a trailing blank page. */
   [data-deck-last] {
     break-after: auto !important;
@@ -245,6 +341,122 @@ const printStyles = (widthPx: number, heightPx: number): string => `
   }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }`;
+
+/**
+ * A template's on-screen counter ("3 / 10") is one fixed element its script
+ * updates; printed, it repeats the first slide's number on every page. Each
+ * printed slide gets its own number in the counter's place, and the shared
+ * one is hidden. Templates mark it by class or by id. A slide whose own text
+ * already shows its number is left with that one.
+ */
+export const NUMBER_SLIDES = `(() => {
+  const counter = document.querySelector('.slide-counter, #slide-counter');
+  if (counter == null) return 0;
+  const slides = [...document.querySelectorAll('[data-deck-slide]')];
+  const look = getComputedStyle(counter);
+  const box = counter.getBoundingClientRect();
+  const onRight = box.left + box.width / 2 > window.innerWidth / 2;
+  slides.forEach((slide, index) => {
+    // A slide that already shows its own number ("03 / 07") gets no second one.
+    const own = new RegExp('(^|[^0-9])0*' + (index + 1) + ' */ *0*' + slides.length + '([^0-9]|$)');
+    if (own.test(slide.textContent || '')) return;
+    const number = document.createElement('div');
+    number.textContent = (index + 1) + ' / ' + slides.length;
+    for (const key of ['fontSize', 'fontFamily', 'fontWeight', 'letterSpacing', 'color']) {
+      number.style[key] = look[key];
+    }
+    number.style.bottom = (window.innerHeight - box.bottom) + 'px';
+    if (onRight) number.style.right = (window.innerWidth - box.right) + 'px';
+    else number.style.left = box.left + 'px';
+    number.style.position = 'absolute';
+    number.style.zIndex = '20';
+    number.style.fontVariantNumeric = 'tabular-nums';
+    if (getComputedStyle(slide).position === 'static') slide.style.position = 'relative';
+    slide.appendChild(number);
+  });
+  counter.style.setProperty('display', 'none', 'important');
+  return slides.length;
+})()`;
+
+/**
+ * Text a filler wrote longer than its slot runs off the slide, or past a
+ * card that clips it, and is cut. Each printed slide's overflowing text is
+ * shrunk, a step at a time, until it fits (to half its size at most); what
+ * still does not fit is reported by the caller's own checks, not hidden.
+ * Text pushed off the slide by the text above it shrinks with that text.
+ *
+ * Text that fits its card still counts when the card, grown by it, runs off
+ * the slide. The slide's edge is taken at its printed size: slotted into
+ * <deck-stage> a slide has no height of its own on screen. Text placed with
+ * position absolute is left to bleed past the edge, as decorations do.
+ */
+export const fitSlides = (
+  widthPx: number,
+  heightPx: number
+): string => `(() => {
+  let shrunk = 0;
+  for (const slide of document.querySelectorAll('[data-deck-slide]')) {
+    const own = slide.getBoundingClientRect();
+    const edge = { left: own.left, top: own.top, right: own.right, bottom: own.top + own.width * ${heightPx / widthPx} };
+    // The nearest box that clips the text or is drawn around it (a card
+    // with a fill or border, a figure panel), or else the slide.
+    const cardOf = (el) => {
+      for (let at = el.parentElement; at && at !== slide; at = at.parentElement) {
+        const cs = getComputedStyle(at);
+        const clips = /hidden|clip/.test(cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY);
+        const fill = cs.backgroundColor;
+        const drawn = (fill && fill !== 'transparent' && !/rgba\\([^)]*,\\s*0\\)$/.test(fill)) || (/solid|dashed|dotted|double/.test(cs.borderTopStyle + ' ' + cs.borderLeftStyle) && (parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderLeftWidth) > 0));
+        if (clips || drawn) return at.getBoundingClientRect();
+      }
+      return edge;
+    };
+    // Off the slide: the text, or the card it is drawn in. Text placed
+    // with position absolute and drawn in no card is a decoration.
+    const offSlide = (el, box, limit) => {
+      if (limit === edge && /absolute|fixed/.test(getComputedStyle(el).position)) return false;
+      const bottom = limit === edge ? box.bottom : Math.max(box.bottom, limit.bottom);
+      const right = limit === edge ? box.right : Math.max(box.right, limit.right);
+      // The top too: a bottom-anchored statement grows upward and was cut off
+      // at the slide's top edge (live, studio).
+      return bottom > edge.bottom + 1 || right > edge.right + 1 || box.top < edge.top - 1;
+    };
+    const hasText = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 0);
+    const over = () => [...slide.querySelectorAll('*')].filter((el) => {
+      if (el.children.length > 0 && el.textContent.trim().length === 0) return false;
+      if (!hasText(el)) return false;
+      const box = el.getBoundingClientRect();
+      const limit = cardOf(el);
+      // Its text running past its own box (a figure as wide as its card)
+      // counts too; the boxes alone never show that.
+      const spills = el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1;
+      return box.width > 0 && (spills || offSlide(el, box, limit) || (limit !== edge && (box.bottom > limit.bottom + 1 || box.right > limit.right + 1)));
+    });
+    const shrink = (el, by, floor) => {
+      const size = parseFloat(getComputedStyle(el).fontSize);
+      const start = Number(el.dataset.fitStart || size);
+      el.dataset.fitStart = String(start);
+      if (size * by >= start * floor) { el.style.setProperty('font-size', (size * by) + 'px', 'important'); shrunk++; }
+    };
+    for (let step = 0; step < 8; step++) {
+      const list = over();
+      if (list.length === 0) break;
+      for (const el of list) shrink(el, 0.88, 0.5);
+    }
+    // Text still off the slide, or in a card that is, was pushed there by
+    // the text above it, which fits where it is: the slide's flowing text
+    // shrinks together, a little at a time, so its proportions hold.
+    const flowing = [...slide.querySelectorAll('*')].filter((el) =>
+      hasText(el) && !/absolute|fixed/.test(getComputedStyle(el).position));
+    const pushedOff = () => flowing.some((el) => {
+      const box = el.getBoundingClientRect();
+      return box.width > 0 && offSlide(el, box, cardOf(el));
+    });
+    for (let step = 0; step < 6 && pushedOff(); step++) {
+      for (const el of flowing) shrink(el, 0.92, 0.6);
+    }
+  }
+  return shrunk;
+})()`;
 
 /** `<deck-stage>` keeps its rules in a shadow root document CSS cannot reach. */
 const shadowOverride = (widthPx: number, heightPx: number): string => `(() => {
@@ -304,6 +516,11 @@ export const exportDeckPdf = async (
 
   try {
     await win.loadFile(htmlPath);
+    // After loading: attaching to a window with nothing loaded crashed it.
+    await pinViewport(win, {
+      widthPx: options.widthPx ?? FALLBACK_SIZE.widthPx,
+      heightPx: options.heightPx ?? FALLBACK_SIZE.heightPx,
+    });
     await win.webContents.executeJavaScript(AWAIT_READY);
 
     const measured = (await win.webContents.executeJavaScript(
@@ -323,6 +540,31 @@ export const exportDeckPdf = async (
       (measured.heightPx > 0 ? measured.heightPx : FALLBACK_SIZE.heightPx);
 
     await win.webContents.executeJavaScript(MARK_DECK);
+    await win.webContents.executeJavaScript(NUMBER_SLIDES);
+    if (options.filled != null) {
+      await win.webContents.executeJavaScript(DROP_EMPTY_COLUMNS);
+      await win.webContents.executeJavaScript(DROP_EMPTY_CARDS);
+    }
+    // Short content grows into its slide first; overflow is then shrunk.
+    await win.webContents.executeJavaScript(GROW_SLIDES);
+    await win.webContents.executeJavaScript(fitSlides(widthPx, heightPx));
+    // Measured as it will print: after growing and fitting, before printing.
+    const overlaps =
+      options.filled != null && options.filled.length > 0
+        ? ((await win.webContents.executeJavaScript(
+            FILLED_OVERLAPS(options.filled)
+          )) as string[])
+        : [];
+    // The cover's title as printed: its largest text (a cover check reads it).
+    const coverTitle = (await win.webContents.executeJavaScript(`(() => {
+      const first = document.querySelector('section.slide, section[data-slide], .slide');
+      if (!first) return '';
+      const leaves = [...first.querySelectorAll('*')].filter((e) =>
+        [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.getClientRects().length > 0);
+      const size = (e) => parseFloat(getComputedStyle(e).fontSize) || 0;
+      const top = Math.max(0, ...leaves.map(size));
+      return leaves.filter((e) => size(e) >= top * 0.8).map((e) => e.innerText.trim()).join(' ');
+    })()`)) as string;
     await win.webContents.insertCSS(printStyles(widthPx, heightPx));
     if (measured.hasStage) {
       await win.webContents.executeJavaScript(
@@ -342,14 +584,15 @@ export const exportDeckPdf = async (
     // After the print, so a failure here cannot cost the PDF. The reason
     // travels with the result: a silent null leaves nobody told.
     let pptxError: string | null = null;
-    const exported = await exportDeckPptx(win, pdfPath).catch(
-      (error: unknown) => {
-        pptxError = error instanceof Error ? error.message : String(error);
-        console.error("[deck] pptx export failed:", error);
+    const exported = await exportDeckPptx(win, pdfPath, {
+      widthPx,
+      heightPx,
+    }).catch((error: unknown) => {
+      pptxError = error instanceof Error ? error.message : String(error);
+      console.error("[deck] pptx export failed:", error);
 
-        return null;
-      }
-    );
+      return null;
+    });
 
     return {
       pdfPath,
@@ -359,6 +602,8 @@ export const exportDeckPdf = async (
       bytes: data.length,
       pptxPath: exported?.pptxPath ?? null,
       pptxError,
+      ...(overlaps.length > 0 ? { overlaps } : {}),
+      ...(coverTitle ? { coverTitle } : {}),
     };
   } finally {
     clearTimeout(timeout);

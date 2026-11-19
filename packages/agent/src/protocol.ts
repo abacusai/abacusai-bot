@@ -634,6 +634,23 @@ export type SessionAction =
   | "tasks"
   | "handoff";
 
+/** Work still running past its turn, as the user sees it above the chat box. */
+export interface BackgroundTask {
+  /** `bg-n` for a job, `serve:<port>` for a served page; what `task.stop` takes. */
+  id: string;
+  kind: "job" | "serve";
+  /** What it does, in the user's words; null when none was given. */
+  label: string | null;
+  /** The command, or a served page's address. */
+  command: string;
+  startedAt: number | null;
+  /** When it last printed anything. */
+  lastOutputAt: number | null;
+  lastLine: string;
+  /** 0 to 100 when its output says how far it has got. */
+  progress: number | null;
+}
+
 export type SessionActionResult =
   | {
       ok: true;
@@ -806,6 +823,9 @@ export type HostService =
   | "deck_templates"
   | "deck_slots"
   | "render_deck"
+  /** The design system's guide, and its print (docs-system-task.ts). */
+  | "docs_guide"
+  | "render_docs"
   /** Re-read the Abacus account; answers with its credit snapshot or null. */
   | "credit_balance"
   /** Set up the app's own Python environment if it is not there yet. */

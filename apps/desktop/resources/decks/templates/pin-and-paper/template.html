@@ -3,10 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <title>Pin &amp; Paper — Slide Template</title>
+  <link rel="stylesheet" href="fonts.css">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
 :root {
   --paper:    #EFE56A;
@@ -35,6 +33,7 @@ section.slide {
   color: var(--ink);
   overflow: hidden;
   position: relative;
+  width: 1920px; height: 1080px;
 }
 section.slide.cream { background:
     radial-gradient(120% 90% at 20% 10%, rgba(255,255,255,.5), transparent 60%),
@@ -65,7 +64,7 @@ section.slide.ink::before { opacity: .25; mix-blend-mode: screen; }
   position: absolute; top: 44px; left: 64px; right: 64px;
   display: flex; align-items: center; justify-content: space-between;
   font-family: "DM Mono", ui-monospace, monospace;
-  font-weight: 500; font-size: 18px;
+  font-weight: 500; font-size: 24px;
   letter-spacing: .12em; text-transform: uppercase; line-height: 1;
 }
 .top .lockup { display: flex; align-items: center; gap: 14px; }
@@ -77,7 +76,7 @@ section.slide.ink .top { color: var(--paper); }
   position: absolute; left: 64px; right: 64px; bottom: 36px;
   display: flex; justify-content: space-between; align-items: center;
   font-family: "DM Mono", ui-monospace, monospace;
-  font-weight: 500; font-size: 15px;
+  font-weight: 500; font-size: 22px;
   letter-spacing: .14em; text-transform: uppercase;
   opacity: .65;
 }
@@ -96,7 +95,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   padding: 6px 16px;
   font-family: "DM Mono", monospace;
   font-weight: 500;
-  font-size: 16px;
+  font-size: 24px;
   letter-spacing: .18em;
   text-transform: uppercase;
   transform: rotate(-4deg);
@@ -115,7 +114,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-cover .super {
   font-family: "DM Mono", monospace;
   font-weight: 500;
-  font-size: 18px; letter-spacing: .22em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .22em; text-transform: uppercase;
   opacity: .85;
 }
 .s-cover h1 {
@@ -160,14 +159,14 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-cover .row .who {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .18em; text-transform: uppercase;
 }
 .s-cover .row .who small {
   display: block; opacity: .7; margin-top: 6px; letter-spacing: .14em;
 }
 .s-cover .row .date {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .18em; text-transform: uppercase;
   text-align: right;
 }
 
@@ -184,7 +183,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-agenda .row {
   display: grid;
-  grid-template-columns: 90px 1fr 140px 240px;
+  grid-template-columns: 90px 1fr 140px 320px;
   align-items: center;
   gap: 32px;
   padding: 22px 0;
@@ -193,7 +192,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-agenda .row:last-child { border-bottom: 0; }
 .s-agenda .row .num {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 22px; letter-spacing: .14em;
+  font-size: 28px; letter-spacing: .14em;
 }
 .s-agenda .row .lab {
   font-family: "Space Grotesk", sans-serif; font-weight: 600;
@@ -205,7 +204,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-agenda .row .meta {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 15px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: 22px; letter-spacing: .14em; text-transform: uppercase;
   opacity: .7; text-align: right;
 }
 
@@ -217,7 +216,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-notes .sub {
   margin-top: 14px;
-  font-size: 22px; line-height: 1.45; max-width: 60ch; opacity: .85;
+  font-size: 28px; line-height: 1.45; max-width: 60ch; opacity: .85;
 }
 .s-notes .grid {
   position: absolute; left: 64px; right: 64px; top: 430px; bottom: 100px;
@@ -242,7 +241,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-notes .card .num {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .2em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .2em; text-transform: uppercase;
   opacity: .65; margin-top: 8px;
 }
 .s-notes .card h3 {
@@ -250,7 +249,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-size: 38px; line-height: 1.02; letter-spacing: -.02em;
   margin: 14px 0 16px;
 }
-.s-notes .card p { font-size: 20px; line-height: 1.45; margin: 0; }
+.s-notes .card p { font-size: 27px; line-height: 1.45; margin: 0; }
 .s-notes .card .scribble {
   margin-top: auto; padding-top: 18px;
   font-size: 32px; line-height: 1.05;
@@ -264,13 +263,13 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-sec .marker {
   position: absolute; left: 64px; top: 110px;
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .22em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .22em; text-transform: uppercase;
   color: var(--paper); opacity: .8;
 }
 .s-sec .label {
   position: absolute; right: 64px; top: 110px;
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .22em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .22em; text-transform: uppercase;
   color: var(--paper); opacity: .8; text-align: right;
 }
 .s-sec h2 {
@@ -298,7 +297,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-notice .head .pre {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .2em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .2em; text-transform: uppercase;
   border-right: 2px solid var(--ink);
   padding-right: 28px; padding-top: 14px;
   white-space: nowrap;
@@ -329,13 +328,13 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-family: "Caveat", cursive; font-weight: 600;
   font-size: 38px; line-height: 1.05;
 }
-.s-notice .col p { font-size: 19px; line-height: 1.5; margin: 0; }
-.s-notice .col ul { margin: 0; padding-left: 20px; font-size: 19px; line-height: 1.45; }
+.s-notice .col p { font-size: 27px; line-height: 1.5; margin: 0; }
+.s-notice .col ul { margin: 0; padding-left: 20px; font-size: 27px; line-height: 1.45; }
 .s-notice .col ul li { margin-bottom: 8px; }
 .s-notice .col .src {
   margin-top: auto;
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 14px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: 22px; letter-spacing: .14em; text-transform: uppercase;
   border-top: 1px dashed rgba(31,58,138,.45); padding-top: 10px; opacity: .75;
 }
 
@@ -350,12 +349,12 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-size: 110px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
   color: var(--paper);
 }
-.s-chart .left p { font-size: 21px; line-height: 1.5; color: var(--paper); opacity: .85; max-width: 36ch; }
+.s-chart .left p { font-size: 28px; line-height: 1.5; color: var(--paper); opacity: .85; max-width: 36ch; }
 .s-chart .left .legend { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
 .s-chart .left .legend .li {
   display: flex; align-items: center; gap: 14px;
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .12em; text-transform: uppercase; color: var(--paper);
+  font-size: 24px; letter-spacing: .12em; text-transform: uppercase; color: var(--paper);
 }
 .s-chart .left .legend .li i { width: 32px; height: 4px; }
 .s-chart .right {
@@ -369,7 +368,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-chart .right .yhead {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 14px; letter-spacing: .16em; text-transform: uppercase;
+  font-size: 22px; letter-spacing: .16em; text-transform: uppercase;
   margin-bottom: 8px; opacity: .7;
 }
 .s-chart .plot { flex: 1; min-height: 0; position: relative;
@@ -378,12 +377,12 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-chart .plot .yticks {
   position: absolute; left: -48px; top: 0; bottom: 0;
   display: flex; flex-direction: column; justify-content: space-between;
-  font-family: "DM Mono", monospace; font-weight: 500; font-size: 14px;
+  font-family: "DM Mono", monospace; font-weight: 500; font-size: 22px;
 }
 .s-chart .plot svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
 .s-chart .right .xticks {
   display: flex; justify-content: space-between; padding-top: 8px;
-  font-family: "DM Mono", monospace; font-weight: 500; font-size: 14px; letter-spacing: .1em;
+  font-family: "DM Mono", monospace; font-weight: 500; font-size: 22px; letter-spacing: .1em;
 }
 .s-chart .pin-deco {
   position: absolute; top: 110px; right: 60px;
@@ -402,7 +401,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-process .head .sub {
   font-family: "Space Grotesk", sans-serif;
-  font-size: 19px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
+  font-size: 27px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
 }
 .s-process .flow {
   position: absolute; left: 64px; right: 64px; top: 460px; bottom: 200px;
@@ -430,7 +429,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-family: "Space Grotesk", sans-serif; font-weight: 700;
   font-size: 28px; line-height: 1.05; letter-spacing: -.015em; margin: 0;
 }
-.s-process .node p { font-size: 18px; line-height: 1.4; margin: 0; }
+.s-process .node p { font-size: 27px; line-height: 1.4; margin: 0; }
 .s-process .node .arr {
   position: absolute; right: -16px; top: 44%;
   width: 28px; height: 28px; z-index: 2; color: var(--ink);
@@ -443,7 +442,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   border-bottom: 1.5px solid var(--ink);
   padding: 0 24px; display: flex; align-items: center; justify-content: space-between;
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .12em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .12em; text-transform: uppercase;
 }
 
 /* ============ 08 LEDGER (comparison) ============ */
@@ -456,7 +455,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-size: 88px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
 }
 .s-matrix .head .sub {
-  font-size: 19px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
+  font-size: 27px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
 }
 .s-matrix .table {
   position: absolute; left: 64px; right: 64px; top: 460px; bottom: 110px;
@@ -469,7 +468,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-matrix .cell {
   padding: 18px 22px; display: flex; align-items: center;
-  font-size: 21px; line-height: 1.35;
+  font-size: 28px; line-height: 1.35;
   border-bottom: 1.5px solid rgba(31,58,138,.5);
   border-right: 1.5px solid rgba(31,58,138,.5);
 }
@@ -478,7 +477,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-matrix .cell.head-row {
   background: var(--ink); color: var(--paper);
   font-family: "Space Grotesk", sans-serif; font-weight: 700;
-  font-size: 22px; letter-spacing: -.005em;
+  font-size: 28px; letter-spacing: -.005em;
   border-right-color: rgba(239,229,106,.3);
 }
 .s-matrix .cell.row-label {
@@ -496,7 +495,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-matrix .pill.part { background: var(--paper-2); color: var(--ink); }
 .s-matrix .pill.no   {
   background: transparent; color: var(--red); border-color: var(--red);
-  font-family: "DM Mono", monospace; font-weight: 500; font-size: 16px;
+  font-family: "DM Mono", monospace; font-weight: 500; font-size: 24px;
   letter-spacing: .14em; text-transform: uppercase;
 }
 .s-matrix .pill.note { background: transparent; }
@@ -511,7 +510,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-size: 92px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
 }
 .s-stats .head .sub {
-  font-size: 19px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
+  font-size: 27px; line-height: 1.5; max-width: 36ch; opacity: .85; margin-top: 12px;
 }
 .s-stats .grid {
   position: absolute; left: 64px; right: 64px; top: 460px; bottom: 110px;
@@ -548,7 +547,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   font-size: 26px; letter-spacing: -.015em;
   margin: auto 0 0; line-height: 1.05;
 }
-.s-stats .stat p { font-size: 19px; line-height: 1.45; margin: 0; }
+.s-stats .stat p { font-size: 27px; line-height: 1.45; margin: 0; }
 
 /* ============ 10 QUOTE ============ */
 .s-quote { padding: 0; }
@@ -564,6 +563,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   align-items: center;
   box-shadow: 8px 9px 0 0 var(--ink);
 }
+.s-quote .panel .qmark::before { content: "\201D"; }
 .s-quote .panel .qmark {
   font-family: "Caveat", cursive; font-weight: 700;
   font-size: 360px; line-height: .8; color: var(--ink);
@@ -579,11 +579,11 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 .s-quote .panel .who {
   margin-top: 32px;
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 18px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .14em; text-transform: uppercase;
   color: var(--ink);
 }
 .s-quote .panel .who small {
-  display: block; font-weight: 500; font-size: 16px; opacity: .7; margin-top: 6px;
+  display: block; font-weight: 500; font-size: 24px; opacity: .7; margin-top: 6px;
 }
 .s-quote .panel .pin {
   position: absolute; top: -22px; left: 90px;
@@ -615,14 +615,14 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-cta .pane.l .super {
   font-family: "DM Mono", monospace; font-weight: 500;
-  font-size: 16px; letter-spacing: .22em; text-transform: uppercase;
+  font-size: 24px; letter-spacing: .22em; text-transform: uppercase;
   opacity: .8;
 }
 .s-cta .pane.l h2 {
   font-family: "Space Grotesk", sans-serif; font-weight: 700;
   font-size: 130px; line-height: 1.05; letter-spacing: -.035em; margin: 0;
 }
-.s-cta .pane.l p { font-size: 21px; line-height: 1.5; opacity: .9; max-width: 30ch; }
+.s-cta .pane.l p { font-size: 28px; line-height: 1.5; opacity: .9; max-width: 30ch; }
 .s-cta .pane.l .pin {
   position: absolute; bottom: 40px; right: 40px;
   width: 220px; color: var(--paper); opacity: .9;
@@ -644,9 +644,9 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 }
 .s-cta .pane.r .step h4 {
   font-family: "Space Grotesk", sans-serif; font-weight: 700;
-  font-size: 22px; letter-spacing: -.005em; margin: 0 0 4px;
+  font-size: 28px; letter-spacing: -.005em; margin: 0 0 4px;
 }
-.s-cta .pane.r .step p { font-size: 18px; line-height: 1.4; margin: 0; }
+.s-cta .pane.r .step p { font-size: 27px; line-height: 1.4; margin: 0; }
 </style>
 <script src="deck-stage.js"></script>
 
@@ -705,12 +705,12 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
 <deck-stage>
 
   <!-- ============ 01 COVER ============ -->
-  <section class="slide s-cover" data-screen-label="01 Cover" data-om-validate="false">
+  <section class="slide s-cover" data-screen-label="01 Cover" data-label="title: a small tag line, a two-line title, who presents it with a short line under it, a date, and a two-line handwritten note" data-om-validate="false">
     <svg class="pin-1" viewBox="0 0 360 110"><use href="#pin"/></svg>
     <svg class="pin-2" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
     <div class="stage">
       <div class="super">A field guide · Vol. I</div>
-      <h1>Kept<br/>things</h1>
+      <h1>Kept things</h1>
       <div class="row">
         <div class="who">Presented by <span class="underline-thin">A. Speaker</span>
           <small>Role · Team · Spring 2026</small>
@@ -725,7 +725,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 02 AGENDA ============ -->
-  <section class="slide s-agenda" data-screen-label="02 Agenda" data-om-validate="false">
+  <section class="slide s-agenda" data-screen-label="02 Agenda" data-label="agenda: a heading and four numbered items, each a short title and a short note (type and minutes)" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> Pin &amp; Paper</span>
       <span class="meta"><span>North Field Office</span><span>Phase I</span></span>
@@ -761,7 +761,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 03 NOTECARDS ============ -->
-  <section class="slide s-notes" data-screen-label="03 Principles" data-om-validate="false">
+  <section class="slide s-notes" data-screen-label="03 Principles" data-label="three principles: a heading and a sentence, then three pinned cards, each a numbered tag, a two-line title, a sentence and a short handwritten aside" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> Principles</span>
       <span class="meta"><span>North Field Office</span><span>Phase II</span></span>
@@ -774,21 +774,21 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
       <div class="card">
         <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
         <span class="num">Rule · 01</span>
-        <h3>Write the<br/>real sentence</h3>
+        <h3>Write the real sentence</h3>
         <p>If a customer wouldn't read the email, the email is not the work. Plain words, signed by a person, sent on a Tuesday.</p>
         <div class="scribble">— write it <span class="underline">by hand</span> first.</div>
       </div>
       <div class="card alt">
         <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
         <span class="num">Rule · 02</span>
-        <h3>Earn the<br/>second look</h3>
+        <h3>Earn the second look</h3>
         <p>Every interaction in the first 72 hours is doing four times the work of one in week three. Spend accordingly.</p>
         <div class="scribble">no autoresponder, ever.</div>
       </div>
       <div class="card alt2">
         <svg class="pin" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
         <span class="num">Rule · 03</span>
-        <h3>Keep the<br/>handwriting</h3>
+        <h3>Keep the handwriting</h3>
         <p>The system is allowed to grow, but the voice on the other end stays small enough to know who you wrote to last week.</p>
         <div class="scribble">200 names, max.</div>
       </div>
@@ -797,17 +797,17 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 04 SECTION DIVIDER ============ -->
-  <section class="slide s-sec ink" data-screen-label="04 Section · Direction" data-om-validate="false">
+  <section class="slide s-sec ink" data-screen-label="04 Section · Direction" data-label="section divider: a section tag, a two-line label, a three-line heading and a short handwritten line, on blue" data-om-validate="false">
     <div class="marker">Section II</div>
     <div class="label">Direction<br/>&amp; doctrine</div>
     <svg class="pin-big" viewBox="0 0 360 110"><use href="#pin"/></svg>
-    <h2>Where we<br/>are going,<br/>and why</h2>
+    <h2>Where we are going, and why</h2>
     <div class="scribble">— turn the page —</div>
     <div class="footer"><span>North Field Office</span><span>04 / 11</span></div>
   </section>
 
   <!-- ============ 05 NOTICE ============ -->
-  <section class="slide s-notice" data-screen-label="05 Findings · Detail" data-om-validate="false">
+  <section class="slide s-notice" data-screen-label="05 Findings · Detail" data-label="findings in detail: a short tag and a one-sentence headline, then three cards (what we found, why it matters, what to do), each a heading, a lead line or paragraphs or three bullet points, and a source line" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> Findings · detail</span>
       <span class="meta"><span>North Field Office</span><span>Phase III</span></span>
@@ -848,14 +848,14 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 06 CHART ============ -->
-  <section class="slide s-chart ink" data-screen-label="06 Retention Curve" data-om-validate="false">
+  <section class="slide s-chart ink" data-screen-label="06 Retention Curve" data-label="line chart" data-deck-skip data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> Retention, by cohort</span>
       <span class="meta"><span>Phase III</span><span>Evidence</span></span>
     </div>
     <svg class="pin-deco" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
     <div class="left">
-      <h2>Curve<br/>bends at<br/>day three</h2>
+      <h2>Curve bends at day three</h2>
       <p>Cohorts that received a written welcome and a human reply within 24 hours retain at roughly 2× the rate of the templated cohort, and the gap holds steady for ninety days.</p>
       <div class="legend">
         <div class="li"><i style="background:rgba(239,229,106,.5)"></i> Templated welcome (control)</div>
@@ -890,13 +890,13 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 07 PROCESS ============ -->
-  <section class="slide s-process" data-screen-label="07 Process" data-om-validate="false">
+  <section class="slide s-process" data-screen-label="07 Process" data-label="process: a two-line heading and a sentence, five numbered cards each a one-word title and a sentence, and a five-part timeline under them" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> How we'll work</span>
       <span class="meta"><span>North Field Office</span><span>Phase IV</span></span>
     </div>
     <div class="head">
-      <h2>From insight to default,<br/>in five moves</h2>
+      <h2>From insight to default, in five moves</h2>
       <div class="sub">A repeatable path each pilot follows, end to end, before it is allowed to graduate to the default experience for every customer.</div>
     </div>
     <div class="flow">
@@ -946,13 +946,13 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 08 LEDGER ============ -->
-  <section class="slide s-matrix" data-screen-label="08 Comparison" data-om-validate="false">
+  <section class="slide s-matrix" data-screen-label="08 Comparison" data-label="comparison table: a heading and a sentence, three options as columns scored on four rows, each score a short tag" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> Three pilots, side by side</span>
       <span class="meta"><span>North Field Office</span><span>Phase IV</span></span>
     </div>
     <div class="head">
-      <h2>Where each pilot<br/>earns its keep</h2>
+      <h2>Where each pilot earns its keep</h2>
       <div class="sub">Scored against the four levers that matter most this cycle. We will only carry forward bets that win on at least two.</div>
     </div>
     <div class="table">
@@ -985,32 +985,32 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 09 STATS ============ -->
-  <section class="slide s-stats" data-screen-label="09 In Numbers" data-om-validate="false">
+  <section class="slide s-stats" data-screen-label="09 In Numbers" data-label="three key figures: a heading and a sentence, then three pinned cards each a big figure, a two-line label and a sentence" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> In numbers</span>
       <span class="meta"><span>Phase III</span><span>Evidence</span></span>
     </div>
     <div class="head">
-      <h2>The case,<br/>by the numbers</h2>
+      <h2>The case, by the numbers</h2>
       <div class="sub">Three figures we will report against every cycle. If one of these stops moving, the bet is over.</div>
     </div>
     <div class="grid">
       <div class="stat">
         <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
-        <div class="big">2.4<small>×</small></div>
-        <h3>Retention<br/>multiple</h3>
+        <div class="big">2.4×</div>
+        <h3>Retention multiple</h3>
         <p>Cohort with written welcome + human reply, vs. templated control. Sustained through D90.</p>
       </div>
       <div class="stat alt">
         <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
-        <div class="big">$4.1<small>M</small></div>
-        <h3>Projected<br/>retained ARR</h3>
+        <div class="big">$4.1M</div>
+        <h3>Projected retained ARR</h3>
         <p>Modelled on the current quarter's signup cohort, holding all other inputs constant.</p>
       </div>
       <div class="stat alt2">
         <svg class="pin" viewBox="0 0 360 130"><use href="#pin-open"/></svg>
-        <div class="big">72<small>hr</small></div>
-        <h3>The window<br/>that matters</h3>
+        <div class="big">72h</div>
+        <h3>The window that matters</h3>
         <p>Behaviour after the first 72 hours predicts 18-month retention better than any feature metric.</p>
       </div>
     </div>
@@ -1018,14 +1018,14 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 10 QUOTE ============ -->
-  <section class="slide s-quote" data-screen-label="10 Voice" data-om-validate="false">
+  <section class="slide s-quote" data-screen-label="10 Voice" data-label="quote: a client quotation of two or three sentences, who said it and their role" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> Client voice</span>
       <span class="meta"><span>Phase III</span><span>Evidence</span></span>
     </div>
     <div class="panel">
       <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
-      <div class="qmark">"</div>
+      <div class="qmark" aria-hidden="true"></div>
       <div>
         <blockquote>Three days in, someone wrote me a real sentence. I'd been a customer of theirs for nine months before I noticed I'd never been a customer anywhere else again.</blockquote>
         <div class="who">Margaux Lévêque
@@ -1037,7 +1037,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
   </section>
 
   <!-- ============ 11 CTA ============ -->
-  <section class="slide s-cta" data-screen-label="11 Next" data-om-validate="false">
+  <section class="slide s-cta" data-screen-label="11 Next" data-label="closing: a kicker, a short call to action and a sentence, beside three numbered next steps each a title and a sentence" data-om-validate="false">
     <div class="top">
       <span class="lockup"><svg><use href="#mark"/></svg> What's next</span>
       <span class="meta"><span>North Field Office</span><span>Phase V</span></span>
@@ -1045,7 +1045,7 @@ section.slide.ink .footer { color: var(--paper); opacity: .75; }
     <div class="stage">
       <div class="pane l">
         <div class="super">From here</div>
-        <h2>Pick the<br/>three<br/>bets</h2>
+        <h2>Pick the three bets</h2>
         <p>Three pilots in eight weeks. We'll bring back evidence the quarter after, and the question won't be whether to ship — it'll be which two to default.</p>
         <svg class="pin" viewBox="0 0 360 110"><use href="#pin"/></svg>
       </div>

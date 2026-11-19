@@ -649,7 +649,10 @@ import {
   type WorkWaitingPlace,
 } from "./services/providers/work-waiting";
 import { SandboxProbeService } from "./services/sandbox/sandbox-probe-service";
-import { agentTurnBusy } from "./services/session/agent-busy";
+import {
+  agentBusySessionIds,
+  agentTurnBusy,
+} from "./services/session/agent-busy";
 import { AgentSessionManagerService } from "./services/session/agent-session-manager-service";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import { AgentCommunicationService } from "./services/session/cli-communication-service";
@@ -1421,6 +1424,16 @@ export class ServiceHost {
    * never appear in the sidebar, so theirs is the bot's visible thread.
    */
   private conversationKeyForSession(sessionId: string): ConversationKey | null {
+    const thread = this.threadOfSession(sessionId);
+    return thread == null
+      ? null
+      : sessionConversationKey(thread.workspaceId, thread.id);
+  }
+
+  /** The chat a session's work shows in: a bot's helper shows in its bot's thread. */
+  private threadOfSession(
+    sessionId: string
+  ): { id: string; workspaceId: string } | null {
     const session = this.agentSessionManagerService.get(sessionId);
     if (session == null) return null;
     const owner = session.owner;
@@ -1430,10 +1443,9 @@ export class ServiceHost {
         .find((bot) => bot.id === owner.botId)?.sessionId;
       const thread =
         forever == null ? null : this.agentSessionManagerService.get(forever);
-      if (thread != null)
-        return sessionConversationKey(thread.workspaceId, thread.id);
+      if (thread != null) return thread;
     }
-    return sessionConversationKey(session.workspaceId, session.id);
+    return session;
   }
 
   private browserRuntime: ElectronBrowserRuntime | null = null;
@@ -2004,6 +2016,10 @@ export class ServiceHost {
     funnel: (step, detail) => reportFunnelStep(step, detail),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
+    threadIdForSession: (sessionId) =>
+      this.threadOfSession(sessionId)?.id ?? null,
+    internetDown: () => this.connectivity.state === "offline",
+    refreshConnectivity: () => this.connectivity.check(),
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     // The hosted computer serves only its live sessions: a call that names
     // none is never taken for an app chat (the phone's words are its own).
@@ -2132,6 +2148,9 @@ export class ServiceHost {
       listChatsDetailed: (query, platform) =>
         this.messagingGatewayService.listKnownChatsDetailed(query, platform),
       livePlatforms: () => this.messagingGatewayService.livePlatforms(),
+      wasLinked: (platform) => this.messagingGatewayService.wasLinked(platform),
+      queueSend: (platform, to, text, threadId) =>
+        this.messagingGatewayService.queueSend(platform, to, text, threadId),
       selfChats: () => this.messagingGatewayService.selfChats(),
       startingPlatforms: () => this.messagingGatewayService.startingPlatforms(),
       awaitReady: (platform) =>
@@ -2208,7 +2227,14 @@ export class ServiceHost {
       this.builtinToolPermissions.flushPending(decision, server),
   });
   /** Whether this machine can reach Abacus; see connectivity-service.ts. */
-  readonly connectivity = new ConnectivityService();
+  readonly connectivity = new ConnectivityService({
+    // The window's banner reads it again (status.connectivity).
+    changed: () =>
+      this.emitEvent({
+        type: "connectivity-updated",
+        emittedAt: new Date().toISOString(),
+      }),
+  });
   /**
    * The one teller of stops (status-board.ts): routines, lanes, runs and the
    * agent report into it; it decides whether and where the user hears.
@@ -3494,6 +3520,9 @@ export class ServiceHost {
         metadata: { kind: "messaging" },
       }),
     status: this.statusBoard,
+    internetDown: () => this.connectivity.state === "offline",
+    networkSuspect: () => this.connectivity.reportFailure(),
+    refreshConnectivity: () => this.connectivity.check(),
     appLanguage: () => this.appLanguage(),
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();
@@ -4038,6 +4067,24 @@ export class ServiceHost {
     });
   }
 
+  /** The work `hasActiveAgentTurn` counts, named as the sidebar names it. */
+  activeAgentWork(): { sessionId: string; label: string }[] {
+    const ids = agentBusySessionIds({
+      relay: this.aguiRelay,
+      turnState: this.sessionTurnStateService,
+      wireOf: (sessionId) =>
+        this.agentManagerService.getRuntimeInfo(sessionId)?.wire ?? null,
+    });
+    if (ids.length === 0) return [];
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return ids.map((sessionId) => ({
+      sessionId,
+      label: labels.get(sessionId)?.trim() ?? "",
+    }));
+  }
+
   /** True while any terminal PTY (user shell or preview server) is alive. */
   hasLiveTerminalSessions(): boolean {
     return this.terminalSessionService.hasLiveSessions();
@@ -4145,6 +4192,68 @@ export class ServiceHost {
         return await deckSlots(payload as DeckSlotsRequest);
       case "render_deck":
         return await renderDeck(payload as RenderDeckRequest);
+      // The design system's guide, and its print (docs-system/make.ts).
+      case "docs_guide": {
+        const { resourcePath } = await import("#main/resources");
+        const fsp = await import("fs/promises");
+        const { designsGuide } =
+          await import("./services/agent-tools/docs-system/designs");
+        return (
+          (await fsp.readFile(resourcePath("docs-system/guide.md"), "utf8")) +
+          designsGuide()
+        );
+      }
+      case "render_docs": {
+        const { makeDocument } =
+          await import("./services/agent-tools/docs-system/make");
+        const { readAsk } =
+          await import("./services/agent-tools/docs-system/ask");
+        const p = payload as {
+          htmlPath: string;
+          outBase: string;
+          kind: "doc" | "deck";
+          brief: string;
+          facts?: string;
+          request?: string;
+          today: string;
+          last: boolean;
+          slides?: number;
+          word?: boolean;
+        };
+        const ask = readAsk(p.brief);
+        if (p.slides != null) ask.slides = p.slides;
+        if (p.word === true && !ask.formats.includes("docx"))
+          ask.formats = ["docx", ...ask.formats];
+        if (p.kind === "deck" && !ask.formats.includes("pptx"))
+          ask.formats = ["pptx"];
+        const made = await makeDocument({
+          htmlPath: p.htmlPath,
+          outBase: p.outBase,
+          kind: p.kind,
+          ask,
+          brief: p.brief,
+          ...(p.facts != null ? { facts: p.facts } : {}),
+          ...(p.request != null ? { request: p.request } : {}),
+          today: p.today,
+          dropUnsupported: p.last,
+        });
+        return {
+          pdfPath: made.pdfPath,
+          pptxPath: made.pptxPath,
+          docxPath: made.docxPath,
+          pages: made.pages,
+          sums: {
+            total: made.sums.total,
+            marks: made.sums.marks,
+          },
+          sendBack: made.sendBack,
+          failed: made.failed,
+          layout: made.layout,
+          images: made.images,
+          dropped: made.dropped,
+          foreignFonts: made.foreignFonts,
+        };
+      }
       case "credit_balance":
         // The read itself broadcasts the snapshot to every agent.
         await fetchAbacusAccount(true);
@@ -4951,6 +5060,10 @@ export class ServiceHost {
 
   releaseMessagingLogin(platformId: MessagingPlatformId): void {
     this.messagingGatewayService.releaseLogin(platformId);
+  }
+
+  cancelQueuedChatSend(id: string): MessagingSnapshot {
+    return this.messagingGatewayService.cancelQueuedSend(id);
   }
 
   retryMessagingLane(platformId: MessagingPlatformId): MessagingSnapshot {
@@ -6668,6 +6781,13 @@ export class ServiceHost {
       });
       if (state === "online") void this.cronScheduler.release();
       if (resumed) this.routinesAfterWake();
+      // Chat apps paused for the internet try again; the pane re-reads.
+      if (state === "online") this.messagingGatewayService.internetBack();
+      else
+        this.emitEvent({
+          type: "messaging-updated",
+          emittedAt: new Date().toISOString(),
+        });
     });
     this.cronScheduler.everyMinute(() => {
       // Ticking means awake: a resume the OS never sent must not freeze

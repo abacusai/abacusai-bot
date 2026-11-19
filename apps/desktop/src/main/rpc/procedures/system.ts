@@ -88,6 +88,13 @@ export const systemRouter = impl.system.router({
   restart: impl.system.restart.handler(({ context }) => {
     context.deps.app.restartApp();
   }),
+  quitGuard: impl.system.quitGuard.handler(
+    ({ context }) => context.deps.app.quitGuard?.state() ?? { phase: "idle" }
+  ),
+  answerQuitGuard: impl.system.answerQuitGuard.handler(({ input, context }) => {
+    requireMainRenderer(context);
+    context.deps.app.quitGuard?.answer(input.answer);
+  }),
   takeOpenLink: impl.system.takeOpenLink.handler(({ context }) => {
     requireMainRenderer(context);
     return context.deps.app.takeOpenLink?.() ?? null;

@@ -1492,6 +1492,12 @@
     "stopped": "링크를 삭제했습니다",
     "links": "공유 링크",
     "linksEmpty": "아직 공유한 항목이 없습니다. 봇이 만든 파일에서 공유를 사용하세요.",
+    "offer": {
+      "title": "누구에게나 보내기",
+      "body": "어떤 휴대폰이나 컴퓨터에서도 열리는 링크를 받으세요. 공개하기 전에 상대방이 보게 될 화면을 그대로 확인할 수 있어요.",
+      "getLink": "링크 받기",
+      "notNow": "나중에"
+    },
     "errors": {
       "TOO_LARGE": "이 파일은 링크 한도인 5 MB를 초과합니다.",
       "TOO_MANY": "공유 링크가 50개 있습니다. 새로 만들려면 하나를 중지하세요.",
@@ -1921,26 +1927,26 @@
       "build": {
         "orders-system": {
           "name": "주문·예약 앱",
-          "detail": "가게, 헬스장, 미용실, 서비스업용.",
+          "detail": "매장, 헬스장, 살롱, 서비스용.",
           "prompt": "작은 사업을 하고 있어요. 이 컴퓨터에서 주문, 예약, 서비스 작업을 관리할 수 있는 간단한 앱을 만들어 주세요. 항목을 추가하고 검색하고 필터링할 수 있는 목록, 고객·날짜·상태·가격을 볼 수 있는 항목별 페이지, 그리고 일일 요약이 있으면 좋겠어요. 일반적인 작은 가게를 기준으로 샘플 데이터를 넣어서 첫 버전을 바로 만들고 열어 주세요. 그다음에 제 사업이 어떤 일을 하는지, 무엇을 관리해야 하는지 짧은 메시지 하나로 물어봐 주세요. 그걸 바탕으로 제게 맞게 다듬어 주세요."
         },
         "business-site": {
           "name": "내 사업 웹사이트",
-          "detail": "서비스, 영업시간, 후기, 문의 양식.",
+          "detail": "서비스, 영업시간, 연락처.",
           "prompt": "제 사업을 위한 웹사이트를 만들어 주세요. 사업 이름과 제공하는 서비스를 보여 주는 상단 영역, 가격이 포함된 서비스 섹션, 영업시간, 고객 후기 몇 개, 찾아오는 길, 문의 양식이 있으면 좋겠어요. 나중에 바꿀 수 있도록 임시 정보를 넣고, 휴대폰에서도 제대로 보이게 해 주세요. 페이지가 준비되면 보여 주시고, 그다음에 제 사업 이름과 하는 일을 짧은 메시지 하나로 물어봐 주세요. 그걸 바탕으로 제게 맞게 바꿔 주세요."
         },
         "lead-finder": {
           "name": "고객 찾기",
-          "detail": "매일 아침 새 잠재 고객과 첫 이메일 초안."
+          "detail": "새 고객과 첫 이메일 초안."
         },
         "my-game": {
           "name": "내 게임 작업하기",
-          "detail": "프로젝트 폴더에서 Unity, Godot, Unreal, Roblox 작업.",
+          "detail": "Unity, Godot, Unreal, Roblox.",
           "prompt": "제 게임 작업을 도와주세요. 열려 있는 프로젝트 폴더가 없으면 제 게임 프로젝트가 어디 있는지 물어봐 주세요. 그다음 프로젝트를 살펴보고 어떤 엔진과 버전을 쓰는지, 주요 씬과 스크립트는 무엇인지, 고장 났거나 덜 만들어진 것처럼 보이는 부분이 있는지 알려 주세요. 가장 유용한 다음 단계 세 가지를 제안해 주시고, 무엇이든 바꾸기 전에 제가 하나를 고를 때까지 기다려 주세요."
         },
         "morning-inbox": {
           "name": "매일 아침 이메일 답장하기",
-          "detail": "내가 답해야 할 이메일마다 답장 초안."
+          "detail": "매일 아침 답장 초안."
         },
         "portfolio-site": {
           "name": "포트폴리오 사이트",
@@ -1949,7 +1955,7 @@
         },
         "numbers-dashboard": {
           "name": "내 수치 대시보드",
-          "detail": "스프레드시트로 보는 매출, 비용, 추세.",
+          "detail": "매출, 비용, 추세.",
           "prompt": "제 사업 수치를 보여 주는 대시보드를 만들어 주세요. 이번 달 합계, 월별 차트, 상위 제품이나 고객, 그리고 눈에 띄는 특이한 점이 있으면 좋겠어요. 바로 작동하도록 현실적인 샘플 매출 데이터로 지금 시작해서 보여 주세요. 그다음에 제 스프레드시트나 CSV 파일을 요청하고, 대시보드를 제 실제 수치로 바꿔 주세요."
         },
         "shop-page": {
@@ -1958,9 +1964,14 @@
           "prompt": "내 작은 가게를 위한 한 페이지 쇼핑몰을 만들어 줘. 가게 이름이 있는 헤더, 사진·이름·가격·장바구니 담기 버튼이 있는 샘플 상품 6개, 간단한 장바구니, 연락처 섹션을 넣어 줘. 나중에 바꿀 수 있는 임시 상품을 쓰고, 휴대폰에서도 잘 보이게 해 줘. 완성되면 페이지를 보여 줘."
         },
         "simple-game": {
-          "name": "간단한 게임",
-          "detail": "브라우저에서 바로 플레이.",
-          "prompt": "브라우저에서 바로 할 수 있는 간단한 게임을 만들어 줘. 방향키와 스와이프로 조작하는 스네이크 게임으로, 점수, 최고 점수, 다시 시작 버튼을 넣어 줘. 한 페이지로 만들고 완성되면 보여 줘."
+          "name": "바로 하는 게임",
+          "detail": "1분 정도면 플레이할 수 있어요.",
+          "prompt": "브라우저에서 1분 정도면 할 수 있는 재미있는 게임을 만들어 주세요. 떨어지는 물체를 피하는 아케이드 게임으로, 시작 화면, 방향키와 터치 조작, 점수와 최고 점수, 게임 오버 화면, 다시 하기 버튼을 넣어 주세요. 창에 맞는 한 페이지로 만들고, 모든 조작이 잘 되는지 확인한 뒤 준비되면 보여 주세요. 그다음 어떤 게임을 원하는지 짧은 메시지 하나로 물어보고, 제 게임으로 바꿔 주세요."
+        },
+        "my-project": {
+          "name": "내 앱이나 사이트 작업하기",
+          "detail": "이 컴퓨터의 앱이나 사이트.",
+          "prompt": "제 앱이나 웹사이트 프로젝트를 도와주세요. 열린 프로젝트 폴더가 없으면 프로젝트가 어디 있는지 물어봐 주세요. 그다음 살펴보고 무엇으로 만들었는지, 어떻게 실행하는지, 주요 구성, 망가졌거나 덜 된 것처럼 보이는 부분을 알려 주세요. 가장 유용한 다음 단계 세 가지를 제안하고, 제가 하나를 고를 때까지 아무것도 바꾸지 마세요."
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "Messaging",
       "mcp": "MCP servers",
       "skills": "Skills",
-      "tools": "Tools"
+      "tools": "Tools",
+      "templates": "Templates"
     },
     "emptyDescription": "This page arrives in a coming update.",
     "connectorDescription": "Connection details arrive in a coming update."
@@ -3150,7 +3162,10 @@
         "browser": "브라우저에서 작업 중",
         "subtask": "하위 작업 진행 중"
       },
-      "longTool": "{{activity}} · {{minutes}}분"
+      "longTool": "{{activity}} · {{minutes}}분",
+      "waitingForInternet": "인터넷을 기다리는 중",
+      "waitingForAbacus": "AbacusAI를 기다리는 중",
+      "messageSafe": "메시지는 안전합니다. 연결이 돌아오면 봇이 자동으로 계속합니다."
     },
     "code": {
       "copied": "Copied",
@@ -3223,7 +3238,8 @@
       "includedIn": "{{plan}}에 포함",
       "includedInPaid": "유료 요금제에 포함",
       "commands": "Commands",
-      "commandFailed": "That didn't work. Try again."
+      "commandFailed": "That didn't work. Try again.",
+      "offline": "지금 입력하세요. 온라인이 되면 바로 전송됩니다"
     },
     "day": {
       "today": "Today",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} 크레딧",
       "creditsLeft_one": "{{credits}} 크레딧 · {{left}} 남음",
       "creditsLeft_other": "{{credits}} 크레딧 · {{left}} 남음",
-      "creditsAction": "{{credits}}. 플랜과 크레딧 보기"
+      "creditsAction": "{{credits}}. 플랜과 크레딧 보기",
+      "waitedInternet": "그중 {{duration}} 동안 인터넷을 기다렸습니다",
+      "waitedAbacus": "그중 {{duration}} 동안 AbacusAI를 기다렸습니다"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "Skipped",
       "askBot": "{{bot}}에게 질문함: {{what}}",
       "giveTask": "{{bot}}에게 작업을 전달함: {{what}}",
-      "memoryUpdated": "메모리 업데이트됨: {{name}}"
+      "memoryUpdated": "메모리 업데이트됨: {{name}}",
+      "quiet": "{{time}} 동안 출력 없음",
+      "progress": "진행률"
     },
     "transcript": {
       "jump": "Jump to the end",
@@ -3607,9 +3627,15 @@
       "open": "열기"
     },
     "suggestedTasks": {
-      "label": "작업을 탭하면 바로 실행돼요",
+      "pickOne": "하나를 골라 계속하세요",
+      "next": "다음",
+      "routineLine": "앱이 열려 있는 동안 일정에 따라 실행됩니다",
+      "copied": "복사됨",
       "copy": "휴대폰에서 보낼 수 있게 “{{text}}” 복사",
-      "copyFailed": "복사하지 못했어요"
+      "copyFailed": "복사하지 못했어요",
+      "formTitle": "내 것으로 만들기",
+      "formLine": "한두 줄이면 충분해요. 샘플 문구를 바꿔 드릴게요.",
+      "notNow": "나중에"
     },
     "retryOffer": {
       "title": "{{model}}(으)로 다시 시도하기",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "이 작업은 저비용 모델에게는 어려워요. 가장 뛰어난 모델 중 하나인 {{model}}을(를) 여기서 쓸 수 있어요. 크레딧은 더 빨리 쓰여요.",
       "continue": "새 채팅에서 계속하기",
       "paidBody": "이 채팅의 요약으로 새 채팅에서 상위 모델이 이어서 작업해요. 크레딧은 더 빨리 쓰여요."
+    },
+    "topModelRetry": {
+      "retry": "{{model}}(으)로 다시 시도",
+      "upgradeRetry": "업그레이드하고 {{model}} 등 최상위 모델로 다시 시도",
+      "dismiss": "닫기",
+      "opusBody": "가장 강력한 모델이 새 채팅에서 이어서 처리합니다. 크레딧이 더 빨리 소모됩니다.",
+      "dialogBody": "어려운 작업을 위한 가장 강력한 모델, {{plan}}에 포함되어 있습니다."
     },
     "topModelCard": {
       "title": "{{plan}}으로 {{model}}을(를) 계속 쓰세요",
@@ -3718,6 +3751,12 @@
       "newChat": "{{model}}(으)로 새 채팅에서 계속",
       "here": "그래도 이 채팅을 {{model}}(으)로 바꾸기",
       "cancel": "취소"
+    },
+    "tasks": {
+      "title": "실행 중",
+      "stop": "중지",
+      "serving": "{{url}} 제공 중",
+      "stopFailed": "중지하지 못했습니다. 다시 시도하세요."
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "브라우저에서 마무리하세요",
     "planLine": "{{plan}} 플랜 · 언제든 해지 가능",
     "planTitle": "{{plan}}로 할 수 있는 모든 것",
+    "planModelTitle": "{{plan}}으로 {{model}}에서 다시 실행",
     "startAt": "시작 가격",
     "waitingBody": "플랜이 활성화되면 바로 메시지가 전송됩니다.",
     "waitingBodyNoMessage": "플랜이 활성화되면 바로 닫힙니다.",
@@ -5320,6 +5360,23 @@
     "continuing": "도구 결과 뒤에 오는 모든 내용은 이어지는 같은 답변입니다. 다시 인사하지 말고, 미션을 다시 설명하지 마세요.",
     "write": "사용자의 언어인 {{language}}로 작성하세요. 단, 사용자가 다른 언어로 쓰면 그 언어로 작성하세요."
   },
+  "quitGuard": {
+    "title_one": "작업이 아직 실행 중입니다",
+    "title_other": "작업 {{count}}개가 아직 실행 중입니다",
+    "body_one": "지금 종료하면 작업이 중지되고 끝나지 않은 내용은 사라집니다.",
+    "body_other": "지금 종료하면 작업이 중지되고 끝나지 않은 내용은 사라집니다.",
+    "wait_one": "끝날 때까지 기다리기",
+    "wait_other": "끝날 때까지 기다리기",
+    "quitAnyway": "종료하기",
+    "cancel": "취소",
+    "unnamed": "제목 없는 채팅",
+    "more_one": "외 {{count}}개",
+    "more_other": "외 {{count}}개",
+    "waitingOne": "'{{name}}' 작업이 끝나면 앱이 종료됩니다.",
+    "waitingMany_one": "작업 {{count}}개가 끝나면 앱이 종료됩니다.",
+    "waitingMany_other": "작업 {{count}}개가 끝나면 앱이 종료됩니다.",
+    "dontQuit": "종료하지 않기"
+  },
   "native": {
     "aboutApp": "{{app}} 소개",
     "services": "서비스",
@@ -5349,11 +5406,13 @@
     "zoom": "줌",
     "front": "모두 앞으로 가져오기",
     "credits": "MIT 라이선스에 따른 오픈 소스",
-    "keepRunning": "백그라운드에서 계속 실행",
-    "quitAnyway": "종료하기",
-    "taskRunningTitle": "작업이 실행 중입니다.",
-    "taskRunningMessage": "작업이 아직 실행 중입니다.",
-    "taskRunningDetail": "백그라운드에서 계속 실행하시겠습니까, 아니면 종료하고 중지하시겠습니까?",
+    "quitGuardTitleOne": "작업이 아직 실행 중입니다",
+    "quitGuardTitleMany": "실행 중인 작업이 있습니다",
+    "quitGuardDetail": "지금 종료하면 끝나지 않은 내용은 사라집니다. 기다리면 작업이 끝난 뒤 앱이 자동으로 종료됩니다.",
+    "quitGuardWait": "끝날 때까지 기다리기",
+    "quitGuardQuitAnyway": "종료하기",
+    "quitGuardCancel": "취소",
+    "quitGuardUnnamed": "제목 없는 채팅",
     "restart": "다시 시작",
     "quit": "종료",
     "wait": "기다리기",
@@ -5541,6 +5600,16 @@
     "line": "{{plan}}로 완성하세요: 어려운 부분엔 {{model}}, 이만한 작업에 충분한 크레딧, 완성되면 공개 링크까지.",
     "lineNoModel": "{{plan}}로 완성하세요: 어려운 부분엔 최고 모델, 이만한 작업에 충분한 크레딧, 완성되면 공개 링크까지."
   },
+  "freeModelDown": {
+    "title": "지금 무료 모델에 사용자가 많아요",
+    "line": "{{plan}}으로 최상위 모델(Claude, GPT, Gemini)에서 마무리하세요:",
+    "upgrade": "업그레이드하고 마무리하기",
+    "retry": "무료로 다시 시도",
+    "retrying": "{{seconds}}초 후 다시 시도…",
+    "firstRetrying": "{{seconds}}초 후에 다시 시도할게요…",
+    "tryNow": "지금 시도",
+    "history": "무료 모델에 사용자가 많았어요"
+  },
   "keepRunning": {
     "title": "“{{name}}”을(를) 24시간 실행하기",
     "titleUnnamed": "24시간 실행하기",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "여기 PR에 리뷰가 달리거나 CI가 실패하면 알려줘"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "오프라인 상태입니다.",
+      "offlineBody": "앱 문제가 아니라 인터넷 연결이 끊겼습니다. 인터넷이 돌아오면 자동으로 다시 이어집니다.",
+      "abacusTitle": "AbacusAI가 지금 응답하지 않습니다.",
+      "abacusBody": "인터넷은 괜찮습니다. 저희가 확인 중입니다.",
+      "checkingIn": "{{seconds}}초 후 다시 확인",
+      "backTitle": "다시 온라인입니다.",
+      "backSending_one": "대기 중인 메시지를 지금 보냅니다.",
+      "backSending_other": "대기 중인 메시지 {{count}}개를 지금 보냅니다."
+    },
+    "lanePaused": "일시 중지 · 오프라인",
+    "laneOfflineNote": "이 컴퓨터가 오프라인이라 일시 중지되었습니다. 링크는 괜찮으며, 인터넷이 돌아오면 자동으로 이어집니다.",
+    "queued": {
+      "title": "온라인이 되면 전송됩니다",
+      "line": "{{app}}의 {{to}}에게 \"{{text}}\". 인터넷이 돌아오는 즉시 한 번만 자동으로 전송됩니다.",
+      "cancel": "이 메시지 취소",
+      "unsureTitle": "전송되지 않았을 수 있습니다",
+      "unsureLine": "{{app}}의 {{to}}에게 \"{{text}}\". 보내는 중 인터넷이 끊겼으니 다시 보내기 전에 채팅을 확인해 주세요.",
+      "dismiss": "닫기"
     }
   }
 }

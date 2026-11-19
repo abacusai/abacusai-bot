@@ -45,6 +45,7 @@ import { useConnectFlow } from "./connect-flow";
 import {
   connectorAdded,
   offeredConnectors,
+  pausedOffline,
   uncheckable,
   useConnectorStatuses,
 } from "./connector-status";
@@ -147,6 +148,7 @@ export const ConnectorsPage = () => {
                 const appReason = localAppReason(statuses.data?.[e.id]);
                 const warn = signIn || appReason != null;
                 const cantCheck = uncheckable(statuses.data?.[e.id]);
+                const offline = pausedOffline(statuses.data?.[e.id]);
                 const inFlight =
                   flow.state.connectorId === e.id &&
                   flow.state.phase !== "idle" &&
@@ -174,19 +176,21 @@ export const ConnectorsPage = () => {
                           }
                         >
                           {t(
-                            appReason != null
-                              ? LOCAL_APP_PILL[appReason]
-                              : signIn
-                                ? "phase5.signInNeeded"
-                                : group
-                                  ? "phase5.connected"
-                                  : cantCheck
-                                    ? "phase5.cantCheck"
-                                    : "phase5.available"
+                            offline
+                              ? "connectivity.lanePaused"
+                              : appReason != null
+                                ? LOCAL_APP_PILL[appReason]
+                                : signIn
+                                  ? "phase5.signInNeeded"
+                                  : group
+                                    ? "phase5.connected"
+                                    : cantCheck
+                                      ? "phase5.cantCheck"
+                                      : "phase5.available"
                           )}
                         </StatePill>
                       </span>
-                      {inFlight ? (
+                      {offline ? null : inFlight ? (
                         // The wait is this row's: every other row, the search
                         // and navigation stay usable, and Cancel is beside it.
                         <ConnectPending onCancel={() => void flow.cancel()} />

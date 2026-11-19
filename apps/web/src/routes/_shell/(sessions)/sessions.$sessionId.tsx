@@ -112,6 +112,7 @@ import {
   ChatProjectChip,
   SessionIdentity,
 } from "#renderer/features/sessions/sessions-pages";
+import { ChatShareAction } from "#renderer/features/shell/chat-share-action";
 import {
   APP_HOTKEYS,
   useAppHotkey,
@@ -518,6 +519,7 @@ const SessionRoute = () => {
         <SessionIdentity sessionId={sessionId} />
         <ChatProjectChip sessionId={sessionId} />
       </TopBarSlot>
+      <ChatShareAction hostStore={session.hostStore} workspaceRoot={root} />
       <SidePanelOverride />
       <SessionWorkspace
         row={row}

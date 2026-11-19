@@ -28,6 +28,7 @@ import type {
   RoutineListItem,
   RoutineRun,
 } from "../routines";
+import type { ShareOfferCard } from "../share";
 import type { SiteReadyMark } from "../site-deploy";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
 import type { TopModelHintCard } from "../top-model-hint";
@@ -249,12 +250,16 @@ export interface PrefsRow {
     retryOffer?: DeliverableOfferCard | null;
     /** The rating line: asked, answered, closed, or turned off. */
     ratingPrompt?: RatingPromptCard | null;
+    /** The "Send it to anyone" card under a reply, shown and answered. */
+    shareOffer?: ShareOfferCard | null;
     /** The top-model hint above the composer, shown and answered. */
     topModelHint?: TopModelHintCard | null;
     /** The latest credit wall in the user's own chat, asked again once when they come back. */
     wallReopen?: WallReopenMark | null;
     /** The latest result in the user's own chat, offered on return (resume-card.ts); stamped by main. */
     resumeCard?: ResumeCardMark | null;
+    /** The session-1 "Retry with <top model>" line, closed with its ×. */
+    topModelRetryClosedAt?: number | null;
     /** The onboarding offer held for the first finished result (first-result-offer.ts): held, shown and answered. */
     firstResultOffer?: FirstResultOfferMark | null;
     freePlanSeenAt: number | null;

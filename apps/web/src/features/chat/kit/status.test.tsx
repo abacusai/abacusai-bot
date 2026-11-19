@@ -48,6 +48,7 @@ import {
   longToolLabel,
   noteRunningCalls,
   runningCallKey,
+  runningCommandProgress,
 } from "./status/status";
 
 let current: { cleanup(): Promise<void> } | null = null;
@@ -128,6 +129,42 @@ describe("a long-running tool on the busy line", () => {
     expect(longToolLabel(plain, "t1", here, 3 * 60_000)).toBe(
       "Running a command · 3 min"
     );
+  });
+
+  it("keeps the label the agent gave a command", () => {
+    const messages = running([
+      "l1",
+      "bash",
+      { command: "curl -L -o f.zip https://x", label: "Downloading Flutter" },
+    ]);
+    seen(messages, 0);
+    expect(longToolLabel(plain, "t1", messages, 3 * 60_000)).toBe(
+      "Downloading Flutter · 3 min"
+    );
+  });
+
+  it("carries the one running command's progress and silence", () => {
+    const messages = running(["p1", "bash", { command: "curl -O x" }]);
+    seen(messages, 1_000, "tp");
+    const state = emptyThreadState();
+    expect(runningCommandProgress(state, "tp", messages)).toEqual({
+      progress: null,
+      quietSince: 1_000,
+    });
+    const key = "\u0000p1" as keyof typeof state.tools.output;
+    state.tools.output[key] = "\r 12%\r 45%";
+    state.tools.outputAt[key] = 9_000;
+    expect(runningCommandProgress(state, "tp", messages)).toEqual({
+      progress: 45,
+      quietSince: 9_000,
+    });
+    // Several at once, or something that is not a command: no meter.
+    const two = running(["p2", "bash"], ["p3", "bash"]);
+    seen(two, 2_000, "tp");
+    expect(runningCommandProgress(state, "tp", two)).toBeNull();
+    const read = running(["r1", "read", { path: "a" }]);
+    seen(read, 2_000, "tp");
+    expect(runningCommandProgress(state, "tp", read)).toBeNull();
   });
 
   it("keeps a tool's own title where it has no plain phrase", () => {

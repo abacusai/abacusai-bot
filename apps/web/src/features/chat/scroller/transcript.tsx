@@ -20,6 +20,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useConnectivity } from "#renderer/components/connectivity";
 import { Button } from "#renderer/ui/button";
 import { Marker, MarkerContent } from "#renderer/ui/marker";
 import {
@@ -38,16 +39,20 @@ import { useChatView } from "../kit/context";
 import { DeliverableOfferRow } from "../kit/deliverable-offer";
 import { FirstResultOfferRow } from "../kit/first-result-offer";
 import { appLineOf, userView, routeRowOf } from "../kit/message";
+import { QueuedSendsRow } from "../kit/queued-sends";
 import { RatingPromptRow } from "../kit/rating-prompt";
 import { RetryOfferRow } from "../kit/retry-offer";
 import { RouterAfterUpgradeRow } from "../kit/router-after-upgrade";
+import { ShareOfferRow } from "../kit/share-offer";
 import {
   BusyLine,
+  runningCommandProgress,
   busyLabel,
   ErrorCard,
   FreeLaneChip,
   RunMarker,
   longToolLabel,
+  NetworkWaitPill,
   noteRunningCalls,
   runningCallKey,
   runningTools,
@@ -55,6 +60,7 @@ import {
 } from "../kit/status/status";
 import { SuccessPitchRow } from "../kit/success-pitch";
 import { TopModelCardRow } from "../kit/top-model-card";
+import { TopModelRetryRow } from "../kit/top-model-retry";
 import { outOfAbacusCredits, UpgradeTriggers } from "../kit/upgrade-triggers";
 import { useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
@@ -152,6 +158,7 @@ const RunTail = ({ messages }: { messages: UIMessage[] }) => {
   const { t } = useTranslation();
   const { session, skin, slots } = useChatView();
   const state = useThreadStore(session, (s) => s);
+  const connectivity = useConnectivity();
   const subagents = useHost(
     session,
     (s) => s.subagents.filter((h) => h.status === "running").length
@@ -168,6 +175,20 @@ const RunTail = ({ messages }: { messages: UIMessage[] }) => {
   );
   if (active == null)
     return slots.runTail != null ? <>{slots.runTail}</> : null;
+  // Waiting on the network: whose, and for how long, in place of the line.
+  // A provider's own retry while the computer is offline is the same wait.
+  const wait = state.activity.networkWait;
+  const retry = state.activity.retry;
+  if (
+    retry != null &&
+    (retry.waitingForConnection || connectivity.state !== "online")
+  )
+    return (
+      <NetworkWaitPill
+        since={wait?.since ?? active.startedAt}
+        connectivity={connectivity.state}
+      />
+    );
   // Past a minute, one running tool reads in plain words with its own time.
   const long = longToolLabel(t, thread, messages, now);
   const running = long != null ? [long] : titles;
@@ -186,6 +207,11 @@ const RunTail = ({ messages }: { messages: UIMessage[] }) => {
     <BusyLine
       label={busyLabel(t, { state, running, agents: subagents })}
       startedAt={active.startedAt}
+      command={
+        subagents === 0 && state.permissions.items.length === 0
+          ? runningCommandProgress(state, thread, messages)
+          : null
+      }
     />
   );
 };
@@ -933,12 +959,15 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           ))}
           {rows}
           <RunTail messages={messages} />
+          <QueuedSendsRow />
           <DeliverableOfferRow messages={messages} active={active} />
           <RetryOfferRow messages={messages} active={active} />
           <RouterAfterUpgradeRow messages={messages} active={active} />
           <FirstResultOfferRow messages={messages} active={active} />
           <TopModelCardRow messages={messages} active={active} />
           <SuccessPitchRow messages={messages} active={active} />
+          <ShareOfferRow messages={messages} active={active} />
+          <TopModelRetryRow messages={messages} active={active} />
           <RatingPromptRow messages={messages} active={active} />
           <UpgradeTriggers
             messages={messages}

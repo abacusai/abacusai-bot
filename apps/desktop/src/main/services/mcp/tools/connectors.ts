@@ -43,9 +43,12 @@ export const CONNECTORS_TOOLS: ToolDefinition[] = [
       "Call it with a service to ask for that one. It answers at once, never waiting",
       "for the user: an account connector comes back as a one-tap link to send them",
       "(one Google sign-in covers Gmail, Drive and Calendar), and in the app a Connect",
-      "card shows too. Carry on meanwhile; you are told when it is connected, and its",
-      "tools are in your list then. Every connector is available to every chat. Do not",
-      "report that you cannot do something for want of a connector until you have asked.",
+      "card shows too. Carry on meanwhile: the part of the task you can do now with what",
+      "is connected or built in (web search, the browser), do in this same turn and send",
+      "the link beside it; never end a turn on only a link and questions. You are told",
+      "when it is connected, and its tools are in your list then. Every connector is",
+      "available to every chat. Do not report that you cannot do something for want of",
+      "a connector until you have asked.",
       "",
       "When the task plainly needs a missing service, call this immediately: the",
       "link is the question. Do not ask permission first, do not offer",
@@ -185,6 +188,15 @@ export function appConnectResult(
           "part of the task does not need it."
       );
     }
+    case "offline":
+      return host.ok(
+        outcome.linked
+          ? `This computer's internet connection is down. ${outcome.name} is still linked and nothing about the link is wrong: ` +
+              "it picks up by itself when the internet is back, and anything you send now waits and goes once then. " +
+              "No Connect card was shown. Tell the user in one short line that their internet dropped; do not ask them to reconnect or scan anything."
+          : `This computer's internet connection is down, so ${outcome.name} cannot be linked right now and no Connect card was shown. ` +
+              "Tell the user in one short line that their internet dropped; it can be linked once the internet is back."
+      );
     case "not_here":
       return host.ok(
         `${outcome.name} cannot be connected from this chat. Say so, and offer whatever part of the task does not need it.`

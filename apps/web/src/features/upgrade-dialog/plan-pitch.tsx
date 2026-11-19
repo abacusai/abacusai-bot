@@ -43,10 +43,13 @@ export const PlanPitchList = ({
   billing,
   lead = null,
   sameForEveryone = false,
+  model,
   className,
 }: {
   billing: BillingPlan | null;
   lead?: PitchLine | null;
+  /** A top model the moment names: first in the models line. */
+  model?: string;
   sameForEveryone?: boolean;
   className?: string;
 }) => {
@@ -57,7 +60,8 @@ export const PlanPitchList = ({
     t,
     billing,
     i18n.language,
-    pitchOrder(sameForEveryone ? null : upgradePitch(account), lead)
+    pitchOrder(sameForEveryone ? null : upgradePitch(account), lead),
+    model
   );
   if (lines.length === 0) return null;
   return (

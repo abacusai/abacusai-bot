@@ -34,6 +34,8 @@ export const UPGRADE_SRCS = [
   "web_tab",
   "big_task",
   "keep_running",
+  "retry_top_model",
+  "free_model_down",
   "first_result",
 ] as const;
 
@@ -75,12 +77,22 @@ export interface BillingPlan {
    */
   topModels?: PlanTopModel[];
   /**
+   * A free account's arm in the server's top-model retry 50/50 (opus_retry):
+   * "opus", its retry runs the paid plans' Opus on its own credits in a new
+   * chat; "dialog", its retry opens the upgrade dialog. Absent from older
+   * servers, null for a paid plan or with the test off.
+   */
+  opusRetry?: OpusRetryArm | null;
+  /**
    * Where the platform puts a new account's onboarding offer: on the
    * onboarding screen, or held for one card under the first finished result
    * (the onboarding offer test). Absent from older servers: onboarding.
    */
   onboardingOffer?: OnboardingOfferPlacement;
 }
+
+/** The arms of the top-model retry 50/50 (BillingPlan.opusRetry). */
+export type OpusRetryArm = "opus" | "dialog";
 
 export type OnboardingOfferPlacement = "onboarding" | "after_first_result";
 
@@ -254,9 +266,18 @@ export const planTopModelNames = (features: readonly string[]): string[] => {
 
 const planTopModels = (
   features: readonly string[],
-  locale: string
+  locale: string,
+  lead?: string
 ): string | null => {
-  const names = planTopModelNames(features);
+  const listed = planTopModelNames(features);
+  // A moment that names one top model shows it first, never cut off by the count.
+  const names =
+    lead != null && lead.length > 0
+      ? [lead, ...listed.filter((name) => name !== lead)].slice(
+          0,
+          TOP_MODEL_COUNT
+        )
+      : listed;
   if (names.length === 0) return null;
   // Chinese's unit list has no separator at all: names would run together.
   return locale.startsWith("zh")
@@ -330,7 +351,9 @@ export function planPitch(
   t: PlanT,
   billing: BillingPlan | null,
   locale: string,
-  order: readonly PitchLine[] = PITCH_LINES
+  order: readonly PitchLine[] = PITCH_LINES,
+  /** A top model the moment names (a retry on it): first in the models line. */
+  leadModel?: string
 ): string[] {
   const offer = wallOffer(billing);
   const number = (value: number) =>
@@ -349,7 +372,8 @@ export function planPitch(
       : null;
   const times = creditsTimes(monthly, free, locale);
   const first = monthly != null ? firstMonthCredits(offer, monthly) : null;
-  const models = offer != null ? planTopModels(offer.features, locale) : null;
+  const models =
+    offer != null ? planTopModels(offer.features, locale, leadModel) : null;
   const projects = offer != null ? planAppProjects(offer.features) : null;
   const line = (name: PitchLine): string | null => {
     switch (name) {

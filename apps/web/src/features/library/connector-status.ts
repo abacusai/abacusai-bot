@@ -62,5 +62,9 @@ export const offeredConnectors = (
       statuses?.[e.id]?.reason !== "not-offered" &&
       !localAppHidden(e, statuses?.[e.id])
   );
+/** A linked chat app paused while this computer is offline: nothing to connect. */
+export const pausedOffline = (status: ConnectorStatus | undefined): boolean =>
+  status?.reason === "offline";
+
 export const connectorAdded = (status: ConnectorStatus | undefined): boolean =>
   ["connected", "pending"].includes(status?.state ?? "");

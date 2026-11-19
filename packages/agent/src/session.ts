@@ -71,6 +71,7 @@ import { createGuardrails } from "./extensions/guardrails.js";
 import knowledge from "./extensions/knowledge.js";
 import orientation from "./extensions/orientation.js";
 import outputRepair from "./extensions/output-repair.js";
+import pdfRoute from "./extensions/pdf-route.js";
 import requestSize from "./extensions/request-size.js";
 import {
   COMPACTED_ACTION,
@@ -193,6 +194,7 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "./reply-language.js";
+import { requestSources } from "./request-facts.js";
 import { createResourceLoader } from "./resource-loader.js";
 import { buildRoster } from "./roster.js";
 import {
@@ -224,6 +226,7 @@ import {
   modelStallMs,
 } from "./stall-watch.js";
 import { continueCutReply, isStreamCut, streamCutStep } from "./stream-cut.js";
+import { partialOutputText } from "./terminal-progress.js";
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
@@ -551,6 +554,22 @@ export function componentsPrompt(
         "and say so when you do it.",
       ].join("\n")
     );
+    // An attached deck to improve was rebuilt by script in 2 of 3 runs: the
+    // Office-file rule (edit the user's own file) read as the way to do it.
+    const remake = [
+      qualifiedName(availableTools, "ppt"),
+      qualifiedName(availableTools, "document"),
+    ].filter((name): name is string => name != null);
+    if (remake.length > 0)
+      sections.push(
+        [
+          "A file the user wants improved, redesigned or made professional is made anew: for their",
+          `.pptx or .docx, call ${remake.map((n) => `\`${n}\``).join(" or ")} with source_file set to it (the tool reads its words,`,
+          "figures and pictures; do not read or unzip it yourself), and put only what they want",
+          "changed in the brief; for a PDF, read it and pass its words, figures and pictures' paths.",
+          "Editing their file in place is for a change they name (a title, a figure), not a redesign.",
+        ].join("\n")
+      );
   }
 
   const serve = qualifiedName(availableTools, "serve");
@@ -956,6 +975,8 @@ export class AbacusBotSession {
       ...componentToolNames(hostServices),
       ...this.mcp.tools.map((tool) => tool.name),
     ]);
+    const documentTool = qualifiedName(toolNames, "document");
+    const deckTool = qualifiedName(toolNames, "ppt");
     // A run nobody watches gets none of the user's private context: a page it
     // reads could ask for it back. Its routine's own prompt still arrives.
     const unattended = this.mode === AgentMode.Unattended;
@@ -1087,6 +1108,21 @@ export class AbacusBotSession {
               name: "abacusai-bot-email-format",
               factory: emailFormat as unknown as (pi: ExtensionAPI) => void,
             },
+            // A new PDF goes through the document tool, not weasyprint or
+            // reportlab in bash (overnight: the chat's certificate).
+            ...(documentTool != null || deckTool != null
+              ? [
+                  {
+                    name: "abacusai-bot-pdf-route",
+                    factory: pdfRoute({
+                      ...(documentTool != null
+                        ? { document: documentTool }
+                        : {}),
+                      ...(deckTool != null ? { ppt: deckTool } : {}),
+                    }) as unknown as (pi: ExtensionAPI) => void,
+                  },
+                ]
+              : []),
             {
               name: "abacusai-bot-compaction-pruner",
               factory: compactionPruner as unknown as (
@@ -1257,6 +1293,8 @@ export class AbacusBotSession {
         // Read at spawn: the chat's model moves with a pick or a pool hop, and
         // a sub-agent runs on the one the user is on then, not at start.
         model: () => this.session?.model ?? model,
+        // A document's numbers are checked against the person, not the bot.
+        requestSources: () => requestSources(this.session?.messages ?? []),
         browserModel: () =>
           browserModelOverride ?? this.session?.model ?? model,
         hostServices: hostServices ? this.hostServices : null,
@@ -1482,7 +1520,7 @@ export class AbacusBotSession {
     this.router.beginTurn();
     this.pendingNetworkFailure = null;
     this.pendingBusyWait = null;
-    this.networkWait.reset();
+    this.networkWait.beginTurn();
     this.busyWait.reset();
     this.networkFailureReported = false;
     this.languageRepairsThisTurn = 0;
@@ -1827,6 +1865,13 @@ export class AbacusBotSession {
                 abacusFreeModels: [],
                 abacus: null,
               }),
+          // The free model's outage: a busy or silent Abacus call this turn,
+          // or the stall the turn ends on (reported without the chain).
+          abacusBusy:
+            this.router.chain.abacusBusy ||
+            (failure.provider === "abacus" &&
+              (failure.cause === "rate_limited" ||
+                failure.cause === "stalled")),
           ...(failure.cause === "context_too_long" &&
             registry != null && {
               fit: this.governor.fitCard(
@@ -2771,6 +2816,8 @@ export class AbacusBotSession {
           }
         : this.lastTurnUsage;
     const credits = this.turnCreditsSoFar;
+    const waited = this.networkWait.waitedMs;
+    const abacusWaited = this.networkWait.abacusWaitedMs;
     this.lastTurnUsage = null;
     this.turnCreditsSoFar = undefined;
     const end = (outcome?: TurnOutcome): void => {
@@ -2778,7 +2825,14 @@ export class AbacusBotSession {
         type: "turn_complete",
         ...(outcome != null ? { outcome } : {}),
         ...(usage != null
-          ? { usage: credits !== undefined ? { ...usage, credits } : usage }
+          ? {
+              usage: {
+                ...usage,
+                ...(credits !== undefined ? { credits } : {}),
+                ...(waited > 0 ? { networkWaitMs: waited } : {}),
+                ...(abacusWaited > 0 ? { abacusWaitMs: abacusWaited } : {}),
+              },
+            }
           : {}),
       });
       this.emitAgentEvent({
@@ -3428,13 +3482,13 @@ export class AbacusBotSession {
 
       case "tool_execution_update": {
         // Long-running bash streams its output; the tool card shows it live.
-        const partial = event.partialResult;
+        const output = partialOutputText(event.partialResult);
 
-        if (typeof partial === "string" && partial.length > 0) {
+        if (output.length > 0) {
           this.emitAgentEvent({
             type: "tool_output_update",
             toolCallId: event.toolCallId,
-            output: partial,
+            output,
           });
         }
 

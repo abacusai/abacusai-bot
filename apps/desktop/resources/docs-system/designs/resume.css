@@ -1,0 +1,112 @@
+/* resume designs: html[data-design="resume-…"] over the CV markup of guide.md
+   (.cv-head, then .cv-body with main and aside). */
+
+/* ------------------------------------------------------------------ */
+/* Harbour: a dark sidebar down the whole left of the page, the name    */
+/* beside it in a heavy grotesque, teal as the signal colour.           */
+/* ------------------------------------------------------------------ */
+html[data-design="resume-harbour"]:root {
+  --accent: #23877a; --accent-soft: #e1f0ed; --ink: #18222d; --muted: #5a6470; --line: #d8dde2;
+  --side: #1d2a37; --side-ink: #e8eef2; --side-accent: #7fd1c2;
+  --sans: "Manrope", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --display: "Bricolage Grotesque", var(--sans);
+}
+html[data-design="resume-harbour"] body.doc:has(> .cv-body > aside) {
+  display: grid; grid-template-columns: 62mm 1fr; grid-template-rows: auto 1fr; column-gap: 9mm; min-height: 256mm;
+}
+html[data-design="resume-harbour"] body.doc:has(> .cv-body > aside) > .cv-body { display: contents; }
+html[data-design="resume-harbour"] body.doc:has(> .cv-body > aside) > .cv-head { grid-column: 2; grid-row: 1; }
+html[data-design="resume-harbour"] body.doc:has(> .cv-body > aside) > .cv-body > main { grid-column: 2; grid-row: 2; }
+html[data-design="resume-harbour"] body.doc:has(> .cv-body > aside) > .cv-body > aside { grid-column: 1; grid-row: 1 / span 2; }
+html[data-design="resume-harbour"] body.doc:has(> .cv-body > aside) > :not(.cv-head):not(.cv-body) { grid-column: 1 / -1; }
+html[data-design="resume-harbour"] .cv-head { border-bottom: 0; padding: 4mm 0 0; margin-bottom: 9mm; }
+html[data-design="resume-harbour"] .cv-head h1 { font-family: var(--display); font-weight: 800; font-size: calc(34pt * var(--fit)) !important; line-height: 1.02; letter-spacing: -0.025em; margin: 0 0 3mm !important; }
+html[data-design="resume-harbour"] .cv-head .role { color: var(--accent); font-weight: 700; font-size: calc(14pt * var(--fit)); margin: 0 0 3mm; }
+html[data-design="resume-harbour"] .cv-head .contact { font-size: calc(10.5pt * var(--fit)); color: var(--muted); }
+html[data-design="resume-harbour"] .cv-head::after { content: ""; display: block; width: 16mm; height: 1.6mm; background: var(--accent); margin-top: 5mm; }
+html[data-design="resume-harbour"] .cv-body > aside { background: var(--side); color: var(--side-ink); border-radius: 0; padding: 14mm 7mm 10mm; border-top: 5mm solid var(--accent); font-size: calc(11pt * var(--fit)); }
+html[data-design="resume-harbour"] .cv-body > aside li, html[data-design="resume-harbour"] .cv-body > aside p { font-size: calc(11pt * var(--fit)); line-height: 1.5; }
+html[data-design="resume-harbour"] .cv-body > aside li { padding-left: 4mm; position: relative; margin-bottom: 2mm; }
+html[data-design="resume-harbour"] .cv-body > aside li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 1.6mm; height: 1.6mm; background: var(--side-accent); }
+html[data-design="resume-harbour"] .cv-body > aside b, html[data-design="resume-harbour"] .cv-body > aside strong { color: #fff; }
+html[data-design="resume-harbour"] .cv-body h2 { font-family: var(--display); font-weight: 700; font-size: calc(11.5pt * var(--fit)) !important; letter-spacing: 0.14em; text-transform: uppercase; }
+html[data-design="resume-harbour"] .cv-body > aside h2 { color: var(--side-accent); border-bottom: 0.75pt solid rgba(255, 255, 255, 0.25); padding-bottom: 2mm; }
+html[data-design="resume-harbour"] .cv-body > main h2 { color: var(--ink); display: flex; align-items: center; gap: 3mm; }
+html[data-design="resume-harbour"] .cv-body > main h2::after { content: ""; flex: 1; border-bottom: 0.75pt solid var(--line); }
+html[data-design="resume-harbour"] .cv-body > main { font-size: calc(12pt * var(--fit)); }
+html[data-design="resume-harbour"] .cv-body .job { display: block; margin-bottom: 6mm; }
+html[data-design="resume-harbour"] .cv-body .job .when { color: var(--accent); font-weight: 700; font-size: calc(10pt * var(--fit)); letter-spacing: 0.06em; text-transform: uppercase; padding: 0; margin-bottom: 0.5mm; }
+html[data-design="resume-harbour"] .cv-body .job h3 { font-family: var(--display); font-weight: 700; font-size: calc(13.5pt * var(--fit)) !important; }
+html[data-design="resume-harbour"] .cv-body .job .org { font-size: calc(11pt * var(--fit)); font-weight: 600; color: var(--muted); }
+html[data-design="resume-harbour"] .cv-body main li::marker { color: var(--accent); }
+
+/* ------------------------------------------------------------------ */
+/* Folio: an editorial serif CV. A centred name in Playfair Display,     */
+/* an italic role, a hairline with a small diamond, spaced capitals in   */
+/* claret for the headings and a ruled side column.                      */
+/* ------------------------------------------------------------------ */
+html[data-design="resume-folio"]:root {
+  --accent: #8a2c34; --accent-soft: #f6eaea; --ink: #1e1b18; --muted: #6a625b; --line: #d9d2ca;
+  --display: "Playfair Display", var(--serif);
+  --text: "Lora", var(--serif);
+}
+html[data-design="resume-folio"] body.doc { font-family: var(--text); }
+html[data-design="resume-folio"] .cv-head { text-align: center; border-bottom: 0.75pt solid var(--ink); padding: 2mm 0 7mm; margin-bottom: 10mm; position: relative; }
+html[data-design="resume-folio"] .cv-head::after { content: ""; position: absolute; left: 50%; bottom: -1.6mm; width: 2.6mm; height: 2.6mm; background: #fff; border: 0.75pt solid var(--ink); transform: translateX(-50%) rotate(45deg); }
+html[data-design="resume-folio"] .cv-head h1 { font-family: var(--display); font-weight: 500; font-size: calc(40pt * var(--fit)) !important; letter-spacing: 0.01em; line-height: 1.05; margin: 0 0 2.5mm !important; }
+html[data-design="resume-folio"] .cv-head .role { font-family: var(--text); font-style: italic; font-weight: 400; color: var(--accent); font-size: calc(15pt * var(--fit)); margin: 0 0 3.5mm; }
+html[data-design="resume-folio"] .cv-head .contact { font-size: calc(10.5pt * var(--fit)); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+html[data-design="resume-folio"] .cv-body { gap: 10mm; grid-template-columns: 1fr 56mm; }
+html[data-design="resume-folio"] .cv-body:not(:has(> aside)) { grid-template-columns: 1fr; }
+html[data-design="resume-folio"] .cv-body > aside { background: none; border-radius: 0; border-left: 0.75pt solid var(--line); padding: 1mm 0 0 7mm; font-size: calc(11pt * var(--fit)); }
+html[data-design="resume-folio"] .cv-body > aside li, html[data-design="resume-folio"] .cv-body > aside p { font-size: calc(11pt * var(--fit)); }
+html[data-design="resume-folio"] .cv-body > aside ul li { padding-left: 4mm; position: relative; }
+html[data-design="resume-folio"] .cv-body > aside ul li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 1.4mm; height: 1.4mm; background: var(--accent); transform: rotate(45deg); }
+html[data-design="resume-folio"] .cv-body h2 { font-family: var(--display); font-weight: 600; font-size: calc(12pt * var(--fit)) !important; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); border-bottom: 0.5pt solid var(--line); padding-bottom: 1.8mm; }
+html[data-design="resume-folio"] .cv-body > main { font-size: calc(12pt * var(--fit)); line-height: 1.6; }
+html[data-design="resume-folio"] .cv-body .job { grid-template-columns: 1fr auto; gap: 0 4mm; }
+html[data-design="resume-folio"] .cv-body .job > .when { grid-column: 2; grid-row: 1; font-style: italic; font-weight: 400; font-size: calc(10.5pt * var(--fit)); padding-top: 1mm; white-space: nowrap; }
+html[data-design="resume-folio"] .cv-body .job > div:not(.when) { grid-column: 1; grid-row: 1; min-width: 0; }
+html[data-design="resume-folio"] .cv-body .job h3 { font-family: var(--display); font-weight: 600; font-size: calc(14pt * var(--fit)) !important; }
+html[data-design="resume-folio"] .cv-body .job .org { font-style: italic; font-size: calc(11.5pt * var(--fit)); }
+html[data-design="resume-folio"] .cv-body main li::marker { color: var(--accent); }
+
+/* ------------------------------------------------------------------ */
+/* Signal: a solid colour band across the top with the name in tall     */
+/* condensed capitals; experience as a timeline with dots; square       */
+/* markers on the headings; a side column under a thick top rule.        */
+/* ------------------------------------------------------------------ */
+html[data-design="resume-signal"]:root {
+  --accent: #df4f2c; --accent-soft: #fcebe5; --ink: #1c1c1f; --muted: #5f5f66; --line: #e2e0dd;
+  --sans: "DM Sans", "Inter", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Math", "Noto Sans Symbols 2", sans-serif;
+  --display: "Bebas Neue", var(--sans);
+  --head: "Space Grotesk", var(--sans);
+}
+html[data-design="resume-signal"] .cv-head { background: var(--accent); color: #fff; border: 0; padding: 10mm 10mm 8mm; margin-bottom: 9mm; position: relative; overflow: hidden; }
+html[data-design="resume-signal"] .cv-head::after { content: ""; position: absolute; right: -14mm; top: -14mm; width: 52mm; height: 52mm; border-radius: 50%; border: 7mm solid rgba(255, 255, 255, 0.14); }
+html[data-design="resume-signal"] .cv-head > * { position: relative; z-index: 1; }
+html[data-design="resume-signal"] .cv-head h1 { font-family: var(--display); font-weight: 400; font-size: calc(56pt * var(--fit)) !important; line-height: 0.92; letter-spacing: 0.01em; margin: 0 0 3mm !important; color: #fff; }
+html[data-design="resume-signal"] .cv-head .role { font-family: var(--head); color: #fff; font-weight: 600; font-size: calc(15pt * var(--fit)); margin: 0 0 2mm; }
+html[data-design="resume-signal"] .cv-head .contact { color: #fff; opacity: 0.9; font-size: calc(10.5pt * var(--fit)); }
+html[data-design="resume-signal"] .cv-body { grid-template-columns: 1fr 58mm; gap: 10mm; }
+html[data-design="resume-signal"] .cv-body:not(:has(> aside)) { grid-template-columns: 1fr; }
+html[data-design="resume-signal"] .cv-body h2 { font-family: var(--head); font-weight: 700; font-size: calc(12.5pt * var(--fit)) !important; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); display: flex; align-items: center; gap: 2.5mm; }
+html[data-design="resume-signal"] .cv-body h2::before { content: ""; width: 3mm; height: 3mm; background: var(--accent); flex: none; }
+html[data-design="resume-signal"] .cv-body > aside { background: none; border-radius: 0; border-top: 2mm solid var(--ink); padding: 6mm 0 0; font-size: calc(11pt * var(--fit)); }
+html[data-design="resume-signal"] .cv-body > aside li, html[data-design="resume-signal"] .cv-body > aside p { font-size: calc(11pt * var(--fit)); }
+html[data-design="resume-signal"] .cv-body > aside ul li { border-bottom: 0.5pt solid var(--line); padding-bottom: 1.6mm; }
+html[data-design="resume-signal"] .cv-body > main { font-size: calc(12pt * var(--fit)); border-top: 2mm solid var(--accent); padding-top: 6mm; }
+html[data-design="resume-signal"] .cv-body .job { display: block; position: relative; padding: 0 0 1mm 7mm; margin: 0 0 4mm 1.5mm; border-left: 0.75pt solid #cfccc8; }
+html[data-design="resume-signal"] .cv-body .job::before { content: ""; position: absolute; left: -2.1mm; top: 0.4mm; width: 3.4mm; height: 3.4mm; border-radius: 50%; background: #fff; border: 0.9mm solid var(--accent); box-sizing: border-box; }
+html[data-design="resume-signal"] .cv-body .job .when { display: inline-block; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: calc(10pt * var(--fit)); padding: 0.6mm 2.2mm; border-radius: 1mm; margin-bottom: 1.5mm; }
+html[data-design="resume-signal"] .cv-body .job h3 { font-family: var(--head); font-weight: 700; font-size: calc(13.5pt * var(--fit)) !important; }
+html[data-design="resume-signal"] .cv-body .job .org { font-size: calc(11pt * var(--fit)); }
+html[data-design="resume-signal"] .cv-body main li::marker { color: var(--accent); }
+
+/* The side column runs down to the foot of the page under a one- or two-line
+   name (a taller min-height pushed the CV to a second page, then shrank it). */
+html[data-design="resume-folio"] .cv-body { min-height: 200mm; }
+html[data-design="resume-signal"] .cv-body { min-height: 196mm; }
+/* Room between the sections, and between the jobs. */
+html[data-design^="resume-"] .cv-body > main > h2:not(:first-child) { margin-top: 10mm !important; }
+html[data-design^="resume-"] .cv-body .job { margin-bottom: 7mm; }

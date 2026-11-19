@@ -20,7 +20,11 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { abacusStreamSimple } from "./abacus-credits.js";
-import { abacusV1BaseUrl, sponsoredRunHeaders } from "./abacus-endpoint.js";
+import {
+  abacusV1BaseUrl,
+  experimentsHeaders,
+  sponsoredRunHeaders,
+} from "./abacus-endpoint.js";
 import { writeFileAtomicSync } from "./atomic-file.js";
 import {
   abacusBotDir,
@@ -639,7 +643,7 @@ export async function registerAbacusProvider(
   const live = await fetchAbacusCatalog(apiKey);
   if (live.length > 0) writeLastGoodCatalog(apiKey, live);
   const lastGood = live.length > 0 ? [] : readLastGoodCatalog(apiKey);
-  const sponsored = sponsoredRunHeaders();
+  const headers = { ...experimentsHeaders(), ...sponsoredRunHeaders() };
 
   registerProvider(registry, "abacus", {
     name: "Abacus.AI",
@@ -654,7 +658,7 @@ export async function registerAbacusProvider(
         : lastGood.length > 0
           ? withUnlisted(lastGood)
           : STATIC_ABACUS_MODELS,
-    ...(Object.keys(sponsored).length > 0 ? { headers: sponsored } : {}),
+    headers,
   });
 }
 

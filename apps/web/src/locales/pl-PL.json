@@ -1508,6 +1508,12 @@
     "stopped": "Link usunięty",
     "links": "Udostępnione linki",
     "linksEmpty": "Nic jeszcze nie udostępniono. Użyj opcji Udostępnij przy pliku utworzonym przez bota.",
+    "offer": {
+      "title": "Wyślij to komukolwiek",
+      "body": "Uzyskaj link, który otworzy się na każdym telefonie i komputerze. Zanim go opublikujesz, zobaczysz dokładnie to, co zobaczą inni.",
+      "getLink": "Utwórz link",
+      "notNow": "Nie teraz"
+    },
     "errors": {
       "TOO_LARGE": "Ten plik przekracza limit 5 MB dla linków.",
       "TOO_MANY": "Masz 50 udostępnionych linków. Przestań udostępniać jeden, by utworzyć kolejny.",
@@ -1942,36 +1948,36 @@
       "recent": "Kontynuuj tam, gdzie skończyłeś w {{workspace}}",
       "build": {
         "orders-system": {
-          "name": "Aplikacja do zamówień i rezerwacji",
-          "detail": "Dla sklepu, siłowni, salonu lub firmy usługowej.",
+          "name": "Zamówienia i rezerwacje",
+          "detail": "Dla sklepów, siłowni i salonów.",
           "prompt": "Prowadzę małą firmę. Zbuduj mi na tym komputerze prostą aplikację do śledzenia zamówień, rezerwacji lub zleceń: listę, do której mogę dodawać pozycje i którą mogę przeszukiwać i filtrować, osobną stronę dla każdej pozycji z klientem, datą, statusem i ceną oraz dzienne podsumowanie. Od razu zbuduj pierwszą wersję z przykładowymi danymi dla typowego małego sklepu i otwórz ją dla mnie. Potem w jednej krótkiej wiadomości zapytaj mnie, czym zajmuje się moja firma i co chcę śledzić, aby dopasować aplikację do moich potrzeb."
         },
         "business-site": {
           "name": "Strona dla mojej firmy",
-          "detail": "Usługi, godziny otwarcia, opinie i formularz kontaktowy.",
+          "detail": "Usługi, godziny i kontakt.",
           "prompt": "Zbuduj stronę internetową dla mojej firmy: nagłówek z nazwą firmy i tym, co oferuje, sekcję z usługami i cenami, godziny otwarcia, kilka opinii klientów, informację, gdzie nas znaleźć, oraz formularz kontaktowy. Użyj przykładowych danych, które później podmienię, i zadbaj o to, żeby strona dobrze wyglądała na telefonie. Pokaż mi ją, gdy będzie gotowa, a potem w jednej krótkiej wiadomości zapytaj mnie o nazwę mojej firmy i o to, czym się zajmuje, aby dopasować stronę do mojej firmy."
         },
         "lead-finder": {
           "name": "Znajdź klientów",
-          "detail": "Nowi potencjalni klienci każdego ranka i gotowy szkic pierwszego maila."
+          "detail": "Nowi klienci i pierwszy e-mail."
         },
         "my-game": {
           "name": "Praca nad moją grą",
-          "detail": "Unity, Godot, Unreal lub Roblox, w folderze twojego projektu.",
+          "detail": "Unity, Godot, Unreal lub Roblox.",
           "prompt": "Pomóż mi z moją grą. Jeśli nie jest otwarty żaden folder projektu, zapytaj mnie, gdzie jest projekt mojej gry. Potem przejrzyj go i powiedz mi, jakiego silnika i której wersji używa, jakie ma główne sceny i skrypty oraz co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i zanim cokolwiek zmienisz, poczekaj, aż wybiorę jeden z nich."
         },
         "morning-inbox": {
-          "name": "Odpowiadaj co rano na moje maile",
-          "detail": "Szkic odpowiedzi na każdy mail, który wymaga twojej uwagi."
+          "name": "Odpowiadaj na maile rano",
+          "detail": "Odpowiedzi gotowe co rano."
         },
         "portfolio-site": {
           "name": "Strona z portfolio",
-          "detail": "Jednostronicowa witryna z twoimi pracami.",
+          "detail": "Jedna strona z twoimi pracami.",
           "prompt": "Zbuduj mi jednostronicową stronę z portfolio: sekcję powitalną z moim imieniem i jednozdaniowym wstępem, siatkę z trzema przykładowymi projektami, sekcję „O mnie” i sekcję kontaktową. Użyj tekstów i obrazów zastępczych, które później podmienię, zadbaj o czysty, nowoczesny wygląd i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
         },
         "numbers-dashboard": {
           "name": "Panel z moimi wynikami",
-          "detail": "Sprzedaż, koszty i trendy z twojego arkusza kalkulacyjnego.",
+          "detail": "Sprzedaż, koszty i trendy.",
           "prompt": "Zbuduj panel z wynikami mojej firmy: sumy za bieżący miesiąc, wykres w podziale na miesiące, najlepsze produkty lub klientów oraz wszystko, co odbiega od normy. Zacznij od razu od realistycznych przykładowych danych sprzedażowych, żeby panel działał, i pokaż mi go. Potem poproś mnie o mój arkusz kalkulacyjny lub plik CSV i przełącz panel na moje prawdziwe dane."
         },
         "shop-page": {
@@ -1980,9 +1986,14 @@
           "prompt": "Zbuduj jednostronicowy sklep dla mojej małej firmy: nagłówek z nazwą sklepu, sześć przykładowych produktów ze zdjęciami, nazwami, cenami i przyciskiem „Dodaj do koszyka”, prosty koszyk oraz sekcję kontaktową. Użyj produktów zastępczych, które później podmienię, i upewnij się, że strona dobrze wygląda na telefonie. Pokaż mi ją, gdy będzie gotowa."
         },
         "simple-game": {
-          "name": "Prosta gra",
-          "detail": "Do zagrania w przeglądarce.",
-          "prompt": "Zbuduj prostą grę, w którą od razu zagram w przeglądarce: węża sterowanego strzałkami i przesunięciami palcem, z wynikiem, najlepszym wynikiem i przyciskiem restartu. Zmieść wszystko na jednej stronie i pokaż mi grę, gdy będzie gotowa."
+          "name": "Gra do zagrania",
+          "detail": "Gotowa do gry w około minutę.",
+          "prompt": "Zrób mi zabawną grę, w którą zagram w przeglądarce w około minutę: grę zręcznościową, w której unikam spadających przedmiotów, z ekranem startowym, sterowaniem strzałkami i dotykiem, wynikiem i rekordem, ekranem końca gry i przyciskiem restartu. Zmieść ją na jednej stronie dopasowanej do okna, sprawdź, czy każde sterowanie działa, i pokaż mi ją, gdy będzie gotowa. Potem zapytaj mnie w jednej krótkiej wiadomości, jaką grę chcę, żeby zrobić z niej moją."
+        },
+        "my-project": {
+          "name": "Moja aplikacja lub strona",
+          "detail": "Aplikacja lub strona na tym PC.",
+          "prompt": "Pomóż mi z moim projektem aplikacji lub strony. Jeśli żaden folder projektu nie jest otwarty, zapytaj, gdzie jest mój projekt. Potem przejrzyj go i powiedz mi, z czego jest zbudowany, jak go uruchomić, jakie ma główne części i co wygląda na zepsute lub niedokończone. Zaproponuj trzy najbardziej przydatne kolejne kroki i poczekaj, aż wybiorę jeden, zanim cokolwiek zmienisz."
         }
       },
       "code": {
@@ -2974,7 +2985,8 @@
       "messaging": "Komunikatory",
       "mcp": "Serwery MCP",
       "skills": "Umiejętności",
-      "tools": "Narzędzia"
+      "tools": "Narzędzia",
+      "templates": "Templates"
     },
     "emptyDescription": "Ta strona pojawi się w jednej z kolejnych aktualizacji.",
     "connectorDescription": "Szczegóły połączenia pojawią się w jednej z kolejnych aktualizacji."
@@ -3184,7 +3196,10 @@
         "browser": "Działam w przeglądarce",
         "subtask": "Pracuję nad podzadaniem"
       },
-      "longTool": "{{activity}} · {{minutes}} min"
+      "longTool": "{{activity}} · {{minutes}} min",
+      "waitingForInternet": "Czekamy na Twój internet",
+      "waitingForAbacus": "Czekamy na AbacusAI",
+      "messageSafe": "Twoja wiadomość jest bezpieczna. Bot sam wznowi działanie, gdy połączenie wróci."
     },
     "code": {
       "copied": "Skopiowano",
@@ -3261,7 +3276,8 @@
       "includedIn": "W ramach planu {{plan}}",
       "includedInPaid": "W ramach płatnych planów",
       "commands": "Polecenia",
-      "commandFailed": "Nie udało się. Spróbuj ponownie."
+      "commandFailed": "Nie udało się. Spróbuj ponownie.",
+      "offline": "Pisz teraz. Wyśle się, gdy tylko wrócisz online"
     },
     "day": {
       "today": "Dzisiaj",
@@ -3470,7 +3486,9 @@
       "creditsLeft_other": "{{credits}} kredytu · zostało {{left}}",
       "creditsLeft_few": "{{credits}} kredyty · zostało {{left}}",
       "creditsLeft_many": "{{credits}} kredytów · zostało {{left}}",
-      "creditsAction": "{{credits}}. Zobacz swój plan i kredyty"
+      "creditsAction": "{{credits}}. Zobacz swój plan i kredyty",
+      "waitedInternet": "{{duration}} z tego to oczekiwanie na Twój internet",
+      "waitedAbacus": "{{duration}} z tego to oczekiwanie na AbacusAI"
     },
     "subagent": {
       "done_one": "Gotowe, {{count}} krok, {{duration}}",
@@ -3678,7 +3696,9 @@
       "askSkipped": "Pominięto",
       "askBot": "Zapytano {{bot}}: {{what}}",
       "giveTask": "Przekazano zadanie do {{bot}}: {{what}}",
-      "memoryUpdated": "Zaktualizowano pamięć: {{name}}"
+      "memoryUpdated": "Zaktualizowano pamięć: {{name}}",
+      "quiet": "Brak wyjścia od {{time}}",
+      "progress": "Postęp"
     },
     "transcript": {
       "jump": "Przejdź na koniec",
@@ -3743,9 +3763,15 @@
       "open": "Otwórz"
     },
     "suggestedTasks": {
-      "label": "Stuknij zadanie, aby je uruchomić",
+      "pickOne": "Wybierz jedno, aby kontynuować",
+      "next": "Dalej",
+      "routineLine": "Działa według harmonogramu, gdy aplikacja jest otwarta",
+      "copied": "Skopiowano",
       "copy": "Skopiuj „{{text}}”, aby wysłać z telefonu",
-      "copyFailed": "Nie udało się skopiować"
+      "copyFailed": "Nie udało się skopiować",
+      "formTitle": "Dopasuj do siebie",
+      "formLine": "Wystarczy linijka lub dwie: podmienię przykładowy tekst.",
+      "notNow": "Nie teraz"
     },
     "retryOffer": {
       "title": "Spróbuj ponownie z {{model}}",
@@ -3753,6 +3779,13 @@
       "freeTopModel": "To zadanie jest trudne dla taniego modelu. {{model}}, jeden z najlepszych modeli w ogóle, jest tu dla Ciebie dostępny. Szybciej zużywa kredyty.",
       "continue": "Kontynuuj w nowym czacie",
       "paidBody": "Nowy czat zacznie od podsumowania tego, na najlepszym modelu. Szybciej zużywa kredyty."
+    },
+    "topModelRetry": {
+      "retry": "Ponów z {{model}}",
+      "upgradeRetry": "Ulepsz plan, by spróbować ponownie z {{model}} i innymi topowymi modelami",
+      "dismiss": "Zamknij",
+      "opusBody": "Nasz najmocniejszy model przejmie to w nowym czacie, od miejsca, w którym skończyłeś. Zużywa kredyty szybciej.",
+      "dialogBody": "Nasz najmocniejszy model do trudnych zadań, w ramach {{plan}}."
     },
     "topModelCard": {
       "title": "Pracuj dalej z {{model}} w planie {{plan}}",
@@ -3854,6 +3887,12 @@
       "newChat": "Kontynuuj w nowym czacie z {{model}}",
       "here": "Mimo to przełącz ten czat na {{model}}",
       "cancel": "Anuluj"
+    },
+    "tasks": {
+      "title": "Działa",
+      "stop": "Zatrzymaj",
+      "serving": "Udostępnia {{url}}",
+      "stopFailed": "Nie udało się zatrzymać. Spróbuj ponownie."
     }
   },
   "notch": {
@@ -4907,6 +4946,7 @@
     "paidWaitingTitle": "Dokończ w przeglądarce",
     "planLine": "Plan {{plan}} · anuluj w dowolnym momencie",
     "planTitle": "Wszystko, co daje Ci {{plan}}",
+    "planModelTitle": "Uruchom ponownie na {{model}} z planem {{plan}}",
     "startAt": "Już od",
     "waitingBody": "Twoja wiadomość zostanie wysłana, gdy tylko plan będzie aktywny.",
     "waitingBodyNoMessage": "To okno zamknie się, gdy tylko plan będzie aktywny.",
@@ -5480,6 +5520,33 @@
     "continuing": "Wszystko po wyniku narzędzia to ciąg dalszy tej samej odpowiedzi. Bez drugiego powitania i bez ponownego opisywania misji.",
     "write": "Pisz w języku {{language}}, czyli w języku użytkownika, chyba że napisze do ciebie w innym."
   },
+  "quitGuard": {
+    "title_one": "Twoje zadanie wciąż trwa",
+    "title_other": "{{count}} zadań wciąż trwa",
+    "title_few": "{{count}} zadania wciąż trwają",
+    "title_many": "{{count}} zadań wciąż trwa",
+    "body_one": "Jeśli zakończysz teraz, zadanie zostanie przerwane, a niedokończona praca przepadnie.",
+    "body_other": "Jeśli zakończysz teraz, zadania zostaną przerwane, a niedokończona praca przepadnie.",
+    "body_few": "Jeśli zakończysz teraz, zadania zostaną przerwane, a niedokończona praca przepadnie.",
+    "body_many": "Jeśli zakończysz teraz, zadania zostaną przerwane, a niedokończona praca przepadnie.",
+    "wait_one": "Poczekaj, aż się skończy",
+    "wait_other": "Poczekaj, aż się skończą",
+    "wait_few": "Poczekaj, aż się skończą",
+    "wait_many": "Poczekaj, aż się skończą",
+    "quitAnyway": "Zakończ mimo to",
+    "cancel": "Anuluj",
+    "unnamed": "Czat bez tytułu",
+    "more_one": "i jeszcze {{count}}",
+    "more_other": "i jeszcze {{count}}",
+    "more_few": "i jeszcze {{count}}",
+    "more_many": "i jeszcze {{count}}",
+    "waitingOne": "Aplikacja zamknie się, gdy „{{name}}” się skończy.",
+    "waitingMany_one": "Aplikacja zamknie się, gdy skończy się {{count}} zadań.",
+    "waitingMany_other": "Aplikacja zamknie się, gdy skończy się {{count}} zadań.",
+    "waitingMany_few": "Aplikacja zamknie się, gdy skończą się {{count}} zadania.",
+    "waitingMany_many": "Aplikacja zamknie się, gdy skończy się {{count}} zadań.",
+    "dontQuit": "Nie zamykaj"
+  },
   "native": {
     "aboutApp": "O {{app}}",
     "services": "Usługi",
@@ -5509,11 +5576,13 @@
     "zoom": "Zmień rozmiar",
     "front": "Przenieś wszystko na wierzch",
     "credits": "Open source na licencji MIT",
-    "keepRunning": "Działaj w tle",
-    "quitAnyway": "Zakończ mimo to",
-    "taskRunningTitle": "Trwa zadanie",
-    "taskRunningMessage": "Zadanie wciąż trwa.",
-    "taskRunningDetail": "Zostawić je w tle czy zakończyć i je przerwać?",
+    "quitGuardTitleOne": "Twoje zadanie wciąż trwa",
+    "quitGuardTitleMany": "Niektóre zadania wciąż trwają",
+    "quitGuardDetail": "Jeśli zakończysz teraz, niedokończona praca przepadnie. Jeśli poczekasz, aplikacja zamknie się sama, gdy praca się skończy.",
+    "quitGuardWait": "Poczekaj, aż się skończy",
+    "quitGuardQuitAnyway": "Zakończ mimo to",
+    "quitGuardCancel": "Anuluj",
+    "quitGuardUnnamed": "Czat bez tytułu",
     "restart": "Uruchom ponownie",
     "quit": "Zakończ",
     "wait": "Czekaj",
@@ -5721,6 +5790,16 @@
     "line": "Dokończ go w planie {{plan}}: {{model}} do trudnych części, kredyty na projekt tej wielkości i publiczny link, gdy będzie gotowy.",
     "lineNoModel": "Dokończ go w planie {{plan}}: najlepsze modele do trudnych części, kredyty na projekt tej wielkości i publiczny link, gdy będzie gotowy."
   },
+  "freeModelDown": {
+    "title": "Darmowy model jest teraz przeciążony",
+    "line": "Dokończ to na najlepszym modelu (Claude, GPT, Gemini) z planem {{plan}}:",
+    "upgrade": "Ulepsz i dokończ",
+    "retry": "Spróbuj ponownie za darmo",
+    "retrying": "Ponowna próba za {{seconds}} s…",
+    "firstRetrying": "Spróbuję ponownie za {{seconds}} s…",
+    "tryNow": "Spróbuj teraz",
+    "history": "Darmowy model był przeciążony"
+  },
   "keepRunning": {
     "title": "Niech „{{name}}” działa 24/7",
     "titleUnnamed": "Niech działa 24/7",
@@ -5819,6 +5898,98 @@
     },
     "pr": {
       "line": "Daj znać, gdy PR-y tutaj dostaną recenzję albo CI nie przejdzie"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "Jesteś offline.",
+      "offlineBody": "Twoje połączenie z internetem zostało przerwane, nie aplikacja. Wszystko wznowi się samo, gdy wróci.",
+      "abacusTitle": "AbacusAI teraz nie odpowiada.",
+      "abacusBody": "Twój internet działa; zajmujemy się tym.",
+      "checkingIn": "Sprawdzimy ponownie za {{seconds}} s",
+      "backTitle": "Znowu online.",
+      "backSending_one": "Wysyłamy teraz Twoją oczekującą wiadomość.",
+      "backSending_other": "Wysyłamy teraz Twoje oczekujące wiadomości: {{count}}."
+    },
+    "lanePaused": "wstrzymano · offline",
+    "laneOfflineNote": "Wstrzymano, bo ten komputer jest offline. Łącze jest w porządku; wznowi się samo, gdy internet wróci.",
+    "queued": {
+      "title": "Wyśle się, gdy wrócisz online",
+      "line": "\"{{text}}\" do {{to}} w {{app}}. Wyśle się samo, gdy tylko Twój internet wróci, tylko raz.",
+      "cancel": "Anuluj tę wiadomość",
+      "unsureTitle": "Mogła nie zostać wysłana",
+      "unsureLine": "\"{{text}}\" do {{to}} w {{app}}. Twój internet przerwał podczas wysyłania, więc sprawdź czat, zanim wyślesz ją ponownie.",
+      "dismiss": "Zamknij"
     }
   }
 }

@@ -397,7 +397,7 @@ describe("billing_plan for what only a plan does", () => {
     const description = agentTool("billing_plan")?.description;
     expect(typeof description).toBe("string");
     expect(String(description).replace(/\n/g, " ")).toContain(
-      "whenever they ask for anything to keep working while the app or computer is off or asleep (WhatsApp, Telegram or Discord auto-replies, routines, reminders, monitoring), or to stay online 24/7, or a live, public or shareable link for something they built (hosting, deploying or publishing a site, app or page), which a plan answers and is never impossible"
+      "whenever they ask for anything to keep working while the app or computer is off or asleep (WhatsApp, Telegram or Discord auto-replies, routines, reminders, monitoring), or to stay online 24/7, or a live link that stays up for a site of several pages or an app that runs a server, built here (hosting, deploying or publishing it), which a plan answers and is never impossible"
     );
     expect(String(description).replace(/\n/g, " ")).toContain(
       "when they ask to analyse a video (a reel, a Short, a YouTube or TikTok link, a video file)"
@@ -428,14 +428,14 @@ describe("billing_plan for what only a plan does", () => {
   it("a free account asking for a live link to what it built hears the free part, then Basic's deploys, never a free host", async () => {
     const text = await answer("free");
     expect(text).toContain(
-      "Asked for a live, public or shareable link for something they built (hosting, deploying or publishing a site, app or page): say first that this app builds it and runs it on this computer, and do that part. Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer Basic for it (building apps and websites and deploying them to a live link in Abacus AI Agent on the web): its price, then every feature line it has above as a short list (translated, never shortened or dropped), then their upgrade link, in their language."
+      "Asked for a live link that stays up for a site of several pages or an app that runs a server, built here (hosting, deploying or publishing it): say first that this app builds it and runs it on this computer, and do that part. Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it. Offer Basic for it (building apps and websites and deploying them to a live link in Abacus AI Agent on the web): its price, then every feature line it has above as a short list (translated, never shortened or dropped), then their upgrade link, in their language."
     );
   });
 
   it("a Basic account asking for a live link is pointed at its own deploys in Abacus AI Agent, with no upsell", async () => {
     const text = await answer("basic");
     expect(text).toContain(
-      "Asked for a live, public or shareable link for something they built (hosting, deploying or publishing a site, app or page): their plan already includes building apps and websites and deploying them to a live link in Abacus AI Agent on the web. Set it up there: https://apps.abacus.ai/chatllm/agent"
+      "Asked for a live link that stays up for a site of several pages or an app that runs a server, built here (hosting, deploying or publishing it): their plan already includes building apps and websites and deploying them to a live link in Abacus AI Agent on the web. Set it up there: https://apps.abacus.ai/chatllm/agent"
     );
   });
 });

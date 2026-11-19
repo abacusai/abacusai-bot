@@ -1,0 +1,43 @@
+{
+  "slug": "storefront",
+  "name": "Storefront",
+  "tagline": "Cream, espresso and terracotta with a golden accent: a warm small-business sales deck.",
+  "mood": [
+    "warm",
+    "inviting",
+    "confident",
+    "local"
+  ],
+  "occasion": [
+    "small business pitch",
+    "sales deck",
+    "service offer",
+    "local shop or cafe",
+    "client proposal",
+    "franchise or partnership pitch"
+  ],
+  "tone": [
+    "friendly",
+    "persuasive",
+    "down-to-earth"
+  ],
+  "formality": "medium",
+  "density": "medium",
+  "palette": {
+    "bg": "#FFF8F0",
+    "primary": "#C2410C",
+    "text": "#2B1B17",
+    "text_muted": "#6B5A52",
+    "description": "warm cream with espresso ink, terracotta and a golden accent"
+  },
+  "typography": {
+    "display": "DM Serif Display",
+    "body": "DM Sans",
+    "style": "friendly serif headlines over a round sans"
+  },
+  "scheme": "mixed",
+  "best_for": "Selling a product or service from a small business: cafes, shops, studios, agencies and local services pitching customers or partners. Has slides for the problem, three offerings, how it works, why us, three price tiers, a testimonial, proof in numbers, an offer and a contact close.",
+  "avoid_for": "Formal finance, research reports and technical reviews.",
+  "slide_count": 10,
+  "navigation": "inline keyboard handler with on-page slide counter"
+}

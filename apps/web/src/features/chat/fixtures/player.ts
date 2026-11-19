@@ -126,6 +126,12 @@ export const fixtureRuntime = (
         setTimeout(() => relay.emit(item.event), delay * (index + 1))
       );
   }
-  const runtime = createChatRuntime(relay.ai, { host: inertHostActions });
+  const tier = scenario.view?.accountTier;
+  const runtime = createChatRuntime(relay.ai, {
+    host:
+      tier == null
+        ? inertHostActions
+        : { ...inertHostActions, accountTier: async () => tier },
+  });
   return { runtime, relay, scenario, threadId };
 };

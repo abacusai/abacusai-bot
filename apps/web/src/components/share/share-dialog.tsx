@@ -8,6 +8,7 @@ import {
   isArtifactPage,
   type ArtifactAccess,
   type SharedLink,
+  type ShareEntry,
   type SharePreview,
   type ShareRefusal,
 } from "@abacus-ai/contract/share";
@@ -31,7 +32,7 @@ import {
 } from "#renderer/ui/dialog";
 import { Input } from "#renderer/ui/input";
 
-import { closeShareDialog, shareDialogStore } from "./share-store";
+import { closeShareDialog, markLinked, shareDialogStore } from "./share-store";
 
 type Step =
   | "share_opened"
@@ -134,9 +135,12 @@ const LinkActions = ({
 };
 
 /** An artifact runs live, so it goes through the page itself, not a static copy. */
-const ArtifactShare = ({ path }: { path: string }) => {
+const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
   const { t } = useTranslation();
   const { client, funnel } = useShareActions();
+  useEffect(() => {
+    reportStep(client, "share_opened", from);
+  }, [client, from]);
   const [access, setAccess] = useState<ArtifactAccess>("private");
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
@@ -154,6 +158,7 @@ const ArtifactShare = ({ path }: { path: string }) => {
       return;
     }
     setUrl(result.url);
+    markLinked(path);
     funnel("share_created");
   };
   return (
@@ -240,7 +245,7 @@ const ArtifactShare = ({ path }: { path: string }) => {
   );
 };
 
-const FileShare = ({ path }: { path: string }) => {
+const FileShare = ({ path, from }: { path: string; from: ShareEntry }) => {
   const { t, i18n } = useTranslation();
   const { client, funnel } = useShareActions();
   const [preview, setPreview] = useState<SharePreview | null>(null);
@@ -251,7 +256,7 @@ const FileShare = ({ path }: { path: string }) => {
 
   useEffect(() => {
     let live = true;
-    reportStep(client, "share_opened");
+    reportStep(client, "share_opened", from);
     client.shares
       .preview({ path, lang })
       .catch((): SharePreview => ({ ok: false, code: "FAILED" }))
@@ -261,12 +266,15 @@ const FileShare = ({ path }: { path: string }) => {
         if (result.ok === false) {
           setFailure(result.code);
           reportStep(client, "share_failed", result.code);
-        } else if (result.existing != null) setLink(result.existing);
+        } else if (result.existing != null) {
+          setLink(result.existing);
+          markLinked(path);
+        }
       });
     return () => {
       live = false;
     };
-  }, [client, lang, path]);
+  }, [client, from, lang, path]);
 
   const create = async () => {
     setCreating(true);
@@ -281,6 +289,7 @@ const FileShare = ({ path }: { path: string }) => {
       return;
     }
     setLink(result.link);
+    markLinked(path);
     funnel("share_created");
   };
 
@@ -409,9 +418,17 @@ export const ShareDialogHost = () => {
       <DialogContent className="sm:max-w-lg" data-slot="share-dialog">
         {request?.kind === "file" &&
           (isArtifactPage(request.path) ? (
-            <ArtifactShare key={request.path} path={request.path} />
+            <ArtifactShare
+              key={request.path}
+              path={request.path}
+              from={request.from}
+            />
           ) : (
-            <FileShare key={request.path} path={request.path} />
+            <FileShare
+              key={request.path}
+              path={request.path}
+              from={request.from}
+            />
           ))}
         {request?.kind === "links" && <SharedLinks />}
       </DialogContent>

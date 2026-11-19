@@ -74,6 +74,9 @@ export function buildToolTitle(toolName: string, args: ToolArgs): string {
     case "ls":
       return p !== undefined ? `List ${p}` : "List files";
     case "bash": {
+      // The model's words for long work read better than the command.
+      const label = str(args.label)?.trim();
+      if (label) return truncateTitle(label);
       const command = str(args.command) ?? str(args.cmd);
       return command !== undefined ? truncateTitle(`Run ${command}`) : "bash";
     }

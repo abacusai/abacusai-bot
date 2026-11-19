@@ -13,7 +13,11 @@ import type {
   WindowChromeState,
   WindowState,
 } from "@abacus-ai/contract/contract";
-import type { PickedFile } from "@abacus-ai/contract/contract/system";
+import type {
+  PickedFile,
+  QuitGuardAnswer,
+  QuitGuardState,
+} from "@abacus-ai/contract/contract/system";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
@@ -53,6 +57,16 @@ export interface AppOperations {
     path?: string
   ): Promise<import("@abacus-ai/contract/contract/files").DirectoryListing>;
   mkdir?(path: string, name: string): Promise<{ path: string }>;
+  /** "Try another look": the document printed again in a look or design. */
+  relookDocument?(
+    path: string,
+    look?: string,
+    design?: string
+  ): Promise<{ path: string }>;
+  /** A document's type and the designs it can switch to. */
+  documentDesigns?(
+    path: string
+  ): Promise<{ type: string; designs: Array<{ id: string; name: string }> }>;
   openFolderDialog(): Promise<string | null>;
   openFilesDialog(
     kind?: "all" | "image" | "theme"
@@ -71,6 +85,11 @@ export interface AppOperations {
   /** Upgraded from the old renderer, as found at launch. */
   legacyInstall(): boolean;
   restartApp(): void;
+  /** Desktop only: the quit asked about running work (quit-guard.ts). */
+  quitGuard?: {
+    state(): QuitGuardState;
+    answer(answer: QuitGuardAnswer): void;
+  };
   deleteAllData(): void;
   /** `once`: the persisted first-time report (`reportFunnelStepOnce`). */
   reportFunnelStep(step: unknown, detail: unknown, once?: boolean): void;

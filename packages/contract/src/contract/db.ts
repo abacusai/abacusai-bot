@@ -298,6 +298,17 @@ export const PREFS_GROUP_ENTRIES = {
         off: v.boolean(),
       })
     ),
+    /** The "Send it to anyone" card under a reply, shown and answered (share.ts). */
+    shareOffer: v.optional(
+      v.nullable(
+        v.strictObject({
+          shownOffer: v.nullable(v.string()),
+          shownThread: v.nullable(v.string()),
+          answered: v.nullable(v.string()),
+          threads: v.array(v.string()),
+        })
+      )
+    ),
     /** The top-model hint above the composer, shown and answered (top-model-hint.ts). */
     topModelHint: v.nullable(
       v.strictObject({
@@ -331,6 +342,8 @@ export const PREFS_GROUP_ENTRIES = {
         })
       )
     ),
+    /** The session-1 "Retry with <top model>" line, closed with its ×. */
+    topModelRetryClosedAt: v.optional(NullableTimestamp),
     /** The onboarding offer held for the first finished result (first-result-offer.ts). */
     firstResultOffer: v.optional(
       v.nullable(

@@ -354,6 +354,34 @@ describe("network and busy waits", () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
+    it("counts a turn's outages whole, failed calls included, by whose they were", async () => {
+      const wait = new NetworkWait(() => Date.now());
+      wait.beginTurn();
+      setHostConnectivity("offline");
+      const first = wait.next(NETWORK_WAIT_TURN_MS, () => {});
+      await vi.advanceTimersByTimeAsync(2_000);
+      await first;
+      // The call it retried failed again after 14 s of its own.
+      await vi.advanceTimersByTimeAsync(14_000);
+      const second = wait.next(NETWORK_WAIT_TURN_MS, () => {});
+      await vi.advanceTimersByTimeAsync(4_000);
+      await second;
+      // Back: the retried call answers 10 s later.
+      setHostConnectivity("online");
+      await vi.advanceTimersByTimeAsync(10_000);
+      wait.reset();
+      expect(wait.waitedMs).toBe(30_000);
+      expect(wait.abacusWaitedMs).toBe(0);
+      // A later outage while AbacusAI alone is down is counted apart.
+      setHostConnectivity("degraded");
+      const third = wait.next(NETWORK_WAIT_TURN_MS, () => {});
+      await vi.advanceTimersByTimeAsync(2_000);
+      await third;
+      expect(wait.abacusWaitedMs).toBe(2_000);
+      wait.beginTurn();
+      expect(wait.waitedMs + wait.abacusWaitedMs).toBe(0);
+    });
+
     it("retries at once when the machine wakes", async () => {
       const wait = new NetworkWait(() => Date.now());
       setHostConnectivity("offline");

@@ -4,13 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vellum Presentation</title>
+  <link rel="stylesheet" href="fonts.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:wght@300;400;500&family=Courier+Prime:wght@400;700&family=Noto+Serif+SC:wght@300;400;500&family=Noto+Sans+SC:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
 
     <style>
       /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -35,7 +30,7 @@
         --c-fg-light-2: rgba(232, 216, 92, 0.62);
         --c-fg-light-3: rgba(232, 216, 92, 0.32);
 
-        --c-accent: #3a7878;       /* dusty teal — only used on the large quote-mark glyph */
+        --c-accent: #5f9e9b;       /* dusty teal — only used on the large quote-mark glyph */
         --c-emphasis: #F5E168;     /* brighter yellow — used for <em> emphasis and small accent text */
         --c-border: rgba(232, 216, 92, 0.20);
         --c-border-light: rgba(232, 216, 92, 0.20);
@@ -57,10 +52,10 @@
         --sz-h1: 7vw;
         --sz-h2: 4vw;
         --sz-h3: 2.4vw;
-        --sz-lead: 1.5vw;
-        --sz-body: 1.05vw;
-        --sz-caption: 0.85vw;
-        --sz-label: 0.72vw;
+        --sz-lead: 1.75vw;
+        --sz-body: 1.6vw;
+        --sz-caption: 1.4vw;
+        --sz-label: 1.3vw;
 
         /* ── Spacing — generous, the field breathes ─────────────────────── */
         --pad-x: 6vw;
@@ -269,7 +264,7 @@
       /* Annotation: the handwriting font — only used for .pin-note */
       .pin-note {
         font-family: var(--f-annotation);
-        font-size: 1.15vw;
+        font-size: 1.3vw;
         font-weight: 500;
         line-height: 1.5;
         color: var(--c-accent);
@@ -337,6 +332,14 @@
         padding-bottom: var(--gap-sm);
         border-bottom: 1px solid var(--c-border);
         margin-bottom: var(--gap-md);
+      }
+      .slide--stats > .slide-chrome,
+      .slide--list > .slide-chrome,
+      .slide--chart > .slide-chrome {
+        position: absolute;
+        top: var(--pad-y);
+        left: var(--pad-x);
+        right: var(--pad-x);
       }
       .slide-foot {
         padding-top: var(--gap-sm);
@@ -546,6 +549,9 @@
         max-width: 70%;
         margin-bottom: var(--gap-lg);
       }
+      .quote-mark::before {
+        content: "\201C";
+      }
       .quote-attr {
         display: flex;
         flex-direction: column;
@@ -735,12 +741,15 @@
         gap: var(--gap-md);
         max-width: 60%;
       }
+      @media print {
+        #nav-dots { display: none !important; }
+      }
     </style>
   </head>
   <body>
     <div id="deck">
       <!-- ═══ SLIDE 01 · COVER ═══════════════════════════════════════════ -->
-      <section class="slide light slide--cover" data-slide="1" style="position: relative">
+      <section class="slide light slide--cover" data-slide="1" data-label="title: a small kicker, a short title in huge type, a one-sentence subtitle, and three short corner notes (a page number, a name, an edition)" style="position: relative">
         <div class="cover-title">
           <span class="kicker">Essay 01 · 2026</span>
           <h1 class="display">On Restraint</h1>
@@ -756,11 +765,11 @@
       </section>
 
       <!-- ═══ SLIDE 02 · STATEMENT (single thesis, chromeless) ═══════════ -->
-      <section class="slide dark slide--statement" data-slide="2" style="position: relative">
+      <section class="slide dark slide--statement" data-slide="2" data-label="big statement: a bracketed kicker and one claim in two lines, with three short corner notes (the first is the page number)" style="position: relative">
         <div class="slide-body">
           <span class="kicker">[The Argument]</span>
           <h1 class="h1">
-            Most design problems<br />are removed, not solved.
+            Most design problems are removed, not solved.
           </h1>
         </div>
         <div class="pin-annotation">
@@ -771,15 +780,15 @@
       </section>
 
       <!-- ═══ SLIDE 03 · OBSERVATION (full text, no image) ═══════════════ -->
-      <section class="slide light slide--text" data-slide="3" style="position: relative">
+      <section class="slide light slide--text" data-slide="3" data-label="observation: a header label and page number, a kicker, a two-line heading and a paragraph, with two short corner notes" style="position: relative">
         <header class="slide-chrome">
           <span class="label">[Field Note 03]</span>
-          <span class="label">03</span>
+          <span class="label">03 / 09</span>
         </header>
         <div class="slide-body" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--gap-md); text-align: center; padding: 0 8vw">
           <span class="kicker">Observation</span>
           <h2 class="h2">
-            What you remove is louder<br />than what you keep.
+            What you remove is louder than what you keep.
           </h2>
           <p class="lead" style="max-width: 64ch; color: var(--c-fg-2)">
             Subtraction creates the figure. Addition only fills the ground. Working drafts always carry more than they need; the work of editing is mostly the work of cutting.
@@ -792,10 +801,10 @@
       </section>
 
       <!-- ═══ SLIDE 04 · STATS (three findings) ══════════════════════════ -->
-      <section class="slide light slide--stats" data-slide="4" style="position: relative">
+      <section class="slide light slide--stats" data-slide="4" data-label="three findings: a header label and page number, a heading and three figures each with a one-line label, with three short corner notes" style="position: relative">
         <header class="slide-chrome">
           <span class="label">[By the Numbers]</span>
-          <span class="label">04</span>
+          <span class="label">04 / 09</span>
         </header>
         <div class="slide-body">
           <h2 class="h2" style="text-align: center">
@@ -824,10 +833,10 @@
       </section>
 
       <!-- ═══ SLIDE 05 · LIST (four numbered principles) ═════════════════ -->
-      <section class="slide light slide--list" data-slide="5" style="position: relative">
+      <section class="slide light slide--list" data-slide="5" data-label="four rules: a header label and page number, a kicker, a heading and four numbered one-sentence points, with three short corner notes" style="position: relative">
         <header class="slide-chrome">
           <span class="label">[Method]</span>
-          <span class="label">05</span>
+          <span class="label">05 / 09</span>
         </header>
         <div class="slide-body">
           <div class="list-header">
@@ -836,7 +845,7 @@
               Four rules that hold.
             </h2>
           </div>
-          <div class="list-items">
+          <div class="list-items" data-deck-grow>
             <ul class="bullet-list">
               <li>One accent color per spread. Never two.</li>
               <li>Body text obeys the grid. Display is allowed to break it.</li>
@@ -853,8 +862,8 @@
       </section>
 
       <!-- ═══ SLIDE 06 · QUOTE (chromeless, the big quote) ═══════════════ -->
-      <section class="slide dark slide--quote" data-slide="6" style="position: relative">
-        <div class="quote-mark">"</div>
+      <section class="slide dark slide--quote" data-slide="6" data-label="quote: a quote of one or two lines, the speaker and a role or year, with three short corner notes" style="position: relative">
+        <div class="quote-mark" aria-hidden="true"></div>
         <div class="quote-text">
           Design is a plan for arranging elements<br />
           to accomplish a particular purpose.
@@ -871,7 +880,7 @@
       </section>
 
       <!-- ═══ SLIDE 07 · COMPARE (before / after on one canvas) ══════════ -->
-      <section class="slide slide--compare" data-slide="7" style="position: relative">
+      <section class="slide slide--compare" data-slide="7" data-label="before and after: two panels, each with a label, a heading, a two-sentence paragraph and three short bullets, with three short corner notes" style="position: relative">
         <div class="slide-body">
           <div class="compare-panel left">
             <span class="compare-label" style="color: var(--c-fg-2)">Before</span>
@@ -906,10 +915,10 @@
       </section>
 
       <!-- ═══ SLIDE 08 · CHART (how drafts shrink) ═══════════════════════ -->
-      <section class="slide light slide--chart" data-slide="8" style="position: relative">
+      <section class="slide light slide--chart" data-slide="8" data-label="bar chart" data-deck-skip style="position: relative">
         <header class="slide-chrome">
           <span class="label">[Pattern]</span>
-          <span class="label">08</span>
+          <span class="label">08 / 09</span>
         </header>
         <div class="slide-body">
           <div class="chart-header">
@@ -955,11 +964,11 @@
       </section>
 
       <!-- ═══ SLIDE 09 · END (closing thought) ═══════════════════════════ -->
-      <section class="slide light slide--end" data-slide="9" style="position: relative">
+      <section class="slide light slide--end" data-slide="9" data-label="closing: a kicker, a closing line in two parts, a sentence of thanks ending in an email address, and three short corner notes" style="position: relative">
         <div class="end-body">
           <span class="kicker">[End notes]</span>
           <h1 class="h1">
-            Edit until it stops<br />looking edited.
+            Edit until it stops looking edited.
           </h1>
           <p class="lead" style="color: var(--c-fg-2); max-width: 56ch">
             Thank you for reading. Comments, corrections, or quiet disagreement welcome at <span style="color: var(--c-emphasis)">notes@quiet-studio.com</span>.
@@ -968,7 +977,7 @@
         <div class="pin-annotation">
           <span class="pin-note">09 / 09</span>
           <span class="pin-note">The Quiet Studio.</span>
-          <span class="pin-note">Set in Cormorant + DM Sans.</span>
+          <span class="pin-note"></span>
         </div>
       </section>
     </div>

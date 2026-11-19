@@ -69,6 +69,7 @@ const CUSTOM = new Set([
   "permission.pending",
   "tool.output",
   "tool.display",
+  "background.tasks",
   "queue.updated",
   "queue.steered",
   "queue.dequeued",

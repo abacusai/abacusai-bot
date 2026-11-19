@@ -192,6 +192,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "app-root",
     "app-toaster",
     "browser-open",
+    "chat-share-action",
     "hotkeys",
     "native-presenter",
     "panel-store",

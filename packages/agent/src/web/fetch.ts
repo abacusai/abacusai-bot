@@ -420,7 +420,9 @@ export async function fetchUrl(
         throw new WebFetchError(
           "BINARY",
           `${url.href} returned ${contentType}, which is not text. ` +
-            `Download it with bash if you need the file itself.`
+            // Downloaded where the bot stood, three reports (10 MB) were left
+            // in the user's folder beside their deck (bug hunt f11).
+            `If you need the file itself, download it with bash into a temporary folder (mktemp -d), never into the user's folder, and read it from there.`
         );
       }
 

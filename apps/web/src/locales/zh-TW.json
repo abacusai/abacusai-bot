@@ -1492,6 +1492,12 @@
     "stopped": "已移除連結",
     "links": "已分享的連結",
     "linksEmpty": "還沒有分享任何內容。在機器人產生的檔案上使用「分享」。",
+    "offer": {
+      "title": "傳給任何人",
+      "body": "取得一個在任何手機或電腦上都能開啟的連結。發布前，你能看到對方會看到的完全相同內容。",
+      "getLink": "取得連結",
+      "notNow": "以後再說"
+    },
     "errors": {
       "TOO_LARGE": "這個檔案超過連結的 5 MB 上限。",
       "TOO_MANY": "你已經有 50 個分享連結。停止分享其中一個才能再建立。",
@@ -1921,26 +1927,26 @@
       "build": {
         "orders-system": {
           "name": "訂單與預約應用程式",
-          "detail": "適合商店、健身房、美髮沙龍或服務業。",
+          "detail": "適合商店、健身房、沙龍。",
           "prompt": "我經營一家小生意。請在這台電腦上幫我做一個簡單的應用程式，用來追蹤我的訂單、預約或服務案件：要有一個可以新增、搜尋和篩選的清單，每一筆都有自己的頁面，顯示客戶、日期、狀態和價格，還要有每日摘要。請馬上用一般小店的範例資料做出第一版，並幫我打開。然後用一則簡短的訊息問我做的是什麼生意、需要追蹤哪些東西，好讓你依照我的需求調整。"
         },
         "business-site": {
           "name": "我的商家網站",
-          "detail": "服務項目、營業時間、評價和聯絡表單。",
+          "detail": "服務、營業時間、聯絡方式。",
           "prompt": "請幫我的生意做一個網站：頁首要有店名和提供的服務，還要有附價格的服務項目區塊、營業時間、幾則顧客評價、店家位置和聯絡表單。先用之後可以替換的範例資料，並確保在手機上看起來正常。做好後請把網頁給我看，然後用一則簡短的訊息問我店名和做什麼生意，好讓你改成我的版本。"
         },
         "lead-finder": {
           "name": "尋找客戶",
-          "detail": "每天早上找到新的潛在客戶，並擬好第一封信。"
+          "detail": "每天新客戶，附首封郵件草稿。"
         },
         "my-game": {
           "name": "開發我的遊戲",
-          "detail": "Unity、Godot、Unreal 或 Roblox，直接在你的專案資料夾裡進行。",
+          "detail": "Unity、Godot、Unreal 或 Roblox。",
           "prompt": "請幫我處理我的遊戲。如果還沒打開任何專案資料夾，請問我遊戲專案在哪裡。接著請瀏覽整個專案，告訴我它用的是哪個引擎和版本、主要的場景和腳本，以及任何看起來壞掉或還沒完成的地方。請建議三個最有幫助的下一步，並等我選好其中一個之後再做任何修改。"
         },
         "morning-inbox": {
           "name": "每天早上幫我回信",
-          "detail": "每封需要你處理的郵件，都先幫你擬好回覆。"
+          "detail": "每天早上草擬回覆。"
         },
         "portfolio-site": {
           "name": "作品集網站",
@@ -1949,7 +1955,7 @@
         },
         "numbers-dashboard": {
           "name": "我的數據儀表板",
-          "detail": "從你的試算表整理出銷售、成本和趨勢。",
+          "detail": "銷售、成本和趨勢。",
           "prompt": "請幫我做一個生意數據的儀表板：要有本月總計、按月份的圖表、最熱賣的產品或最重要的客戶，以及任何異常的地方。請馬上用逼真的範例銷售資料做出能用的版本，並給我看。然後跟我要試算表或 CSV 檔，再把儀表板換成我的真實數據。"
         },
         "shop-page": {
@@ -1958,9 +1964,14 @@
           "prompt": "為我的小店做一個單頁商店：頁首放店名，六件範例商品，每件都有照片、名稱、價格和「加入購物車」按鈕，再加上簡單的購物車和一個聯絡資訊區塊。使用之後可以替換的預留商品，並確保在手機上顯示正常。做好後把頁面給我看。"
         },
         "simple-game": {
-          "name": "一個簡單的遊戲",
-          "detail": "在瀏覽器裡就能玩。",
-          "prompt": "做一個我馬上就能在瀏覽器裡玩的簡單遊戲：貪食蛇，支援方向鍵和滑動操作，有分數、最高分和重新開始按鈕。只用一個頁面，做好後給我看。"
+          "name": "能玩的小遊戲",
+          "detail": "大約一分鐘就能玩。",
+          "prompt": "幫我做一個大約一分鐘就能在瀏覽器裡玩的有趣小遊戲：一個躲避掉落物體的街機遊戲，要有開始畫面、方向鍵和觸控操作、分數和最高分、遊戲結束畫面和重新開始按鈕。做成符合視窗大小的單一頁面，確認每個操作都能用，做好後給我看。然後用一則簡短訊息問我想要什麼樣的遊戲，把它改成我的遊戲。"
+        },
+        "my-project": {
+          "name": "處理我的應用程式或網站",
+          "detail": "這台電腦上的應用程式或網站。",
+          "prompt": "幫我處理我的應用程式或網站專案。如果還沒有開啟專案資料夾，先問我專案在哪裡。然後瀏覽一遍，告訴我它用什麼做的、怎麼執行、主要組成部分，以及任何看起來有問題或沒完成的地方。提出三個最有用的下一步，等我選好一個再做任何修改。"
         }
       },
       "code": {
@@ -2946,7 +2957,8 @@
       "messaging": "訊息",
       "mcp": "MCP 伺服器",
       "skills": "技能",
-      "tools": "工具"
+      "tools": "工具",
+      "templates": "Templates"
     },
     "emptyDescription": "這個頁面將在後續更新中推出。",
     "connectorDescription": "連線詳細資料將在後續更新中推出。"
@@ -3150,7 +3162,10 @@
         "browser": "正在瀏覽器中操作",
         "subtask": "正在處理子任務"
       },
-      "longTool": "{{activity}} · {{minutes}} 分鐘"
+      "longTool": "{{activity}} · {{minutes}} 分鐘",
+      "waitingForInternet": "正在等你的網路",
+      "waitingForAbacus": "正在等 AbacusAI",
+      "messageSafe": "你的訊息已保留。連線恢復後，機器人會自動繼續。"
     },
     "code": {
       "copied": "已複製",
@@ -3223,7 +3238,8 @@
       "includedIn": "包含在 {{plan}} 中",
       "includedInPaid": "包含在付費方案中",
       "commands": "指令",
-      "commandFailed": "操作沒有成功，請再試一次。"
+      "commandFailed": "操作沒有成功，請再試一次。",
+      "offline": "現在可以輸入。你重新上線後就會送出"
     },
     "day": {
       "today": "今天",
@@ -3412,7 +3428,9 @@
       "credits_other": "{{credits}} 點數",
       "creditsLeft_one": "{{credits}} 點數 · 剩餘 {{left}}",
       "creditsLeft_other": "{{credits}} 點數 · 剩餘 {{left}}",
-      "creditsAction": "{{credits}}。查看你的方案和點數"
+      "creditsAction": "{{credits}}。查看你的方案和點數",
+      "waitedInternet": "其中 {{duration}} 在等你的網路",
+      "waitedAbacus": "其中 {{duration}} 在等 AbacusAI"
     },
     "subagent": {
       "done_one": "已完成，{{count}} 步，{{duration}}",
@@ -3546,7 +3564,9 @@
       "askSkipped": "已略過",
       "askBot": "問了 {{bot}}：{{what}}",
       "giveTask": "把任務交給了 {{bot}}：{{what}}",
-      "memoryUpdated": "記憶已更新：{{name}}"
+      "memoryUpdated": "記憶已更新：{{name}}",
+      "quiet": "已 {{time}} 沒有輸出",
+      "progress": "進度"
     },
     "transcript": {
       "jump": "跳到最後",
@@ -3607,9 +3627,15 @@
       "open": "開啟"
     },
     "suggestedTasks": {
-      "label": "點選任務即可執行",
+      "pickOne": "選一個繼續",
+      "next": "下一步",
+      "routineLine": "應用程式開啟時依排程執行",
+      "copied": "已複製",
       "copy": "複製「{{text}}」，再從手機傳送",
-      "copyFailed": "無法複製"
+      "copyFailed": "無法複製",
+      "formTitle": "換成你的內容",
+      "formLine": "寫一兩行就夠了：我來替換範例文字。",
+      "notNow": "先不要"
     },
     "retryOffer": {
       "title": "用 {{model}} 再試一次",
@@ -3617,6 +3643,13 @@
       "freeTopModel": "這個任務對低成本模型來說很難。{{model}} 是目前最強的模型之一，在這裡可以直接使用。它消耗點數更快。",
       "continue": "在新對話中繼續",
       "paidBody": "新對話會根據本對話的摘要，由頂級模型繼續。消耗點數更快。"
+    },
+    "topModelRetry": {
+      "retry": "用 {{model}} 重試",
+      "upgradeRetry": "升級後用 {{model}} 等頂級模型重試",
+      "dismiss": "關閉",
+      "opusBody": "我們最強的模型會在新對話中接手，從你停下的地方繼續。它消耗額度更快。",
+      "dialogBody": "我們處理難題最強的模型，包含在 {{plan}} 中。"
     },
     "topModelCard": {
       "title": "升級 {{plan}}，繼續使用 {{model}}",
@@ -3718,6 +3751,12 @@
       "newChat": "在新對話中使用 {{model}} 繼續",
       "here": "仍將此對話切換到 {{model}}",
       "cancel": "取消"
+    },
+    "tasks": {
+      "title": "執行中",
+      "stop": "停止",
+      "serving": "正在提供 {{url}}",
+      "stopFailed": "無法停止，請再試一次。"
     }
   },
   "notch": {
@@ -4767,6 +4806,7 @@
     "paidWaitingTitle": "請在瀏覽器中完成",
     "planLine": "{{plan}} 方案 · 隨時可取消",
     "planTitle": "{{plan}} 提供給你的所有內容",
+    "planModelTitle": "使用 {{plan}}，在 {{model}} 上重新執行",
     "startAt": "起價",
     "waitingBody": "方案一啟用，你的訊息就會送出。",
     "waitingBodyNoMessage": "方案一啟用，這個視窗就會關閉。",
@@ -5320,6 +5360,23 @@
     "continuing": "工具結果之後的所有內容都是同一則回覆的延續。不要再次問候，也不要重述任務目標。",
     "write": "使用 {{language}}（使用者的語言）書寫，除非使用者用其他語言傳訊息給你。"
   },
+  "quitGuard": {
+    "title_one": "你的任務仍在執行",
+    "title_other": "{{count}} 個任務仍在執行",
+    "body_one": "現在結束，任務會被停止，未完成的工作將會遺失。",
+    "body_other": "現在結束，這些任務會被停止，未完成的工作將會遺失。",
+    "wait_one": "等待完成",
+    "wait_other": "等待完成",
+    "quitAnyway": "仍要結束",
+    "cancel": "取消",
+    "unnamed": "未命名聊天",
+    "more_one": "還有 {{count}} 個",
+    "more_other": "還有 {{count}} 個",
+    "waitingOne": "「{{name}}」完成後將結束應用程式。",
+    "waitingMany_one": "{{count}} 個任務完成後將結束應用程式。",
+    "waitingMany_other": "{{count}} 個任務完成後將結束應用程式。",
+    "dontQuit": "不要結束"
+  },
   "native": {
     "aboutApp": "關於 {{app}}",
     "services": "服務",
@@ -5349,11 +5406,13 @@
     "zoom": "縮放",
     "front": "全部移到最上層",
     "credits": "依 MIT 授權條款開放原始碼",
-    "keepRunning": "繼續在背景執行",
-    "quitAnyway": "仍要結束",
-    "taskRunningTitle": "有任務正在執行",
-    "taskRunningMessage": "有任務仍在執行。",
-    "taskRunningDetail": "要讓它繼續在背景執行，還是結束並停止任務？",
+    "quitGuardTitleOne": "你的任務仍在執行",
+    "quitGuardTitleMany": "仍有任務在執行",
+    "quitGuardDetail": "現在結束，未完成的工作將會遺失。選擇等待，工作完成後應用程式會自動結束。",
+    "quitGuardWait": "等待完成",
+    "quitGuardQuitAnyway": "仍要結束",
+    "quitGuardCancel": "取消",
+    "quitGuardUnnamed": "未命名聊天",
     "restart": "重新啟動",
     "quit": "結束",
     "wait": "等待",
@@ -5541,6 +5600,16 @@
     "line": "用 {{plan}} 完成它：難的部分交給 {{model}}，點數夠這種規模的專案用，完成後還有公開連結。",
     "lineNoModel": "用 {{plan}} 完成它：難的部分交給頂級模型，點數夠這種規模的專案用，完成後還有公開連結。"
   },
+  "freeModelDown": {
+    "title": "免費模型目前負載過高",
+    "line": "升級到 {{plan}}，用頂級模型（Claude、GPT、Gemini）完成這項任務：",
+    "upgrade": "升級並完成",
+    "retry": "免費重試",
+    "retrying": "{{seconds}} 秒後重試…",
+    "firstRetrying": "{{seconds}} 秒後為你重試…",
+    "tryNow": "立即重試",
+    "history": "免費模型當時負載過高"
+  },
   "keepRunning": {
     "title": "讓「{{name}}」全天候運作",
     "titleUnnamed": "讓它全天候運作",
@@ -5639,6 +5708,98 @@
     },
     "pr": {
       "line": "這裡的 PR 收到審查或 CI 失敗時提醒我"
+    }
+  },
+  "templates": {
+    "makeDeck": "Make a deck",
+    "makeDocument": "Make a document",
+    "decksTitle": "Deck templates",
+    "documentsTitle": "Document looks and forms",
+    "pickHint": "Pick a design: its name goes into the message box, then say what it is about.",
+    "pageHint": "Every design the bot can print. Pick one to start a chat with it.",
+    "items": {
+      "classroom": "Lessons and training, step by step.",
+      "status-report": "Project status, reviews and board updates.",
+      "emerald-editorial": "Leadership readouts with a magazine front.",
+      "monochrome": "Research talks, typeset and quiet.",
+      "block-frame": "Project kickoffs and plans, bold and bright.",
+      "capsule": "Marketing and launch plans in three pillars.",
+      "storefront": "A small business pitching its customers.",
+      "grove": "Organic, grown-up brands and proposals.",
+      "coral": "Warm, graphic lifestyle and brand decks.",
+      "studio": "Electric, design-led studio credentials.",
+      "daisy-days": "Cheerful sessions for kids and families.",
+      "retro-zine": "Recipes, menus and food businesses.",
+      "broadside": "Manifestos, vision talks and launches, loud and graphic.",
+      "biennale-yellow": "Programmes, seasons and events, quiet and elegant.",
+      "creative-mode": "Agency pitches and concepts, bright blocks of colour.",
+      "editorial-tri-tone": "Magazine and lifestyle pitches in three colours.",
+      "mat": "Product briefs and studio credentials, calm and dark.",
+      "vellum": "Essays and reflective findings, navy and literary.",
+      "peoples-platform": "Campaigns and community plans, poster-loud.",
+      "scatterbrain": "Brainstorms and workshops on pinned sticky notes.",
+      "playful": "Friendly introductions for small studios and makers.",
+      "bold-poster": "Company overviews that land like a magazine cover.",
+      "pink-script": "Night-time, fashion and luxe launches in hot pink.",
+      "stencil-tablet": "Archives, heritage and museums, stencil and earth tones.",
+      "editorial-forest": "Quarterly reviews and studio updates, forest and pink.",
+      "soft-editorial": "Quiet research and editorial talks, serif and soft.",
+      "pin-and-paper": "Personal, hand-made stories on yellow paper.",
+      "signal": "Board and investor decks, navy and gold.",
+      "cobalt-grid": "Research bulletins on graph paper, in cobalt.",
+      "cartesian": "White papers and theses, warm and restrained.",
+      "8-bit-orbit": "Gaming and dev-tool talks, pixel-art neon.",
+      "retro-windows": "Tongue-in-cheek decks in old desktop windows.",
+      "long-table": "Weddings, birthdays and dinners, warm and inviting.",
+      "sakura-chroma": "Trips and itineraries, retro rainbow catalogue.",
+      "neo-grid-bold": "Annual reviews and results, black with neon yellow.",
+      "raw-grid": "Startup pitches with thick borders and pink.",
+      "blue-professional": "Clean, modern business decks in electric blue."
+    },
+    "tryLook": "Try another look",
+    "lookDone": "Printed again in the {{look}} look. Open it to see.",
+    "lookFailed": "That look could not be printed.",
+    "looks": {
+      "classic": "Classic",
+      "editorial": "Editorial",
+      "bold": "Bold",
+      "minimal": "Minimal",
+      "warm": "Warm",
+      "midnight": "Midnight"
+    },
+    "designs": "Designs",
+    "classicDesign": "Classic",
+    "types": {
+      "resume": "CV / resume",
+      "certificate": "Certificate",
+      "invoice": "Invoice / quote",
+      "report": "Report",
+      "flyer": "Flyer / notice",
+      "invitation": "Invitation",
+      "letter": "Letter",
+      "proposal": "Proposal"
+    }
+  },
+  "connectivity": {
+    "banner": {
+      "offlineTitle": "你已離線。",
+      "offlineBody": "是你的網路連線中斷，不是應用程式問題。網路恢復後，一切會自動繼續。",
+      "abacusTitle": "AbacusAI 目前沒有回應。",
+      "abacusBody": "你的網路正常；我們正在處理。",
+      "checkingIn": "{{seconds}} 秒後再檢查",
+      "backTitle": "已重新連線。",
+      "backSending_one": "正在送出你等待中的訊息。",
+      "backSending_other": "正在送出你 {{count}} 則等待中的訊息。"
+    },
+    "lanePaused": "已暫停 · 離線",
+    "laneOfflineNote": "這台電腦離線時已暫停。連結沒問題；網路恢復後會自動繼續。",
+    "queued": {
+      "title": "你重新上線後會送出",
+      "line": "「{{text}}」傳給 {{to}}，在 {{app}} 上。你的網路恢復時會自動送出，且只送一次。",
+      "cancel": "取消這則訊息",
+      "unsureTitle": "可能尚未送達",
+      "unsureLine": "「{{text}}」傳給 {{to}}，在 {{app}} 上。你的網路在傳送時中斷，重新傳送前請先檢查聊天內容。",
+      "dismiss": "關閉"
     }
   }
 }
