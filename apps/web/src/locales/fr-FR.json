@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "Réessayer avec {{model}}",
+      "upgradeRetry": "Passer à un forfait supérieur pour réessayer avec {{model}} et d'autres modèles de pointe",
       "dismiss": "Fermer",
       "opusBody": "Notre modèle le plus puissant reprend cette tâche dans une nouvelle discussion, là où vous vous êtes arrêté. Il consomme les crédits plus vite.",
       "dialogBody": "Notre modèle le plus puissant pour les tâches difficiles, inclus dans {{plan}}."

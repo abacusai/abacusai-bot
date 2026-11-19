@@ -202,12 +202,17 @@ export const TopModelRetryRow = ({
           >
             {preparing ? (
               <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
-            ) : (
+            ) : arm === "opus" ? (
               <RotateCcw aria-hidden className="size-3.5 shrink-0" />
+            ) : (
+              <Sparkles aria-hidden className="size-3.5 shrink-0" />
             )}
             {preparing
               ? t("chat.continuation.preparing", { model: label })
-              : t("chat.topModelRetry.retry", { model: label })}
+              : arm === "opus"
+                ? t("chat.topModelRetry.retry", { model: label })
+                : // The dialog arm's tap is an upgrade: the button says so.
+                  t("chat.topModelRetry.upgradeRetry", { model: label })}
           </Button>
         </div>
       </div>

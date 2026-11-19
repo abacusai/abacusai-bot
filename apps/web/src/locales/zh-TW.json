@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "用 {{model}} 重試",
+      "upgradeRetry": "升級後用 {{model}} 等頂級模型重試",
       "dismiss": "關閉",
       "opusBody": "我們最強的模型會在新對話中接手，從你停下的地方繼續。它消耗額度更快。",
       "dialogBody": "我們處理難題最強的模型，包含在 {{plan}} 中。"

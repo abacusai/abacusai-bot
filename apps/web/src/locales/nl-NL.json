@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "Opnieuw met {{model}}",
+      "upgradeRetry": "Upgrade om opnieuw te proberen met {{model}} en andere topmodellen",
       "dismiss": "Sluiten",
       "opusBody": "Ons sterkste model pakt dit op in een nieuwe chat, precies waar je was gebleven. Het verbruikt sneller credits.",
       "dialogBody": "Ons sterkste model voor lastige taken, inbegrepen bij {{plan}}."

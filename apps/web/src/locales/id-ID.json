@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "Coba lagi dengan {{model}}",
+      "upgradeRetry": "Upgrade untuk coba lagi dengan {{model}} dan model teratas lainnya",
       "dismiss": "Tutup",
       "opusBody": "Model terkuat kami melanjutkan ini di chat baru, dari titik terakhirmu. Model ini memakai kredit lebih cepat.",
       "dialogBody": "Model terkuat kami untuk tugas sulit, termasuk dalam {{plan}}."

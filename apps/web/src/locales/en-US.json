@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "Retry with {{model}}",
+      "upgradeRetry": "Upgrade to retry with {{model}} and other top models",
       "dismiss": "Close",
       "opusBody": "Our strongest model takes this on in a new chat, picking up where you left off. It uses credits faster.",
       "dialogBody": "Our strongest model for hard tasks, included in {{plan}}."

@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "{{model}} ile yeniden dene",
+      "upgradeRetry": "{{model}} ve diğer üst modellerle yeniden denemek için yükselt",
       "dismiss": "Kapat",
       "opusBody": "En güçlü modelimiz bunu yeni bir sohbette kaldığın yerden devralır. Kredileri daha hızlı kullanır.",
       "dialogBody": "Zor görevler için en güçlü modelimiz, {{plan}} planına dahil."

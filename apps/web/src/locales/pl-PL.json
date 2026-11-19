@@ -3777,6 +3777,7 @@
     },
     "topModelRetry": {
       "retry": "Ponów z {{model}}",
+      "upgradeRetry": "Ulepsz plan, by spróbować ponownie z {{model}} i innymi topowymi modelami",
       "dismiss": "Zamknij",
       "opusBody": "Nasz najmocniejszy model przejmie to w nowym czacie, od miejsca, w którym skończyłeś. Zużywa kredyty szybciej.",
       "dialogBody": "Nasz najmocniejszy model do trudnych zadań, w ramach {{plan}}."

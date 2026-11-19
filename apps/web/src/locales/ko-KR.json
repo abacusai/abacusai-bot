@@ -3641,6 +3641,7 @@
     },
     "topModelRetry": {
       "retry": "{{model}}(으)로 다시 시도",
+      "upgradeRetry": "업그레이드하고 {{model}} 등 최상위 모델로 다시 시도",
       "dismiss": "닫기",
       "opusBody": "가장 강력한 모델이 새 채팅에서 이어서 처리합니다. 크레딧이 더 빨리 소모됩니다.",
       "dialogBody": "어려운 작업을 위한 가장 강력한 모델, {{plan}}에 포함되어 있습니다."
