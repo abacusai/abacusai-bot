@@ -5328,6 +5328,9 @@
       "reaction": "Fijn dat het gelukt is."
     },
     "line": "Houd projecten zoals dit draaiende met {{plan}}.",
+    "nextStep": {
+      "title": "Doe meer met {{plan}}"
+    },
     "chat": {
       "once": "Ik begin hier niet meer over."
     }

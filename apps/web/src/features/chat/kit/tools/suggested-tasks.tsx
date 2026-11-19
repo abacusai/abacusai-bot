@@ -8,6 +8,8 @@
  * a clock and a line on a routine's. A call with fields draws a small form
  * instead, for what only the user knows (their name on a sample page): its
  * one task is the button, and sends with a "label: value" line per field.
+ * A free account's next step under a result can carry the plan as its last
+ * row (success-pitch.tsx NextStepPlanRow), on the success pitch's caps.
  */
 import {
   isSuggestTasksTool,
@@ -27,7 +29,7 @@ import { nextStepAllowed } from "@abacus-ai/contract/next-step";
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
 import { ArrowRight, Check, Clock, Copy, PenLine } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useOptionalDb } from "#renderer/data/db";
@@ -43,7 +45,7 @@ import { useHost, useThreadStore } from "../../store/selectors";
 import { useChatView } from "../context";
 import { retryOfferTarget } from "../retry-offer";
 import { useSendAsUser } from "../send-as-user";
-import { OfferCardFrame } from "../success-pitch";
+import { NextStepPlanRow, OfferCardFrame } from "../success-pitch";
 import { toolInput } from "./normalize";
 
 /** Calls already counted as shown, so a re-render or a scroll back counts nothing. */
@@ -273,6 +275,10 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
       onTap={(task) =>
         task.copy ? copy(task.text) : send(task.text, task.routine)
       }
+      // A free account's offer after a result rides on its next step's tasks.
+      plan={
+        nextStep && db != null ? <NextStepPlanRow active={running} /> : null
+      }
     />
   );
 };
@@ -280,17 +286,20 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
 /**
  * The tasks as one card: a label, then a row per task with its icon, the
  * text and an arrow. The first row's tile is filled, as the likeliest answer.
+ * `plan`, when given, is the last row.
  */
 const SuggestedTaskList = ({
   tasks,
   nextStep,
   copied,
   onTap,
+  plan,
 }: {
   tasks: readonly SuggestedTask[];
   nextStep: boolean;
   copied: string | null;
   onTap(task: SuggestedTask): void;
+  plan?: ReactNode;
 }) => {
   const { t } = useTranslation();
   const label = t(
@@ -363,6 +372,7 @@ const SuggestedTaskList = ({
             </button>
           );
         })}
+        {plan}
       </div>
     </div>
   );

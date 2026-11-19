@@ -5328,6 +5328,9 @@
       "reaction": "Senang itu berhasil untukmu."
     },
     "line": "Lanjutkan proyek seperti ini dengan {{plan}}.",
+    "nextStep": {
+      "title": "Lakukan lebih banyak dengan {{plan}}"
+    },
     "chat": {
       "once": "Aku tidak akan membahas ini lagi di sini."
     }

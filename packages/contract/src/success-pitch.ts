@@ -13,6 +13,10 @@
  * a personal agent on the web that keeps it running with the computer off.
  * A paid plan gets the second as the deploy steps instead (site-deploy.ts),
  * as it does for a site.
+ *
+ * Where a result ends on the next step (next-step.ts), its offer is not a
+ * card of its own: it is the plan's row in the next step's card, under the
+ * tasks (`place: "next_step"`), on the same caps and events.
  */
 
 /** Why the card was offered; the funnel's detail. */
@@ -39,6 +43,13 @@ export type SuccessPitchMoment = (typeof SUCCESS_PITCH_MOMENTS)[number];
 export const SUCCESS_PITCH_LEADS = ["apps", "agents", "media"] as const;
 export type SuccessPitchLead = (typeof SUCCESS_PITCH_LEADS)[number];
 
+/**
+ * Where an offer shows: a card of its own under the reply, or the plan's
+ * row in the next step's card, when the result ended on one.
+ */
+export const SUCCESS_PITCH_PLACES = ["card", "next_step"] as const;
+export type SuccessPitchPlace = (typeof SUCCESS_PITCH_PLACES)[number];
+
 /** One card owed under a session's latest reply, as main stamped it. */
 export interface SuccessPitchOffer {
   /** The turn it is for (TurnLedger turnId), plus a suffix for a reaction. */
@@ -52,7 +63,14 @@ export interface SuccessPitchOffer {
   name?: string | null;
   /** The funnel's detail when it is not the trigger: the big build's file count. */
   detail?: string | null;
+  /** Where it shows; a card of its own when absent. */
+  place?: SuccessPitchPlace;
 }
+
+/** Where `offer` shows. */
+export const successPitchPlace = (
+  offer: SuccessPitchOffer
+): SuccessPitchPlace => offer.place ?? "card";
 
 /** Main's record for one account (creditAccountKey). */
 export interface SuccessPitchMark {
