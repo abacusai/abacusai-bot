@@ -18,6 +18,7 @@ import type { CreditThresholdMark } from "@abacus-ai/contract/credit-thresholds"
 import {
   MESSAGING_PLATFORM_CATALOG,
   SHARED_BOT_PLATFORM_OF,
+  basePlatformOf,
   appOfSelfLane,
   isMessagingPlatformId,
   isOwnChatTarget,
@@ -122,6 +123,7 @@ import {
   readGatewaySettings,
   readStoredMessageLog,
   readPlatformAppStopped,
+  readPlatformLoginSetup,
   readPlatformFirstMessageNeeded,
   readPlatformLinkLost,
   readPlatformSignedIn,
@@ -131,6 +133,7 @@ import {
   revokePairing,
   saveGatewaySettings,
   savePlatformAppStopped,
+  savePlatformLoginSetup,
   savePlatformFirstMessageNeeded,
   savePlatformValues,
   setPlatformEnabled,
@@ -1140,9 +1143,12 @@ export class MessagingGatewayService {
     // checks, so a drop for want of it is told as such, never as a lost link.
     if (state === "error" || state === "connecting")
       this.options.networkSuspect?.();
-    // A released login that landed is kept.
-    if (state === "connected" || state === "syncing")
+    // A released login that landed is kept, with what it set up.
+    if (state === "connected" || state === "syncing") {
       this.clearReleasedLogin(platformId);
+      const shared = SHARED_BOT_PLATFORM_OF[platformId];
+      if (shared != null) savePlatformLoginSetup(shared, null);
+    }
     // What a connector that made it back up still owes a chat goes now.
     if (state === "connected") {
       // The user's own chat may now be reachable through this app too.
@@ -3014,13 +3020,36 @@ export class MessagingGatewayService {
   // IPC surface
   // ---------------------------------------------------------------------------
 
-  /** Shared-bot platforms: mint a pairing code. See AbacusChannelsConnector. */
+  /**
+   * Shared-bot platforms: mint a pairing code. See AbacusChannelsConnector.
+   * A lane not running is turned on first. While its chat app's own login
+   * runs unfinished here, what this did is that login's setup (`loginSetup`):
+   * the lane turned on, or else the code minted, which an abandoned login
+   * takes back.
+   */
   async pairSharedChannel(
     platformId: MessagingPlatformId
   ): Promise<MessagingSnapshot> {
+    const base = basePlatformOf(platformId);
+    const baseState =
+      base != null && this.connectors.has(base)
+        ? this.states.get(base)?.state
+        : undefined;
+    const inLogin =
+      baseState != null && baseState !== "connected" && baseState !== "syncing";
+    if (!this.connectors.has(platformId)) {
+      await this.updatePlatform({ platformId, enabled: true });
+      if (inLogin) savePlatformLoginSetup(platformId, "lane");
+    }
     const connector = this.connectors.get(platformId);
     if (connector instanceof AbacusChannelsConnector) {
-      await connector.pair();
+      const link = await connector.pair();
+      if (
+        inLogin &&
+        link.status === "pending" &&
+        readPlatformLoginSetup(platformId) == null
+      )
+        savePlatformLoginSetup(platformId, "code");
       this.options.emitChanged();
     }
     return this.getSnapshot();
@@ -3115,8 +3144,8 @@ export class MessagingGatewayService {
   /**
    * Its connect dialog closed without a link: stop showing the login, but
    * leave it running, since a scan already made may still land. Unfinished
-   * after RELEASED_LOGIN_MS, the platform is turned off (with its shared-bot
-   * lane, as Unlink does).
+   * after RELEASED_LOGIN_MS, the platform is turned off, and what its connect
+   * set up on the shared-bot lane is taken back.
    */
   releaseLogin(platformId: MessagingPlatformId): void {
     const state = this.states.get(platformId)?.state;
@@ -3154,7 +3183,10 @@ export class MessagingGatewayService {
    * A login left unfinished: the connector stops, and the lane is held by the
    * app (`appStopped`), never by writing the user's own switch. It stays on,
    * so routines skip and make up through it and Connect brings it back; the
-   * status board tells the user.
+   * status board tells the user. What its connect set up on the shared-bot
+   * lane (`loginSetup`) is taken back: a lane it turned on is held with it,
+   * whatever its state; a code it minted on a lane the user had on is
+   * withdrawn, leaving that lane on and idle.
    */
   private async abandonLogin(platformId: MessagingPlatformId): Promise<void> {
     const state = this.states.get(platformId)?.state;
@@ -3169,7 +3201,16 @@ export class MessagingGatewayService {
       `[messaging] ${platformId}: login not finished ${RELEASED_LOGIN_MS / 1000}s after its dialog closed; stopping it until Connect`
     );
     const shared = SHARED_BOT_PLATFORM_OF[platformId];
-    for (const id of shared != null ? [shared, platformId] : [platformId]) {
+    const setup = shared != null ? readPlatformLoginSetup(shared) : null;
+    if (shared != null && setup != null) {
+      savePlatformLoginSetup(shared, null);
+      const connector = this.connectors.get(shared);
+      if (setup === "code" && connector instanceof AbacusChannelsConnector)
+        await connector.endPairing();
+    }
+    const held =
+      shared != null && setup === "lane" ? [shared, platformId] : [platformId];
+    for (const id of held) {
       if (!isPlatformEnabled(id)) continue;
       savePlatformAppStopped(id, "login-not-finished");
       await this.stopPlatform(id);
@@ -4543,8 +4584,13 @@ export class MessagingGatewayService {
     if (request.values != null)
       savePlatformValues(request.platformId, request.values);
     if (request.enabled != null) {
-      // Switched either way by hand: a released login's deadline is moot.
+      // Switched either way by hand: a released login's deadline is moot, and
+      // the lane is the user's, no longer a login's setup (setPlatformEnabled).
+      // A personal lane switched off ends its login's setup too.
       this.clearReleasedLogin(request.platformId);
+      const shared = SHARED_BOT_PLATFORM_OF[request.platformId];
+      if (!request.enabled && shared != null)
+        savePlatformLoginSetup(shared, null);
       setPlatformEnabled(request.platformId, request.enabled);
     }
 

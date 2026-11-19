@@ -19,7 +19,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const stored = vi.hoisted(() => ({
   linkLost: false,
   appStopped: {} as Record<string, "login-not-finished" | null>,
+  loginSetup: {} as Record<string, "lane" | "code" | null>,
   enabled: [] as string[],
+  /** The lanes switched on, and those configured, in the stored config. */
+  on: ["discord", "abacus_discord"] as string[],
+  configured: ["discord"] as string[],
 }));
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
@@ -32,6 +36,16 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
   // The user's own switch: the app must never write it.
   setPlatformEnabled: (id: string, enabled: boolean) => {
     stored.enabled.push(`${id}:${String(enabled)}`);
+    stored.on = enabled
+      ? [...new Set([...stored.on, id])]
+      : stored.on.filter((on) => on !== id);
+    // As the real one does: switched by hand, the lane is the user's again.
+    stored.appStopped[id] = null;
+    stored.loginSetup[id] = null;
+  },
+  readPlatformLoginSetup: (id: string) => stored.loginSetup[id] ?? null,
+  savePlatformLoginSetup: (id: string, setup: "lane" | "code" | null) => {
+    stored.loginSetup[id] = setup;
   },
   readGatewaySettings: () => ({
     gatewayEnabled: true,
@@ -39,9 +53,44 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
     respondToInbound: true,
     workspaceId: null,
   }),
-  isPlatformEnabled: (id: MessagingPlatformId) =>
-    id === "discord" || id === "abacus_discord",
-  isPlatformConfigured: (id: MessagingPlatformId) => id === "discord",
+  isPlatformEnabled: (id: MessagingPlatformId) => stored.on.includes(id),
+  isPlatformConfigured: (id: MessagingPlatformId) =>
+    stored.configured.includes(id),
+}));
+
+// The app window a shared bot's link opens in, for the real connector's tests.
+const linkWindow = vi.hoisted(() => ({
+  loadURL: () => Promise.resolve(),
+  show: () => {},
+  focus: () => {},
+  close: vi.fn(),
+  isDestroyed: () => false,
+  on: () => {},
+  webContents: {
+    on: () => {},
+    setWindowOpenHandler: () => {},
+    setAudioMuted: () => {},
+  },
+}));
+vi.mock("electron", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("electron")>()),
+  // Discord's link window first shuts its loopback (closeDiscordLoopback).
+  session: {
+    fromPartition: () => ({ webRequest: { onBeforeRequest: () => {} } }),
+  },
+  BrowserWindow: class {
+    constructor() {
+      return linkWindow;
+    }
+  },
+}));
+vi.mock("../../bring-to-front", () => ({ parentWindow: () => null }));
+
+// The shared bot's server, for the tests that run its real connector.
+vi.mock("../providers/abacus", () => ({ resolveAbacusApiKey: () => "key" }));
+vi.mock("../providers/abacus-host", () => ({
+  abacusRoutellmV1: () => "https://example.test/v1",
+  abacusUserAgent: () => "test",
 }));
 
 // No OS events to watch here: hints have their own test (lane-supervisor.test.ts).
@@ -74,13 +123,19 @@ type Callbacks = {
 
 /** Builds a gateway whose connectors are stubs that hand their callbacks back. */
 const service = (
-  notified?: (title: string) => void
+  notified?: (title: string) => void,
+  /** Run the shared bot lanes' real connectors, against the fake server. */
+  realShared = false,
+  host: "electron" | "web-host" = "electron"
 ): {
   gateway: InstanceType<typeof MessagingGatewayService>;
   captured: Callbacks[];
+  /** The latest connector's callbacks per lane. */
+  lanes: Map<MessagingPlatformId, Callbacks>;
   board: InstanceType<typeof StatusBoard>;
 } => {
   const captured: Callbacks[] = [];
+  const lanes = new Map<MessagingPlatformId, Callbacks>();
   // The real status board, in memory: the gateway reports, the board tells.
   const board = new StatusBoard({
     file: () => null,
@@ -97,6 +152,7 @@ const service = (
     emitUserMessage: () => {},
     emitChanged: () => {},
     status: board,
+    platform: () => host,
   } as never);
 
   const build = (
@@ -113,6 +169,8 @@ const service = (
     // test, and rebuilding it here would test the test.
     const real = build(id) as { callbacks?: Callbacks };
     const callbacks = (real as unknown as { callbacks: Callbacks }).callbacks;
+    lanes.set(id, callbacks);
+    if (realShared && id.startsWith("abacus_")) return real;
     captured.push(callbacks);
     return {
       id,
@@ -130,7 +188,7 @@ const service = (
     };
   };
 
-  return { gateway, captured, board };
+  return { gateway, captured, lanes, board };
 };
 
 const platformState = (
@@ -146,7 +204,10 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   stored.appStopped = {};
+  stored.loginSetup = {};
   stored.enabled = [];
+  stored.on = ["discord", "abacus_discord"];
+  stored.configured = ["discord"];
 });
 
 describe("a lost link", () => {
@@ -342,16 +403,13 @@ describe("a login whose connect dialog closed unlinked", () => {
     expect(platformState(gateway)).toBe("connected");
   });
 
-  it("is stopped by the app, with its shared-bot lane, never by the user's switch", async () => {
+  it("is stopped by the app, never by the user's switch", async () => {
     const told: string[] = [];
     const { gateway, board } = await released((title) => told.push(title));
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS - 1);
     expect(stopped()).toBeNull();
     await vi.advanceTimersByTimeAsync(1);
-    expect(stored.appStopped).toEqual({
-      abacus_discord: "login-not-finished",
-      discord: "login-not-finished",
-    });
+    expect(stopped()).toBe("login-not-finished");
     // The saved on/off stays the user's alone.
     expect(stored.enabled).toEqual([]);
     // Still the user's lane: routines skip and make up through it.
@@ -412,5 +470,368 @@ describe("a login whose connect dialog closed unlinked", () => {
     gateway.releaseLogin("discord");
     await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
     expect(stopped()).toBeNull();
+  });
+});
+
+describe("an abandoned personal login next to its chat app's shared-bot lane", () => {
+  type Personal = "discord" | "telegram";
+  /** The lanes the app holds stopped (a hand switch leaves `null`). */
+  const held = () =>
+    Object.fromEntries(
+      Object.entries(stored.appStopped).filter(([, why]) => why != null)
+    );
+  const sharedOf = (personal: Personal) => `abacus_${personal}` as const;
+  const stateOf = (
+    gateway: InstanceType<typeof MessagingGatewayService>,
+    id: MessagingPlatformId
+  ) => gateway.getSnapshot().platforms.find((p) => p.id === id)?.state;
+  const sharedLinkOf = (
+    gateway: InstanceType<typeof MessagingGatewayService>,
+    id: MessagingPlatformId
+  ) => gateway.getSnapshot().platforms.find((p) => p.id === id)?.sharedLink;
+
+  /**
+   * Both lanes configured, the shared bot switched on before or not, and the
+   * personal connect dialog opened: its Connect turns the personal lane on,
+   * which shows its login.
+   */
+  const openDialog = async (
+    personal: Personal,
+    sharedOnBefore: boolean,
+    realShared = false
+  ) => {
+    const shared = sharedOf(personal);
+    stored.on = sharedOnBefore ? [shared] : [];
+    stored.configured = [personal, shared];
+    const { gateway, lanes } = service(undefined, realShared);
+    await gateway.syncConnectors();
+    await gateway.updatePlatform({ platformId: personal, enabled: true });
+    lanes.get(personal)!.onState("needs_login", "Scan the QR to connect.");
+    return { gateway, lanes, shared };
+  };
+
+  /** The dialog closes unlinked and the login is given up on. */
+  const abandon = async (
+    gateway: InstanceType<typeof MessagingGatewayService>,
+    personal: MessagingPlatformId
+  ) => {
+    gateway.releaseLogin(personal);
+    await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+  };
+
+  describe.each(["discord", "telegram"] as const)("%s", (personal) => {
+    describe("a shared bot this connect turned on", () => {
+      it.each([
+        [
+          "connected",
+          "a link made earlier, which an Unlink left on the server",
+        ],
+        ["needs_login", "its pairing code, unanswered"],
+        ["error", "a status check that failed before any link"],
+        ["connecting", "still asking the server"],
+      ])("is held with the login when it is %s (%s)", async (state) => {
+        const { gateway, lanes, shared } = await openDialog(personal, false);
+        // The dialog pairs the shared bot, which main switches on.
+        await gateway.pairSharedChannel(shared);
+        expect(gateway.runningPlatforms()).toContain(shared);
+        lanes.get(shared)!.onState(state, "x");
+        await abandon(gateway, personal);
+        expect(held()).toEqual({
+          [shared]: "login-not-finished",
+          [personal]: "login-not-finished",
+        });
+        expect(gateway.runningPlatforms()).toEqual([]);
+        // Held by the app, never by writing the user's switch off.
+        expect(stored.enabled.filter((w) => w.endsWith(":false"))).toEqual([]);
+      });
+
+      it("is the user's once the login lands: a later abandoned login leaves it", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, false);
+        await gateway.pairSharedChannel(shared);
+        lanes.get(shared)!.onState("connected");
+        lanes.get(personal)!.onState("connected");
+        // Later the personal link is lost and its new login left unfinished.
+        lanes.get(personal)!.onState("needs_login", "Scan the QR to connect.");
+        await abandon(gateway, personal);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+      });
+
+      it("is still this login's after a restart mid-attempt", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, false);
+        await gateway.pairSharedChannel(shared);
+        lanes.get(shared)!.onState("connected");
+        expect(stored.loginSetup[shared]).toBe("lane");
+        await gateway.dispose();
+        // Relaunched: both lanes come back from the stored config.
+        const next = service();
+        await next.gateway.syncConnectors();
+        expect(next.gateway.runningPlatforms()).toEqual(
+          expect.arrayContaining([personal, shared])
+        );
+        next.lanes.get(shared)!.onState("connected");
+        next.lanes
+          .get(personal)!
+          .onState("needs_login", "Scan the QR to connect.");
+        await abandon(next.gateway, personal);
+        expect(held()).toEqual({
+          [shared]: "login-not-finished",
+          [personal]: "login-not-finished",
+        });
+      });
+
+      it("is the user's once they switch the personal lane off by hand", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, false);
+        await gateway.pairSharedChannel(shared);
+        lanes.get(shared)!.onState("connected");
+        await gateway.updatePlatform({ platformId: personal, enabled: false });
+        expect(stored.loginSetup[shared] ?? null).toBeNull();
+        // A later connect that never pairs (the bot is linked) and is abandoned.
+        await gateway.updatePlatform({ platformId: personal, enabled: true });
+        lanes.get(personal)!.onState("needs_login", "Scan the QR to connect.");
+        await abandon(gateway, personal);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+      });
+
+      it("is the user's once they switch it by hand", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, false);
+        await gateway.pairSharedChannel(shared);
+        lanes.get(shared)!.onState("connected");
+        await gateway.updatePlatform({ platformId: shared, enabled: true });
+        await abandon(gateway, personal);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+      });
+
+      it("comes back with the next Connect, and is held again if that is abandoned too", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, false);
+        await gateway.pairSharedChannel(shared);
+        lanes.get(shared)!.onState("connected");
+        await abandon(gateway, personal);
+        expect(gateway.runningPlatforms()).toEqual([]);
+        // Connect again: the dialog turns the personal lane on and pairs.
+        await gateway.updatePlatform({ platformId: personal, enabled: true });
+        lanes.get(personal)!.onState("needs_login", "Scan the QR to connect.");
+        await gateway.pairSharedChannel(shared);
+        expect(stored.appStopped[shared]).toBeNull();
+        expect(gateway.runningPlatforms()).toEqual(
+          expect.arrayContaining([personal, shared])
+        );
+        await abandon(gateway, personal);
+        expect(held()).toEqual({
+          [shared]: "login-not-finished",
+          [personal]: "login-not-finished",
+        });
+      });
+    });
+
+    describe("a shared bot the user already had on", () => {
+      it("keeps running while connected", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, true);
+        lanes.get(shared)!.onState("connected");
+        await abandon(gateway, personal);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+        expect(stateOf(gateway, shared)).toBe("connected");
+      });
+
+      it.each(["error", "connecting", "rate_limited", "needs_login"])(
+        "keeps running while %s at the deadline",
+        async (passing) => {
+          const { gateway, lanes, shared } = await openDialog(personal, true);
+          lanes.get(shared)!.onState("connected");
+          gateway.releaseLogin(personal);
+          await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS - 10);
+          lanes.get(shared)!.onState(passing, "x");
+          await vi.advanceTimersByTimeAsync(10);
+          expect(held()).toEqual({
+            [personal]: "login-not-finished",
+          });
+          expect(gateway.runningPlatforms()).toContain(shared);
+        }
+      );
+
+      it("keeps running when the dialog paired it again (it was already running)", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, true);
+        lanes.get(shared)!.onState("needs_login", "Not linked yet.");
+        await gateway.pairSharedChannel(shared);
+        await abandon(gateway, personal);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+      });
+
+      it("a cancel mid-login stops only the personal lane, once it lands on its login", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, true);
+        lanes.get(shared)!.onState("connected");
+        lanes.get(personal)!.onState("connecting");
+        // The connect flow cancelled: it releases the login, never unlinks.
+        gateway.releaseLogin(personal);
+        await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS * 2);
+        expect(held()).toEqual({});
+        lanes.get(personal)!.onState("needs_login", "Scan the QR to connect.");
+        await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+      });
+
+      it("Connect brings the personal lane back without restarting the shared bot", async () => {
+        const { gateway, lanes, shared } = await openDialog(personal, true);
+        const sharedLane = lanes.get(shared)!;
+        sharedLane.onState("connected");
+        await abandon(gateway, personal);
+        const personalBefore = lanes.get(personal);
+        await gateway.updatePlatform({ platformId: personal, enabled: true });
+        expect(stored.appStopped[personal]).toBeNull();
+        expect(gateway.runningPlatforms()).toEqual(
+          expect.arrayContaining([personal, shared])
+        );
+        expect(lanes.get(personal)).not.toBe(personalBefore);
+        // The shared bot kept its connector: it was never stopped.
+        expect(lanes.get(shared)).toBe(sharedLane);
+        lanes.get(personal)!.onState("connected");
+        await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+        expect(stored.appStopped[personal]).toBeNull();
+      });
+    });
+
+    describe("with the shared bot's real connector and server", () => {
+      /** What the server answers: the link's status, or no answer at all. */
+      let server: "linked" | "unlinked" | "offline";
+      /** Every call the lane made, by action. */
+      let calls: string[] = [];
+      const realFetch = globalThis.fetch;
+      beforeEach(() => {
+        calls = [];
+        globalThis.fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+          const body = JSON.parse(String(init?.body ?? "{}")) as {
+            action: string;
+          };
+          calls.push(body.action);
+          if (server === "offline")
+            throw new DOMException("This operation was aborted", "AbortError");
+          if (body.action === "inbox")
+            return new Promise<Response>(() => {
+              // Long poll: holds while the test runs.
+            });
+          const linked = server === "linked";
+          const answer =
+            body.action === "pair"
+              ? linked
+                ? { status: "linked", display_name: "Me" }
+                : {
+                    status: "pending",
+                    code: "123456",
+                    deep_link: "https://t.me/bot?start=123456",
+                    // A short-lived code, which the watch replaces on expiry.
+                    expires_at: Date.now() / 1000 + 10,
+                  }
+              : {
+                  available: [personal],
+                  channels: linked
+                    ? { [personal]: { status: "linked", display_name: "Me" } }
+                    : {},
+                };
+          return new Response(JSON.stringify(answer), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }) as unknown as typeof fetch;
+      });
+      afterEach(() => {
+        globalThis.fetch = realFetch;
+      });
+
+      it.each([
+        ["linked", "connected"],
+        ["unlinked", "needs_login"],
+        ["offline", "error"],
+      ] as const)(
+        "turned on by this connect with the server %s, it reads %s and is held with the login",
+        async (answer, reads) => {
+          server = answer;
+          const { gateway, shared } = await openDialog(personal, false, true);
+          await gateway.pairSharedChannel(shared).catch(() => {});
+          await vi.advanceTimersByTimeAsync(0);
+          expect(stateOf(gateway, shared)).toBe(reads);
+          await abandon(gateway, personal);
+          expect(held()).toEqual({
+            [shared]: "login-not-finished",
+            [personal]: "login-not-finished",
+          });
+          expect(gateway.runningPlatforms()).toEqual([]);
+        }
+      );
+
+      it("already on and unlinked, the code this connect minted is withdrawn: the lane stays on, idle", async () => {
+        server = "unlinked";
+        const { gateway, shared } = await openDialog(personal, true, true);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(stateOf(gateway, shared)).toBe("needs_login");
+        await gateway.pairSharedChannel(shared);
+        expect(sharedLinkOf(gateway, shared)?.status).toBe("pending");
+        // The code shown in the app's own window (the dialog's Open link).
+        linkWindow.close.mockClear();
+        await gateway.openSharedChannelLink(shared, "install");
+        // The watch is live: it polls, and replaces the code as it runs out.
+        calls = [];
+        await vi.advanceTimersByTimeAsync(15_000);
+        expect(calls).toContain("status");
+        expect(calls).toContain("pair");
+        gateway.releaseLogin(personal);
+        await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+        expect(sharedLinkOf(gateway, shared)?.status).toBe("unlinked");
+        // The window with the withdrawn code is gone.
+        expect(linkWindow.close).toHaveBeenCalledTimes(1);
+        expect(stateOf(gateway, shared)).toBe("needs_login");
+        // Nothing polls or mints for it any more.
+        calls = [];
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(calls).toEqual([]);
+        // The user's switch was not written.
+        expect(stored.enabled).not.toContain(`${shared}:false`);
+        expect(stored.loginSetup[shared] ?? null).toBeNull();
+      });
+
+      it("already on and linked, it keeps running and connected", async () => {
+        server = "linked";
+        const { gateway, shared } = await openDialog(personal, true, true);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(stateOf(gateway, shared)).toBe("connected");
+        await abandon(gateway, personal);
+        expect(held()).toEqual({ [personal]: "login-not-finished" });
+        expect(gateway.runningPlatforms()).toEqual([shared]);
+        expect(stateOf(gateway, shared)).toBe("connected");
+      });
+    });
+  });
+
+  it("on a host with no personal lane, pairing the shared bot records no login setup", async () => {
+    stored.on = [];
+    stored.configured = ["telegram", "abacus_telegram"];
+    const { gateway } = service(undefined, false, "web-host");
+    await gateway.syncConnectors();
+    await gateway.pairSharedChannel("abacus_telegram");
+    expect(gateway.runningPlatforms()).toEqual(["abacus_telegram"]);
+    expect(stored.loginSetup.abacus_telegram ?? null).toBeNull();
+  });
+
+  it("WhatsApp, which has no shared bot, stops only itself and leaves other apps' lanes alone", async () => {
+    stored.on = ["whatsapp", "abacus_telegram"];
+    stored.configured = ["whatsapp", "abacus_telegram"];
+    const { gateway, lanes } = service();
+    await gateway.syncConnectors();
+    lanes.get("abacus_telegram")!.onState("connected");
+    lanes.get("whatsapp")!.onState("needs_login", "Scan the QR to connect.");
+    await abandon(gateway, "whatsapp");
+    expect(held()).toEqual({ whatsapp: "login-not-finished" });
+    expect(gateway.runningPlatforms()).toEqual(["abacus_telegram"]);
+    // Connect brings it back.
+    await gateway.updatePlatform({ platformId: "whatsapp", enabled: true });
+    expect(gateway.runningPlatforms()).toEqual(
+      expect.arrayContaining(["whatsapp", "abacus_telegram"])
+    );
   });
 });

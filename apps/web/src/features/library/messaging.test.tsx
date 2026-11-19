@@ -77,7 +77,10 @@ const setup = (
         releaseLogin: os.messaging.releaseLogin.handler(({ input }) => {
           calls.push(`${input.platformId}:released`);
         }),
-        pairShared: os.messaging.pairShared.handler(() => snapshot),
+        pairShared: os.messaging.pairShared.handler(({ input }) => {
+          calls.push(`pair:${input.platformId}`);
+          return snapshot;
+        }),
         unlinkShared: os.messaging.unlinkShared.handler(({ input }) => {
           calls.push(`unlink:${input.platformId}`);
           if (unlinkFails)
@@ -117,6 +120,28 @@ it.each(["Escape", "Cancel", "navigation"])(
         ).toHaveLength(1)
       );
       expect(d.calls).not.toContain("whatsapp:false");
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  }
+);
+it.each(["telegram", "discord"] as const)(
+  "%s Connect pairs an unlinked shared bot through main, never switching it itself",
+  async (platform) => {
+    const d = setup(platform);
+    // A shared bot never linked (or switched off by Unlink): no link to show.
+    for (const p of d.snapshot().platforms)
+      if (p.id !== platform) p.sharedLink = { status: "unlinked" };
+    const app = await renderApp(`/library/messaging?platform=${platform}`, {
+      procedures: d.procedures,
+    });
+    try {
+      await waitFor(() => expect(d.calls).toContain(`pair:abacus_${platform}`));
+      // Main turns the lane on as part of this login's setup, so an
+      // abandoned login can take it back; the page writes only its own switch.
+      expect(d.calls).toContain(`${platform}:true`);
+      expect(d.calls).not.toContain(`abacus_${platform}:true`);
     } finally {
       app.view.unmount();
       await app.cleanup();

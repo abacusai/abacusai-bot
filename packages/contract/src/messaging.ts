@@ -102,6 +102,17 @@ export const describePlatformForAgent = (id: MessagingPlatformId): string => {
 // The account API's names for the shared bots. Reported under abacus_*; listed
 // again as "telegram" they would read as the user's own Telegram.
 
+/** The chat app's own platform whose shared bot lane `platformId` is, or null. */
+export const basePlatformOf = (
+  platformId: MessagingPlatformId
+): MessagingPlatformId | null =>
+  (
+    Object.entries(SHARED_BOT_PLATFORM_OF) as [
+      MessagingPlatformId,
+      MessagingPlatformId,
+    ][]
+  ).find(([, shared]) => shared === platformId)?.[0] ?? null;
+
 // The live lanes a conversation is told about. A shared bot lane counts only
 // while the user's own account on that app is linked; the lane still works
 // for DMs either way, this is only what is said.
@@ -109,12 +120,7 @@ export const reportableLivePlatforms = (
   live: readonly MessagingPlatformId[]
 ): MessagingPlatformId[] =>
   live.filter((id) => {
-    const base = (
-      Object.entries(SHARED_BOT_PLATFORM_OF) as [
-        MessagingPlatformId,
-        MessagingPlatformId,
-      ][]
-    ).find(([, shared]) => shared === id)?.[0];
+    const base = basePlatformOf(id);
     return base == null || live.includes(base);
   });
 

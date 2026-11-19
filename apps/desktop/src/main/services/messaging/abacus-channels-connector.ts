@@ -511,6 +511,29 @@ export class AbacusChannelsConnector implements MessagingConnector {
     }
   }
 
+  /**
+   * Withdraw a pending code: its watch stops, the window showing it closes,
+   * and the lane goes back to idle, not linked. The link is read once first,
+   * so a Start that landed since the last poll is kept.
+   */
+  endPairing(): Promise<SharedChannelLink> {
+    return this.linkStep(async () => {
+      if (this.link.status !== "pending") return this.link;
+      this.clearPairTimer();
+      await this.refreshStatusNow();
+      if (this.linked) return this.link;
+      if (this.linkWindow != null && !this.linkWindow.isDestroyed())
+        this.linkWindow.close();
+      this.linkWindow = null;
+      this.setLink({ status: "unlinked" });
+      this.callbacks.onState(
+        "needs_login",
+        "Not linked to the Abacus AI bot yet."
+      );
+      return this.link;
+    });
+  }
+
   unlink(): Promise<SharedChannelLink> {
     return this.linkStep(async () => {
       this.clearPairTimer();
@@ -559,9 +582,14 @@ export class AbacusChannelsConnector implements MessagingConnector {
         this.serverNow() / 1000 > this.link.expiresAt
       ) {
         try {
-          // pair() starts the watch again, so this tick is done: scheduling
-          // another below would leave two loops polling the same link.
-          await this.pair();
+          // pairNow() starts the watch again, so this tick is done: scheduling
+          // another below would leave two loops polling the same link. A code
+          // withdrawn meanwhile (endPairing) is not replaced.
+          await this.linkStep(() =>
+            this.link.status === "pending"
+              ? this.pairNow()
+              : Promise.resolve(this.link)
+          );
           this.callbacks.onLog(
             `${this.channel}: the pairing code ran out; showing a fresh one`
           );
