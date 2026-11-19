@@ -46,6 +46,7 @@ import { useTranslation } from "react-i18next";
 import { usePaymentRequired } from "#renderer/components/payment-required";
 import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { cn } from "#renderer/lib/cn";
 import { creditsTier } from "#renderer/lib/credits";
 import { payingAccount } from "#renderer/lib/upgrade";
 import {
@@ -74,6 +75,112 @@ export interface SuccessPitchCardProps {
   onNotNow(): void;
 }
 
+/** How a card under a reply is painted: an upgrade's violet, or the app's own card. */
+const FRAME_TONES = {
+  pitch: {
+    card: "border-violet-200 bg-violet-50/70 dark:border-violet-900/70 dark:bg-violet-950/30",
+    tile: "bg-violet-600 text-white",
+    primary: "bg-violet-600 text-white hover:bg-violet-700",
+  },
+  plain: {
+    card: "bg-background shadow-xs",
+    tile: "bg-primary/10 text-primary",
+    primary: "",
+  },
+} as const;
+
+/**
+ * A card under a reply (owner rule: an offer there is a card, never a pill
+ * with grey text): an icon tile, a bold title and a line, anything else
+ * the card says, then its button and Not now. A close button when given.
+ */
+export const OfferCardFrame = ({
+  slot,
+  moment,
+  tone,
+  icon,
+  title,
+  line,
+  children,
+  action,
+  notNow,
+  onClose,
+}: {
+  slot: string;
+  moment?: string;
+  tone: keyof typeof FRAME_TONES;
+  icon: ReactNode;
+  title: string;
+  line: string;
+  children?: ReactNode;
+  /** The main button; `name` is its data-action. */
+  action: { label: string; name: string; onClick(): void };
+  notNow: { label: string; onClick(): void };
+  /** The corner X, with its label. */
+  onClose?: { label: string; onClick(): void };
+}) => {
+  const colors = FRAME_TONES[tone];
+  return (
+    <div
+      data-slot={slot}
+      data-moment={moment}
+      className={cn(
+        "relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border p-3.5 text-sm",
+        onClose != null && "pr-9",
+        colors.card
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-[9px]",
+          colors.tile
+        )}
+      >
+        {icon}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+        <div className="flex flex-col gap-0.5">
+          <p className="font-semibold">{title}</p>
+          <p className="text-muted-foreground">{line}</p>
+        </div>
+        {children}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <Button
+            size="sm"
+            className={colors.primary}
+            data-action={action.name}
+            onClick={action.onClick}
+          >
+            {action.label}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground"
+            data-action="not-now"
+            onClick={notNow.onClick}
+          >
+            {notNow.label}
+          </Button>
+        </div>
+      </div>
+      {onClose != null && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground absolute top-2 right-2 size-7"
+          aria-label={onClose.label}
+          data-action="close"
+          onClick={onClose.onClick}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </div>
+  );
+};
+
 /**
  * One pitch card: its icon and first lines, the plan's price, its whole
  * list (led by `lead`), Upgrade and Not now.
@@ -100,62 +207,31 @@ export const PitchCardFrame = ({
   const offer = wallOffer(billing);
   if (offer == null) return null;
   return (
-    <div
-      data-slot={slot}
-      data-moment={moment}
-      className="relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-3.5 pr-9 text-sm dark:border-violet-900/70 dark:bg-violet-950/30"
+    <OfferCardFrame
+      slot={slot}
+      moment={moment}
+      tone="pitch"
+      icon={icon}
+      title={title}
+      line={line}
+      action={{
+        label: upgradeCtaLabel(t, offer),
+        name: "upgrade",
+        onClick: onUpgrade,
+      }}
+      notNow={{ label: t("upgradeDialog.notNow"), onClick: onNotNow }}
+      onClose={{ label: t("upgradeDialog.close"), onClick: onNotNow }}
     >
-      <span
-        aria-hidden
-        className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-violet-600 text-white"
-      >
-        {icon}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-        <div className="flex flex-col gap-0.5">
-          <p className="font-semibold">{title}</p>
-          <p className="text-muted-foreground">{line}</p>
-          <p className="font-semibold" data-slot="success-pitch-price">
-            {planPrice(t, offer, i18n.language)}
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t("upgradeDialog.planTitle", { plan: offer.planName })}
-          </p>
-          <PlanPitchList billing={billing} lead={lead} />
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <Button
-            size="sm"
-            className="bg-violet-600 text-white hover:bg-violet-700"
-            data-action="upgrade"
-            onClick={onUpgrade}
-          >
-            {upgradeCtaLabel(t, offer)}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            data-action="not-now"
-            onClick={onNotNow}
-          >
-            {t("upgradeDialog.notNow")}
-          </Button>
-        </div>
+      <p className="-mt-2 font-semibold" data-slot="success-pitch-price">
+        {planPrice(t, offer, i18n.language)}
+      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t("upgradeDialog.planTitle", { plan: offer.planName })}
+        </p>
+        <PlanPitchList billing={billing} lead={lead} />
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-muted-foreground absolute top-2 right-2 size-7"
-        aria-label={t("upgradeDialog.close")}
-        data-action="close"
-        onClick={onNotNow}
-      >
-        <X className="size-4" />
-      </Button>
-    </div>
+    </OfferCardFrame>
   );
 };
 

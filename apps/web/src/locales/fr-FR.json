@@ -1490,6 +1490,12 @@
     "stopped": "Lien supprimé",
     "links": "Liens partagés",
     "linksEmpty": "Rien de partagé pour l’instant. Utilisez Partager sur un fichier créé par le bot.",
+    "offer": {
+      "title": "Envoyez-le à qui vous voulez",
+      "body": "Obtenez un lien qui s’ouvre sur n’importe quel téléphone ou ordinateur. Vous voyez exactement ce qu’ils verront avant la mise en ligne.",
+      "getLink": "Obtenir un lien",
+      "notNow": "Pas maintenant"
+    },
     "errors": {
       "TOO_LARGE": "Ce fichier dépasse la limite de 5 Mo pour les liens.",
       "TOO_MANY": "Vous avez 50 liens partagés. Arrêtez d’en partager un pour en créer un autre.",

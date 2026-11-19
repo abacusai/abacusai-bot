@@ -1490,6 +1490,12 @@
     "stopped": "Link rimosso",
     "links": "Link condivisi",
     "linksEmpty": "Ancora nulla di condiviso. Usa Condividi su un file creato dal bot.",
+    "offer": {
+      "title": "Invialo a chiunque",
+      "body": "Ottieni un link che si apre su qualsiasi telefono o computer. Vedi esattamente cosa vedranno prima che sia pubblico.",
+      "getLink": "Ottieni un link",
+      "notNow": "Non ora"
+    },
     "errors": {
       "TOO_LARGE": "Questo file supera il limite di 5 MB per i link.",
       "TOO_MANY": "Hai 50 link condivisi. Interrompine uno per crearne un altro.",

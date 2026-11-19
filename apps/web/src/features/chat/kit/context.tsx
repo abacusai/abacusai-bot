@@ -206,6 +206,8 @@ export interface ChatViewSlots {
   successPitchOffer?: SuccessPitchOffer;
   /** The gallery shows the deliverable offer without its caps, keeping no answer. */
   deliverableOfferPreview?: boolean;
+  /** The gallery shows the "Send it to anyone" card without its once-per-chat rule, keeping no answer. */
+  shareOfferPreview?: boolean;
   /** The gallery shows the retry offer on this model, without its caps. */
   retryOfferPreview?: { label: string; plan: string; freeTop?: boolean };
   /** The gallery shows the top-model card for this model, without the account. */

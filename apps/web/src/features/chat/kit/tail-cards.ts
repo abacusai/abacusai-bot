@@ -1,7 +1,8 @@
 /**
  * The cards under a thread's latest reply (the deliverable offer, the retry
  * offer, the success pitch, the deploy steps). Each claims the space, keyed
- * by the reply it sits under, while it shows. The rating line is the quietest
+ * by the reply it sits under, while it shows; a card that yields to the others
+ * names itself, so it can tell their claims from its own. The rating line is the quietest
  * thing there: it shows only while nothing is claimed, and never under the
  * reply right after one that had a card.
  */
@@ -11,50 +12,55 @@ import { useEffect, useSyncExternalStore } from "react";
 export interface TailCards {
   /** A card shows under one of the thread's replies now. */
   claimed: boolean;
+  /** Who holds the space now: each claim's owner, or "" when it gave none. */
+  owners: readonly string[];
   /** Replies that had a card, most recent last. */
   had: readonly string[];
 }
 
-const EMPTY: TailCards = { claimed: false, had: [] };
+const EMPTY: TailCards = { claimed: false, owners: [], had: [] };
 const KEPT_REPLIES = 20;
-/** Per thread: how many claims each reply holds now. */
+/** Per thread: how many claims each owner holds now. */
 const counts = new Map<string, Map<string, number>>();
 const snapshots = new Map<string, TailCards>();
 const listeners = new Set<() => void>();
 
 const publish = (threadId: string, had: readonly string[]): void => {
-  snapshots.set(threadId, {
-    claimed: (counts.get(threadId)?.size ?? 0) > 0,
-    had,
-  });
+  const owners = [...(counts.get(threadId)?.keys() ?? [])];
+  snapshots.set(threadId, { claimed: owners.length > 0, owners, had });
   for (const listener of listeners) listener();
 };
 
-const claim = (threadId: string, replyId: string): (() => void) => {
+const claim = (
+  threadId: string,
+  replyId: string,
+  owner: string
+): (() => void) => {
   const held = counts.get(threadId) ?? new Map<string, number>();
   counts.set(threadId, held);
-  held.set(replyId, (held.get(replyId) ?? 0) + 1);
+  held.set(owner, (held.get(owner) ?? 0) + 1);
   const had = snapshots.get(threadId)?.had ?? [];
   publish(
     threadId,
     [...had.filter((id) => id !== replyId), replyId].slice(-KEPT_REPLIES)
   );
   return () => {
-    const left = (held.get(replyId) ?? 1) - 1;
-    if (left > 0) held.set(replyId, left);
-    else held.delete(replyId);
+    const left = (held.get(owner) ?? 1) - 1;
+    if (left > 0) held.set(owner, left);
+    else held.delete(owner);
     publish(threadId, snapshots.get(threadId)?.had ?? []);
   };
 };
 
-/** While `replyId` is set, a card shows under that reply of `threadId`. */
+/** While `replyId` is set, a card (named `owner`, when it yields to others) shows under that reply of `threadId`. */
 export const useTailCardClaim = (
   threadId: string,
-  replyId: string | null
+  replyId: string | null,
+  owner = ""
 ): void => {
   useEffect(
-    () => (replyId == null ? undefined : claim(threadId, replyId)),
-    [threadId, replyId]
+    () => (replyId == null ? undefined : claim(threadId, replyId, owner)),
+    [threadId, replyId, owner]
   );
 };
 

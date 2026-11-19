@@ -1490,6 +1490,12 @@
     "stopped": "Bağlantı kaldırıldı",
     "links": "Paylaşılan bağlantılar",
     "linksEmpty": "Henüz bir şey paylaşılmadı. Botun yaptığı bir dosyada Paylaş'ı kullanın.",
+    "offer": {
+      "title": "Herkese gönder",
+      "body": "Her telefonda ve bilgisayarda açılan bir bağlantı al. Yayına girmeden önce karşı tarafın ne göreceğini tam olarak görürsün.",
+      "getLink": "Bağlantı al",
+      "notNow": "Şimdi değil"
+    },
     "errors": {
       "TOO_LARGE": "Bu dosya bağlantılar için 5 MB sınırını aşıyor.",
       "TOO_MANY": "50 paylaşılan bağlantınız var. Yenisini oluşturmak için birini durdurun.",

@@ -23,6 +23,7 @@ import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
+import { ChatShareAction } from "#renderer/features/shell/chat-share-action";
 import {
   openPanelTab,
   panelScopeKey,
@@ -49,7 +50,8 @@ const Sender = ({
   sessionId: string;
 }) => {
   const { chat } = Route.useRouteContext();
-  const host = useThreadHost(chat.session(sessionId));
+  const session = chat.session(sessionId);
+  const host = useThreadHost(session);
   useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
   const slots = useBotChatSlots(bot, sessionId, false, true, (url) =>
     requestBrowserOpen({ sessionId, url })
@@ -74,6 +76,10 @@ const Sender = ({
         {/* A chat with another of the user's bots says so; it is read-only. */}
         <PairWith sessionId={sessionId} />
       </TopBarSlot>
+      <ChatShareAction
+        hostStore={session.hostStore}
+        workspaceRoot={slots.workspaceRoot}
+      />
       <ChatView
         threadId={sessionId}
         skin="bot"

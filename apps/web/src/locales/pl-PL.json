@@ -1506,6 +1506,12 @@
     "stopped": "Link usunięty",
     "links": "Udostępnione linki",
     "linksEmpty": "Nic jeszcze nie udostępniono. Użyj opcji Udostępnij przy pliku utworzonym przez bota.",
+    "offer": {
+      "title": "Wyślij to komukolwiek",
+      "body": "Uzyskaj link, który otworzy się na każdym telefonie i komputerze. Zanim go opublikujesz, zobaczysz dokładnie to, co zobaczą inni.",
+      "getLink": "Utwórz link",
+      "notNow": "Nie teraz"
+    },
     "errors": {
       "TOO_LARGE": "Ten plik przekracza limit 5 MB dla linków.",
       "TOO_MANY": "Masz 50 udostępnionych linków. Przestań udostępniać jeden, by utworzyć kolejny.",

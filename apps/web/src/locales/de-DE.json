@@ -1490,6 +1490,12 @@
     "stopped": "Link entfernt",
     "links": "Geteilte Links",
     "linksEmpty": "Noch nichts geteilt. Nutze Teilen bei einer Datei, die der Bot erstellt hat.",
+    "offer": {
+      "title": "An alle senden",
+      "body": "Hol dir einen Link, der auf jedem Handy und Computer funktioniert. Du siehst vorher genau, was andere sehen werden.",
+      "getLink": "Link erstellen",
+      "notNow": "Nicht jetzt"
+    },
     "errors": {
       "TOO_LARGE": "Diese Datei überschreitet das Limit von 5 MB für Links.",
       "TOO_MANY": "Du hast 50 geteilte Links. Beende einen, um einen neuen zu erstellen.",

@@ -89,6 +89,7 @@ const DEFAULTS: PrefsValues = {
     nextStepOffer: null,
     retryOffer: null,
     ratingPrompt: null,
+    shareOffer: null,
     topModelHint: null,
     wallReopen: null,
     resumeCard: null,

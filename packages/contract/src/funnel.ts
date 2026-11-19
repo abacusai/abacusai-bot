@@ -212,14 +212,17 @@ export const FUNNEL_STEPS = [
   "site_deploy_cancel",
   "site_deploy_retry",
   "site_deploy_dismissed",
-  // A public link to a file the bot made (share.ts); share_failed's detail is
-  // the refusal.
+  // A public link to a file the bot made (share.ts); share_opened's detail is
+  // where it was opened (row, header or card), share_failed's the refusal.
+  // The "Send it to anyone" card under a reply: shown and Not now.
   "share_opened",
   "share_created",
   "share_copied",
   "share_link_opened",
   "share_unshared",
   "share_failed",
+  "share_card_shown",
+  "share_card_not_now",
   // A coding routine starter (coding-routines.ts): its row or section shown
   // (detail: where), a starter opened and a routine started (detail: which).
   "code_routine_shown",

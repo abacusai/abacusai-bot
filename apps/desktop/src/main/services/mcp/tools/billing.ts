@@ -165,6 +165,13 @@ export const alwaysOnAnswer = (billing: BillingPlan, app = true): string =>
 export const publishAnswer = (billing: BillingPlan): string =>
   planAskAnswer(billing, PUBLISH_ASK, abacusAgentPromptUrl(), true);
 
+/**
+ * Asked how a friend can see a page, the model went to the plan's live link;
+ * one file made here gets a free public link from Share in the app.
+ */
+const SHARE_ANSWER =
+  "Asked how someone else can see one page, image, PDF or document made here: that needs no plan. Tell them to press Share, on its row of the files card or at the top of the chat, for a public link, and never give a 127.0.0.1 or localhost link to send. A live link on a plan is for a site of several pages or an app that runs a server.";
+
 /** What the app's model is told about the user's plan, and how to answer. */
 export function appBillingResult(
   host: Pick<ToolHost, "ok">,
@@ -172,7 +179,7 @@ export function appBillingResult(
 ): ToolResult {
   if (billing == null)
     return host.ok(
-      "The plan details cannot be read right now. Say so plainly in one short line and offer to try again in a moment."
+      `The plan details cannot be read right now. Say so plainly in one short line and offer to try again in a moment.\n${SHARE_ANSWER}`
     );
   const lines = [
     `The user's plan: ${billing.current.planName}.`,
@@ -210,7 +217,7 @@ export function appBillingResult(
     "never send them to account settings or a billing page instead of these links, and never say you changed their",
     "plan: they upgrade on the page. Do not bring plans up unasked in the middle of a task or after a complaint."
   );
-  lines.push("", alwaysOnAnswer(billing), publishAnswer(billing));
+  lines.push("", alwaysOnAnswer(billing), publishAnswer(billing), SHARE_ANSWER);
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."
