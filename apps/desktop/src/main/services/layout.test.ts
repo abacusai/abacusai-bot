@@ -98,6 +98,9 @@ const MAIN_ROOT_FILES = [
   "smoke.test.ts",
   "keep-awake.test.ts",
   "keep-awake.ts",
+  // Where a quit the user asks for meets running work: every way the app
+  // quits goes through it, so it belongs to the process, not one service.
+  "quit-guard.ts",
   // Registers the app as a login item once per install: an OS setting, made
   // at sign-in, that no one service owns.
   "login-item.test.ts",

@@ -159,10 +159,7 @@
       "onboardingStep": null,
       "panes": {},
       "pinned": {
-        "botIds": [
-          "bot-a",
-          "bot-b"
-        ],
+        "botIds": ["bot-a", "bot-b"],
         "sessionIds": []
       },
       "projectReminders": true,
