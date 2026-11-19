@@ -5759,6 +5759,16 @@
     "line": "Dokończ go w planie {{plan}}: {{model}} do trudnych części, kredyty na projekt tej wielkości i publiczny link, gdy będzie gotowy.",
     "lineNoModel": "Dokończ go w planie {{plan}}: najlepsze modele do trudnych części, kredyty na projekt tej wielkości i publiczny link, gdy będzie gotowy."
   },
+  "freeModelDown": {
+    "title": "Darmowy model jest teraz przeciążony",
+    "line": "Dokończ to na najlepszym modelu (Claude, GPT, Gemini) z planem {{plan}}:",
+    "upgrade": "Ulepsz i dokończ",
+    "retry": "Spróbuj ponownie za darmo",
+    "retrying": "Ponowna próba za {{seconds}} s…",
+    "firstRetrying": "Spróbuję ponownie za {{seconds}} s…",
+    "tryNow": "Spróbuj teraz",
+    "history": "Darmowy model był przeciążony"
+  },
   "keepRunning": {
     "title": "Niech „{{name}}” działa 24/7",
     "titleUnnamed": "Niech działa 24/7",

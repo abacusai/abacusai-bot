@@ -5579,6 +5579,16 @@
     "line": "用 {{plan}} 完成它：難的部分交給 {{model}}，點數夠這種規模的專案用，完成後還有公開連結。",
     "lineNoModel": "用 {{plan}} 完成它：難的部分交給頂級模型，點數夠這種規模的專案用，完成後還有公開連結。"
   },
+  "freeModelDown": {
+    "title": "免費模型目前負載過高",
+    "line": "升級到 {{plan}}，用頂級模型（Claude、GPT、Gemini）完成這項任務：",
+    "upgrade": "升級並完成",
+    "retry": "免費重試",
+    "retrying": "{{seconds}} 秒後重試…",
+    "firstRetrying": "{{seconds}} 秒後為你重試…",
+    "tryNow": "立即重試",
+    "history": "免費模型當時負載過高"
+  },
   "keepRunning": {
     "title": "讓「{{name}}」全天候運作",
     "titleUnnamed": "讓它全天候運作",

@@ -47,6 +47,8 @@ export interface Scenario {
     shareOffer?: boolean;
     /** The card under a reply for a top model, in an opus_retry arm. */
     topModelRetry?: { label: string; plan: string; arm: "opus" | "dialog" };
+    /** The free-model card on the gallery's plan; `first` for a chat's first message. */
+    freeModelDown?: { first?: boolean };
     /** The composer's top-model hint on a paying plan, without its caps. */
     topModels?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
@@ -510,6 +512,15 @@ const OUTCOME_ERRORS: Record<
     cause: "model_unavailable",
     detail: "410 status code (no body)",
     actions: [OWN_KEY_GONE],
+  },
+  // The free model overloaded on a free account (turn-outcome.ts
+  // freeModelOverloaded): one card however the turn ended on it.
+  "free-model-down": {
+    message:
+      "The free model is overloaded right now. Try it again in a minute, or upgrade to finish this on a top model.",
+    cause: "rate_limited",
+    detail: "",
+    actions: [{ type: "free-pool-out", cause: "busy" }, { type: "retry" }],
   },
   "credits-exhausted": {
     message:
@@ -1949,8 +1960,18 @@ export const SCENARIOS: Scenario[] = [
     canvas: [],
     skin: "session" as const,
     events: sessionOutcome(kind),
-    view: { model: kind.startsWith("own-key") ? "Gemini" : "Abacus.AI" },
+    view: {
+      model: kind.startsWith("own-key") ? "Gemini" : "Abacus.AI",
+      ...(kind === "free-model-down" && { freeModelDown: {} }),
+    },
   })),
+  {
+    id: "session-outcome-free-model-down-first",
+    canvas: [],
+    skin: "session",
+    events: sessionOutcome("free-model-down"),
+    view: { model: "Abacus.AI", freeModelDown: { first: true } },
+  },
   {
     id: "session-sandbox-refused",
     canvas: ["SessionBrowser"],

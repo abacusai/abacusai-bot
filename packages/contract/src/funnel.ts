@@ -163,6 +163,12 @@ export const FUNNEL_STEPS = [
   "keep_running_not_now",
   "keep_running_withdrawn",
   "keep_running_move",
+  // A free account's turn ended because the free model is overloaded (the
+  // free-model card); the detail is the turn's cause, or `first` for the
+  // chat's first message, which tries the free model again before the card.
+  "free_model_down_shown",
+  "free_model_down_upgrade",
+  "free_model_down_retry",
   // The offer to turn a long answer into a document (deliverable-offer.ts);
   // the detail is the button (doc or report) and the chat's skin.
   "deliverable_offer_shown",

@@ -5579,6 +5579,16 @@
     "line": "Terminez-le avec {{plan}} : {{model}} pour les parties difficiles, des crédits pour un projet de cette taille et un lien public une fois terminé.",
     "lineNoModel": "Terminez-le avec {{plan}} : les meilleurs modèles pour les parties difficiles, des crédits pour un projet de cette taille et un lien public une fois terminé."
   },
+  "freeModelDown": {
+    "title": "Le modèle gratuit est surchargé en ce moment",
+    "line": "Terminez ceci sur un modèle de pointe (Claude, GPT, Gemini) avec {{plan}} :",
+    "upgrade": "Passer à l’offre supérieure et terminer",
+    "retry": "Réessayer gratuitement",
+    "retrying": "Nouvel essai dans {{seconds}} s…",
+    "firstRetrying": "Je réessaie pour vous dans {{seconds}} s…",
+    "tryNow": "Réessayer maintenant",
+    "history": "Le modèle gratuit était surchargé"
+  },
   "keepRunning": {
     "title": "Faire tourner « {{name}} » 24 h/24",
     "titleUnnamed": "Le faire tourner 24 h/24",

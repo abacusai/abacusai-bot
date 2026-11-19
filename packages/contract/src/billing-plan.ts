@@ -35,6 +35,7 @@ export const UPGRADE_SRCS = [
   "big_task",
   "keep_running",
   "retry_top_model",
+  "free_model_down",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];

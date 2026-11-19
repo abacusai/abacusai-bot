@@ -1865,6 +1865,13 @@ export class AbacusBotSession {
                 abacusFreeModels: [],
                 abacus: null,
               }),
+          // The free model's outage: a busy or silent Abacus call this turn,
+          // or the stall the turn ends on (reported without the chain).
+          abacusBusy:
+            this.router.chain.abacusBusy ||
+            (failure.provider === "abacus" &&
+              (failure.cause === "rate_limited" ||
+                failure.cause === "stalled")),
           ...(failure.cause === "context_too_long" &&
             registry != null && {
               fit: this.governor.fitCard(

@@ -5579,6 +5579,16 @@
     "line": "Selesaikan dengan {{plan}}: {{model}} untuk bagian yang sulit, kredit untuk proyek sebesar ini, dan tautan publik saat selesai.",
     "lineNoModel": "Selesaikan dengan {{plan}}: model terbaik untuk bagian yang sulit, kredit untuk proyek sebesar ini, dan tautan publik saat selesai."
   },
+  "freeModelDown": {
+    "title": "Model gratis sedang kelebihan beban",
+    "line": "Selesaikan ini dengan model teratas (Claude, GPT, Gemini) di {{plan}}:",
+    "upgrade": "Upgrade dan selesaikan ini",
+    "retry": "Coba gratis lagi",
+    "retrying": "Mencoba lagi dalam {{seconds}} dtk…",
+    "firstRetrying": "Saya coba lagi untuk Anda dalam {{seconds}} dtk…",
+    "tryNow": "Coba sekarang",
+    "history": "Model gratis sedang kelebihan beban saat itu"
+  },
   "keepRunning": {
     "title": "Jalankan “{{name}}” 24/7",
     "titleUnnamed": "Jalankan 24/7",

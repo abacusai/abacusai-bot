@@ -5579,6 +5579,16 @@
     "line": "{{plan}} ile bitir: zor kısımlar için {{model}}, bu boyutta bir iş için kredi ve bittiğinde canlı bir bağlantı.",
     "lineNoModel": "{{plan}} ile bitir: zor kısımlar için en iyi modeller, bu boyutta bir iş için kredi ve bittiğinde canlı bir bağlantı."
   },
+  "freeModelDown": {
+    "title": "Ücretsiz model şu anda aşırı yoğun",
+    "line": "Bunu {{plan}} ile en iyi bir modelde (Claude, GPT, Gemini) bitir:",
+    "upgrade": "Yükselt ve bitir",
+    "retry": "Ücretsiz tekrar dene",
+    "retrying": "{{seconds}} sn içinde tekrar deneniyor…",
+    "firstRetrying": "{{seconds}} sn içinde senin için tekrar deniyorum…",
+    "tryNow": "Şimdi dene",
+    "history": "Ücretsiz model aşırı yoğundu"
+  },
   "keepRunning": {
     "title": "“{{name}}” 7/24 çalışsın",
     "titleUnnamed": "7/24 çalışsın",

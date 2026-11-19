@@ -5579,6 +5579,16 @@
     "line": "用 {{plan}} 完成它：难点交给 {{model}}，积分够这种规模的项目用，完成后还有公开链接。",
     "lineNoModel": "用 {{plan}} 完成它：难点交给顶级模型，积分够这种规模的项目用，完成后还有公开链接。"
   },
+  "freeModelDown": {
+    "title": "免费模型当前负载过高",
+    "line": "升级到 {{plan}}，用顶级模型（Claude、GPT、Gemini）完成这项任务：",
+    "upgrade": "升级并完成",
+    "retry": "免费重试",
+    "retrying": "{{seconds}} 秒后重试…",
+    "firstRetrying": "{{seconds}} 秒后为你重试…",
+    "tryNow": "立即重试",
+    "history": "免费模型当时负载过高"
+  },
   "keepRunning": {
     "title": "让“{{name}}”全天候运行",
     "titleUnnamed": "让它全天候运行",

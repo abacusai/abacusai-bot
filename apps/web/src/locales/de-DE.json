@@ -5579,6 +5579,16 @@
     "line": "Stell es mit {{plan}} fertig: {{model}} für die schwierigen Teile, Credits für ein Projekt dieser Größe und ein öffentlicher Link, wenn es fertig ist.",
     "lineNoModel": "Stell es mit {{plan}} fertig: Top-Modelle für die schwierigen Teile, Credits für ein Projekt dieser Größe und ein öffentlicher Link, wenn es fertig ist."
   },
+  "freeModelDown": {
+    "title": "Das kostenlose Modell ist gerade überlastet",
+    "line": "Mach das mit {{plan}} auf einem Top-Modell (Claude, GPT, Gemini) fertig:",
+    "upgrade": "Upgraden und fertigstellen",
+    "retry": "Kostenlos erneut versuchen",
+    "retrying": "Neuer Versuch in {{seconds}} s…",
+    "firstRetrying": "Ich versuche es in {{seconds}} s noch einmal für dich…",
+    "tryNow": "Jetzt versuchen",
+    "history": "Das kostenlose Modell war überlastet"
+  },
   "keepRunning": {
     "title": "„{{name}}“ rund um die Uhr laufen lassen",
     "titleUnnamed": "Rund um die Uhr laufen lassen",

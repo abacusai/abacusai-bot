@@ -5579,6 +5579,16 @@
     "line": "{{plan}}로 완성하세요: 어려운 부분엔 {{model}}, 이만한 작업에 충분한 크레딧, 완성되면 공개 링크까지.",
     "lineNoModel": "{{plan}}로 완성하세요: 어려운 부분엔 최고 모델, 이만한 작업에 충분한 크레딧, 완성되면 공개 링크까지."
   },
+  "freeModelDown": {
+    "title": "지금 무료 모델에 사용자가 많아요",
+    "line": "{{plan}}으로 최상위 모델(Claude, GPT, Gemini)에서 마무리하세요:",
+    "upgrade": "업그레이드하고 마무리하기",
+    "retry": "무료로 다시 시도",
+    "retrying": "{{seconds}}초 후 다시 시도…",
+    "firstRetrying": "{{seconds}}초 후에 다시 시도할게요…",
+    "tryNow": "지금 시도",
+    "history": "무료 모델에 사용자가 많았어요"
+  },
   "keepRunning": {
     "title": "“{{name}}”을(를) 24시간 실행하기",
     "titleUnnamed": "24시간 실행하기",

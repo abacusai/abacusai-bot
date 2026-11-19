@@ -92,7 +92,8 @@ const FRAME_TONES = {
 /**
  * A card under a reply (owner rule: an offer there is a card, never a pill
  * with grey text): an icon tile, a bold title and a line, anything else
- * the card says, then its button and Not now. A close button when given.
+ * the card says, then its button and Not now (or the card's own second way
+ * on, `secondary`). A close button when given.
  */
 export const OfferCardFrame = ({
   slot,
@@ -104,6 +105,7 @@ export const OfferCardFrame = ({
   children,
   action,
   notNow,
+  secondary,
   onClose,
 }: {
   slot: string;
@@ -116,6 +118,8 @@ export const OfferCardFrame = ({
   /** The main button; `name` is its data-action. Without it the card's own children carry its controls. */
   action?: { label: string; name: string; onClick(): void };
   notNow?: { label: string; onClick(): void };
+  /** In place of Not now: the card's own second way on. */
+  secondary?: ReactNode;
   /** The corner X, with its label. */
   onClose?: { label: string; onClick(): void };
 }) => {
@@ -145,7 +149,7 @@ export const OfferCardFrame = ({
           <p className="text-muted-foreground">{line}</p>
         </div>
         {children}
-        {action != null && notNow != null && (
+        {action != null && (notNow != null || secondary != null) && (
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             <Button
               size="sm"
@@ -155,15 +159,18 @@ export const OfferCardFrame = ({
             >
               {action.label}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-muted-foreground"
-              data-action="not-now"
-              onClick={notNow.onClick}
-            >
-              {notNow.label}
-            </Button>
+            {secondary ??
+              (notNow != null && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-muted-foreground"
+                  data-action="not-now"
+                  onClick={notNow.onClick}
+                >
+                  {notNow.label}
+                </Button>
+              ))}
           </div>
         )}
       </div>
@@ -185,7 +192,9 @@ export const OfferCardFrame = ({
 
 /**
  * One pitch card: its icon and first lines, the plan's price, its whole
- * list (led by `lead`), Upgrade and Not now.
+ * list (led by `lead`), Upgrade and Not now. A card with its own second way
+ * on (`secondary`) shows that in place of Not now; without `onNotNow` it has
+ * no close.
  */
 export const PitchCardFrame = ({
   slot,
@@ -195,6 +204,8 @@ export const PitchCardFrame = ({
   line,
   lead,
   billing,
+  cta,
+  secondary,
   onUpgrade,
   onNotNow,
 }: {
@@ -204,7 +215,14 @@ export const PitchCardFrame = ({
   title: string;
   line: string;
   lead: PitchLine | null;
-} & Omit<SuccessPitchCardProps, "moment" | "lead">) => {
+  billing: BillingPlan;
+  /** The Upgrade button's words; the plan's by default. */
+  cta?: string;
+  /** The way on beside Upgrade, in place of Not now. */
+  secondary?: ReactNode;
+  onUpgrade(): void;
+  onNotNow?: () => void;
+}) => {
   const { t, i18n } = useTranslation();
   const offer = wallOffer(billing);
   if (offer == null) return null;
@@ -217,12 +235,15 @@ export const PitchCardFrame = ({
       title={title}
       line={line}
       action={{
-        label: upgradeCtaLabel(t, offer),
+        label: cta ?? upgradeCtaLabel(t, offer),
         name: "upgrade",
         onClick: onUpgrade,
       }}
-      notNow={{ label: t("upgradeDialog.notNow"), onClick: onNotNow }}
-      onClose={{ label: t("upgradeDialog.close"), onClick: onNotNow }}
+      secondary={secondary}
+      {...(onNotNow != null && {
+        notNow: { label: t("upgradeDialog.notNow"), onClick: onNotNow },
+        onClose: { label: t("upgradeDialog.close"), onClick: onNotNow },
+      })}
     >
       <p className="-mt-2 font-semibold" data-slot="success-pitch-price">
         {planPrice(t, offer, i18n.language)}

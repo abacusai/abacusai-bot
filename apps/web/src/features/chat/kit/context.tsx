@@ -215,6 +215,8 @@ export interface ChatViewSlots {
   retryOfferPreview?: { label: string; plan: string; freeTop?: boolean };
   /** The gallery shows the card under a reply for this model and opus_retry arm. */
   topModelRetryPreview?: { label: string; plan: string; arm: OpusRetryArm };
+  /** The gallery shows the free-model card on this plan, without the account or a retry. */
+  freeModelDownPreview?: { billing: BillingPlan; first?: boolean };
   /** The gallery shows the top-model card for this model, without the account. */
   topModelCardPreview?: { label: string; billing: BillingPlan };
   /** The gallery's top-model hint: these models, without the account, plan or caps. */

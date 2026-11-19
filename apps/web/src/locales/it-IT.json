@@ -5579,6 +5579,16 @@
     "line": "Completalo con {{plan}}: {{model}} per le parti difficili, crediti per un progetto di queste dimensioni e un link pubblico quando è pronto.",
     "lineNoModel": "Completalo con {{plan}}: i modelli migliori per le parti difficili, crediti per un progetto di queste dimensioni e un link pubblico quando è pronto."
   },
+  "freeModelDown": {
+    "title": "Il modello gratuito è sovraccarico in questo momento",
+    "line": "Completa questo su un modello top (Claude, GPT, Gemini) con {{plan}}:",
+    "upgrade": "Fai l’upgrade e completa",
+    "retry": "Riprova gratis",
+    "retrying": "Nuovo tentativo tra {{seconds}} s…",
+    "firstRetrying": "Riprovo per te tra {{seconds}} s…",
+    "tryNow": "Riprova ora",
+    "history": "Il modello gratuito era sovraccarico"
+  },
   "keepRunning": {
     "title": "Tieni “{{name}}” attivo 24/7",
     "titleUnnamed": "Tienilo attivo 24/7",
