@@ -38,7 +38,6 @@ import {
   watchInboxPass,
   type FirstChoice,
 } from "#renderer/features/onboarding/first-bot";
-import { holdOnboardingOffer } from "#renderer/features/onboarding/first-result-offer";
 import { startWebsiteSignIn } from "#renderer/features/onboarding/first-run";
 import {
   guardStep,
@@ -375,19 +374,17 @@ const factsOf = async (
     context.transport.client.account.abacus({}, { signal }),
   ]);
   const payingTier = isPayingAbacusTier(account?.subscription_tier);
-  // The platform decides who gets it; a paid or held account never sees it.
-  const offerDue =
-    IS_ELECTRON &&
-    account?.onboarding_offer === true &&
-    !payingTier &&
-    account.free_credits_held !== true &&
-    onboardingStore.state.offerAnswered !== true;
   return {
     signedIn: canSignOutOfAbacus(settings),
     payingTier,
     ownsBot: context.db.collections.bots.toArray.length > 0,
-    // The onboarding offer test holds the screen for the first result's card.
-    offer: offerDue && !(await holdOnboardingOffer(context)),
+    // The platform decides who gets it; a paid or held account never sees it.
+    offer:
+      IS_ELECTRON &&
+      account?.onboarding_offer === true &&
+      !payingTier &&
+      account.free_credits_held !== true &&
+      onboardingStore.state.offerAnswered !== true,
   };
 };
 /**

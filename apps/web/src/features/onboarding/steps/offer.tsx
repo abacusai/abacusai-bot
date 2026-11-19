@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useDb } from "#renderer/data/db";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { startPlanCheckout } from "#renderer/lib/upgrade-dialog";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
@@ -17,6 +19,12 @@ import { StepBody, StepTitle } from "./kit";
  * the billing plan, beside an equally weighted Start free. Either answer goes
  * on to the first-run screen; an account the plan read offers nothing (or a
  * failed read) goes on by itself, so the screen never holds anyone up.
+ *
+ * The onboarding offer test (billing plan `onboardingOffer`): an account the
+ * platform puts in the after_first_result arm goes on by itself too, the
+ * offer held for one card under its first finished result
+ * (features/chat/kit/first-result-offer.tsx). It is held here, where the
+ * screen would show, so `held` counts the same accounts `shown` does.
  */
 export const OfferStep = ({
   ctx,
@@ -28,20 +36,50 @@ export const OfferStep = ({
   const { t, props, busy, advance } = ctx;
   const { transport } = props;
   const { i18n } = useTranslation();
+  const db = useDb();
+  const prefs = usePrefs();
   const billing = useQuery({
     ...transport.orpc.account.billingPlan.queryOptions({ input: {} }),
     staleTime: 60_000,
     retry: false,
     enabled: props.preview !== true,
   });
-  const offer = wallOffer(billing.data ?? null);
+  const held =
+    props.preview !== true &&
+    billing.data?.onboardingOffer === "after_first_result";
+  // A held offer never draws: the skeleton stands until the step goes on.
+  const offer = held ? null : wallOffer(billing.data ?? null);
   const nothingToOffer =
     props.preview !== true &&
+    !held &&
     (billing.isError || (billing.isSuccess && offer == null));
   const goOn = useEffectEvent(() => advance());
   useEffect(() => {
     if (nothingToOffer) goOn();
   }, [nothingToOffer]);
+  // Stamped once: back and forth through here keeps the card's place.
+  const hold = useEffectEvent(() => {
+    if (prefs.dismissals.firstResultOffer == null) {
+      void db
+        .updatePrefs({
+          dismissals: {
+            firstResultOffer: {
+              heldAt: Date.now(),
+              shownOn: null,
+              answered: null,
+            },
+          },
+        })
+        .catch(() => undefined);
+      void transport.client.system
+        .funnelStep({ step: "onboarding_offer_held" })
+        .catch(() => {});
+    }
+    advance();
+  });
+  useEffect(() => {
+    if (held) hold();
+  }, [held]);
   const shown = useRef(false);
   useEffect(() => {
     if (offer == null || shown.current || props.preview === true) return;

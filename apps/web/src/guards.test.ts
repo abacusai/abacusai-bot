@@ -117,7 +117,6 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "actions",
     "first-run",
     "first-bot",
-    "first-result-offer",
     "connect",
     "gallery",
     "gate",
