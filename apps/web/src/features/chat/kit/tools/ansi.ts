@@ -3,6 +3,7 @@
  * a style object) that React renders as text nodes, so no HTML is ever built
  * from terminal bytes. Non-colour escape sequences are dropped.
  */
+import { screenText } from "@abacus-ai/agent/terminal-progress";
 import type { CSSProperties } from "react";
 
 export interface AnsiRun {
@@ -98,23 +99,12 @@ const applySgr = (state: State, params: readonly number[]): State => {
   return next;
 };
 
-// A bare carriage return redraws the line (progress bars): keep the last draw.
-const settleCarriageReturns = (text: string): string =>
-  text
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => {
-      const at = line.lastIndexOf("\r");
-      return at < 0 ? line : line.slice(at + 1);
-    })
-    .join("\n");
-
 const ESCAPE =
   // oxlint-disable-next-line no-control-regex
   /\u001b(?:\[([0-9;:?<=>!]*)([ -/]*)([@-~])|\][^\u0007\u001b]*(?:\u0007|\u001b\\)?|[@-_])/g;
 
 export const parseAnsi = (input: string): AnsiRun[] => {
-  const text = settleCarriageReturns(input);
+  const text = screenText(input);
   const runs: AnsiRun[] = [];
   let state: State = {};
   let last = 0;

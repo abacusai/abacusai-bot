@@ -3,7 +3,7 @@
  * meta and an expander, fed only by `NormalizedTool` (§5.4a). Plus the
  * expanders (bash, diff, read, browser, generic).
  */
-import { collapseProgress } from "@abacus-ai/agent/terminal-progress";
+import { screenText } from "@abacus-ai/agent/terminal-progress";
 import { buildToolTitle } from "@abacus-ai/agent/tool-display";
 import {
   parsePartialJSON,
@@ -383,13 +383,9 @@ const AnsiText = ({ text }: { text: string }) => (
   </>
 );
 
-/** Output as a terminal shows it: a redrawn progress line at its last state. */
-const shownOutput = (output: string): string =>
-  collapseProgress(output).replace(/\r$/, "");
-
 /** The last lines of a still-running command, shown even while collapsed. */
 const LivePreview = ({ output }: { output: string }) => {
-  const tail = tailLines(shownOutput(output), 4).text;
+  const tail = tailLines(screenText(output), 4).text;
   return tail === "" ? null : (
     <pre
       className="chat-terminal ms-5.5 mt-1 max-h-16 text-xs"
@@ -423,9 +419,7 @@ const BashBody = ({ tool }: { tool: NormalizedTool }) => {
   const ref = useRef<HTMLPreElement>(null);
   const [following, setFollowing] = useState(true);
   const terminalOutput = tool.terminal?.output ?? "";
-  const output = shownOutput(
-    terminalOutput !== "" ? terminalOutput : tool.text
-  );
+  const output = screenText(terminalOutput !== "" ? terminalOutput : tool.text);
   const { text: tail, hidden } = tailLines(output);
   const running = tool.status === "running";
   useEffect(() => {
