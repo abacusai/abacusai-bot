@@ -2279,6 +2279,11 @@
       "into": "Şurada devam ediyor:",
       "startsFrom": "“{{label}}” sohbetinin özetiyle başlar",
       "drop": "Özetsiz başla"
+    },
+    "websitePrompt": {
+      "label": "Web sitesinden gelen göreviniz",
+      "stop": "Durdur",
+      "edit": "Düzenle"
     }
   },
   "terminalShells": {

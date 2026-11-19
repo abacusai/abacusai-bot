@@ -2279,6 +2279,11 @@
       "into": "接续于",
       "startsFrom": "从“{{label}}”的摘要开始",
       "drop": "不带摘要开始"
+    },
+    "websitePrompt": {
+      "label": "你在网站上提交的任务",
+      "stop": "停止",
+      "edit": "编辑"
     }
   },
   "terminalShells": {

@@ -146,8 +146,10 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   }, [step]);
   useEffect(() => {
     if (step !== "first-bot" || props.preview || facts.provisional) return;
+    // The website's prompt is the first task: no Chief of Staff starts beside it.
+    if (facts.websitePrompt?.kind === "run") return;
     ensureFirstBot(facts.ownsBot, props.createFirstBot);
-  }, [step, facts.ownsBot, facts.provisional, props]);
+  }, [step, facts.ownsBot, facts.provisional, facts.websitePrompt, props]);
   useEffect(() => {
     if (
       !props.preview &&

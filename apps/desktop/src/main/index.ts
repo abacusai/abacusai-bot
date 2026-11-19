@@ -167,6 +167,7 @@ import {
   skipOnboarding,
 } from "./services/providers/account-service";
 import { getLocalUsageSnapshot } from "./services/providers/usage";
+import { takeWebsitePrompt } from "./services/providers/website-prompt";
 import { accountStashKey } from "./services/session/account-session-stash";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import {
@@ -1550,6 +1551,10 @@ const appOperations: AppOperations = {
     // the offer is counted per account, and they carry nothing but the step.
     const offerStep = onboardingOfferAccountStep(step);
     if (offerStep != null) reportOnboardingOffer(offerStep);
+    // The website's prompt was run or passed over: the account lets go of it,
+    // whatever the diagnostics toggle, so no other install runs it again.
+    if (step === "website_prompt_run" || step === "website_prompt_skipped")
+      takeWebsitePrompt();
   },
 
   // The local account; see shared/account.ts for why it is optional.

@@ -2279,6 +2279,11 @@
       "into": "Continúa en",
       "startsFrom": "Empieza con un resumen de «{{label}}»",
       "drop": "Empezar sin él"
+    },
+    "websitePrompt": {
+      "label": "Tu tarea desde la web",
+      "stop": "Detener",
+      "edit": "Editar"
     }
   },
   "terminalShells": {

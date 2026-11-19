@@ -19,6 +19,7 @@ import {
   type ModelTier,
 } from "@abacus-ai/contract/models";
 import { parseStreak, streakCreditsLeft } from "@abacus-ai/contract/streak";
+import { websitePromptText } from "@abacus-ai/contract/website-prompt";
 
 import { abacusBotHome } from "../../paths";
 import { credentialFor, hasCredential } from "../config/settings";
@@ -686,6 +687,7 @@ export const requestAbacusAccount = async (
       user_id?: unknown;
       organization_id?: unknown;
     };
+    const websitePrompt = websitePromptText(body.website_prompt);
     const identity = (value: unknown): string | null =>
       typeof value === "string" || typeof value === "number"
         ? String(value)
@@ -726,6 +728,8 @@ export const requestAbacusAccount = async (
         onboarding_offer: body.onboarding_offer === true,
         share_artifact: body.share_artifact === true,
         streak: parseStreak(body.streak),
+        // Only a server that has one: an older one sends nothing.
+        ...(websitePrompt != null ? { website_prompt: websitePrompt } : {}),
       },
     };
   } catch {
@@ -772,6 +776,16 @@ export const fetchAbacusAccount = async (
     case "unavailable":
       return accountCache?.value ?? null;
   }
+};
+
+/**
+ * The website's prompt was taken (run, or passed over): the cached account
+ * stops offering it, while the platform's own copy may lag behind its ack.
+ */
+export const forgetWebsitePrompt = (): void => {
+  if (accountCache?.value.website_prompt == null) return;
+  const { website_prompt: _taken, ...value } = accountCache.value;
+  accountCache = { ...accountCache, value };
 };
 
 /** How long ago the account was last read from the server; null without a read. */
