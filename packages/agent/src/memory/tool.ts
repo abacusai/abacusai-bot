@@ -4,7 +4,7 @@ import { redactIdNumbers } from "../traveler/id-numbers.js";
  * file, its header and the date; the model only supplies words, so a small
  * model cannot break a note. Every write passes gate.ts under the folder lock.
  */
-import { ageOf, ensureProject, projectSummary } from "./core.js";
+import { ageOf, ensureProject, projectSummary, withStatus } from "./core.js";
 import {
   checkDraft,
   contentWords,
@@ -311,13 +311,14 @@ export function buildMemoryTool(
       'Actions: "save" a new note (text, type, optional name, description, about),',
       '"update" a note by name (new text and/or description), "forget" a note by name,',
       '"read" a note by name, "search" notes and journals (query),',
-      '"note" a dated journal line when a piece of work is finished and worth finding later (text; one per task, never per message),',
+      '"status" set where the work stands on the project card (text: what is done, what is next, open threads); it replaces the last status,',
+      '"note" a dated journal line for a finished task worth finding later (text; once, when it is done),',
       '"open" a project when this chat turns out to be about one (project: its name, or a new name for ongoing work the user returns to).',
       "",
       `Sizes: a note holds ${MAX_NOTE_CHARS} characters, the project card ${MAX_CARD_CHARS}, a journal line ${MAX_JOURNAL_CHARS}.`,
       `Types: ${NOTE_TYPES.join(", ")}. "status" needs "expires" (YYYY-MM-DD, 14 days at most).`,
       'about: "you" (who the user is, their rules and preferences) or "project" (this project). Leave it out to let the app choose.',
-      `The project card is the note "${CARD_NAME}": update it when the goal, status or a decision changes.`,
+      `The project card is the note "${CARD_NAME}": "status" sets its Status; "update" it when the goal or a decision changes.`,
       "replaces: the name of a note this one supersedes; that note is removed.",
       "keywords: other words someone would use to ask about the note, and the same words in the user's language when it is not the note's. Memory is found by matching words, so this is how a note is found later.",
     ].join("\n"),
@@ -326,11 +327,20 @@ export function buildMemoryTool(
       properties: {
         action: {
           type: "string",
-          enum: ["save", "update", "forget", "read", "search", "note", "open"],
+          enum: [
+            "save",
+            "update",
+            "forget",
+            "read",
+            "search",
+            "status",
+            "note",
+            "open",
+          ],
         },
         text: {
           type: "string",
-          description: "The note's text, or the journal line.",
+          description: "The note's text, the status, or the journal line.",
         },
         type: { type: "string", enum: [...NOTE_TYPES, "card"] },
         name: {
@@ -465,6 +475,21 @@ export function buildMemoryTool(
         return reply(hits.join("\n"));
       }
 
+      if (action === "status") {
+        const text = string(params.text).trim();
+        if (text.length === 0)
+          return reply("Nothing to set: text is empty.", true);
+        const own = await currentProject();
+        if (own == null)
+          return reply(
+            'This chat has no project yet. "open" the project it is about, then set its status.',
+            true
+          );
+        const card = readNote({ kind: "project", slug: own.slug }, CARD_NAME);
+        if (card == null) return reply("Memory is busy; try again.", true);
+        return save({ text: withStatus(card.body, text) }, card);
+      }
+
       if (action === "note") {
         // ID numbers are withheld here as in notes (gate.ts).
         const text = redactIdNumbers(string(params.text).trim());
@@ -504,7 +529,7 @@ export function buildMemoryTool(
       }
 
       return reply(
-        'action must be "save", "update", "forget", "read", "search", "note" or "open".',
+        'action must be "save", "update", "forget", "read", "search", "status", "note" or "open".',
         true
       );
     },

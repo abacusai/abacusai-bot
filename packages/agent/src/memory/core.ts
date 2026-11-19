@@ -118,6 +118,32 @@ export const blankCard = (
   by,
 });
 
+const CARD_FIELD = /^(What|Where|Goal|Status|Decisions):/;
+
+/**
+ * The card with its Status section replaced: where the work stands has one
+ * place, overwritten each time, so it never piles up as notes.
+ */
+export const withStatus = (
+  card: string,
+  status: string,
+  now = new Date()
+): string => {
+  const line = `Status (${today(now)}): ${oneLine(status)}`;
+  const lines = card.split("\n");
+  const start = lines.findIndex((each) => each.startsWith("Status"));
+  if (start === -1) {
+    const decisions = lines.findIndex((each) => each.startsWith("Decisions:"));
+    if (decisions === -1) return [...lines, line].join("\n");
+    return [...lines.slice(0, decisions), line, ...lines.slice(decisions)].join(
+      "\n"
+    );
+  }
+  let end = start + 1;
+  while (end < lines.length && !CARD_FIELD.test(lines[end]!)) end++;
+  return [...lines.slice(0, start), line, ...lines.slice(end)].join("\n");
+};
+
 /**
  * The project this chat works in, created with a first card on first use: a
  * folder the user picked, a bot or a routine is a project from the start.
@@ -268,19 +294,21 @@ const memoryInstructions = (context: MemoryContext): string => {
   if (context.unattended)
     return 'How to use memory here: add what this run did or found with memory action "note" (one line). You cannot change other notes in a run nobody is watching.';
   return [
-    "How to use memory (memory tool):",
-    "- Most turns write nothing. Save only when the user states a preference, a rule, a correction, a decision, or a lasting fact about themselves or their project, or asks you to remember something. Save it when you hear it.",
+    "How to use memory (memory tool). Most turns write nothing. Each kind of thing has one place:",
+    '- A short note: what the user states about themselves or their project (a preference, a rule, a correction, a decision, who they are, what the project is and where it lives), or anything they ask you to remember. Save it when you hear it, one fact per note; if a note already covers it, "update" that note.',
+    '- The project card\'s status, action "status": where the work stands (what is done, what is next, open threads). It replaces the last status. Set it when the user stops for now or asks to save the chat, not as you go; chats stay in the sidebar and can be reopened.',
+    "- A file in the project: the work itself (specs, reports, data, lists, drafts, character sheets, what you found). Memory never holds a copy; at most one note says where the file is.",
+    '- A journal line, action "note": a finished task the user may ask about later, once, when it is done. Never progress.',
     "- Never write for an acknowledgement, a link or file they shared, small talk, or what you just did.",
-    '- One fact per note. If a note already covers it, use "update" on that note; never add a second.',
     "- When the user corrects something, update the note that was wrong.",
     "- Never save passwords, keys or codes; never save that something does not exist or is not connected.",
-    '- Things that change (status, waiting on someone) are type "status" with "expires".',
-    '- When a piece of work is finished and worth finding later, add one "note" (a dated journal line), not a note. One per task, never per message.',
+    '- What will stop being true about the user (away until a date, waiting on someone) is type "status" with "expires".',
+    '- Use "search" before saying you don\'t recall something.',
     "- Only say something is saved after the tool said Saved.",
     '- A rule about the user (type "rule", about "you") applies to every chat from then on. Notes the user wrote themselves only they change, on the Memory page.',
     ...(context.project == null || context.project.kind === "topic"
       ? [
-          '- When this chat is about one of the projects above, or about ongoing work the user keeps coming back to, use "open" with its name (a new name starts a project) before saving project facts.',
+          '- When this chat is about one of the projects above, or about ongoing work the user keeps coming back to, use "open" with its name (a new name starts a project) before saving project facts or its status.',
         ]
       : []),
   ].join("\n");

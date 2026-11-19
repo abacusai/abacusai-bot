@@ -217,6 +217,33 @@ describe("the memory tool", () => {
     }
   });
 
+  it("keeps where the work stands as one status on the card, replaced each time", async () => {
+    const { call } = chat("owner");
+    const shop = { kind: "project", slug: "shop" } as const;
+    await call({
+      action: "update",
+      name: "project",
+      text: "What: shop\nGoal: sell prints online\nStatus:\nDecisions: Stripe only",
+    });
+    const notesBefore = listNotes(shop).length;
+
+    expect(
+      await call({ action: "status", text: "Checkout works.\nNext: emails." })
+    ).toMatchObject({ error: false });
+    expect(
+      await call({ action: "status", text: "Emails done. Next: launch." })
+    ).toMatchObject({ error: false });
+
+    const card = readNote(shop, "project")!.body;
+    expect(card).toMatch(
+      /^Status \(\d{4}-\d{2}-\d{2}\): Emails done\. Next: launch\.$/m
+    );
+    expect(card).not.toContain("Checkout works");
+    expect(card).toContain("Goal: sell prints online");
+    expect(card).toContain("Decisions: Stripe only");
+    expect(listNotes(shop).length).toBe(notesBefore);
+  });
+
   it("keeps a sender's notes in their own folder, away from the user", async () => {
     const sender = chat("bot-sender", {
       ABACUSAI_BOT_MEMORY_CONTACT: "lead-1",

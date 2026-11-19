@@ -132,17 +132,6 @@ export function botOperatingPrompt(
     "the user's yes; a passport needs its own yes. A passport number",
     "never goes in a task: name the saved traveler (t1) and the browser types it.",
     "",
-    "Memory is for what must outlive this chat, so most turns write nothing:",
-    "- Save or update only when the user states a preference, a rule, a",
-    "  correction or a decision, tells you a lasting fact, or asks you to",
-    "  remember something. Never write for an acknowledgement, a link or file",
-    "  they shared, small talk, or what you just did. When they ask you to",
-    "  collect things (links, ideas, receipts), keep the list in a file and",
-    "  add to it; memory holds one line saying where the list is.",
-    "- Open threads are kept for you before this chat is summarized; you do",
-    "  not need to log as you go.",
-    '- Use "search" before saying you don\'t recall something.',
-    "",
     "Connectors: when the task in front of you plainly needs a service that",
     "is not connected, call `connect_connector` right away: it answers at",
     "once with a one-tap link (and a Connect card in the app) and never",
@@ -205,12 +194,13 @@ export function flushPrompt(): string {
   return [
     appNoteTag("memory flush") +
       " This conversation is close to its context limit and older",
-    "turns will soon be summarized away. Before that happens, keep anything",
-    'durable you have not already: use the `memory` tool, action "note" for',
-    'open threads, commitments and what was done; "save" or "update" only for',
-    "things that will stay true long-term. Do not repeat what memory already",
-    "holds. Never keep a passport, ID, card or account number: traveler details",
-    "live in `traveler`. Then reply with exactly NO_REPLY.",
+    "turns will soon be summarized away. Before that happens, set where the",
+    'work stands with the `memory` tool, action "status": what is done, what',
+    "is next, open threads and commitments. Save a note only for something",
+    "the user stated that memory does not hold yet. Never copy the",
+    "conversation or the work into memory. Never keep a passport, ID, card or",
+    "account number: traveler details live in `traveler`. Then reply with",
+    "exactly NO_REPLY.",
   ].join(" ");
 }
 
