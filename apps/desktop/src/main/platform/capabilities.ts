@@ -20,6 +20,8 @@ export const WEB_HOST_DENIED = [
   "auth.openRouter.cancel",
   "system.loginItem",
   "system.restart",
+  // Answers the window's own quit dialog; a hosted computer has no window.
+  "system.answerQuitGuard",
   "system.deleteAllData",
   "system.openPath",
   "system.showItemInFolder",
@@ -236,6 +238,8 @@ export const WEB_HOST_ALLOWED = [
   "system.funnelStep",
   "system.logs.append",
   "system.events",
+  // No app to quit here: the guard always reads idle.
+  "system.quitGuard",
   "skills.listInstalled",
   "skills.search",
   "skills.install",
