@@ -84,7 +84,16 @@ function writtenPaths(tool: MessageTool): string[] {
   const base = componentToolBase(tool.name);
   if (base != null && base !== "present_deliverable") {
     const target = componentOutputPath(base, tool.input);
-    return target == null ? [] : [target];
+    if (target == null) return [];
+    // A deck or document call that failed names no file in its result (a
+    // tool's own isError does not mark it failed), so its planned path was
+    // listed as a file that was never made (bug hunt, row 20).
+    if (
+      (base === "ppt" || base === "document") &&
+      !tool.text.includes(basename(target))
+    )
+      return [];
+    return [target];
   }
   if (FILE_WRITE_TOOLS.has(tool.name)) {
     const target = getFilePath(tool.input);

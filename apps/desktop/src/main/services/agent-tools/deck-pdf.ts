@@ -194,6 +194,28 @@ const DROP_EMPTY_COLUMNS = `(() => {
 })()`;
 
 /**
+ * A card left with only its number ("04") when the filler had fewer items
+ * than the slide has cards (bug hunt f12: boxes 04 and 05 printed empty).
+ * Only among three or more like siblings. Self-contained page script.
+ */
+const DROP_EMPTY_CARDS = `(() => {
+  let dropped = 0;
+  for (const slide of document.querySelectorAll('[data-deck-slide]'))
+    for (const el of [...slide.querySelectorAll('*')]) {
+      const parent = el.parentElement;
+      if (!parent || el.children.length === 0) continue;
+      const like = [...parent.children].filter((c) => c.tagName === el.tagName && c.className === el.className);
+      if (like.length < 3) continue;
+      const text = (el.textContent || '').replace(/[\\s\\u2063]/g, '');
+      if (/^0?\\d{1,2}$/.test(text) && !el.querySelector('img, svg, canvas')) {
+        el.remove();
+        dropped++;
+      }
+    }
+  return dropped;
+})()`;
+
+/**
  * Text a filler wrote, drawn over other text it wrote, on the printed slide.
  * Only filled text counts: templates lay their own decoration (a big numeral,
  * a watermark word) under text on purpose. Self-contained page script.
@@ -519,8 +541,10 @@ export const exportDeckPdf = async (
 
     await win.webContents.executeJavaScript(MARK_DECK);
     await win.webContents.executeJavaScript(NUMBER_SLIDES);
-    if (options.filled != null)
+    if (options.filled != null) {
       await win.webContents.executeJavaScript(DROP_EMPTY_COLUMNS);
+      await win.webContents.executeJavaScript(DROP_EMPTY_CARDS);
+    }
     // Short content grows into its slide first; overflow is then shrunk.
     await win.webContents.executeJavaScript(GROW_SLIDES);
     await win.webContents.executeJavaScript(fitSlides(widthPx, heightPx));

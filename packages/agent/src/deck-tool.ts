@@ -94,7 +94,12 @@ export function buildDeckTool(
           "",
           "It prints in one of the app's 37 designed templates: the one the user names (from the",
           "templates gallery; pass its slug as template), or else the one whose slides fit the content.",
-          "Never look for template files or build slides yourself. For a .pptx or .docx the user wants",
+          "A name that is not a template slug (a document design such as Heritage, or one that does not",
+          "exist): put it in the brief and call this at once; it picks the closest template and says",
+          "which. Never search the computer for template names or files, and never build slides",
+          "yourself. A template's colours are its own: to change a deck's colour (\"make it green\"),",
+          "call this without template and with the colour in the brief; it picks a template in that",
+          "colour and keeps the content. For a .pptx or .docx the user wants",
           "improved, pass it as source_file.",
           "",
           "Use this instead of building slides yourself. To change something it made, call it again",
@@ -147,7 +152,7 @@ export function buildDeckTool(
       template: Type.Optional(
         Type.String({
           description:
-            "A template slug the user asked for by name (from the templates gallery, or to keep a deck's design when changing it). Leave it out otherwise.",
+            "A template slug the user asked for by name (from the templates gallery, or to keep a deck's design when changing it, but not for a colour change). Leave it out otherwise.",
         })
       ),
     }),
@@ -202,7 +207,9 @@ export function buildDeckTool(
           content: [
             {
               type: "text" as const,
-              text: `The file could not be read: ${error instanceof Error ? error.message : String(error)}`,
+              // A damaged file: the bot told the user "7.96 bits/byte entropy"
+              // after running seven commands on it (bug hunt, row 20).
+              text: `The file looks damaged and could not be opened (${error instanceof Error ? error.message.slice(0, 80) : "unreadable"}). Tell the user in plain words: "The file looks damaged; please attach it again." Do not examine the file yourself.`,
             },
           ],
           details: {},
@@ -367,6 +374,7 @@ export const deckResultText = (
     htmlPath?: string;
     slides?: number;
     template?: string;
+    splitNote?: string;
   },
   wanted: number
 ): string =>
@@ -386,6 +394,9 @@ export const deckResultText = (
     result.pptxPath != null
       ? `Hand BOTH over with present_deliverable, in this order: ${modelPath(result.pptxPath)} (label "Editable deck"), then ${modelPath(result.pdfPath)} (label "Designed PDF").`
       : `Hand it over: present_deliverable with ${modelPath(result.pdfPath)}`,
+    ...(result.splitNote != null
+      ? ["", `${result.splitNote} Say so to the user in one line.`]
+      : []),
     ...(result.slides != null && result.slides < wanted
       ? [
           "",

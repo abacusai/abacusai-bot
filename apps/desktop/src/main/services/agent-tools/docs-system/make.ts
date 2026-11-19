@@ -151,6 +151,7 @@ type Prepared = {
   repeats: string[];
   images: string[];
   sparse: string[];
+  fonts: string[];
 };
 
 /** Each picture block with its shot (PNG) and printed size; unshot ones as they were. */
@@ -404,6 +405,19 @@ const prepare = async (
             const b = coverTitle.textContent.trim().toLowerCase();
             if (a && (a === b || a.includes(b) || b.includes(a))) (h.closest('.doc-head') ?? h).remove();
           }
+      // "PHOTO OF BISCUIT HERE": a stand-in for a picture nobody gave never
+      // prints (bug hunt f07); a picture the user gave is an <img>.
+      for (const el of [...document.querySelectorAll('p, div, span, figcaption, li')].reverse())
+        if (el.children.length === 0 && /^\\[?\\s*(photo|picture|image|logo|pic)\\b[^\\]]{0,60}\\bhere\\s*\\]?\\.?$/i.test((el.textContent || '').trim()))
+          el.remove();
+      // A sign-off whose name repeats its caption ("Teacher In-charge" over
+      // "Teacher In-charge") keeps the caption only (bug hunt f15).
+      for (const d of document.querySelectorAll('.signs > div')) {
+        const cap = d.querySelector(':scope > span');
+        const lead = [...d.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' ').trim();
+        if (cap && lead && lead.toLowerCase() === cap.textContent.trim().toLowerCase())
+          for (const n of [...d.childNodes]) if (n.nodeType === 3) n.remove();
+      }
       // A signature or date line has one label: its caption. The model's own
       // line label, "Date:" and a second line go (master's read: "DATE" over
       // "Date" on every certificate).
@@ -520,7 +534,45 @@ const prepare = async (
       "[document.body.classList.contains('bleed'), document.body.classList.contains('landscape')]"
     )) as [boolean, boolean];
     await fs.writeFile(printPath, html);
+    // The font files the page fetched: Chromium loads a face only when text
+    // uses it, so these are the ones the print needs.
+    const fonts = (await win.webContents.executeJavaScript(
+      `(() => {
+        // Families the page's text uses, then the files their @font-face
+        // rules name (file: loads are not in resource timing).
+        const clean = (f) => f.trim().replace(/^["']|["']$/g, '').toLowerCase();
+        const used = new Set();
+        for (const el of document.querySelectorAll('body, body *'))
+          if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+            for (const f of getComputedStyle(el).fontFamily.split(',')) used.add(clean(f));
+        // A script's fallback face only when the text has that script: every
+        // stack lists them, and they are most of the folder's weight.
+        const text = document.body.innerText;
+        const NEEDS = {
+          'noto sans bengali': /[\\u0980-\\u09ff]/,
+          'noto sans devanagari': /[\\u0900-\\u097f]/,
+          'noto sans math': /[\\u2200-\\u22ff\\u27c0-\\u27ef\\u2980-\\u2aff]/,
+          'noto sans symbols 2': /[\\u2190-\\u21ff\\u2300-\\u23ff\\u2460-\\u27bf\\u2b00-\\u2bff]/,
+        };
+        for (const [family, chars] of Object.entries(NEEDS))
+          if (!chars.test(text)) used.delete(family);
+        const files = new Set();
+        const walk = (sheet) => {
+          let rules = [];
+          try { rules = [...sheet.cssRules]; } catch { return; }
+          for (const r of rules) {
+            if (r.styleSheet) walk(r.styleSheet);
+            if (r.type === 5 && used.has(clean(r.style.getPropertyValue('font-family'))))
+              for (const m of r.style.getPropertyValue('src').matchAll(/url\\(["']?([^"')]+)["']?\\)/g))
+                files.add(decodeURIComponent(m[1].split('/').pop()));
+          }
+        };
+        for (const sheet of document.styleSheets) walk(sheet);
+        return [...files].filter((f) => f.endsWith('.woff2'));
+      })()`
+    )) as string[];
     return {
+      fonts,
       sums,
       charts,
       fitted,
@@ -690,7 +742,13 @@ export const makeDocument = async (opts: {
       await printOnce();
       if (best == null || issues.length < best.count)
         best = { count: issues.length, fit, relief };
-      if (issues.length === 0 || prints >= 6) break;
+      // Over the pages asked for ("a one page report" printed 2): shrink
+      // to fit, as a résumé does.
+      const overAsked =
+        opts.kind === "doc" &&
+        opts.ask.pagesAsked != null &&
+        pages.length > opts.ask.pagesAsked;
+      if ((issues.length === 0 && !overAsked) || prints >= 6) break;
       // A page left under 40% full: first let big blocks break across pages,
       // then shorten the charts; only then shrink the type.
       // A short spill onto a second page (two rows of a table, a sign-off)
@@ -704,13 +762,14 @@ export const makeDocument = async (opts: {
         ) &&
         relief < 2 &&
         // A résumé has no big blocks to break: it shrinks to its one page.
-        !isCv
+        !isCv &&
+        !overAsked
       ) {
         relief++;
-      } else if (fit > (isCv ? 0.74 : 0.88)) {
+      } else if (fit > (isCv ? 0.74 : overAsked ? 0.8 : 0.88)) {
         // Down to 0.88: below that the 9 pt labels would print under 8 pt; a
         // résumé to 0.74, as its smallest type is larger.
-        fit = Math.round((fit - (isCv ? 0.06 : 0.04)) * 100) / 100;
+        fit = Math.round((fit - (isCv || overAsked ? 0.06 : 0.04)) * 100) / 100;
       } else break;
       prepared = await again();
     }
@@ -832,6 +891,15 @@ export const makeDocument = async (opts: {
   if (failed.length > 0) {
     for (const f of [wantPdf ? pdfPath : null, pptxPath, docxPath])
       if (f != null) await fs.rm(f, { force: true });
+  }
+  // The source folder keeps only the fonts the page used (2 MB of faces sat
+  // beside every document); a reprint copies the full set back first.
+  if (prepared.fonts.length > 0) {
+    const keep = new Set(prepared.fonts);
+    const fontsDir = path.join(dir, "fonts");
+    for (const name of await fs.readdir(fontsDir).catch(() => [] as string[]))
+      if (name.endsWith(".woff2") && !keep.has(name))
+        await fs.rm(path.join(fontsDir, name), { force: true });
   }
   return {
     pdfPath: wantPdf && failed.length === 0 ? pdfPath : null,

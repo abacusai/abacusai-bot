@@ -115,14 +115,29 @@ export function applySums(
       set(cell(discount), `−${money(d)}`);
       running = round2(running - d);
     }
-    const tax = row("tax");
-    if (tax) {
-      const pct = num(tax.getAttribute("data-pct"));
-      const t = Number.isFinite(pct) ? round2((running * pct) / 100) : 0;
-      figures.tax = t;
-      set(cell(tax), money(t));
-      running = round2(running + t);
-    }
+    // Every tax row, each on the same base: GST in India is CGST 9% and SGST
+    // 9% (bug hunt f14: one tax row only, so the model built its own table
+    // and the items table's "total inclusive of GST" printed the subtotal).
+    const taxes = Array.from(table.querySelectorAll('tr[data-role="tax"]'));
+    if (taxes.length > 0) {
+      const base = running;
+      let all = 0;
+      for (const tax of taxes) {
+        const pct = num(tax.getAttribute("data-pct"));
+        const t = Number.isFinite(pct) ? round2((base * pct) / 100) : 0;
+        set(cell(tax), money(t));
+        all = round2(all + t);
+      }
+      figures.tax = all;
+      running = round2(running + all);
+    } else if (
+      /\b(gst|vat|tax|inclusive|incl\.?)\b/i.test(
+        row("total")?.textContent ?? ""
+      )
+    )
+      problems.push(
+        `The total says it includes tax ("${(row("total")?.textContent ?? "").trim()}") but its table has no tax row: add <tr data-role="tax" data-pct="…"> rows (one each for CGST and SGST) above the total.`
+      );
     figures.total = running;
     computed.push(...Object.values(figures));
     set(cell(row("total")), money(running));

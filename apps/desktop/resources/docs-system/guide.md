@@ -89,6 +89,8 @@ Any number that is not written in the brief, but worked out from it (a share, a 
 </table>
 <p>Total à vista: <b data-ref="total"></b></p>     <!-- data-ref="subtotal|discount|tax|total" repeats a figure anywhere -->
 ```
+Several taxes are several tax rows, each with its own `data-pct`, all in the same table above the total: Indian GST at 18% within a state is `<tr data-role="tax" data-pct="9">…CGST 9%…` and `<tr data-role="tax" data-pct="9">…SGST 9%…` (IGST 18% across states). Never put tax in a separate table.
+
 Use a `data-currency` table only for priced line items (a quote, an invoice, a price list). Figures in a report go in an ordinary `table.data`.
 
 `data-qty`, `data-unit`, `data-amount` and `data-pct` are plain numbers (`28`, not `R$ 28,00`). Leave the cells empty; code fills them, formatted for the document's language.
@@ -203,6 +205,7 @@ Every slide uses one of these layouts. Each fills the slide on its own; do not l
   - a quote: line items, terms, validity and acceptance;
   - minutes: present, items, decisions, and an actions table with owners and dates;
   - a letter: addresses, date, subject, the ask with its deadline, sign-off.
+- **A header the user asks for** ("the society name in the header"): `<p class="running">Green Park Apartments</p>` first in the body. Word puts it in every page's header; the PDF prints it small at the top. Page numbers are always in the footer.
 - **Fit the length asked for.** With no length asked, a report is about 6 pages. No filler.
 - **A detail the document needs that the user did not give** (the person's name, college, roll number, the event's date or place): write it as `[Employee name]` where it goes. On a certificate, invitation or invoice it prints as a ruled line to fill in; in a letter, flyer, proposal or report as a highlighted placeholder in the sentence. Write everything else as natural sample wording (a flyer describes the classes in general; a leave letter asks politely for the leave), so a page has a few placeholders, never a form of lines. Never invent a person. A template to fill in later (a sales report whose figures the user will add) is at most 2 pages: one table per kind of figure. Keep blanks few: one per missing detail (name, contact, college, dates), never one per bullet; a résumé with no details still fits one page, with short sections (two projects, one line each).
 - **A quiz, worksheet or test is a paper to fill in:** it prints plain (black ink, thin rules). Put the questions and their answer space first. Use a cover only when one is asked for (it prints as a compact header at the top of page 1, with the questions under it), and add no overview tiles, summary band, charts, coloured boxes or styles of your own; a diagram to label (data-chart="label") is the one figure a question may have.

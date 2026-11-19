@@ -5,6 +5,8 @@
 export type Ask = {
   totalMarks: number | null;
   onePage: boolean;
+  /** "a 2 page business plan": the most pages asked for, if any. */
+  pagesAsked: number | null;
   slides: number | null;
   formats: Array<"pdf" | "pptx" | "docx">;
   /**
@@ -45,6 +47,20 @@ export const readAsk = (brief: string): Ask => {
       brief
     ) || /\b(flyer|poster|notice)\b/i.test(brief);
 
+  const pageCount =
+    /\b(one|two|three|four|five|[1-9])[- ]pages?\b(?![- ](summary|section|overview|recap|cheat ?sheet|appendix|table))/i.exec(
+      brief
+    );
+  const pagesAsked =
+    pageCount == null
+      ? null
+      : ((
+          { one: 1, two: 2, three: 3, four: 4, five: 5 } as Record<
+            string,
+            number
+          >
+        )[pageCount[1]!.toLowerCase()] ?? Number(pageCount[1]));
+
   // On one line, so "Group 4" ending a line before "Slide 2:" is not a count.
   const written = brief.match(/\b(\d{1,2})[ \t]+slides?\b(?![ \t]*\d)/i);
   const listed = brief.match(/^\s*slide\s+\d+\s*:/gim)?.length ?? 0;
@@ -82,6 +98,7 @@ export const readAsk = (brief: string): Ask => {
       !/\b(revision|lecture|study) notes\b/i.test(brief),
     totalMarks,
     onePage,
+    pagesAsked,
     slides: listed > 0 ? listed : written ? Number(written[1]) : null,
     formats:
       formats.includes("pptx") && !/\bpdf\b/i.test(brief) ? ["pptx"] : formats,

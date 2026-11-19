@@ -183,7 +183,11 @@ const FACES: Record<string, string> = {
   "dm mono": "Courier New",
 };
 
-export function faceFor(font: string): string {
+export function faceFor(font: string, text = ""): string {
+  // Devanagari and Bengali need a face that has them: Windows ships Nirmala
+  // UI; a Latin face left the .pptx to the viewer's fallback (broken
+  // conjuncts in LibreOffice, bug hunt rows 10 and 13b).
+  if (/[\u0900-\u09ff]/.test(text)) return "Nirmala UI";
   const name = font.trim().toLowerCase();
   if (FACES[name] != null) return FACES[name];
   if (/\bmono\b/.test(name)) return "Courier New";
@@ -656,7 +660,7 @@ const build = async (
           displayPoints(
             points(lead),
             group.map(textOf).join(" "),
-            faceFor(lead.font),
+            faceFor(lead.font, group.map(textOf).join(" ")),
             lead.bold,
             box
           ) / points(lead);
@@ -699,7 +703,7 @@ const build = async (
             bold: run.bold,
             italic: run.italic,
             // A common face the viewer has (see faceFor), not the web font.
-            fontFace: faceFor(run.font),
+            fontFace: faceFor(run.font, spaced),
           },
         };
       });

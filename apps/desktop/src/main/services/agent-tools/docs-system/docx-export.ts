@@ -11,6 +11,7 @@ import {
   BorderStyle,
   Document as DocxDocument,
   Footer,
+  Header,
   HeadingLevel,
   ImageRun,
   Packer,
@@ -53,7 +54,9 @@ export type Block =
       t: "table";
       rows: Array<{ header: boolean; cells: Run[][]; total?: boolean }>;
     }
-  | { t: "break" };
+  | { t: "break" }
+  /** A running header the page asks for (`.running`): Word's page header. */
+  | { t: "running"; text: string };
 
 /** In the window: the document as blocks. Self-contained (serialised). */
 export function collectBlocks(doc: Document): Block[] {
@@ -137,6 +140,11 @@ export function collectBlocks(doc: Document): Block[] {
     const tag = el.tagName.toLowerCase();
     const cls = el.classList;
     if (tag === "style" || tag === "script" || tag === "svg") return;
+    if (cls.contains("running")) {
+      const text = (el.textContent || "").replace(/\s+/g, " ").trim();
+      if (text !== "") out.push({ t: "running", text });
+      return;
+    }
     if (/^h[1-4]$/.test(tag)) {
       out.push({
         t: "h",
@@ -320,6 +328,9 @@ const runs = (
 /** The .docx, in code, from the blocks. */
 export const buildDocx = async (blocks: Block[]): Promise<Buffer> => {
   const accent = "0f6e6a";
+  const running =
+    blocks.find((b): b is Extract<Block, { t: "running" }> => b.t === "running")
+      ?.text ?? null;
   const children: Array<Paragraph | Table> = [];
   for (const b of blocks) {
     if (b.t === "h")
@@ -543,6 +554,28 @@ export const buildDocx = async (blocks: Block[]): Promise<Buffer> => {
     sections: [
       {
         properties: {},
+        // A header asked for ("the society name in the header"): the page's
+        // running line, on every page (bug hunt f17: Word had none).
+        ...(running != null
+          ? {
+              headers: {
+                default: new Header({
+                  children: [
+                    new Paragraph({
+                      alignment: AlignmentType.CENTER,
+                      children: [
+                        new TextRun({
+                          text: running,
+                          size: 18,
+                          color: "5B6068",
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              },
+            }
+          : {}),
         footers: {
           default: new Footer({
             children: [

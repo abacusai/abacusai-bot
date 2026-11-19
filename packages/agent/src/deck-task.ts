@@ -71,7 +71,8 @@ const SYSTEM_PROMPT = [
   "     is not a lecture, a memorial is not a launch) and whose slides fit its content: list",
   "     what the brief holds (key figures, steps, a comparison or table, a quote, a timeline)",
   "     and pick a template whose best_for names slides for those, so no slide is left empty.",
-  "     When several suit, take the first of them in the list.",
+  "     When several suit, take the first of them in the list. A colour the brief asks for",
+  '     ("make it green") picks a template whose colours have it.',
   "  3. `deck_slots`: every slide the template has, each with its role and its text slots.",
   "  4. Choose the slides: as many as deck_slots says to pick. Start with the template's first",
   "     slide (the title) and, when its last slide is a closing or thank-you slide, end with it.",
@@ -142,6 +143,8 @@ export interface DeckTaskResult {
   pptxPath?: string;
   slides?: number;
   template?: string;
+  /** A counted list no slide could hold, split over slides. */
+  splitNote?: string;
 }
 
 interface PiToolDefinitionLike {
@@ -254,6 +257,8 @@ export interface Draft {
   labels?: Map<number, string>;
   /** How often a slide counting more items than it holds was sent back. */
   itemsChecked?: number;
+  /** A counted list no slide could hold: the reply says it was split. */
+  splitNote?: string;
   /** Set once a printed cover title without the topic was sent back. */
   coverTitleChecked?: boolean;
   /** Set once a cover without the deck's topic was sent back. */
@@ -323,7 +328,17 @@ export const catalogueFor = (
     const at = items.length > 0 ? seed % items.length : 0;
     return [...items.slice(at), ...items.slice(0, at)];
   };
-  if (audience == null || audience === "business") return turn(enough(list));
+  // A list the ask counts ("12 tips"): templates whose list slide holds it first.
+  const listed = listCount(words);
+  const holdsList = (items: Array<Record<string, unknown>>) =>
+    listed == null
+      ? items
+      : [
+          ...items.filter((t) => Number(t.max_items ?? 0) >= listed),
+          ...items.filter((t) => Number(t.max_items ?? 0) < listed),
+        ];
+  if (audience == null || audience === "business")
+    return holdsList(turn(enough(list)));
   const text = (t: Record<string, unknown>, ...keys: string[]): string =>
     keys.map((k) => String(t[k] ?? "")).join(" ");
   const serious = SERIOUS.test(words);
@@ -342,7 +357,7 @@ export const catalogueFor = (
         /\b(school|lessons?|children'?s?|student)/i.test(text(t, "avoid_for"))
       )
   );
-  if (audience === "casual") return turn(enough(fits));
+  if (audience === "casual") return holdsList(turn(enough(fits)));
   const made = fits.filter(
     (t) =>
       /school lesson|children's lesson|school assembly|classroom|explainer/i.test(
@@ -359,7 +374,7 @@ export const catalogueFor = (
       )
   );
   const ordered = [...turn(low), ...turn(rest), ...turn(playful)];
-  return ordered.filter((t) => enough(ordered).includes(t));
+  return holdsList(ordered.filter((t) => enough(ordered).includes(t)));
 };
 
 const NUMBER_WORDS = [
@@ -402,6 +417,23 @@ export const itemSlots = (label: string, samples: string[]): number | null => {
 
 const COUNT_WORD =
   /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})\s+(?=(?:[A-Za-z][\w-]*\s+)?[A-Za-z][\w-]*s\b)/i;
+
+/** A list the user's ask counts ("12 tips", "7 wonders"), not slides or pages. */
+export const listCount = (words: string): number | null => {
+  for (const m of words.matchAll(
+    /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})\s+(?:[A-Za-z][\w-]*\s+)?([A-Za-z][\w-]*s)\b/gi
+  )) {
+    if (
+      /^(slides|pages|minutes|mins|hours|days|weeks|months|years|people|students)$/i.test(
+        m[2]!
+      )
+    )
+      continue;
+    const n = asNumber(m[1]!);
+    if (n != null && n >= 5) return n;
+  }
+  return null;
+};
 
 /** The count a heading gives its list: "Four Exhibitions", "5 reasons to…". */
 export const countIn = (heading: string): number | null => {
@@ -796,21 +828,24 @@ export const buildTools = (
           // Up to twice what it holds: "Twelve talks" over four strands
           // sums the season up rather than listing it.
           if (counted != null && counted > holds && counted <= holds * 2) {
-            if (draft.itemsChecked === 2) {
-              // Asked twice: the heading stops claiming more than it shows.
+            const roomy = [...(draft.labels ?? new Map<number, string>())]
+              .filter(([, label]) => (itemSlots(label, []) ?? 0) >= counted)
+              .map(([at]) => at);
+            if (roomy.length === 0) {
+              // No slide holds that many: the items run over slides, and the
+              // reply says so in one line (no send-back: none can help).
+              draft.splitNote = `The ${counted} items are split over slides: no slide in this template holds ${counted}.`;
+            } else if ((draft.itemsChecked ?? 0) >= 1) {
+              // Asked once: the heading stops claiming more than it shows.
               for (const id of ids.slice(0, 3))
                 if (typeof values[id] === "string" && values[id] !== REMOVE)
                   values[id] = values[id]!.replace(COUNT_WORD, "")
                     .replace(/^\s+/, "")
                     .replace(/^./, (c) => c.toUpperCase());
-            } else {
-              const roomy = [...(draft.labels ?? new Map<number, string>())]
-                .filter(([, label]) => (itemSlots(label, []) ?? 0) >= counted)
-                .map(([at]) => at);
+            } else
               overfull.push(
-                `slide ${index} ("${heading.slice(0, 60)}") counts ${counted} but holds ${holds}${roomy.length > 0 ? `; slide ${roomy.join(" or ")} holds ${counted} or more` : "; no offered slide holds that many, so split the items over two slides"}`
+                `slide ${index} ("${heading.slice(0, 60)}") counts ${counted} but holds ${holds}; slide ${roomy.join(" or ")} holds ${counted} or more`
               );
-            }
           }
         }
 
@@ -927,7 +962,22 @@ export const buildTools = (
         );
       }
 
-      if (overfull.length > 0 && (draft.itemsChecked ?? 0) < 2) {
+      // A list the user's ask counts ("12 tips") that no slide of this
+      // template holds runs over slides: the reply says so in one line.
+      const listed = listCount(draft.audienceWords ?? "");
+      if (
+        listed != null &&
+        draft.splitNote == null &&
+        Math.max(
+          0,
+          ...[...(draft.labels ?? new Map<number, string>()).values()].map(
+            (label) => itemSlots(label, []) ?? 0
+          )
+        ) < listed
+      )
+        draft.splitNote = `The ${listed} items are split over slides: no slide in this template holds ${listed}.`;
+
+      if (overfull.length > 0 && (draft.itemsChecked ?? 0) < 1) {
         draft.itemsChecked = (draft.itemsChecked ?? 0) + 1;
         return failed(
           [
@@ -1084,7 +1134,10 @@ export const buildTools = (
         if (
           typeof result.coverTitle === "string" &&
           result.coverTitle.length > 0 &&
+          // One send-back per check: a cover already sent back before the
+          // print is not sent back again after it (each round costs credits).
           draft.coverTitleChecked !== true &&
+          draft.coverChecked !== true &&
           !coverNamesTopic(result.coverTitle, words, titledAs != null)
         ) {
           draft.coverTitleChecked = true;
@@ -1290,6 +1343,7 @@ export async function runDeckTask(
           ...(printed.pptxPath != null ? { pptxPath: printed.pptxPath } : {}),
           slides: printed.slides,
           ...(draft.template != null ? { template: draft.template } : {}),
+          ...(draft.splitNote != null ? { splitNote: draft.splitNote } : {}),
         }
       : {}),
   };

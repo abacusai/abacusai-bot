@@ -9,7 +9,7 @@ const PHRASES =
   /\b(?:lorem ipsum|placeholder|tbc|tbd|xx+|(?:your|company|client|studio|presenter|app|founder|product|brand|startup) name(?: here)?)\b/gi;
 /** "X%", "XX users", "Email: ____": a figure or field left for later. */
 const STANDINS =
-  /(?<![\w])X{1,3}%|_{3,}|^\s*(?:item|exhibition|speaker|event|feature|session|talk|name|title)\s+\d{1,2}(?:\s*$|\s+[—–-].*$)|\b(?:title|name)\s*\/\s*(?:artist|author|speaker|date|role|venue)\b|(?:\ba\s+)?\b(?:a|one)[ -](?:line|short|brief)\s+(?:note|description|line)\b[^.]*\.?/gim;
+  /\([^()]{0,200}\bto be (?:confirmed|added|filled(?: in)?|gathered|provided|decided|announced)\b[^()]*\)|(?<![\w])X{1,3}%|_{3,}|^\s*(?:item|exhibition|speaker|event|feature|session|talk|name|title)\s+\d{1,2}(?:\s*$|\s+[—–-].*$)|\b(?:title|name)\s*\/\s*(?:artist|author|speaker|date|role|venue)\b|(?:\ba\s+)?\b(?:a|one)[ -](?:line|short|brief)\s+(?:note|description|line)\b[^.]*\.?/gim;
 
 export const placeholdersIn = (text: string): string[] => {
   const found: Array<{ at: number; text: string }> = [];
@@ -43,5 +43,6 @@ export const withoutPlaceholders = (text: string): string => {
     .replace(/^\s*[·•|,/–—:-]\s*/, "")
     .replace(/^\s*:\s*$/, "")
     .replace(/\s{2,}/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1")
     .trim();
 };

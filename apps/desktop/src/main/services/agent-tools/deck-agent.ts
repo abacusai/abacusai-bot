@@ -427,6 +427,33 @@ export type DeckTemplateSummary = {
   tone?: string;
   formality?: string;
   slide_count?: number;
+  max_items?: number;
+  colours?: string;
+};
+
+const LIST_WORDS: Record<string, number> = {
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+};
+/** The most items a slide's label says it holds ("up to eight sections", "four cards"). */
+const listSize = (label: string): number => {
+  let most = 0;
+  for (const m of label.matchAll(
+    /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})(?:\s+|-)(?:[\w-]+\s+)?(points|items|cards|steps?|columns|findings|rules|reasons|tips|sections|rows|tiles|boxes|panels|features|ideas|lessons|events|sessions|people|members|questions)\b/gi
+  )) {
+    const word = m[1]!.toLowerCase();
+    most = Math.max(most, LIST_WORDS[word] ?? Number(word));
+  }
+  return most;
 };
 
 /** The catalogue minus the markup: a chooser needs the feel, not the HTML. */
@@ -440,6 +467,42 @@ export const deckTemplates = async (): Promise<{
     templates: Array<Record<string, unknown>>;
   };
 
+  const offeredOf = new Map<
+    string,
+    { slide_count: number; max_items?: number; colours?: string }
+  >();
+  for (const entry of index.templates) {
+    const slug = String(entry.slug ?? "");
+    const html = await fs
+      .readFile(path.join(skillDir, "templates", slug, "template.html"), "utf8")
+      .catch(() => null);
+    if (html == null) continue;
+    const offered = splitTemplate(html).slides.filter(isOffered);
+    const most = Math.max(
+      0,
+      ...offered.map((slide) =>
+        listSize(/data-label="([^"]*)"/.exec(slide)?.[1] ?? "")
+      )
+    );
+    // Its colours in words, so "make it green" finds a green template.
+    const colours = await fs
+      .readFile(path.join(skillDir, "templates", slug, "template.json"), "utf8")
+      .then((text) => {
+        const palette = (
+          JSON.parse(text) as { palette?: { description?: unknown } }
+        ).palette;
+        return typeof palette?.description === "string"
+          ? palette.description
+          : undefined;
+      })
+      .catch(() => undefined);
+    offeredOf.set(slug, {
+      ...(colours != null ? { colours } : {}),
+      slide_count: Math.min(offered.length, MAX_SLIDES),
+      ...(most > 0 ? { max_items: most } : {}),
+    });
+  }
+
   return {
     templates: index.templates.map((entry) => ({
       slug: String(entry.slug ?? ""),
@@ -451,10 +514,10 @@ export const deckTemplates = async (): Promise<{
         ? { avoid_for: String(entry.avoid_for) }
         : {}),
       ...(entry.mood != null ? { mood: String(entry.mood) } : {}),
-      // How many slides it has: a 15-slide ask got a 6-slide template.
-      ...(typeof entry.slide_count === "number"
-        ? { slide_count: entry.slide_count }
-        : {}),
+      // How many slides the filler is offered (a 15-slide ask got a 6-slide
+      // template; broadside lists 16 and offers 13), and the longest list a
+      // slide holds ("contents list of up to eight sections").
+      ...offeredOf.get(String(entry.slug ?? "")),
       ...(entry.tone != null ? { tone: String(entry.tone) } : {}),
       ...(entry.formality != null
         ? { formality: String(entry.formality) }

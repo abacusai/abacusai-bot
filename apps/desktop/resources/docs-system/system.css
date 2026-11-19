@@ -731,3 +731,6 @@ body.doc.plain .cover .meta-grid { margin: 2mm 0; }
 /* A blank with no label, inside a sentence or a tile: a short line, not an empty box. */
 .blank:empty::before { min-width: 3.2em; height: 1.1em; margin-bottom: 0; }
 .blank:empty { vertical-align: baseline; }
+
+/* A running header the user asked for: Word's page header, a small line at the top of the PDF. */
+body.doc .running { font-size: calc(9pt * var(--fit)); color: var(--muted); text-align: center; letter-spacing: 0.06em; margin: 0 0 4mm; }
