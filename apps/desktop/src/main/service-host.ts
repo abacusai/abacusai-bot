@@ -625,6 +625,7 @@ import {
   clearBackendProbeCache,
   resolveBackend,
 } from "./services/providers/exec-backend-service";
+import { inFirstDays } from "./services/providers/first-look";
 import { listAvailableModels, modelForTier } from "./services/providers/models";
 import { nextStepOn } from "./services/providers/next-step";
 import {
@@ -1673,6 +1674,22 @@ export class ServiceHost {
 
   cancelSitePack(packId: string): void {
     this.sitePacker.cancel(packId);
+  }
+
+  /**
+   * The first look (first-look.ts): in the user's first days, in a chat of
+   * their own they type into here, where its answers can be tapped. Not the
+   * first-run sample's chat, a bot's, a routine's, a hosted or unattended run.
+   */
+  private firstLookFor(sessionId: string): boolean {
+    const sessions = this.agentSessionManagerService;
+    return (
+      nextStepOn() &&
+      this.isOwnerSession(sessionId) &&
+      this.isUsersOwnSessionChat(sessionId) &&
+      sessions.sponsoredUntil(sessionId) == null &&
+      inFirstDays(sessions.listAll())
+    );
   }
 
   private nextStepPassedOver(): boolean {
@@ -9719,6 +9736,10 @@ export class ServiceHost {
       // Read at spawn: three offers passed over stop it for the next session.
       ...(nextStepOn() && !this.nextStepPassedOver()
         ? { ABACUSAI_BOT_NEXT_STEP_ASK: "1" }
+        : {}),
+      // Read at spawn: a new user's own chat gets a first look before a long build.
+      ...(sessionId != null && this.firstLookFor(sessionId)
+        ? { ABACUSAI_BOT_FIRST_LOOK: "1" }
         : {}),
       // Kept current afterwards by the `credit_balance` command.
       ...(credits != null

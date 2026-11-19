@@ -3,7 +3,10 @@ import path from "node:path";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { SUCCESS_PITCH_GAP_MS } from "@abacus-ai/contract/success-pitch";
+import {
+  isPositiveReaction,
+  SUCCESS_PITCH_GAP_MS,
+} from "@abacus-ai/contract/success-pitch";
 import { describe, expect, it, vi } from "vitest";
 
 import type { TurnRecord } from "../session/turn-ledger";
@@ -834,5 +837,60 @@ describe("how a turn ended, for the work-waiting reminder", () => {
     expect(userWrote).not.toHaveBeenCalled();
     watch.userSaid("s1", "Add a dark mode");
     expect(userWrote).toHaveBeenCalledWith("s1");
+  });
+});
+
+describe("SuccessPitchWatch: a first look", () => {
+  const TAP = "Great, keep going";
+  const answers = (input: object = {}) =>
+    tool("suggest_tasks", {
+      tasks: [{ text: TAP }, { text: "Bots are too easy" }],
+      ...input,
+    });
+  const look = (input?: object): DesktopEvent[] => [
+    event({ type: "first_look" }),
+    background("cd arena && npm run dev"),
+    text("A first look: two teams on the field. Is this the right direction?"),
+    answers(input),
+  ];
+  const build = (): DesktopEvent[] => [
+    background("cd arena && npm run dev"),
+    text(LONG_REPLY),
+  ];
+
+  it("defers its card to the full build that follows, spending nothing on the stop", async () => {
+    const t = setup();
+    await t.run("Finish the team deathmatch mode", look());
+    expect(t.offer()).toBeNull();
+    expect(t.mark()?.keepOffered ?? []).toEqual([]);
+    await t.run(TAP, build());
+    expect(t.offer()).toMatchObject({ trigger: "keep_running", name: "arena" });
+  });
+
+  it("changes nothing without the note, nor for a next step under a result", async () => {
+    for (const events of [look().slice(1), look({ after_result: true })]) {
+      const t = setup();
+      await t.run("Finish the team deathmatch mode", events);
+      expect(t.offer()).toMatchObject({ trigger: "keep_running" });
+    }
+  });
+
+  it("a tapped answer is not praise; typed praise still is", async () => {
+    expect(isPositiveReaction(TAP)).toBe(true);
+    const stop = (): DesktopEvent[] => [
+      event({ type: "first_look" }),
+      tool("write", { file_path: "/a.py" }),
+      text(LONG_REPLY),
+      answers(),
+    ];
+    const tapped = setup();
+    await tapped.run("Build it", stop());
+    await tapped.run(TAP, [text("Going on.")]);
+    expect(tapped.offer()).toBeNull();
+
+    const typed = setup();
+    await typed.run("Build it", stop());
+    await typed.run("great, thanks!", [text("Anytime!")]);
+    expect(typed.offer()).toMatchObject({ trigger: "positive_reaction" });
   });
 });

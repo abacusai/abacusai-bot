@@ -33,7 +33,10 @@ import type {
   DesktopEvent,
   UserTextTags,
 } from "@abacus-ai/contract/agent-types";
-import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
+import {
+  isSuggestTasksTool,
+  suggestedTasks,
+} from "@abacus-ai/contract/bots/suggested-tasks";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
@@ -95,6 +98,10 @@ interface TurnFacts {
   reply: string;
   /** The first task of the next step the turn ended on (`after_result`), if any. */
   nextTask: string | null;
+  /** The send carried the first-look note (the agent's first-look.ts). */
+  firstLook: boolean;
+  /** The tasks of plain buttons (no `after_result`) the turn ended on, if any. */
+  tasks: string[] | null;
   /** Files it wrote or edited, by full path. */
   files: Set<string>;
   /** Something it left on that is not a site: a server or a routine. */
@@ -202,6 +209,8 @@ const ROUTINE_NAME_WORDS = 6;
 
 export class SuccessPitchWatch {
   private readonly turns = new Map<string, TurnFacts>();
+  /** Per chat: the answers its first look offered; a message in those words is a tap. */
+  private readonly firstLookAnswers = new Map<string, string[]>();
   private readonly lastReply = new Map<string, LastReply>();
   /** Per chat: the files it has written so far, for the big-build card. */
   private readonly chats = new Map<string, Set<string>>();
@@ -227,6 +236,8 @@ export class SuccessPitchWatch {
         failed: false,
         reply: "",
         nextTask: null,
+        firstLook: false,
+        tasks: null,
         files: new Set(),
         keep: null,
       };
@@ -245,7 +256,12 @@ export class SuccessPitchWatch {
     facts.messages += 1;
     if (facts.messages === 1) {
       facts.byUser = words.length > 0;
-      facts.praise = facts.byUser && isPositiveReaction(words);
+      // A tapped first-look answer ("Looks right, keep going") is not praise.
+      const tapped = (this.firstLookAnswers.get(sessionId) ?? []).some((task) =>
+        words.includes(task)
+      );
+      this.firstLookAnswers.delete(sessionId);
+      facts.praise = facts.byUser && !tapped && isPositiveReaction(words);
     } else facts.praise = false;
     if (words.length > 0) {
       this.endOffer(sessionId, isComplaint(words));
@@ -267,6 +283,9 @@ export class SuccessPitchWatch {
         return;
       case "error":
         this.facts(sessionId).troubled = true;
+        return;
+      case "first_look":
+        this.facts(sessionId).firstLook = true;
         return;
       case "turn_complete":
         if (event.usage?.lane === "free") this.facts(sessionId).troubled = true;
@@ -298,9 +317,13 @@ export class SuccessPitchWatch {
     const facts = this.facts(sessionId);
     const name = event.tool.name;
     // The reply stands: suggest_tasks comes after it and can end the turn.
-    if (!isSuggestTasksTool(name)) facts.reply = "";
-    else if (event.tool.input.after_result === true)
+    if (!isSuggestTasksTool(name)) {
+      facts.reply = "";
+      facts.tasks = null;
+    } else if (event.tool.input.after_result === true)
       facts.nextTask = firstWorkTask(event.tool.input.tasks);
+    else
+      facts.tasks = suggestedTasks(event.tool.input).map((task) => task.text);
     if (event.result.rejected === true) {
       facts.failed = true;
       return;
@@ -396,6 +419,11 @@ export class SuccessPitchWatch {
       !this.deps.pitchable(record.sessionId)
     )
       return Promise.resolve();
+    // A first look stops on a direction check: no card under it, and nothing
+    // spent, so the same card comes with the full build that follows.
+    const firstLookStop = facts.firstLook && facts.tasks != null;
+    if (facts.firstLook && facts.tasks != null)
+      this.firstLookAnswers.set(record.sessionId, facts.tasks);
     // The turn did work, untroubled, and the reply does not say it failed;
     // a result also had no tool fail along the way.
     const settled =
@@ -418,7 +446,7 @@ export class SuccessPitchWatch {
     if (clean && facts.delivered != null)
       this.deps.funnel("result_delivered", facts.delivered);
     const signals: Signal[] = [];
-    if (settled && where === "app") {
+    if (settled && !firstLookStop && where === "app") {
       // A served site is mostly a preview: only a server or a routine is offered.
       const keep = facts.keep;
       if (keep != null)
@@ -441,7 +469,7 @@ export class SuccessPitchWatch {
           once: { list: "bigTaskChats", item: record.sessionId },
         });
     }
-    if (clean && facts.delivered != null && !nextStep)
+    if (clean && !firstLookStop && facts.delivered != null && !nextStep)
       signals.push({ trigger: "deliverable", moment: facts.delivered, lead });
     else if (facts.praise && previous?.clean === true)
       signals.push({

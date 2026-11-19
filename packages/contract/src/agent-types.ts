@@ -326,6 +326,8 @@ export type AgentEvent =
       type: "promised_work_recovery";
       model: string;
     }
+  /** This send carries the first-look note: a big ask may stop on a direction check. */
+  | { type: "first_look" }
   /**
    * The user-visible end of one turn whose `send` or steers carried an id,
    * after any error it reported: its final assistant message (empty when it wrote none), and

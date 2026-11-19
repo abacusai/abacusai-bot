@@ -4,7 +4,7 @@
  * on finished work, one hidden note inside the same send asks for the question
  * and its buttons, as `PromisedWork` does for a promise.
  */
-const SUGGEST_TASKS_TOOL = "suggest_tasks";
+export const SUGGEST_TASKS_TOOL = "suggest_tasks";
 
 export const NEXT_STEP_TYPE = "abacusai-bot:next-step";
 
@@ -38,7 +38,7 @@ const NEXT_STEP_BUTTONS_PROMPT = [
 ].join(" ");
 
 /** Tools that make something the user keeps. */
-const RESULT_TOOLS: ReadonlySet<string> = new Set([
+export const RESULT_TOOLS: ReadonlySet<string> = new Set([
   "write",
   "edit",
   "serve",
@@ -69,6 +69,10 @@ const toolCalls = (messages: readonly unknown[]): RunBlock[] =>
     .filter((message) => message.role === "assistant")
     .flatMap(blocksOf)
     .filter((block) => block.type === "toolCall");
+
+/** The names of the tools the run `messages` called, in order. */
+export const calledTools = (messages: readonly unknown[]): string[] =>
+  toolCalls(messages).map((call) => call.name ?? "");
 
 /**
  * The note a run that made something and closed cleanly ends on: the full ask

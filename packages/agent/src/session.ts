@@ -93,6 +93,12 @@ import testRunner from "./extensions/test-runner.js";
 import toolCallRepair from "./extensions/tool-call-repair.js";
 import toolTimeouts from "./extensions/tool-timeouts.js";
 import { VerifyLoop } from "./extensions/verify-loop.js";
+import {
+  FIRST_LOOK_PROMPT,
+  FIRST_LOOK_TYPE,
+  FirstLook,
+  firstLookOn,
+} from "./first-look.js";
 import { endTurnOnClosedReply } from "./forever/reply-end.js";
 import { callsTool, TurnReply } from "./forever/turn-reply.js";
 import { githubPrompt } from "./github-prompt.js";
@@ -860,6 +866,8 @@ export class AbacusBotSession {
   /** The turn's ask after a reply that ended on a promise (promised-work.ts). */
   private readonly promisedWork = new PromisedWork();
   private readonly nextStepAsk = new NextStepAsk();
+  /** A new user's first big ask in this chat: a first look, then the rest (first-look.ts). */
+  private readonly firstLook = new FirstLook();
   private pendingNextStep = false;
   private pendingPromisedWork = false;
   /** A run whose closing words are being judged (PromisedWork); its turn ends once they are. */
@@ -1315,6 +1323,7 @@ export class AbacusBotSession {
     );
     // A resumed chat: its earlier turns tell whose words the replies follow.
     this.userWords.seed(this.session.messages, (text) => ownWords(text));
+    this.firstLook.seed(this.session.messages);
     // The language model loads off the turn's path; a turn before it has is judged by script.
     void loadLanguageModel();
     endTurnOnClosedReply(this.session.agent);
@@ -1496,6 +1505,13 @@ export class AbacusBotSession {
     this.judgedRun = null;
     this.nextStepAsk.begin(text);
     this.pendingNextStep = false;
+    const firstLookNote =
+      firstLookOn() &&
+      this.mode !== AgentMode.PlanMode &&
+      this.mode !== AgentMode.Unattended &&
+      turn?.continueCut !== true
+        ? this.firstLook.begin(words)
+        : null;
     this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
@@ -1557,6 +1573,18 @@ export class AbacusBotSession {
         if (news.length > 0)
           await session.sendCustomMessage(
             { customType: MEMORY_CONTEXT_TYPE, content: news, display: false },
+            { deliverAs: "nextTurn" }
+          );
+        // Rides along with the user's message, not as a turn of its own.
+        if (firstLookNote === FIRST_LOOK_PROMPT)
+          this.emitAgentEvent({ type: "first_look" });
+        if (firstLookNote != null)
+          await session.sendCustomMessage(
+            {
+              customType: FIRST_LOOK_TYPE,
+              content: firstLookNote,
+              display: false,
+            },
             { deliverAs: "nextTurn" }
           );
         await session.prompt(text);
@@ -1973,11 +2001,14 @@ export class AbacusBotSession {
       this.pendingToolArrival == null &&
       !this.pendingEmptyAsk;
     this.nextStepAsk.sawRun(messages);
+    this.firstLook.sawRun(messages);
     // Closing words with nothing else on the way: judged once the reply has
-    // gone out, inside this send so the run stays open (PromisedWork).
+    // gone out, inside this send so the run stays open (PromisedWork). A
+    // first look waits on the user's answer, whatever its words say is next.
     if (
       ending &&
       !this.interrupted &&
+      !this.firstLook.waitsOnAnswer() &&
       this.ownedTurn != null &&
       mayAskForPromisedWork(this.mode) &&
       this.promisedWork.judge(messages)
