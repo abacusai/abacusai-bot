@@ -8,7 +8,20 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `0f609ac5`, the task list under a reply as one card
+## Current: `898ce378`, main after Share, free-plan media, long work and offline
+
+**464 / 9999019 / 3363157.** Records the renderer of main `898ce378`: Share
+where people look (#871), free plan media asks (#870), long work visible while
+it runs (#850) and the offline notice (#872), which together merged after the
+previous baseline. Against `0f609ac5` (459 / 9929434 / 3338473): +5 chunks
+(+1.09%), +69585 bytes (+0.70%), +24684 gzip bytes (+0.74%). The fifth new
+chunk took the chunk count past the 1% allowance. `apps/web`'s dependencies did
+not change. The 1% allowance is unchanged.
+
+Measured from a build on Linux x64, clean `dist`, summed the same way as
+`check-desktop-parity.mjs`. This baseline-only change touches no renderer code.
+
+### `0f609ac5`, the task list under a reply as one card
 
 **459 / 9929434 / 3338473.** Records the renderer with the suggested tasks drawn
 as one card with a row per task (#874), measured on that branch merged with main
