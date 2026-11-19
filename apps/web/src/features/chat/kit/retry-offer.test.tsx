@@ -36,6 +36,8 @@ const account = (tier: "free" | "basic") => ({
 });
 
 const billing = (tier: "free" | "basic"): BillingPlan => ({
+  // The top-model retry 50/50's opus arm: a free retry runs Opus.
+  ...(tier === "free" && { opusRetry: "opus" as const }),
   current: {
     plan: tier,
     planName: tier === "free" ? "Free" : "Basic",

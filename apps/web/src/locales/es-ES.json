@@ -3639,6 +3639,13 @@
       "continue": "Continuar en un chat nuevo",
       "paidBody": "Un chat nuevo sigue desde un resumen de este, con un modelo de primer nivel. Gasta los créditos más rápido."
     },
+    "topModelRetry": {
+      "retry": "Reintentar con {{model}}",
+      "upgradeRetry": "Mejora tu plan para reintentar con {{model}} y otros modelos top",
+      "dismiss": "Cerrar",
+      "opusBody": "Nuestro modelo más potente lo retoma en un chat nuevo, justo donde lo dejaste. Gasta créditos más rápido.",
+      "dialogBody": "Nuestro modelo más potente para tareas difíciles, incluido en {{plan}}."
+    },
     "topModelCard": {
       "title": "Sigue con {{model}} en {{plan}}",
       "line": "{{model}} gasta los créditos gratis rápido. Con {{plan}} lo mantienes, junto con todo lo de abajo."
@@ -4794,6 +4801,7 @@
     "paidWaitingTitle": "Termina en tu navegador",
     "planLine": "Plan {{plan}} · cancela cuando quieras",
     "planTitle": "Todo lo que te da {{plan}}",
+    "planModelTitle": "Vuelve a ejecutarlo en {{model}} con {{plan}}",
     "startAt": "Desde",
     "waitingBody": "Tu mensaje se enviará en cuanto tu plan esté activo.",
     "waitingBodyNoMessage": "Esto se cerrará en cuanto tu plan esté activo.",

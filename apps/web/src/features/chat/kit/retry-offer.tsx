@@ -5,11 +5,12 @@ import { planTopModelIds, wallOffer } from "@abacus-ai/contract/billing-plan";
  * models, in a new chat that starts from a summary of this one
  * (continue-chat.ts): the top model reads a page instead of the whole stuck
  * history, and this chat keeps its model. A paying plan already runs the
- * model, so a tap starts it at once. A free plan runs the paid plans' Opus
- * there too, on its own credits (the server serves it for this retry), and
- * that chat pitches the plan after each turn (top-model-card.tsx); any other
- * top model opens the upgrade dialog with the message waiting. Only a listed
- * session chat has it. Caps live in prefs.
+ * model, so a tap starts it at once. A free plan's tap is the server's
+ * top-model retry 50/50 (#renderer/lib/opus-retry): in the "opus" arm it runs
+ * the paid plans' Opus there too, on its own credits, and that chat pitches
+ * the plan after each turn (top-model-card.tsx); otherwise (the "dialog" arm,
+ * an older server, any other top model) it opens the upgrade dialog with the
+ * message waiting. Only a listed session chat has it. Caps live in prefs.
  */
 import {
   isSuggestTasksTool,
@@ -42,6 +43,7 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import { messageTools } from "#renderer/lib/bot-turns/tool-parts";
 import { turnReplyText, turnsOf } from "#renderer/lib/bot-turns/turns";
 import { creditsTier } from "#renderer/lib/credits";
+import { useOpusRetryArm } from "#renderer/lib/opus-retry";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
 import {
@@ -139,6 +141,7 @@ export const RetryOfferRow = ({
   const db = useDb();
   const prefs = usePrefs();
   const { data: account } = useAccount();
+  const arm = useOpusRetryArm();
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -209,10 +212,12 @@ export const RetryOfferRow = ({
   const label =
     preview?.label ??
     (model != null && model.id !== current ? model.label : null);
-  // A free plan's retry on the paid plans' Opus starts at once, like a paying one's.
+  // A free plan's retry on the paid plans' Opus starts at once, like a paying
+  // one's, only in the opus_retry test's "opus" arm (the server serves it there).
   const freeTop =
     preview?.freeTop ??
     (free &&
+      arm === "opus" &&
       model != null &&
       modelIdentity(model.id).family === TOP_MODEL_FAMILIES.opus);
   const direct = paying || freeTop;
@@ -234,7 +239,9 @@ export const RetryOfferRow = ({
           ? `${reason}_paid`
           : freeTop
             ? `${reason}_free_top`
-            : reason,
+            : arm === "dialog"
+              ? `${reason}_free_dialog`
+              : reason,
       })
       .catch(() => undefined);
   };

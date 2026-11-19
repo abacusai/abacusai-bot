@@ -45,6 +45,8 @@ export interface Scenario {
     topModelCard?: { label: string };
     /** The "Send it to anyone" card, without its once-per-chat rule. */
     shareOffer?: boolean;
+    /** The card under a reply for a top model, in an opus_retry arm. */
+    topModelRetry?: { label: string; plan: string; arm: "opus" | "dialog" };
     /** The composer's top-model hint on a paying plan, without its caps. */
     topModels?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
@@ -1478,6 +1480,24 @@ export const SCENARIOS: Scenario[] = [
     skin: "session",
     events: headerAnswered,
     view: { topModelCard: { label: "Claude Opus 5.5" } },
+  },
+  {
+    id: "top-model-retry-opus",
+    canvas: ["TopModelRetry", "opus arm"],
+    skin: "session",
+    events: headerAnswered,
+    view: {
+      topModelRetry: { label: "Claude Opus 5.5", plan: "Basic", arm: "opus" },
+    },
+  },
+  {
+    id: "top-model-retry-dialog",
+    canvas: ["TopModelRetry", "dialog arm"],
+    skin: "session",
+    events: headerAnswered,
+    view: {
+      topModelRetry: { label: "Claude Opus 5.5", plan: "Basic", arm: "dialog" },
+    },
   },
   {
     id: "retry-offer-bot",

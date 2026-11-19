@@ -3639,6 +3639,13 @@
       "continue": "在新對話中繼續",
       "paidBody": "新對話會根據本對話的摘要，由頂級模型繼續。消耗點數更快。"
     },
+    "topModelRetry": {
+      "retry": "用 {{model}} 重試",
+      "upgradeRetry": "升級後用 {{model}} 等頂級模型重試",
+      "dismiss": "關閉",
+      "opusBody": "我們最強的模型會在新對話中接手，從你停下的地方繼續。它消耗額度更快。",
+      "dialogBody": "我們處理難題最強的模型，包含在 {{plan}} 中。"
+    },
     "topModelCard": {
       "title": "升級 {{plan}}，繼續使用 {{model}}",
       "line": "{{model}} 消耗免費點數很快。升級 {{plan}} 即可繼續使用，還包括以下全部內容。"
@@ -4794,6 +4801,7 @@
     "paidWaitingTitle": "請在瀏覽器中完成",
     "planLine": "{{plan}} 方案 · 隨時可取消",
     "planTitle": "{{plan}} 提供給你的所有內容",
+    "planModelTitle": "使用 {{plan}}，在 {{model}} 上重新執行",
     "startAt": "起價",
     "waitingBody": "方案一啟用，你的訊息就會送出。",
     "waitingBodyNoMessage": "方案一啟用，這個視窗就會關閉。",

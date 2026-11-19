@@ -3639,6 +3639,13 @@
       "continue": "Lanjutkan di chat baru",
       "paidBody": "Chat baru melanjutkan dari ringkasan chat ini, dengan model teratas. Kredit terpakai lebih cepat."
     },
+    "topModelRetry": {
+      "retry": "Coba lagi dengan {{model}}",
+      "upgradeRetry": "Upgrade untuk coba lagi dengan {{model}} dan model teratas lainnya",
+      "dismiss": "Tutup",
+      "opusBody": "Model terkuat kami melanjutkan ini di chat baru, dari titik terakhirmu. Model ini memakai kredit lebih cepat.",
+      "dialogBody": "Model terkuat kami untuk tugas sulit, termasuk dalam {{plan}}."
+    },
     "topModelCard": {
       "title": "Lanjutkan dengan {{model}} lewat {{plan}}",
       "line": "{{model}} cepat menghabiskan kredit gratis. Dengan {{plan}}, kamu tetap bisa memakainya, plus semua yang ada di bawah."
@@ -4794,6 +4801,7 @@
     "paidWaitingTitle": "Selesaikan di browser Anda",
     "planLine": "Paket {{plan}} · batalkan kapan saja",
     "planTitle": "Semua yang diberikan {{plan}}",
+    "planModelTitle": "Jalankan lagi di {{model}} dengan {{plan}}",
     "startAt": "Mulai dari",
     "waitingBody": "Pesan Anda terkirim begitu paket Anda aktif.",
     "waitingBodyNoMessage": "Ini akan tertutup begitu paket Anda aktif.",

@@ -3775,6 +3775,13 @@
       "continue": "Kontynuuj w nowym czacie",
       "paidBody": "Nowy czat zacznie od podsumowania tego, na najlepszym modelu. Szybciej zużywa kredyty."
     },
+    "topModelRetry": {
+      "retry": "Ponów z {{model}}",
+      "upgradeRetry": "Ulepsz plan, by spróbować ponownie z {{model}} i innymi topowymi modelami",
+      "dismiss": "Zamknij",
+      "opusBody": "Nasz najmocniejszy model przejmie to w nowym czacie, od miejsca, w którym skończyłeś. Zużywa kredyty szybciej.",
+      "dialogBody": "Nasz najmocniejszy model do trudnych zadań, w ramach {{plan}}."
+    },
     "topModelCard": {
       "title": "Pracuj dalej z {{model}} w planie {{plan}}",
       "line": "{{model}} szybko zużywa darmowe kredyty. Z planem {{plan}} zachowasz go, razem ze wszystkim poniżej."
@@ -4934,6 +4941,7 @@
     "paidWaitingTitle": "Dokończ w przeglądarce",
     "planLine": "Plan {{plan}} · anuluj w dowolnym momencie",
     "planTitle": "Wszystko, co daje Ci {{plan}}",
+    "planModelTitle": "Uruchom ponownie na {{model}} z planem {{plan}}",
     "startAt": "Już od",
     "waitingBody": "Twoja wiadomość zostanie wysłana, gdy tylko plan będzie aktywny.",
     "waitingBodyNoMessage": "To okno zamknie się, gdy tylko plan będzie aktywny.",

@@ -242,6 +242,11 @@ export const FUNNEL_STEPS = [
   "github_watch_fix_done",
   "github_watch_upsell_shown",
   "github_watch_upsell_tapped",
+  // The "Retry with <top model>" card under a finished reply (top-model-retry.tsx),
+  // shown, tapped and closed; detail: the opus_retry arm.
+  "top_model_retry_shown",
+  "top_model_retry_tapped",
+  "top_model_retry_closed",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

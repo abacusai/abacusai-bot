@@ -3639,6 +3639,13 @@
       "continue": "在新对话中继续",
       "paidBody": "新对话会基于本对话的摘要，由顶级模型继续。消耗点数更快。"
     },
+    "topModelRetry": {
+      "retry": "用 {{model}} 重试",
+      "upgradeRetry": "升级后用 {{model}} 等顶级模型重试",
+      "dismiss": "关闭",
+      "opusBody": "我们最强的模型会在新对话中接着处理，从你停下的地方继续。它消耗额度更快。",
+      "dialogBody": "我们处理难题最强的模型，包含在 {{plan}} 中。"
+    },
     "topModelCard": {
       "title": "升级 {{plan}}，继续使用 {{model}}",
       "line": "{{model}} 消耗免费点数很快。升级 {{plan}} 即可继续使用，还包括以下全部内容。"
@@ -4794,6 +4801,7 @@
     "paidWaitingTitle": "请在浏览器中完成",
     "planLine": "{{plan}} 套餐 · 随时取消",
     "planTitle": "{{plan}} 为你提供的全部内容",
+    "planModelTitle": "使用 {{plan}}，在 {{model}} 上重新运行",
     "startAt": "起价",
     "waitingBody": "套餐一生效，你的消息就会发送。",
     "waitingBodyNoMessage": "套餐一生效，此窗口就会关闭。",
