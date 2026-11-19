@@ -1,7 +1,12 @@
 import {
   SUGGEST_TASKS_TOOL,
+  SUGGESTED_FIELD_LABEL_MAX_CHARS,
+  SUGGESTED_FIELD_PLACEHOLDER_MAX_CHARS,
+  SUGGESTED_FIELDS_MAX,
   SUGGESTED_TASK_MAX_CHARS,
   SUGGESTED_TASKS_MAX,
+  suggestedFields,
+  suggestedForm,
   suggestedTasks,
 } from "@abacus-ai/contract/bots/suggested-tasks";
 
@@ -40,7 +45,8 @@ const NEXT_STEP_DESCRIPTION = [
   "it: the question may name what a task says. This call takes one task too. Offer:",
   "- the next piece of this same work, the one thing the user would most plausibly want now (a site that only",
   "  exists on this computer goes online first). When the work is built on placeholder or sample content (made-up",
-  '  names, stock text, demo projects), that piece is putting the user\'s own in: "Put my real name and projects in";',
+  "  names, stock text, demo projects), that piece is putting the user's own in, never a tweak: ask for it with",
+  "  fields (below);",
   '- and, only where the work repeats, one task marked routine: true, in words that name when it runs: "Every',
   '  morning at 9, sum up my new orders", "Every Monday, find new job ads that fit my CV", "Every night, run my',
   "  tests and fix what fails\". Work that watches something that changes (job ads, prices, a market, a script's",
@@ -51,9 +57,14 @@ const NEXT_STEP_DESCRIPTION = [
   "tapped, create it with cronjob and firstRun: false, then say in a line when it first runs and that it runs while",
   "this app is open.",
   "When your reply already ends on a question about what comes next, the tasks answer that question and you",
-  "write no more text. Not after a plain answer, a failure or a refusal, not when your question asks for something",
-  "only the user can give (their name, a file, a choice you cannot guess), not when your reply shows another card,",
+  "write no more text. Not after a plain answer, a failure or a refusal, not when your reply shows another card,",
   "and not when your last reply ended with after_result and the user did not take it up.",
+  "When the next step needs details only the user knows (their name, what they do or what their business is,",
+  `whatever the placeholders stand in for), pass fields: 1 to ${SUGGESTED_FIELDS_MAX} short labels in their language, each with an`,
+  "example placeholder, and exactly one task, the form's button and the head of the message it sends:",
+  '"Put my details in". The user fills them in under your reply. Not for a file or a choice you cannot guess:',
+  "ask those in your text and make no call. One form per chat: once the user has filled one, offer tasks, never",
+  "a second form for the placeholders left.",
   "In a reply to a message from a chat app, write the question and make no call.",
 ];
 
@@ -107,6 +118,27 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
             required: ["text"],
           },
         },
+        fields: {
+          type: "array",
+          minItems: 1,
+          maxItems: SUGGESTED_FIELDS_MAX,
+          description:
+            "A short form for details only the user knows, sent with the one task.",
+          items: {
+            type: "object",
+            properties: {
+              label: {
+                type: "string",
+                description: `What to type, in the user's language, at most ${SUGGESTED_FIELD_LABEL_MAX_CHARS} characters: "Your name".`,
+              },
+              placeholder: {
+                type: "string",
+                description: `An example answer shown in the empty box, at most ${SUGGESTED_FIELD_PLACEHOLDER_MAX_CHARS} characters.`,
+              },
+            },
+            required: ["label"],
+          },
+        },
       },
       required: ["tasks"],
     },
@@ -120,6 +152,20 @@ export const SUGGESTED_TASKS_TOOLS: ToolDefinition[] = [
         return host.err(
           `Pass tasks: ${SUGGESTED_TASKS_MAX - 1} or ${SUGGESTED_TASKS_MAX} requests, each one line of at most ${SUGGESTED_TASK_MAX_CHARS} characters.`
         );
+      if (args.fields != null) {
+        const form = suggestedForm(args);
+        if (form == null)
+          return host.err(
+            suggestedFields(args).length === 0
+              ? `Each field needs a label of at most ${SUGGESTED_FIELD_LABEL_MAX_CHARS} characters. Call this again.`
+              : "With fields, pass exactly one task (not copy or routine): the form's button. Call this again."
+          );
+        return host.ok(
+          `The user sees a form under your reply: ${form.fields.map((field) => field.label).join(", ")}, ` +
+            `sent as "${form.task}" with what they type. If you have not written your reply yet, write it now; ` +
+            "never repeat what you already wrote."
+        );
+      }
       const dropped =
         Array.isArray(args.tasks) && args.tasks.length > tasks.length
           ? ` ${args.tasks.length - tasks.length} were left out (empty, repeated, too long or more than ${SUGGESTED_TASKS_MAX}).`

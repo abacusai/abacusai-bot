@@ -3630,7 +3630,10 @@
       "routineLine": "앱이 열려 있는 동안 일정에 따라 실행됩니다",
       "copied": "복사됨",
       "copy": "휴대폰에서 보낼 수 있게 “{{text}}” 복사",
-      "copyFailed": "복사하지 못했어요"
+      "copyFailed": "복사하지 못했어요",
+      "formTitle": "내 것으로 만들기",
+      "formLine": "한두 줄이면 충분해요. 샘플 문구를 바꿔 드릴게요.",
+      "notNow": "나중에"
     },
     "retryOffer": {
       "title": "{{model}}(으)로 다시 시도하기",

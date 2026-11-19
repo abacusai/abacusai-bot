@@ -113,9 +113,9 @@ export const OfferCardFrame = ({
   title: string;
   line: string;
   children?: ReactNode;
-  /** The main button; `name` is its data-action. */
-  action: { label: string; name: string; onClick(): void };
-  notNow: { label: string; onClick(): void };
+  /** The main button; `name` is its data-action. Without it the card's own children carry its controls. */
+  action?: { label: string; name: string; onClick(): void };
+  notNow?: { label: string; onClick(): void };
   /** The corner X, with its label. */
   onClose?: { label: string; onClick(): void };
 }) => {
@@ -145,25 +145,27 @@ export const OfferCardFrame = ({
           <p className="text-muted-foreground">{line}</p>
         </div>
         {children}
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <Button
-            size="sm"
-            className={colors.primary}
-            data-action={action.name}
-            onClick={action.onClick}
-          >
-            {action.label}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            data-action="not-now"
-            onClick={notNow.onClick}
-          >
-            {notNow.label}
-          </Button>
-        </div>
+        {action != null && notNow != null && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <Button
+              size="sm"
+              className={colors.primary}
+              data-action={action.name}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground"
+              data-action="not-now"
+              onClick={notNow.onClick}
+            >
+              {notNow.label}
+            </Button>
+          </div>
+        )}
       </div>
       {onClose != null && (
         <Button

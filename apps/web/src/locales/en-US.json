@@ -3630,7 +3630,10 @@
       "routineLine": "Runs on its schedule while the app is open",
       "copied": "Copied",
       "copy": "Copy “{{text}}” to send from your phone",
-      "copyFailed": "Couldn't copy that"
+      "copyFailed": "Couldn't copy that",
+      "formTitle": "Make it yours",
+      "formLine": "A line or two is enough: I'll swap out the sample text.",
+      "notNow": "Not now"
     },
     "retryOffer": {
       "title": "Try this again on {{model}}",

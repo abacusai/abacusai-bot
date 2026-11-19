@@ -3766,7 +3766,10 @@
       "routineLine": "Działa według harmonogramu, gdy aplikacja jest otwarta",
       "copied": "Skopiowano",
       "copy": "Skopiuj „{{text}}”, aby wysłać z telefonu",
-      "copyFailed": "Nie udało się skopiować"
+      "copyFailed": "Nie udało się skopiować",
+      "formTitle": "Dopasuj do siebie",
+      "formLine": "Wystarczy linijka lub dwie: podmienię przykładowy tekst.",
+      "notNow": "Nie teraz"
     },
     "retryOffer": {
       "title": "Spróbuj ponownie z {{model}}",

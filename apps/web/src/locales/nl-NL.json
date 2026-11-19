@@ -3630,7 +3630,10 @@
       "routineLine": "Draait volgens schema zolang de app open is",
       "copied": "Gekopieerd",
       "copy": "Kopieer “{{text}}” om vanaf je telefoon te versturen",
-      "copyFailed": "Kopiëren is niet gelukt"
+      "copyFailed": "Kopiëren is niet gelukt",
+      "formTitle": "Maak het van jou",
+      "formLine": "Een regel of twee is genoeg: ik vervang de voorbeeldtekst.",
+      "notNow": "Niet nu"
     },
     "retryOffer": {
       "title": "Probeer het opnieuw met {{model}}",

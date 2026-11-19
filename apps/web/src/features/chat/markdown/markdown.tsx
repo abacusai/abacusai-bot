@@ -375,6 +375,8 @@ export const Markdown = ({
             className={cn(
               "chat-prose",
               streaming && "chat-prose-streaming",
+              // A line break the user typed stays one: markdown joins lines.
+              role === "user" && "[&_p]:whitespace-pre-line",
               className
             )}
           />

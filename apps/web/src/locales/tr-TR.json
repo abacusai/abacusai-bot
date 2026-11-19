@@ -3630,7 +3630,10 @@
       "routineLine": "Uygulama açıkken kendi zamanlamasına göre çalışır",
       "copied": "Kopyalandı",
       "copy": "Telefondan göndermek için “{{text}}” metnini kopyala",
-      "copyFailed": "Kopyalanamadı"
+      "copyFailed": "Kopyalanamadı",
+      "formTitle": "Kendine göre yap",
+      "formLine": "Bir iki satır yeterli: örnek metni ben değiştiririm.",
+      "notNow": "Şimdi değil"
     },
     "retryOffer": {
       "title": "{{model}} ile yeniden dene",

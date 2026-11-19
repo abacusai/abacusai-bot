@@ -3630,7 +3630,10 @@
       "routineLine": "Läuft nach Zeitplan, solange die App geöffnet ist",
       "copied": "Kopiert",
       "copy": "„{{text}}“ kopieren, um es vom Handy zu senden",
-      "copyFailed": "Kopieren fehlgeschlagen"
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "formTitle": "Mach es zu deinem",
+      "formLine": "Ein, zwei Zeilen reichen: Ich ersetze den Beispieltext.",
+      "notNow": "Nicht jetzt"
     },
     "retryOffer": {
       "title": "Versuch es noch einmal mit {{model}}",

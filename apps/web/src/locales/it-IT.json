@@ -3630,7 +3630,10 @@
       "routineLine": "Si avvia secondo la sua pianificazione mentre l'app è aperta",
       "copied": "Copiato",
       "copy": "Copia “{{text}}” per inviarlo dal telefono",
-      "copyFailed": "Impossibile copiare"
+      "copyFailed": "Impossibile copiare",
+      "formTitle": "Rendilo tuo",
+      "formLine": "Bastano una o due righe: sostituisco io il testo di esempio.",
+      "notNow": "Non ora"
     },
     "retryOffer": {
       "title": "Riprova con {{model}}",
