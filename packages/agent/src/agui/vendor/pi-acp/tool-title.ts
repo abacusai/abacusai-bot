@@ -115,6 +115,8 @@ export function buildToolTitle(toolName: string, args: ToolArgs): string {
       return "Build deck";
     case "design":
       return "Design";
+    case "motion":
+      return "Make video";
     case "app":
       return "Build app";
     default:

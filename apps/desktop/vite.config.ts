@@ -192,7 +192,12 @@ export default defineConfig(({ command, mode }) => {
           preload: {
             input: resolve(root, "src/preload/index.ts"),
             plugins: [electronAliases],
-            bundleDeps: { both: { exclude: ELECTRON_NATIVE } },
+            // mp4-muxer is inlined: the motion window's preload is sandboxed,
+            // and a sandboxed preload can require nothing but `electron`
+            // (packaged-startup.test.ts checks the built file).
+            bundleDeps: {
+              both: { exclude: ELECTRON_NATIVE, include: ["mp4-muxer"] },
+            },
             // `.cjs`, not the plugin's default `.mjs`: the content it emits is
             // CommonJS, and Electron decides how to load a preload from the
             // extension. An .mjs file holding `require` calls fails at load.

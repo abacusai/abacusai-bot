@@ -272,6 +272,7 @@ export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
   document: NO_SUBAGENT,
   ppt: NO_SUBAGENT,
   design: NO_SUBAGENT,
+  motion: NO_SUBAGENT,
   serve: "puts a directory on a port, an outbound channel",
   present_deliverable: NO_OUTPUT,
   artifact: "a page for someone to open beside the chat",

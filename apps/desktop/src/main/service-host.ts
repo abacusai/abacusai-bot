@@ -328,6 +328,11 @@ import {
   type HostedRunRequest,
 } from "./services/agent-tools/hosted-run";
 import {
+  renderMotion,
+  type RenderMotionRequest,
+} from "./services/agent-tools/motion-agent";
+import { motionCatalog } from "./services/agent-tools/motion-plan";
+import {
   documentTemplates,
   renderDocument,
   type RenderDocumentRequest,
@@ -4145,6 +4150,10 @@ export class ServiceHost {
         return await deckSlots(payload as DeckSlotsRequest);
       case "render_deck":
         return await renderDeck(payload as RenderDeckRequest);
+      case "motion_templates":
+        return motionCatalog();
+      case "render_motion":
+        return await renderMotion(payload as RenderMotionRequest);
       case "credit_balance":
         // The read itself broadcasts the snapshot to every agent.
         await fetchAbacusAccount(true);

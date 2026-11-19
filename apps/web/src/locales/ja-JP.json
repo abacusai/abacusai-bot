@@ -638,6 +638,7 @@
       "list_whatsapp_chats": "WhatsApp のチャットと連絡先を一覧表示します。",
       "ls": "ディレクトリの中身を一覧表示します。",
       "memory": "セッション終了後も保存されるメモを保存して呼び出します。",
+      "motion": "テキスト・数値・グラフが動く短いモーショングラフィックス動画（MP4）を作成します。",
       "pdf": "Write, read, merge, split or fill a PDF.",
       "ppt": "Build a slide deck from a brief and save it as a PDF.",
       "artifact": "Build a page beside the chat: a report, dashboard, diagram or small working tool.",

@@ -87,7 +87,12 @@ it("initializes and starts under the shim; migrates workspace stores without tou
     expect(snapshot.rows.some((row) => row.id === created.id)).toBe(true);
     await transport.client.system.activity();
     expect(host.lease.lastActivityAt).toBeGreaterThan(0);
-    for (const service of ["render_document", "render_deck", "render_design"])
+    for (const service of [
+      "render_document",
+      "render_deck",
+      "render_design",
+      "render_motion",
+    ])
       await expect(
         host.serviceHost.runAgentHostService(service, {})
       ).rejects.toMatchObject({ code: "UNSUPPORTED" });
@@ -95,6 +100,7 @@ it("initializes and starts under the shim; migrates workspace stores without tou
       "document_templates",
       "design_catalog",
       "deck_templates",
+      "motion_templates",
     ])
       await expect(
         host.serviceHost.runAgentHostService(service, {})

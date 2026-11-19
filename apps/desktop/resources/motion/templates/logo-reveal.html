@@ -1,0 +1,48 @@
+<style>
+  .lr { gap: calc(var(--u) * 4.5); }
+  .lr-mark { position: relative; display: grid; place-items: center; width: calc(var(--u) * 40); height: calc(var(--u) * 40); }
+  /* Two rings burst out from behind the logo as it lands. */
+  .lr-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: calc(var(--u) * .5) solid var(--accent);
+    animation: lr-burst 1.6s var(--ease-out) .55s both;
+  }
+  .lr-ring.r2 { border-color: var(--accent2); animation-delay: .75s; animation-duration: 1.9s; }
+  @keyframes lr-burst { from { opacity: .9; transform: scale(.6); } to { opacity: 0; transform: scale(1.9); } }
+  /* The logo opens from a circle; a dark one sits on a light plate. */
+  .lr-logo {
+    position: relative; display: grid; place-items: center; width: 100%; height: 100%;
+    animation: lr-open 1.1s var(--ease-out) .3s both;
+  }
+  .lr-logo img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .lr-logo.dark {
+    background: color-mix(in srgb, #ffffff 94%, var(--accent)); border-radius: calc(var(--u) * 5);
+    padding: calc(var(--u) * 5);
+    box-shadow: 0 calc(var(--u) * 2) calc(var(--u) * 8) color-mix(in srgb, #000 45%, transparent);
+  }
+  @keyframes lr-open {
+    from { clip-path: circle(0% at 50% 50%); transform: scale(.82) rotate(-6deg); filter: blur(calc(var(--u) * 1)); }
+    to { clip-path: circle(75% at 50% 50%); transform: none; filter: none; }
+  }
+  /* A band of light crossing the logo once it has landed. */
+  .lr-shine { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+  .lr-shine::after {
+    content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent);
+    transform: translateX(-160%) skewX(-12deg); animation: lr-sweep 1s var(--ease-in-out) 1.35s both;
+  }
+  @keyframes lr-sweep { to { transform: translateX(360%) skewX(-12deg); } }
+  .lr-name { font-size: calc(var(--u) * var(--t-h1)); font-weight: 850; letter-spacing: -.03em; line-height: 1.05; max-height: calc(var(--u) * 26); }
+  .lr-tag { font-size: calc(var(--u) * var(--t-h3)); font-weight: 500; opacity: .8; max-height: calc(var(--u) * 16); }
+  .size-9x16 .lr-mark { width: calc(var(--u) * 62); height: calc(var(--u) * 62); }
+  .size-1x1 .lr-mark { width: calc(var(--u) * 44); height: calc(var(--u) * 44); }
+  .size-16x9 .lr-mark { width: calc(var(--u) * 50); height: calc(var(--u) * 50); }
+</style>
+<div class="stage lr">
+  <div class="lr-mark">
+    <div class="lr-ring"></div><div class="lr-ring r2"></div>
+    <div class="lr-logo {{tone}}"><img src="{{logo}}" alt="" /><div class="lr-shine"></div></div>
+  </div>
+  {{#name}}<h1 class="lr-name rise" dir="auto" style="--d:1.25s" data-fit>{{name}}</h1>{{/name}}
+  {{#tagline}}<p class="lr-tag rise" dir="auto" style="--d:1.75s" data-fit>{{tagline}}</p>{{/tagline}}
+</div>

@@ -806,6 +806,10 @@ export type HostService =
   | "deck_templates"
   | "deck_slots"
   | "render_deck"
+  /** The motion templates, their slots and sizes (never the markup). */
+  | "motion_templates"
+  /** A motion plan in, an MP4 and its page out (motion-agent.ts). */
+  | "render_motion"
   /** Re-read the Abacus account; answers with its credit snapshot or null. */
   | "credit_balance"
   /** Set up the app's own Python environment if it is not there yet. */

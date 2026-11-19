@@ -1,0 +1,45 @@
+<style>
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  @counter-style pad3 { system: extends decimal; pad: 3 "0"; }
+  .bn-title { font-size: calc(var(--u) * var(--t-display)); font-weight: 850; line-height: 1.02; letter-spacing: -.035em; max-height: calc(var(--u) * 50); }
+  .bn { gap: calc(var(--u) * 2.5); }
+  /* A soft light behind the number while it is on. */
+  .bn-spot {
+    position: absolute; z-index: -1; left: 50%; top: 46%; width: calc(var(--u) * 90); height: calc(var(--u) * 90);
+    margin: calc(var(--u) * -45) 0 0 calc(var(--u) * -45); border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent), transparent 66%);
+    animation: pop 1s var(--ease-out) var(--d) both;
+  }
+  .bn-num {
+    font-size: calc(var(--u) * 26); font-weight: 900; line-height: .95; letter-spacing: -.045em;
+    font-variant-numeric: tabular-nums; white-space: nowrap; padding: 0 .04em .06em;
+    animation: pop .7s var(--ease-back) var(--d) both;
+  }
+  .bn-g { counter-reset: n var(--n); animation: bn-count 1.6s var(--ease-out) calc(var(--d) + .15s) both; }
+  .bn-g::after { content: counter(n); }
+  .bn-g.pad::after { content: counter(n, pad3); }
+  @keyframes bn-count { from { --n: 0; } to { --n: var(--to); } }
+  .bn-dec { animation: fade .4s ease-out calc(var(--d) + 1.5s) both; }
+  .bn-unit { font-size: .5em; letter-spacing: -.02em; margin-left: .04em; }
+  .bn-pre { font-size: .62em; vertical-align: .32em; margin-right: .03em; }
+  .bn-label { font-size: calc(var(--u) * var(--t-h2)); font-weight: 750; line-height: 1.12; letter-spacing: -.02em; max-height: calc(var(--u) * 30); }
+  .bn-caption { font-size: calc(var(--u) * var(--t-h1)); font-weight: 850; line-height: 1.1; letter-spacing: -.025em; max-height: calc(var(--u) * 50); }
+  .size-9x16 .bn-num { font-size: calc(var(--u) * 30); }
+  .size-9x16 .bn-label { max-height: calc(var(--u) * 50); }
+  .size-16x9 .bn-num { font-size: calc(var(--u) * 30); }
+</style>
+{{#title}}<div class="scene" style="--d:0s;--len:{{titleLen}}s">
+  <h1 class="bn-title rise" dir="auto" style="--k:.15s" data-fit>{{title}}</h1>
+  <div class="rule wipe" style="--k:.6s"></div>
+</div>{{/title}}
+{{#stats}}<div class="scene bn{{#last}} last{{/last}}" style="--d:{{d}}s;--len:{{len}}s">
+  <div class="bn-spot"></div>
+  <div class="bn-num gradient-text" data-fit>{{#prefix}}<span class="bn-pre">{{prefix}}</span>{{/prefix}}{{#groups}}<span class="bn-g{{#pad}} pad{{/pad}}" style="--to:{{g}}"></span>{{#sep}}<span>,</span>{{/sep}}{{/groups}}{{#decimals}}<span class="bn-dec">{{decimals}}</span>{{/decimals}}{{#unit}}<span class="bn-unit">{{unit}}</span>{{/unit}}</div>
+  <div class="rule wipe" style="--k:.5s"></div>
+  <p class="bn-label rise" dir="auto" style="--k:.6s" data-fit>{{label}}</p>
+</div>
+{{/stats}}
+{{#caption}}<div class="scene last" style="--d:{{captionAt}}s">
+  <p class="bn-caption rise" dir="auto" style="--k:.15s" data-fit>{{caption}}</p>
+  <div class="rule wipe" style="--k:.6s"></div>
+</div>{{/caption}}

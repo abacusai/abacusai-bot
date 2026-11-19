@@ -119,6 +119,7 @@ import {
 } from "./memory/chat.js";
 import { refreshLiveModelIds } from "./model-catalog.js";
 import { MODEL_PATH_RESOURCES } from "./model-path.js";
+import { motionToolEnabled } from "./motion-tool.js";
 import {
   BUSY_RETRY_PROMPT,
   BusyWait,
@@ -501,6 +502,7 @@ function componentToolNames(hostServices: boolean): string[] {
     ...(documentToolEnabled() ? ["document"] : []),
     ...(deckToolEnabled() ? ["ppt"] : []),
     ...(designToolEnabled() ? ["design"] : []),
+    ...(motionToolEnabled() ? ["motion"] : []),
   ];
 }
 
@@ -521,6 +523,7 @@ export function componentsPrompt(
     ["document", "documents, printed as PDFs"],
     ["ppt", "slide decks"],
     ["design", "mockups and wireframes"],
+    ["motion", "short motion graphics videos"],
   ];
   const present = components
     .map(([base, what]): [string | undefined, string] => [
@@ -549,6 +552,29 @@ export function componentsPrompt(
         "",
         "Hand-building is the fallback only when the tool itself is unavailable or fails,",
         "and say so when you do it.",
+      ].join("\n")
+    );
+  }
+
+  // Not in the base prompt: a session without motion (a bot) read there that
+  // a Reel hook was not for paid_feature, and built one by hand.
+  const motion = qualifiedName(availableTools, "motion");
+  if (motion != null) {
+    const paidFeature = qualifiedName(availableTools, "paid_feature");
+    const notPaid =
+      paidFeature == null
+        ? ""
+        : `, not \`${paidFeature}\`'s (footage, people or photos brought to life still are)`;
+    sections.push(
+      [
+        "Videos:",
+        "",
+        `An animated video of text, numbers, a chart or a logo (an intro, a Reel, an explainer, a`,
+        `promo) is \`${motion}\`'s, free${notPaid}.`,
+        `One ask is one \`${motion}\` video of up to 30 s; a longer ask gets that, said plainly.`,
+        `A video is never built or changed by hand, not even as a fallback: no ffmpeg, no joining`,
+        `clips, no recording a page. A revision is another \`${motion}\` call; what it cannot do`,
+        "you tell the user.",
       ].join("\n")
     );
   }

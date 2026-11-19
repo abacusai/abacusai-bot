@@ -54,6 +54,8 @@ const CONTENDS_FOR_THE_MACHINE = [
   // (spec 00 C); under the parallel project's load one matrix exceeds ten
   // minutes, so it runs alone with the 60 s per-test budget of this project.
   "src/main/migrations/runner.crash.test.ts",
+  // Spawns Electron and renders three short videos frame by frame.
+  "src/main/services/agent-tools/motion-render.electron.test.ts",
 ];
 
 export default defineConfig({

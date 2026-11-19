@@ -239,6 +239,20 @@ describe("the packaged bundles", () => {
   }, 600_000);
 });
 
+describe("the preload", () => {
+  it("requires nothing but electron, because the motion window is sandboxed", () => {
+    buildIfStale();
+    // A sandboxed preload can require only `electron`: any other require
+    // throws, the whole preload fails, and the motion window's encoder never
+    // answers (render_motion timed out in the packaged app this way).
+    const requires = bareImports(
+      readFileSync(resolve(DESKTOP, "dist/preload/index.cjs"), "utf8")
+    ).filter((specifier) => !RUNTIME_PROVIDED.has(specifier));
+
+    expect(requires).toEqual([]);
+  }, 600_000);
+});
+
 describe("the main entry", () => {
   /** The npm packages a bundle's source map says it was built from. */
   const packagesIn = (bundle: string): string[] =>

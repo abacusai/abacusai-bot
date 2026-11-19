@@ -1,0 +1,42 @@
+<style>
+  .kt-line { font-size: calc(var(--u) * var(--t-display)); font-weight: 900; line-height: 1.02; letter-spacing: -.035em; max-height: calc(var(--u) * 62); text-wrap: balance; }
+  .size-9x16 .kt-line { font-size: calc(var(--u) * 15.5); max-height: calc(var(--u) * 125); }
+  /* The whole line leans in slowly while it is on screen: a camera push. */
+  .kt-push { width: 100%; animation: kt-push calc(var(--len) + .5s) linear var(--d) both; }
+  .scene.last .kt-push { animation-duration: 6s; }
+  @keyframes kt-push { from { transform: scale(.97); } to { transform: scale(1.04); } }
+  .kt-word {
+    display: inline-block;
+    animation: kt-word .5s var(--ease-out) var(--wd) both;
+  }
+  @keyframes kt-word {
+    from { opacity: 0; transform: translateY(.4em) scale(.9); filter: blur(calc(var(--u) * .8)); }
+    to { opacity: 1; transform: none; filter: none; }
+  }
+  /* A number or a price: the accent, on a marker that sweeps in under it. */
+  /* Ink until the marker is under it, then paper: never dark on the dark background. */
+  .kt-hl {
+    position: relative; isolation: isolate; padding: 0 .12em; margin: 0 -.04em;
+    animation: kt-word .5s var(--ease-out) var(--wd) both, kt-hl-ink .2s linear calc(var(--wd) + .42s) both;
+  }
+  @keyframes kt-hl-ink { from { color: var(--ink); } to { color: var(--paper); } }
+  .kt-hl::before {
+    content: ""; position: absolute; z-index: -1; inset: .06em 0 .02em; border-radius: .12em;
+    background: var(--gradient); transform-origin: left center;
+    animation: wipe .45s var(--ease-in-out) calc(var(--wd) + .15s) both;
+  }
+  .kt-closing { font-size: calc(var(--u) * var(--t-h1)); }
+  .kt-tick {
+    position: absolute; left: var(--pad); right: var(--pad); bottom: calc(var(--u) * 6); height: calc(var(--u) * .6);
+    border-radius: 99px; background: color-mix(in srgb, var(--ink) 12%, transparent); overflow: hidden; z-index: 2;
+  }
+  .kt-tick > i { display: block; height: 100%; background: var(--gradient); transform-origin: left center; animation: wipe var(--total) linear both; }
+</style>
+<div class="kt-tick"><i></i></div>
+{{#lines}}<div class="scene{{#last}} last{{/last}}" style="--d:{{d}}s;--len:{{len}}s">
+  <div class="kt-push"><p class="kt-line" dir="auto" data-fit>{{#words}}<span class="kt-word{{#hl}} kt-hl{{/hl}}" style="--wd:{{wd}}s">{{w}}</span> {{/words}}</p></div>
+</div>
+{{/lines}}
+{{#closing}}<div class="scene last" style="--d:{{closingAt}}s">
+  <p class="kt-line kt-closing gradient-text pop" dir="auto" data-fit>{{closing}}</p>
+</div>{{/closing}}

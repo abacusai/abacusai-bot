@@ -501,6 +501,7 @@ describe("sub-agent tools", () => {
     "document",
     "ppt",
     "design",
+    "motion",
     "browser_task",
   ];
 
