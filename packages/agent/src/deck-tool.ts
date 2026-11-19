@@ -222,6 +222,22 @@ export function buildDeckTool(
           ? params.slides
           : undefined;
       const wanted = asked ?? 5;
+      // A template deck that printed is done for this turn, as on the design
+      // system: no polishing passes (deck-speed.md). Checked before
+      // the deck row opens: a refused call showed a row that never finished.
+      const turn = turnOf(context);
+      if (passedThisTurn(turn, "deck"))
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "This deck already printed in this turn: it is done. Hand it over with present_deliverable now. Call ppt again only when the user asks for a change.",
+            },
+          ],
+          details: { stoppedBy: "passed" },
+          isError: true,
+        };
+
       const subtaskId = `deck-${Date.now()}-${++counter}`;
       emit(
         tagEvent(
@@ -266,21 +282,6 @@ export function buildDeckTool(
           (await madeByDesignSystem(outputPath)))
       )
         return await plain();
-
-      // A template deck that printed is done for this turn, as on the design
-      // system: no polishing passes (deck-speed.md).
-      const turn = turnOf(context);
-      if (passedThisTurn(turn, "deck"))
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: "This deck already printed in this turn: it is done. Hand it over with present_deliverable now. Call ppt again only when the user asks for a change.",
-            },
-          ],
-          details: { stoppedBy: "passed" },
-          isError: true,
-        };
 
       let result;
       let status: "completed" | "failed" = "failed";
