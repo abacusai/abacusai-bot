@@ -1,0 +1,74 @@
+/* letter designs: html[data-design="letter-…"] over the letter markup of
+   guide.md (.letter: .from, .to, .date, p, .subject, .closing, .signature).
+   The sender's first line is their name (.from::first-line); nothing here
+   adds words, so a letter in any language keeps its own. */
+
+/* ------------------------------------------------------------------ */
+/* Letterhead: a formal business letter. The sender as a navy          */
+/* letterhead plate with a gold hem and a striped edge, Manrope text,  */
+/* the subject on a gold rule, the signature in a hand.                 */
+/* ------------------------------------------------------------------ */
+html[data-design="letter-letterhead"]:root {
+  --accent: #1d3557; --accent-soft: #e8edf4; --ink: #1b2330; --muted: #5a6372; --line: #d6dbe3;
+  --gold: #c49a2c;
+  --text: "Manrope", var(--sans);
+  --hand: "Caveat", var(--sans);
+}
+html[data-design="letter-letterhead"] .letter { font-family: var(--text); font-size: calc(10.75pt * var(--fit)); line-height: 1.62; }
+html[data-design="letter-letterhead"] .letter .from {
+  position: relative; font-family: var(--text); background: var(--accent); color: #dfe6f0; border: 0; border-bottom: 1.6mm solid var(--gold);
+  padding: 8mm 46mm 7mm 9mm; margin: 0 0 11mm; font-size: calc(9.5pt * var(--fit)); line-height: 1.55;
+  background-image: repeating-linear-gradient(-55deg, rgba(255, 255, 255, 0.08) 0 1.6mm, transparent 1.6mm 4.4mm);
+  background-size: 34mm 100%; background-position: right top; background-repeat: no-repeat;
+}
+html[data-design="letter-letterhead"] .letter .from::first-line { font-size: calc(21pt * var(--fit)); font-weight: 800; color: #fff; letter-spacing: -0.01em; line-height: 1.5; }
+html[data-design="letter-letterhead"] .letter .to { margin-bottom: 7mm; }
+html[data-design="letter-letterhead"] .letter .to::first-line { font-weight: 700; }
+html[data-design="letter-letterhead"] .letter .date { text-align: right; color: var(--muted); font-weight: 600; margin: 0 0 7mm; }
+html[data-design="letter-letterhead"] .letter .subject { font-family: var(--text); font-weight: 800; color: var(--accent); border-left: 1.2mm solid var(--gold); padding: 0.5mm 0 0.5mm 4mm; margin: 2mm 0 6mm; }
+html[data-design="letter-letterhead"] .letter p { margin: 0 0 4mm; }
+html[data-design="letter-letterhead"] .letter .closing { margin-top: 6mm; }
+html[data-design="letter-letterhead"] .letter .signature { font-family: var(--hand); font-weight: 700; font-size: calc(24pt * var(--fit)); line-height: 1.1; color: var(--accent); margin-top: 6mm; padding-top: 0; }
+
+/* ------------------------------------------------------------------ */
+/* Engraved: a classic personal letter. The sender's name centred in   */
+/* spaced Cormorant capitals over a dot-and-rule ornament, Lora text,  */
+/* claret for the subject, justified paragraphs.                        */
+/* ------------------------------------------------------------------ */
+html[data-design="letter-engraved"]:root {
+  --accent: #7a1f2b; --accent-soft: #f6e9ea; --ink: #221e1c; --muted: #5f5852; --line: #d8d0c6;
+  --display: "Cormorant Garamond", var(--serif);
+  --text: "Lora", var(--serif);
+}
+html[data-design="letter-engraved"] .letter { font-family: var(--text); font-size: calc(10.75pt * var(--fit)); line-height: 1.62; }
+html[data-design="letter-engraved"] .letter .from { font-family: var(--text); text-align: center; color: var(--muted); font-size: calc(9.5pt * var(--fit)); letter-spacing: 0.05em; line-height: 1.6; border: 0; padding: 2mm 0 0; margin: 0 0 11mm; }
+html[data-design="letter-engraved"] .letter .from::first-line { font-family: var(--display); font-size: calc(26pt * var(--fit)); font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); line-height: 1.5; }
+html[data-design="letter-engraved"] .letter .from::after { content: ""; display: block; height: 4mm; margin: 5mm auto 0; width: 70mm; background: radial-gradient(circle, var(--accent) 0 1.1mm, #fff 1.2mm 3mm, transparent 3.1mm) center / 8mm 4mm no-repeat, linear-gradient(var(--accent), var(--accent)) center / 100% 0.5pt no-repeat; }
+html[data-design="letter-engraved"] .letter .to { margin-bottom: 6mm; }
+html[data-design="letter-engraved"] .letter .date { text-align: right; margin: 0 0 7mm; color: var(--muted); }
+html[data-design="letter-engraved"] .letter .subject { font-family: var(--text); font-weight: 600; color: var(--accent); text-align: center; border-top: 0.5pt solid var(--line); border-bottom: 0.5pt solid var(--line); padding: 2mm 6mm; margin: 2mm 0 6mm; }
+html[data-design="letter-engraved"] .letter p { margin: 0 0 4mm; }
+html[data-design="letter-engraved"] .letter .signature { font-family: var(--display); font-size: calc(19pt * var(--fit)); font-weight: 400; color: var(--ink); margin-top: 14mm; }
+
+/* ------------------------------------------------------------------ */
+/* Margin: a modern minimal letter. A hairline down the left with a    */
+/* coral bar at its head, the name in Space Grotesk, the address and   */
+/* date in monospace, DM Sans text.                                    */
+/* ------------------------------------------------------------------ */
+html[data-design="letter-margin"]:root {
+  --accent: #e4572e; --accent-soft: #fdebe5; --ink: #16181d; --muted: #646a74; --line: #d3d7dd;
+  --display: "Space Grotesk", var(--sans);
+  --text: "DM Sans", var(--sans);
+  --label: "JetBrains Mono", var(--mono);
+}
+html[data-design="letter-margin"] .letter { position: relative; font-family: var(--text); font-size: calc(10.75pt * var(--fit)); line-height: 1.65; padding-left: 15mm; }
+html[data-design="letter-margin"] .letter::before { content: ""; position: absolute; left: 1mm; top: 0; bottom: 0; width: 0.75pt; background: var(--line); }
+html[data-design="letter-margin"] .letter::after { content: ""; position: absolute; left: 0; top: 0; width: 2.2mm; height: 30mm; background: var(--accent); }
+html[data-design="letter-margin"] .letter .from { font-family: var(--label); font-size: calc(9pt * var(--fit)); color: var(--muted); line-height: 1.7; border: 0; padding: 0; margin: 0 0 14mm; }
+html[data-design="letter-margin"] .letter .from::first-line { font-family: var(--display); font-size: calc(24pt * var(--fit)); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); line-height: 1.45; }
+html[data-design="letter-margin"] .letter .to { margin-bottom: 6mm; }
+html[data-design="letter-margin"] .letter .date { font-family: var(--label); font-size: calc(9.5pt * var(--fit)); color: var(--accent); letter-spacing: 0.04em; margin: 0 0 8mm; }
+html[data-design="letter-margin"] .letter .subject { font-family: var(--display); font-weight: 700; font-size: calc(12.5pt * var(--fit)); line-height: 1.4; color: var(--ink); margin: 2mm 0 6mm; }
+html[data-design="letter-margin"] .letter p { margin: 0 0 4mm; }
+html[data-design="letter-margin"] .letter .signature { font-family: var(--display); font-weight: 600; font-size: calc(13pt * var(--fit)); margin-top: 14mm; }
+html[data-design="letter-margin"] .letter .signature::before { content: ""; display: block; width: 10mm; height: 1.2mm; background: var(--accent); margin-bottom: 2.5mm; }

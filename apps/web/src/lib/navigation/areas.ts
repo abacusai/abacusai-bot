@@ -49,6 +49,7 @@ export const SETTINGS_PAGES = [
 export type SettingsPageId = (typeof SETTINGS_PAGES)[number];
 
 export const LIBRARY_PAGES = [
+  "templates",
   "connectors",
   "messaging",
   "mcp",

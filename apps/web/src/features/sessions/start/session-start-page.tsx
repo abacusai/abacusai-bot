@@ -152,6 +152,7 @@ export const SessionStartPage = ({
   handoff,
   prefill,
   hintHeld = false,
+  templates,
 }: {
   workspaceId: string | null;
   renderComposer: (binding: StartComposerBinding) => ReactNode;
@@ -159,6 +160,11 @@ export const SessionStartPage = ({
   prefill: (id: string, text: string) => void;
   /** Another guide holds the screen (the welcome tour): the hint at Send waits. */
   hintHeld?: boolean;
+  /** "Make a deck" / "Make a document", from the templates feature (the route composes it). */
+  templates?: (props: {
+    disabled: boolean;
+    onPick: (ask: string) => void;
+  }) => ReactNode;
 }) => {
   const { t, i18n } = useTranslation();
   const db = useDb();
@@ -526,6 +532,20 @@ export const SessionStartPage = ({
               </Button>
             ))}
           </div>
+          {templates?.({
+            disabled: pending,
+            onPick: (ask) => {
+              setError(null);
+              prefill(id, ask);
+              requestAnimationFrame(() =>
+                document
+                  .querySelector<HTMLTextAreaElement>(
+                    '[data-slot="composer"] textarea'
+                  )
+                  ?.focus()
+              );
+            },
+          })}
           {codingProject != null && (
             <div className="mt-4">
               <CodingRoutinesRow

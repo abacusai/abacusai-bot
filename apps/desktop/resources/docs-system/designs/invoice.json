@@ -1,0 +1,17 @@
+[
+  {
+    "id": "invoice-banner",
+    "name": "Banner",
+    "blurb": "a cobalt header band, a dark table header and the total on a coloured bar; confident business invoices and quotes"
+  },
+  {
+    "id": "invoice-ledger",
+    "name": "Tally",
+    "blurb": "hairlines, monospaced figures and a double-ruled total; precise, accountant-style invoices for consultants and freelancers"
+  },
+  {
+    "id": "invoice-studio",
+    "name": "Studio",
+    "blurb": "a cream header with a terracotta sun, a soft serif title and rounded cards; warm invoices for studios, makers and small businesses"
+  }
+]

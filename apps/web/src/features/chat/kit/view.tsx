@@ -6,10 +6,17 @@
 import "../chat.css";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useSelector } from "@tanstack/react-store";
-import { useEffect, useEffectEvent, useState, type ComponentType } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
+import { RowSendContext } from "#renderer/components/file-preview/row-send";
 import {
   draftStore,
   updateDraft,
@@ -34,7 +41,15 @@ import {
 import { MessageComponentProvider } from "./layout";
 import { KitPartsProvider } from "./message-scope";
 import { useModelSwitchGuard } from "./model-switch-guard";
+import { useSendAsUser } from "./send-as-user";
 import { BotUI, SessionUI } from "./ui";
+
+/** File rows in this chat can send as the user ("Try another look" on a deck). */
+const RowSendBridge = ({ children }: { children: ReactNode }) => (
+  <RowSendContext.Provider value={useSendAsUser()}>
+    {children}
+  </RowSendContext.Provider>
+);
 
 export interface ChatViewProps {
   threadId: string;
@@ -259,7 +274,9 @@ export const ChatView = (props: ChatViewProps) => {
             </p>
           )}
           {ready ? (
-            <Kit key={threadId} skin={skin} />
+            <RowSendBridge>
+              <Kit key={threadId} skin={skin} />
+            </RowSendBridge>
           ) : phase === "error" ? (
             <Failed
               skin={skin}

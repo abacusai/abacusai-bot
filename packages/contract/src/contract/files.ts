@@ -75,6 +75,32 @@ export const files = {
   listDirectory: query
     .input(v.object({ path: v.optional(v.string()) }))
     .output(type<DirectoryListing>()),
+  /** A finished document printed again in another look (no model call). */
+  relook: mutation
+    .input(
+      v.object({
+        path: v.string(),
+        look: v.optional(
+          v.picklist([
+            "classic",
+            "editorial",
+            "bold",
+            "minimal",
+            "warm",
+            "midnight",
+          ])
+        ),
+        /** A design of the document's type, or "classic" for its own layout. */
+        design: v.optional(v.pipe(v.string(), v.maxLength(64))),
+      })
+    )
+    .output(type<{ path: string }>()),
+  /** The designs a finished document can switch to (its type's). */
+  designs: query
+    .input(v.object({ path: v.string() }))
+    .output(
+      type<{ type: string; designs: Array<{ id: string; name: string }> }>()
+    ),
   mkdir: mutation
     .input(
       v.object({ path: v.string(), name: v.pipe(v.string(), v.nonEmpty()) })

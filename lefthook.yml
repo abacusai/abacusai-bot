@@ -5,7 +5,7 @@ pre-commit:
       run: pnpm run gitleaks git --staged --redact --no-banner
     format:
       glob: "*.{js,jsx,mjs,cjs,ts,tsx,json,yml,yaml,md,css}"
-      run: pnpm exec oxfmt --check {staged_files}
+      run: pnpm exec oxfmt --check --no-error-on-unmatched-pattern {staged_files}
     lint:
       glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
       run: pnpm exec oxlint {staged_files}

@@ -45,6 +45,7 @@ import { Route as ShelllibraryLibraryConnectorsRouteImport } from "./routes/_she
 import { Route as ShelllibraryLibraryMcpRouteImport } from "./routes/_shell/(library)/library.mcp"
 import { Route as ShelllibraryLibraryMessagingRouteImport } from "./routes/_shell/(library)/library.messaging"
 import { Route as ShelllibraryLibrarySkillsRouteImport } from "./routes/_shell/(library)/library.skills"
+import { Route as ShelllibraryLibraryTemplatesRouteImport } from "./routes/_shell/(library)/library.templates"
 import { Route as ShellroutinesRoutinesRoutineIdRouteImport } from "./routes/_shell/(routines)/routines.$routineId"
 import { Route as ShellroutinesRoutinesListRouteImport } from "./routes/_shell/(routines)/routines._list"
 import { Route as ShellsessionsSessionsIndexRouteImport } from "./routes/_shell/(sessions)/sessions.index"
@@ -249,6 +250,12 @@ const ShelllibraryLibrarySkillsRoute =
     path: "/skills",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
+const ShelllibraryLibraryTemplatesRoute =
+  ShelllibraryLibraryTemplatesRouteImport.update({
+    id: "/templates",
+    path: "/templates",
+    getParentRoute: () => ShelllibraryLibraryRoute,
+  } as any)
 const ShellroutinesRoutinesRoutineIdRoute =
   ShellroutinesRoutinesRoutineIdRouteImport.update({
     id: "/$routineId",
@@ -388,6 +395,7 @@ export interface FileRoutesByFullPath {
   "/library/mcp": typeof ShelllibraryLibraryMcpRoute
   "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/library/skills": typeof ShelllibraryLibrarySkillsRoute
+  "/library/templates": typeof ShelllibraryLibraryTemplatesRoute
   "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
   "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/sessions/new": typeof ShellsessionsSessionsNewRoute
@@ -435,6 +443,7 @@ export interface FileRoutesByTo {
   "/library/mcp": typeof ShelllibraryLibraryMcpRoute
   "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/library/skills": typeof ShelllibraryLibrarySkillsRoute
+  "/library/templates": typeof ShelllibraryLibraryTemplatesRoute
   "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
   "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/sessions/new": typeof ShellsessionsSessionsNewRoute
@@ -490,6 +499,7 @@ export interface FileRoutesById {
   "/_shell/(library)/library/mcp": typeof ShelllibraryLibraryMcpRoute
   "/_shell/(library)/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/_shell/(library)/library/skills": typeof ShelllibraryLibrarySkillsRoute
+  "/_shell/(library)/library/templates": typeof ShelllibraryLibraryTemplatesRoute
   "/_shell/(routines)/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
   "/_shell/(routines)/routines/_list": typeof ShellroutinesRoutinesListRouteWithChildren
   "/_shell/(sessions)/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | "/library/mcp"
     | "/library/messaging"
     | "/library/skills"
+    | "/library/templates"
     | "/routines/$routineId"
     | "/sessions/$sessionId"
     | "/sessions/new"
@@ -593,6 +604,7 @@ export interface FileRouteTypes {
     | "/library/mcp"
     | "/library/messaging"
     | "/library/skills"
+    | "/library/templates"
     | "/routines/$routineId"
     | "/sessions/$sessionId"
     | "/sessions/new"
@@ -647,6 +659,7 @@ export interface FileRouteTypes {
     | "/_shell/(library)/library/mcp"
     | "/_shell/(library)/library/messaging"
     | "/_shell/(library)/library/skills"
+    | "/_shell/(library)/library/templates"
     | "/_shell/(routines)/routines/$routineId"
     | "/_shell/(routines)/routines/_list"
     | "/_shell/(sessions)/sessions/$sessionId"
@@ -929,6 +942,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShelllibraryLibrarySkillsRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
+    "/_shell/(library)/library/templates": {
+      id: "/_shell/(library)/library/templates"
+      path: "/templates"
+      fullPath: "/library/templates"
+      preLoaderRoute: typeof ShelllibraryLibraryTemplatesRouteImport
+      parentRoute: typeof ShelllibraryLibraryRoute
+    }
     "/_shell/(routines)/routines/$routineId": {
       id: "/_shell/(routines)/routines/$routineId"
       path: "/$routineId"
@@ -1178,6 +1198,7 @@ interface ShelllibraryLibraryRouteChildren {
   ShelllibraryLibraryMcpRoute: typeof ShelllibraryLibraryMcpRoute
   ShelllibraryLibraryMessagingRoute: typeof ShelllibraryLibraryMessagingRoute
   ShelllibraryLibrarySkillsRoute: typeof ShelllibraryLibrarySkillsRoute
+  ShelllibraryLibraryTemplatesRoute: typeof ShelllibraryLibraryTemplatesRoute
   ShelllibraryLibraryIndexRoute: typeof ShelllibraryLibraryIndexRoute
   ShelllibraryLibraryToolsToolsetIdRoute: typeof ShelllibraryLibraryToolsToolsetIdRoute
   ShelllibraryLibraryToolsIndexRoute: typeof ShelllibraryLibraryToolsIndexRoute
@@ -1188,6 +1209,7 @@ const ShelllibraryLibraryRouteChildren: ShelllibraryLibraryRouteChildren = {
   ShelllibraryLibraryMcpRoute: ShelllibraryLibraryMcpRoute,
   ShelllibraryLibraryMessagingRoute: ShelllibraryLibraryMessagingRoute,
   ShelllibraryLibrarySkillsRoute: ShelllibraryLibrarySkillsRoute,
+  ShelllibraryLibraryTemplatesRoute: ShelllibraryLibraryTemplatesRoute,
   ShelllibraryLibraryIndexRoute: ShelllibraryLibraryIndexRoute,
   ShelllibraryLibraryToolsToolsetIdRoute:
     ShelllibraryLibraryToolsToolsetIdRoute,

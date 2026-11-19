@@ -3,10 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <title>Soft Editorial — Slide Template</title>
+  <link rel="stylesheet" href="fonts.css">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="deck-stage.js"></script>
 <style>
   :root {
@@ -29,6 +27,7 @@
     color: var(--ink);
     overflow: hidden;
     position: relative;
+    width: 1920px; height: 1080px;
   }
 
   /* Header / footer chrome shared across slides */
@@ -51,6 +50,11 @@
     
     color: var(--ink-soft);
   }
+  /* Slide numbers count the printed slides, so a picked subset stays in order. */
+  deck-stage { counter-reset: slide; }
+  section.slide { counter-increment: slide; }
+  .pagedot::before { content: counter(slide, lower-roman); }
+  .s-quote .qmark::before { content: "\201C"; }
   .pagedot {
     position: absolute;
     right: 80px; top: 60px;
@@ -113,7 +117,7 @@
   }
   .s-cover h1 em { font-weight: 400; }
   .s-cover .lede {
-    font-size: 30px;
+    font-size: 34px;
     line-height: 1.4;
     max-width: 60ch;
     color: var(--ink-soft);
@@ -155,7 +159,7 @@
     right: 80px; top: 200px; width: 760px;
   }
   .s-foreword .col-r p {
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.55;
     margin-bottom: 22px;
     color: var(--ink-soft);
@@ -199,7 +203,7 @@
     margin-top: 16px;
   }
   .s-method .step p {
-    font-size: 24px;
+    font-size: 29px;
     line-height: 1.45;
     color: var(--ink-soft);
   }
@@ -244,13 +248,13 @@
     line-height: 1.1;
   }
   .s-insights .card p {
-    font-size: 24px;
+    font-size: 30px;
     line-height: 1.45;
     max-width: 26ch;
   }
 
   /* ============== 5. A CLOSER LOOK (full-bleed) ============= */
-  .s-closer { background: var(--pink); }
+  section.slide.s-closer { background: var(--pink); }
   .s-closer .eyebrow,
   .s-closer .pagedot,
   .s-closer .footer { color: var(--ink); }
@@ -279,7 +283,7 @@
   }
   .s-closer h2 em { font-weight: 400; }
   .s-closer p {
-    font-size: 28px;
+    font-size: 32px;
     line-height: 1.5;
     max-width: 56ch;
     margin: 0 auto;
@@ -309,7 +313,7 @@
   }
   .s-numbers .stat .v em { font-weight: 400; }
   .s-numbers .stat .lab {
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.4;
     color: var(--ink);
     max-width: 28ch;
@@ -349,14 +353,14 @@
     margin-top: 48px;
     font-family: "Work Sans", sans-serif;
     font-weight: 500;
-    font-size: 24px;
+    font-size: 27px;
     color: var(--ink);
   }
   .s-quote .attr .role {
     font-family: "Cormorant Garamond", serif;
     
     font-weight: 400;
-    font-size: 24px;
+    font-size: 27px;
     color: var(--ink-soft);
     display: block;
     margin-top: 4px;
@@ -389,7 +393,7 @@
   }
   .s-next .panel.l h2 em { font-weight: 400; }
   .s-next .panel.l p {
-    font-size: 24px;
+    font-size: 30px;
     line-height: 1.5;
     color: var(--ink-soft);
     max-width: 36ch;
@@ -425,7 +429,7 @@
     margin-bottom: 4px;
   }
   .s-next .item p {
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.4;
     color: var(--ink);
     opacity: 0.85;
@@ -527,7 +531,7 @@
   }
   .s-chart .left h2 em { font-weight: 400; }
   .s-chart .left p {
-    font-size: 24px; line-height: 1.5; color: var(--ink-soft);
+    font-size: 27px; line-height: 1.5; color: var(--ink-soft);
   }
   .s-chart .left .legend {
     display: flex; flex-direction: column; gap: 10px;
@@ -535,7 +539,7 @@
   }
   .s-chart .left .legend .li {
     display: flex; align-items: center; gap: 14px;
-    font-size: 24px; color: var(--ink);
+    font-size: 27px; color: var(--ink);
   }
   .s-chart .left .legend .li i {
     width: 28px; height: 12px; border-radius: 6px;
@@ -552,7 +556,7 @@
   .s-chart .right .yhead {
     font-family: "Cormorant Garamond", serif;
     
-    font-size: 24px;
+    font-size: 27px;
     color: var(--ink-soft);
     margin-bottom: 8px;
   }
@@ -569,14 +573,14 @@
   .s-chart .right .yticks {
     position: absolute; left: -56px; top: 0; bottom: 0;
     display: flex; flex-direction: column; justify-content: space-between;
-    font-size: 24px; color: var(--ink-soft);
+    font-size: 27px; color: var(--ink-soft);
     font-family: "Cormorant Garamond", serif; 
   }
   .s-chart .right svg { width: 100%; height: 100%; display: block; position: absolute; inset: 12px 12px 0 12px; overflow: visible; }
   .s-chart .right .xticks {
     display: flex; justify-content: space-between;
     margin-top: 12px;
-    font-size: 24px; color: var(--ink-soft);
+    font-size: 27px; color: var(--ink-soft);
     font-family: "Cormorant Garamond", serif; 
   }
 
@@ -629,7 +633,7 @@
     line-height: 1.05;
   }
   .s-process .node p {
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.4;
     color: var(--ink-soft);
   }
@@ -656,7 +660,7 @@
     display: flex; justify-content: space-between; align-items: center;
     font-family: "Cormorant Garamond", serif;
     
-    font-size: 24px;
+    font-size: 27px;
     color: var(--ink);
   }
 
@@ -699,7 +703,7 @@
   .s-matrix .table .cell {
     padding: 22px 24px;
     display: flex; align-items: flex-start; gap: 12px;
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.4;
     color: var(--ink);
     border-bottom: 1px dashed rgba(42,36,27,.18);
@@ -726,7 +730,7 @@
     display: inline-block;
     border-radius: 999px;
     padding: 4px 14px;
-    font-size: 24px;
+    font-size: 27px;
     font-weight: 500;
     line-height: 1.3;
     margin-bottom: 4px;
@@ -798,7 +802,7 @@
 <deck-stage width="1920" height="1080">
 
   <!-- 1. COVER -->
-  <section class="slide s-cover" data-label="01 Cover">
+  <section class="slide s-cover" data-label="title: a small tag, a kicker line, the title, a two-line summary, a date and the series name">
     <div class="eyebrow">Field Notes</div>
     <div class="swatches" aria-hidden="true">
       <i style="background:var(--pink)"></i>
@@ -817,9 +821,9 @@
   </section>
 
   <!-- 2. FOREWORD -->
-  <section class="slide s-foreword" data-label="02 Foreword">
+  <section class="slide s-foreword" data-label="introduction: a one-sentence opener in large serif (its first letter becomes a drop cap) beside three short paragraphs and a sign-off">
     <div class="eyebrow">Foreword</div>
-    <div class="pagedot">ii</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="col-l">
       <p class="opener">We spent eight weeks listening, and what we heard surprised us in the kindest way.</p>
     </div>
@@ -836,9 +840,9 @@
   </section>
 
   <!-- 3. THE METHOD -->
-  <section class="slide s-method" data-label="03 The Method">
+  <section class="slide s-method" data-label="method: four numbered steps, each a one-word title and a sentence">
     <div class="eyebrow">The Method</div>
-    <div class="pagedot">iii</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="grid">
       <div class="step pink">
         <div class="n">i.</div>
@@ -876,9 +880,9 @@
   </section>
 
   <!-- 4. INSIGHTS (reference) -->
-  <section class="slide s-insights" data-label="04 Insights">
+  <section class="slide s-insights" data-label="three insights: three cards, each a short title, a one-line headline and two sentences">
     <div class="eyebrow">Insights</div>
-    <div class="pagedot">iv</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="row">
       <div class="card pink">
         <div class="head">
@@ -909,9 +913,9 @@
   </section>
 
   <!-- 5. A CLOSER LOOK (full bleed) -->
-  <section class="slide s-closer" data-label="05 A Closer Look">
+  <section class="slide s-closer" data-label="statement: a small marker line, one big short statement and a sentence or two under it, on pink">
     <div class="eyebrow">A closer look · 1 of 3</div>
-    <div class="pagedot">v</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="center">
       <div class="marker">on insight #1</div>
       <h2>Trust is the onboarding.</h2>
@@ -924,9 +928,9 @@
   </section>
 
   <!-- 6. BY THE NUMBERS -->
-  <section class="slide s-numbers" data-label="06 By the Numbers">
+  <section class="slide s-numbers" data-label="three key figures: one big figure with a sentence, and two smaller figures each with a short label">
     <div class="eyebrow">By the numbers</div>
-    <div class="pagedot">vi</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="grid">
       <div class="stat a">
         <div class="lab serif-it" style="font-size:30px">of new accounts open the third email,<br/>up from 41% last quarter.</div>
@@ -948,11 +952,11 @@
   </section>
 
   <!-- 7. IN THEIR WORDS -->
-  <section class="slide s-quote" data-label="07 In Their Words">
+  <section class="slide s-quote" data-label="quote: a customer or source quotation of one or two sentences, who said it and where they are from">
     <div class="eyebrow">In their words</div>
-    <div class="pagedot">vii</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="center">
-      <div class="qmark">"</div>
+      <div class="qmark" aria-hidden="true"></div>
       <blockquote>I did not need a better product. I needed it to behave like it remembered me.</blockquote>
       <div class="attr">
         Renée, three-year customer
@@ -966,15 +970,15 @@
   </section>
 
   <!-- 8. WHAT WE'LL DO NEXT -->
-  <section class="slide s-next" data-label="08 What's Next">
+  <section class="slide s-next" data-label="next steps: a heading and a sentence, beside three numbered actions each a title and a line with owner and date">
     <div class="eyebrow">What we'll do next</div>
-    <div class="pagedot">viii</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="grid">
       <div class="panel l">
-        <h2>Three small moves,<br/>before the next debrief.</h2>
+        <h2>Three small moves, before the next debrief.</h2>
         <p>Each one is small enough to ship inside a sprint, and structured so we can tell, six weeks from now, whether it moved the dial.</p>
       </div>
-      <div class="panel r">
+      <div class="panel r" data-deck-grow>
         <div class="item pink">
           <div class="n">i.</div>
           <div>
@@ -1005,9 +1009,9 @@
   </section>
 
   <!-- 9. CONSULT -->
-  <section class="slide s-consult" data-label="09 Findings · Detail">
+  <section class="slide s-consult" data-label="findings in detail: a one-sentence headline, then three columns (what we found, why it matters, what to do), each with a heading, paragraphs or three bullet points and a source line">
     <div class="eyebrow">Findings · Detail</div>
-    <div class="pagedot">ix</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="action">
       <div class="tag">Action title</div>
       <h2>The trust gap is built in the first 72 hours, not the first 7 days — and the cost compounds for the rest of the lifecycle.</h2>
@@ -1047,11 +1051,11 @@
   </section>
 
   <!-- 10. CHART -->
-  <section class="slide s-chart" data-label="10 Retention Curve">
+  <section class="slide s-chart" data-label="line chart" data-deck-skip>
     <div class="eyebrow">Retention, by cohort</div>
-    <div class="pagedot">x</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="left">
-      <h2>The curve bends<br/>around day three.</h2>
+      <h2>The curve bends around day three.</h2>
       <p>Cohorts that received a written welcome and a human reply within 24 hours retain at roughly 2× the rate of the templated cohort, and the gap holds steady for the first ninety days.</p>
       <div class="legend">
         <div class="li"><i style="background:var(--pink)"></i> Templated welcome (control)</div>
@@ -1089,11 +1093,11 @@
   </section>
 
   <!-- 11. PROCESS -->
-  <section class="slide s-process" data-label="11 Process">
+  <section class="slide s-process" data-label="process: a heading and a sentence, five numbered steps each a one-word title and a sentence, and a five-part timeline under them">
     <div class="eyebrow">How we'll work</div>
-    <div class="pagedot">xi</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="head">
-      <h2>From insight<br/>to shipped change.</h2>
+      <h2>From insight to shipped change.</h2>
       <div class="sub">A five-step path each pilot follows, end to end, before it is allowed to graduate to the default experience.</div>
     </div>
     <div class="flow">
@@ -1137,11 +1141,11 @@
   </section>
 
   <!-- 12. COMPARISON MATRIX -->
-  <section class="slide s-matrix" data-label="12 Comparison">
+  <section class="slide s-matrix" data-label="comparison table: a heading and a sentence, three options as columns scored on four rows, each score a short tag">
     <div class="eyebrow">The three pilots, side by side</div>
-    <div class="pagedot">xii</div>
+    <div class="pagedot" aria-hidden="true"></div>
     <div class="head">
-      <h2>Where each pilot<br/>earns its keep.</h2>
+      <h2>Where each pilot earns its keep.</h2>
       <div class="sub">Scored against the four levers that matter most this cycle. We will only carry forward bets that win on at least two.</div>
     </div>
     <div class="table">
@@ -1176,6 +1180,20 @@
     </div>
   </section>
 
+  <!-- 13. CLOSING -->
+  <section class="slide s-closer s-end" data-label="closing: a small tag, a short line, a thank-you or call to action and a sentence with a contact or next step, on pink">
+    <div class="eyebrow">Thank you</div>
+    <div class="pagedot" aria-hidden="true"></div>
+    <div class="center">
+      <div class="marker">questions, stories, objections</div>
+      <h2>Tell us what we missed.</h2>
+      <p>The research desk reads every reply. Write to us before the next debrief and we will fold what you send into volume four.</p>
+    </div>
+    <div class="footer">
+      <span>April 29, 2026</span>
+      <span>Field Notes · Vol. III</span>
+    </div>
+  </section>
   <!-- 13. DESIGN SYSTEM -->
 </deck-stage>
 

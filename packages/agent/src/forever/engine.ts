@@ -49,6 +49,8 @@ import {
   setCurrentMode,
   setUnattendedPolicy,
 } from "../current-mode.js";
+import { deckToolEnabled } from "../deck-tool.js";
+import { documentToolEnabled } from "../document-tool.js";
 import { EmptyReplies } from "../empty-reply.js";
 import { tagEvent, type EventMeta } from "../event-meta.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
@@ -171,6 +173,7 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "../reply-language.js";
+import { requestSources } from "../request-facts.js";
 import { createResourceLoader } from "../resource-loader.js";
 import { mediaCheckFrom } from "../send-media-tool.js";
 import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
@@ -179,6 +182,7 @@ import { conversationSessionManager } from "../session-file.js";
 import type { TurnHandle } from "../session.js";
 import {
   capRetriesWhileRouting,
+  componentsPrompt,
   endedOnProviderError,
   mcpPrompt,
   mcpRosterFingerprint,
@@ -225,6 +229,7 @@ import {
 } from "../user-language.js";
 import { isAppTurnForPerson, ownWords } from "../user-text.js";
 import webTools from "../web/tools.js";
+import { botComponentExtensions, botComponentTools } from "./components.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
 import { endTurnOnClosedReply } from "./reply-end.js";
 import { callsTool, TurnReply } from "./turn-reply.js";
@@ -570,6 +575,15 @@ export class ForeverEngine {
     this.mcp.onStatusChange = () => this.emitMcpServers();
 
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
+    // The document and deck components, as in the desktop chat: without them
+    // a bot hand-builds every PDF and deck, and none of the templates apply.
+    const components =
+      this.profile.components === true
+        ? [
+            ...(documentToolEnabled() ? ["document"] : []),
+            ...(deckToolEnabled() ? ["ppt"] : []),
+          ]
+        : [];
     // On the router a failing model is rotated away from, not retried thrice.
     capRetriesWhileRouting(settingsManager, () => this.openLlmActive);
 
@@ -591,6 +605,7 @@ export class ForeverEngine {
       systemPromptOverride: () => basePrompt("builtin"),
       appendSystemPrompt: [
         ...this.profile.systemPrompt(),
+        components.length > 0 ? componentsPrompt(new Set(components)) : null,
         githubPrompt(),
         windowsShellPrompt(),
         scriptRuntimesPrompt(),
@@ -675,6 +690,7 @@ export class ForeverEngine {
           name: "abacusai-bot-background",
           factory: background as unknown as (pi: ExtensionAPI) => void,
         },
+        ...botComponentExtensions(components),
         // Observes compaction so the flush budget renews per cycle.
         {
           name: "abacusai-bot-bot-context",
@@ -748,9 +764,26 @@ export class ForeverEngine {
           ]
         : [];
 
+    // Like the desktop chat's: a run takes the model the chat is on when it
+    // starts, not the one the engine started with.
+    const componentTools = botComponentTools(
+      components,
+      {
+        cwd: this.options.cwd,
+        agentDir: dir,
+        modelRuntime: this.modelRuntime,
+        model: () => this.session?.model ?? model.model,
+        hostServices: this.hostServices,
+        // A document's numbers are checked against the person, not the bot.
+        requestSources: () => requestSources(this.session?.messages ?? []),
+      },
+      (event) => this.emitAgentEvent(event)
+    );
+
     const customTools = [
       ...this.profile.tools(this.options.cwd, { mediaCheck }),
       ...browserTaskTools,
+      ...componentTools,
       ...mcpTools,
     ];
 

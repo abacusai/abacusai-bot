@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Capsule — Presentation Template</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
 <style>
   *, *::before, *::after {
     margin: 0;
@@ -142,7 +140,7 @@
     bottom: 2rem;
     right: 2rem;
     font-family: var(--font-body);
-    font-size: 0.75rem;
+    font-size: 0.98rem;
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -157,7 +155,7 @@
     bottom: 2rem;
     left: 2rem;
     font-family: var(--font-body);
-    font-size: 0.65rem;
+    font-size: 0.85rem;
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -180,14 +178,21 @@
   }
 
   .slide-1 .deco-pills {
-    position: absolute;
-    inset: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    width: 100%;
+    padding: 0 2rem;
     pointer-events: none;
-    overflow: hidden;
+    flex-shrink: 0;
   }
+  .slide-1 .deco-top { margin-bottom: auto; }
+  .slide-1 .deco-bottom { margin-top: auto; padding: 0 4rem; }
 
   .slide-1 .deco-pill {
-    position: absolute;
+    flex-shrink: 0;
     border-radius: 9999px;
     border: 2px solid var(--outline);
     display: flex;
@@ -233,7 +238,7 @@
     margin-bottom: 2rem;
     font-family: var(--font-body);
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 1.1rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
@@ -274,7 +279,7 @@
 
   .slide-2 .left-content p {
     font-family: var(--font-body);
-    font-size: clamp(0.95rem, 1.2vw, 1.15rem);
+    font-size: clamp(1.15rem, 1.6vw, 1.45rem);
     line-height: 1.6;
     opacity: 0.7;
     max-width: 90%;
@@ -297,12 +302,17 @@
 
   .slide-2 .right-visual .orbit-pill {
     position: absolute;
+    /* Sized to the word the filler gives, not to the sample's word. */
+    width: max-content !important;
+    min-width: 80px;
+    padding: 0 0.9em;
+    white-space: nowrap;
     border-radius: 9999px;
     border: 2px solid var(--outline);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.98rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -362,7 +372,7 @@
     padding: 0.4rem 1.2rem;
     border-radius: 9999px;
     border: 2px solid var(--outline);
-    font-size: 0.7rem;
+    font-size: 0.91rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -409,7 +419,7 @@
   }
 
   .slide-3 .pillar-card p {
-    font-size: 0.9rem;
+    font-size: 1.17rem;
     line-height: 1.55;
     opacity: 0.65;
   }
@@ -461,7 +471,7 @@
   .slide-4 .chart-label {
     width: 140px;
     font-family: var(--font-body);
-    font-size: 0.85rem;
+    font-size: 1.1rem;
     font-weight: 500;
     text-align: right;
     flex-shrink: 0;
@@ -484,7 +494,7 @@
     align-items: center;
     justify-content: flex-end;
     padding-right: 1rem;
-    font-size: 0.75rem;
+    font-size: 0.98rem;
     font-weight: 600;
     transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
     border-right: 2px solid var(--outline);
@@ -492,7 +502,7 @@
 
   .slide-4 .chart-value {
     width: 60px;
-    font-size: 0.9rem;
+    font-size: 1.17rem;
     font-weight: 600;
     flex-shrink: 0;
   }
@@ -555,7 +565,7 @@
   .slide-5 .statement-box .attribution {
     margin-top: 2rem;
     font-family: var(--font-body);
-    font-size: 0.85rem;
+    font-size: 1.1rem;
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -573,7 +583,7 @@
     position: absolute;
     border-radius: 9999px;
     border: 2px solid var(--outline);
-    font-size: 0.7rem;
+    font-size: 0.91rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -662,7 +672,7 @@
 
   .slide-6 .timeline-step .step-label {
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 1.04rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -671,7 +681,7 @@
 
   .slide-6 .timeline-step .step-desc {
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 1.04rem;
     line-height: 1.4;
     opacity: 0.55;
     margin-top: -0.5rem;
@@ -736,7 +746,7 @@
   }
 
   .slide-7 .stat-pill .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.98rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -797,7 +807,7 @@
     justify-content: center;
     text-align: center;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 1.1rem;
     line-height: 1.3;
     padding: 1rem 2rem;
     box-shadow: 6px 6px 0 var(--shadow);
@@ -905,7 +915,7 @@
 
   .slide-9 .visual-frame .frame-content span {
     font-family: var(--font-body);
-    font-size: 0.8rem;
+    font-size: 1.04rem;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -927,7 +937,7 @@
   }
 
   .slide-9 .text-side p {
-    font-size: clamp(0.9rem, 1.1vw, 1.05rem);
+    font-size: clamp(1.1rem, 1.5vw, 1.35rem);
     line-height: 1.6;
     opacity: 0.65;
   }
@@ -943,7 +953,7 @@
     padding: 0.35rem 1rem;
     border-radius: 9999px;
     border: 2px solid var(--outline);
-    font-size: 0.7rem;
+    font-size: 0.91rem;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -977,7 +987,7 @@
     padding: 1rem 2.5rem;
     border-radius: 9999px;
     border: 2px solid var(--outline);
-    font-size: 0.8rem;
+    font-size: 1.04rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -1001,7 +1011,7 @@
 
   .slide-10 .closing-sub {
     font-family: var(--font-body);
-    font-size: 0.85rem;
+    font-size: 1.1rem;
     font-weight: 400;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1022,7 +1032,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.91rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1045,6 +1055,10 @@
   @media (max-width: 600px) {
     .slide-7 .stats-grid { grid-template-columns: 1fr; }
   }
+  @media print { .nav-dots, .nav-hint, .keyboard-hint { display: none !important; } }
+  /* A note's title wraps inside its column rather than running into the
+     next one when the filler writes more than a word or two. */
+  .flow-notes .pill { white-space: normal; max-width: 100%; border-radius: 1rem; text-align: center; }
 </style>
 </head>
 <body>
@@ -1054,25 +1068,30 @@
 <div class="presentation">
 
   <!-- SLIDE 1: Title -->
-  <div class="slide slide-1 active" data-slide="1">
-    <div class="deco-pills">
-      <div class="deco-pill pill-coral" style="width:120px;height:55px;top:12%;left:8%;transform:rotate(-12deg);font-size:0.85rem;">Concept</div>
-      <div class="deco-pill pill-lavender" style="width:160px;height:60px;top:18%;right:12%;transform:rotate(8deg);font-size:0.9rem;">Strategy</div>
-      <div class="deco-pill pill-sky" style="width:110px;height:50px;top:72%;left:15%;transform:rotate(6deg);font-size:0.8rem;">Vision</div>
-      <div class="deco-pill pill-lime" style="width:135px;height:55px;top:78%;right:18%;transform:rotate(-8deg);font-size:0.85rem;">Future</div>
-      <div class="deco-pill pill-peach" style="width:85px;height:85px;border-radius:50%;top:15%;left:45%;transform:rotate(0deg);font-size:0.75rem;">2026</div>
-      <div class="deco-pill pill-white" style="width:105px;height:48px;top:65%;right:8%;transform:rotate(15deg);font-size:0.75rem;opacity:0.6;">Design</div>
-      <div class="deco-pill pill-violet" style="width:90px;height:90px;border-radius:50%;top:75%;left:5%;transform:rotate(0deg);font-size:0.7rem;">Next</div>
+  <div class="slide slide-1 active" data-slide="1" data-label="title: a small tag, the plan name, a subtitle and up to eight one-word pills around it">
+    <!-- The pills sit in a row above the title and a row below it, in the
+         slide's flow, so a long title pushes them aside instead of running
+         into them. -->
+    <div class="deco-pills deco-top">
+      <div class="deco-pill pill-coral" style="width:120px;height:55px;transform:rotate(-12deg);font-size: 1.1rem;">Concept</div>
+      <div class="deco-pill pill-peach" style="width:85px;height:85px;border-radius:50%;transform:translateY(-10px);font-size: 0.98rem;">2026</div>
+      <div class="deco-pill pill-lavender" style="width:160px;height:60px;transform:rotate(8deg);font-size: 1.17rem;">Strategy</div>
     </div>
     <div class="title-pill">Presentation Template</div>
     <h1 class="main-title">
       CAPSULE
       <span class="subtitle">A Framework for Bold Ideas</span>
     </h1>
+    <div class="deco-pills deco-bottom">
+      <div class="deco-pill pill-violet" style="width:90px;height:90px;border-radius:50%;font-size: 0.91rem;">Next</div>
+      <div class="deco-pill pill-sky" style="width:110px;height:50px;transform:rotate(6deg);font-size: 1.04rem;">Vision</div>
+      <div class="deco-pill pill-lime" style="width:135px;height:55px;transform:rotate(-8deg) translateY(8px);font-size: 1.1rem;">Future</div>
+      <div class="deco-pill pill-white" style="width:105px;height:48px;transform:rotate(15deg);font-size: 0.98rem;opacity:0.6;">Design</div>
+    </div>
   </div>
 
   <!-- SLIDE 2: Introduction Split -->
-  <div class="slide slide-2" data-slide="2">
+  <div class="slide slide-2" data-slide="2" data-label="introduction: a heading, two short paragraphs, a big number or year in the circle and up to eight one-word pills">
     <div class="slide-inner">
       <div class="left-content">
         <div class="accent-line"></div>
@@ -1086,20 +1105,20 @@
         <div class="orbit-pill pill-lime" style="width:100px;height:45px;top:5%;right:15%;transform:rotate(15deg);">Ideation</div>
         <div class="orbit-pill pill-sky" style="width:95px;height:42px;bottom:15%;left:10%;transform:rotate(10deg);">Prototype</div>
         <div class="orbit-pill pill-lavender" style="width:110px;height:48px;bottom:10%;right:10%;transform:rotate(-12deg);">Iterate</div>
-        <div class="orbit-pill pill-yellow" style="width:80px;height:38px;top:40%;left:0%;transform:rotate(25deg);font-size:0.65rem;">Launch</div>
-        <div class="orbit-pill pill-violet" style="width:85px;height:40px;top:45%;right:0%;transform:rotate(-18deg);font-size:0.65rem;">Scale</div>
+        <div class="orbit-pill pill-yellow" style="width:80px;height:38px;top:40%;left:0%;transform:rotate(25deg);font-size: 0.85rem;">Launch</div>
+        <div class="orbit-pill pill-violet" style="width:85px;height:40px;top:45%;right:0%;transform:rotate(-18deg);font-size: 0.85rem;">Scale</div>
       </div>
     </div>
   </div>
 
   <!-- SLIDE 3: Three Pillars -->
-  <div class="slide slide-3" data-slide="3">
+  <div class="slide slide-3" data-slide="3" data-label="three pillars: a numbered title and a paragraph each (goals, audiences or principles)">
     <div class="slide-inner">
       <div class="slide-header">
         <div class="header-pill">Core Principles</div>
         <h2>The Foundation of Every Decision</h2>
       </div>
-      <div class="cards-grid">
+      <div class="cards-grid" data-deck-grow>
         <div class="pillar-card">
           <div class="card-icon pill-coral">I</div>
           <h3>Clarity of Purpose</h3>
@@ -1120,7 +1139,7 @@
   </div>
 
   <!-- SLIDE 4: Data / Chart -->
-  <div class="slide slide-4" data-slide="4">
+  <div class="slide slide-4" data-slide="4" data-label="bar chart" data-deck-skip>
     <div class="slide-inner">
       <div class="slide-header">
         <h2>Performance Indicators</h2>
@@ -1166,14 +1185,14 @@
   </div>
 
   <!-- SLIDE 5: Statement / Quote -->
-  <div class="slide slide-5" data-slide="5">
+  <div class="slide slide-5" data-slide="5" data-label="statement or quote with a highlighted phrase, and up to six one-word pills">
     <div class="floating-pills">
-      <div class="f-pill pill-coral" style="width:80px;height:35px;top:10%;left:8%;transform:rotate(-15deg);font-size:0.6rem;">Bold</div>
-      <div class="f-pill pill-lavender" style="width:100px;height:40px;top:15%;right:10%;transform:rotate(12deg);font-size:0.65rem;">Inspire</div>
-      <div class="f-pill pill-sky" style="width:90px;height:38px;bottom:12%;left:12%;transform:rotate(8deg);font-size:0.6rem;">Create</div>
-      <div class="f-pill pill-lime" style="width:110px;height:42px;bottom:18%;right:8%;transform:rotate(-10deg);font-size:0.7rem;">Elevate</div>
-      <div class="f-pill pill-violet" style="width:70px;height:70px;border-radius:50%;top:8%;left:40%;font-size:0.55rem;">Now</div>
-      <div class="f-pill pill-peach" style="width:75px;height:35px;bottom:8%;left:45%;transform:rotate(20deg);font-size:0.55rem;">Today</div>
+      <div class="f-pill pill-coral" style="width:80px;height:35px;top:10%;left:8%;transform:rotate(-15deg);font-size: 0.78rem;">Bold</div>
+      <div class="f-pill pill-lavender" style="width:100px;height:40px;top:15%;right:10%;transform:rotate(12deg);font-size: 0.85rem;">Inspire</div>
+      <div class="f-pill pill-sky" style="width:90px;height:38px;bottom:12%;left:12%;transform:rotate(8deg);font-size: 0.78rem;">Create</div>
+      <div class="f-pill pill-lime" style="width:110px;height:42px;bottom:18%;right:8%;transform:rotate(-10deg);font-size: 0.91rem;">Elevate</div>
+      <div class="f-pill pill-violet" style="width:70px;height:70px;border-radius:50%;top:8%;left:40%;font-size: 0.72rem;">Now</div>
+      <div class="f-pill pill-peach" style="width:75px;height:35px;bottom:8%;left:45%;transform:rotate(20deg);font-size: 0.72rem;">Today</div>
     </div>
     <div class="statement-box">
       <div class="quote-mark">&ldquo;</div>
@@ -1185,12 +1204,12 @@
   </div>
 
   <!-- SLIDE 6: Timeline -->
-  <div class="slide slide-6" data-slide="6">
+  <div class="slide slide-6" data-slide="6" data-label="plan: five phases in order, each a short title and a line">
     <div class="slide-inner">
       <div class="slide-header">
         <h2>Phased Implementation</h2>
       </div>
-      <div class="timeline">
+      <div class="timeline" data-deck-grow>
         <div class="timeline-track"></div>
         <div class="timeline-step">
           <div class="step-node pill-coral">1</div>
@@ -1222,12 +1241,12 @@
   </div>
 
   <!-- SLIDE 7: Statistics -->
-  <div class="slide slide-7" data-slide="7">
+  <div class="slide slide-7" data-slide="7" data-label="four key metrics or targets, each a figure and a label">
     <div class="slide-inner">
       <div class="slide-header">
         <h2>Key Metrics at a Glance</h2>
       </div>
-      <div class="stats-grid">
+      <div class="stats-grid" data-deck-grow>
         <div class="stat-pill">
           <div class="stat-number" style="color: var(--coral);">340%</div>
           <div class="stat-label">Growth in<br>Active Users</div>
@@ -1253,12 +1272,12 @@
   </div>
 
   <!-- SLIDE 8: Diagram / Flow -->
-  <div class="slide slide-8" data-slide="8">
+  <div class="slide slide-8" data-slide="8" data-label="flow: four stages in a row (a funnel or channel flow), each one to three words, and three notes under it, each a title of one to three words and a sentence">
     <div class="slide-inner">
       <div class="slide-header">
         <h2>System Architecture Overview</h2>
       </div>
-      <div class="diagram-container">
+      <div class="diagram-container" data-deck-grow>
         <div class="diagram-node pill-white" style="min-width:120px;">Input Layer</div>
         <div class="diagram-connector"></div>
         <div class="diagram-node pill-lavender" style="min-width:140px;">Processing Core</div>
@@ -1267,25 +1286,25 @@
         <div class="diagram-connector"></div>
         <div class="diagram-node pill-coral" style="min-width:120px;">Output Stream</div>
       </div>
-      <div style="display:flex;justify-content:center;gap:2rem;margin-top:2.5rem;">
-        <div style="text-align:center;max-width:180px;">
-          <div class="pill pill-filled pill-sky" style="padding:0.5rem 1.2rem;font-size:0.7rem;margin-bottom:0.5rem;">Data Ingestion</div>
-          <div style="font-size:0.75rem;opacity:0.55;line-height:1.4;">Raw signals are captured and normalized from multiple sources in real time</div>
+      <div class="flow-notes" style="display:flex;justify-content:center;gap:2rem;margin-top:2.5rem;">
+        <div style="text-align:center;max-width:240px;">
+          <div class="pill pill-filled pill-sky" style="padding:0.5rem 1.2rem;font-size: 0.91rem;margin-bottom:0.5rem;">Data Ingestion</div>
+          <div style="font-size: 0.98rem;opacity:0.75;line-height:1.4;">Raw signals are captured and normalized from multiple sources in real time</div>
         </div>
-        <div style="text-align:center;max-width:180px;">
-          <div class="pill pill-filled pill-violet" style="padding:0.5rem 1.2rem;font-size:0.7rem;margin-bottom:0.5rem;">Transformation</div>
-          <div style="font-size:0.75rem;opacity:0.55;line-height:1.4;">Information is enriched, filtered, and structured for downstream consumption</div>
+        <div style="text-align:center;max-width:240px;">
+          <div class="pill pill-filled pill-violet" style="padding:0.5rem 1.2rem;font-size: 0.91rem;margin-bottom:0.5rem;">Transformation</div>
+          <div style="font-size: 0.98rem;opacity:0.75;line-height:1.4;">Information is enriched, filtered, and structured for downstream consumption</div>
         </div>
-        <div style="text-align:center;max-width:180px;">
-          <div class="pill pill-filled pill-yellow" style="padding:0.5rem 1.2rem;font-size:0.7rem;margin-bottom:0.5rem;">Distribution</div>
-          <div style="font-size:0.75rem;opacity:0.55;line-height:1.4;">Results are routed to appropriate endpoints with guaranteed delivery</div>
+        <div style="text-align:center;max-width:240px;">
+          <div class="pill pill-filled pill-yellow" style="padding:0.5rem 1.2rem;font-size: 0.91rem;margin-bottom:0.5rem;">Distribution</div>
+          <div style="font-size: 0.98rem;opacity:0.75;line-height:1.4;">Results are routed to appropriate endpoints with guaranteed delivery</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- SLIDE 9: Split with Visual -->
-  <div class="slide slide-9" data-slide="9">
+  <div class="slide slide-9" data-slide="9" data-label="image and text (only with a real image)" data-deck-skip>
     <div class="slide-inner">
       <div class="visual-side">
         <div class="visual-frame">
@@ -1311,15 +1330,15 @@
   </div>
 
   <!-- SLIDE 10: Closing -->
-  <div class="slide slide-10" data-slide="10">
+  <div class="slide slide-10" data-slide="10" data-label="closing: a small tag, a thank-you or call to action, a subtitle and pills">
     <div class="deco-pills-closing">
-      <div class="c-pill pill-lime" style="width:100px;height:42px;top:15%;left:10%;transform:rotate(-12deg);font-size:0.65rem;">Continue</div>
-      <div class="c-pill pill-sky" style="width:80px;height:38px;top:20%;right:12%;transform:rotate(15deg);font-size:0.6rem;">Explore</div>
-      <div class="c-pill pill-lavender" style="width:110px;height:45px;bottom:20%;left:12%;transform:rotate(10deg);font-size:0.7rem;">Discover</div>
-      <div class="c-pill pill-coral" style="width:70px;height:70px;border-radius:50%;bottom:15%;right:15%;font-size:0.6rem;">Go</div>
-      <div class="c-pill pill-violet" style="width:90px;height:40px;top:50%;left:5%;transform:rotate(-20deg);font-size:0.6rem;">Begin</div>
-      <div class="c-pill pill-yellow" style="width:85px;height:38px;top:45%;right:8%;transform:rotate(18deg);font-size:0.55rem;">Launch</div>
-      <div class="c-pill pill-peach" style="width:75px;height:35px;top:8%;left:50%;transform:rotate(5deg);font-size:0.55rem;opacity:0.7;">More</div>
+      <div class="c-pill pill-lime" style="width:100px;height:42px;top:15%;left:10%;transform:rotate(-12deg);font-size: 0.85rem;">Continue</div>
+      <div class="c-pill pill-sky" style="width:80px;height:38px;top:20%;right:12%;transform:rotate(15deg);font-size: 0.78rem;">Explore</div>
+      <div class="c-pill pill-lavender" style="width:110px;height:45px;bottom:20%;left:12%;transform:rotate(10deg);font-size: 0.91rem;">Discover</div>
+      <div class="c-pill pill-coral" style="width:70px;height:70px;border-radius:50%;bottom:15%;right:15%;font-size: 0.78rem;">Go</div>
+      <div class="c-pill pill-violet" style="width:90px;height:40px;top:50%;left:5%;transform:rotate(-20deg);font-size: 0.78rem;">Begin</div>
+      <div class="c-pill pill-yellow" style="width:85px;height:38px;top:45%;right:8%;transform:rotate(18deg);font-size: 0.72rem;">Launch</div>
+      <div class="c-pill pill-peach" style="width:75px;height:35px;top:8%;left:50%;transform:rotate(5deg);font-size: 0.72rem;opacity:0.7;">More</div>
     </div>
     <div class="closing-content">
       <div class="closing-pill">The Journey Continues</div>

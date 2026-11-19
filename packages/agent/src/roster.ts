@@ -40,6 +40,7 @@ import type { ConnectedMcp } from "./mcp/index.js";
 import { buildMcpToolDefinitions, mcpToolCaller } from "./mcp/tools.js";
 import { buildPresentDeliverableTool } from "./present-deliverable-tool.js";
 import type { AgentEvent, AgentMode } from "./protocol.js";
+import type { RequestSources } from "./request-facts.js";
 import { buildServeTool } from "./serve-tool.js";
 import {
   buildSessionSearchTool,
@@ -88,6 +89,8 @@ export interface RosterContext {
   emit: (event: AgentEvent) => void;
   /** Awaited by `skill_add` before it answers, so the new skill is live. */
   reloadSkills: () => Promise<void> | void;
+  /** The user's recent messages and what the bot read: what a document's numbers are checked against. */
+  requestSources?: () => RequestSources;
 }
 
 /** Whatever pi accepts as a custom tool; the builders return several shapes. */
@@ -136,7 +139,12 @@ const browserTaskWanted = (ctx: RosterContext): boolean =>
 export const subAgentOptions = <Extra extends object>(
   ctx: Pick<
     RosterContext,
-    "cwd" | "agentDir" | "modelRuntime" | "subAgentSettingsManager" | "model"
+    | "cwd"
+    | "agentDir"
+    | "modelRuntime"
+    | "subAgentSettingsManager"
+    | "model"
+    | "requestSources"
   >,
   extra?: Extra
 ): {
@@ -145,6 +153,7 @@ export const subAgentOptions = <Extra extends object>(
   modelRuntime: ModelRuntime;
   settingsManager: SettingsManager;
   skillPaths: string[];
+  requestSources?: () => RequestSources;
   readonly model?: never;
 } & Extra =>
   withLiveModel(
@@ -154,6 +163,7 @@ export const subAgentOptions = <Extra extends object>(
       modelRuntime: ctx.modelRuntime,
       settingsManager: ctx.subAgentSettingsManager,
       skillPaths: skillDirs(ctx.cwd),
+      ...(ctx.requestSources ? { requestSources: ctx.requestSources } : {}),
       ...(extra ?? ({} as Extra)),
     },
     ctx.model
@@ -298,7 +308,9 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: (ctx) => ctx.hostServices != null && documentToolEnabled(),
     build: (ctx) =>
       buildDocumentTool(
-        subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
+        subAgentOptions(ctx, {
+          hostServices: ctx.hostServices!,
+        }),
         ctx.emit
       ),
   },
@@ -319,7 +331,9 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
     when: (ctx) => ctx.hostServices != null && deckToolEnabled(),
     build: (ctx) =>
       buildDeckTool(
-        subAgentOptions(ctx, { hostServices: ctx.hostServices! }),
+        subAgentOptions(ctx, {
+          hostServices: ctx.hostServices!,
+        }),
         ctx.emit
       ),
   },

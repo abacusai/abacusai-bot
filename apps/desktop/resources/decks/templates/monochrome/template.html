@@ -4,9 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ivory Ledger · User Research Synthesis</title>
+  <link rel="stylesheet" href="fonts.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
       Ivory Ledger font stack:
         Jost          — geometric sans, the backbone (weights 200–600)
@@ -15,10 +14,6 @@
         Noto Serif SC — CJK serif fallback
         Noto Sans SC  — CJK sans fallback
     -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500&family=Noto+Sans+SC:wght@200;300;400;500&display=swap"
-      rel="stylesheet"
-    />
 
     <style>
       /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -61,14 +56,14 @@
         --f-mono: "JetBrains Mono", monospace;
 
         /* ── Type Scale ───────────────────────────────────────────────────── */
-        --sz-display: 8.5vw; /* hero/cover — very large, very light         */
-        --sz-h1: 5vw; /* chapter / statement headline                */
-        --sz-h2: 3.2vw; /* slide headline                              */
-        --sz-h3: 2vw; /* sub-headline                                */
-        --sz-lead: 1.5vw; /* generous lead text                          */
-        --sz-body: 1.1vw; /* body text                                   */
-        --sz-caption: 0.85vw; /* captions, footnotes                         */
-        --sz-label: 0.72vw; /* chrome labels, sidebar labels               */
+        --sz-display: 7.4vw; /* hero/cover: large, and a four-line question still clears the header */
+        --sz-h1: 6vw; /* chapter / statement headline                */
+        --sz-h2: 4.3vw; /* slide headline                              */
+        --sz-h3: 2.7vw; /* sub-headline                                */
+        --sz-lead: 2.6vw; /* generous lead text                          */
+        --sz-body: 2.15vw; /* body text                                   */
+        --sz-caption: 1.6vw; /* captions, footnotes                         */
+        --sz-label: 1.3vw; /* chrome labels, sidebar labels               */
 
         /* ── Spacing ─────────────────────────────────────────────────────── */
         --pad-x: 8vw; /* generous horizontal padding — space is the design */
@@ -304,21 +299,21 @@
       .display {
         font-family: var(--f-display);
         font-size: var(--sz-display);
-        font-weight: 200;
+        font-weight: 400;
         line-height: 0.96;
         letter-spacing: -0.02em;
       }
       .h1 {
         font-family: var(--f-heading);
         font-size: var(--sz-h1);
-        font-weight: 200;
+        font-weight: 400;
         line-height: 1.1;
         letter-spacing: -0.01em;
       }
       .h2 {
         font-family: var(--f-heading);
         font-size: var(--sz-h2);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.2;
       }
       .h3 {
@@ -330,19 +325,19 @@
       .lead {
         font-family: var(--f-body);
         font-size: var(--sz-lead);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.65;
       }
       .body {
         font-family: var(--f-body);
         font-size: var(--sz-body);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.7;
       }
       .caption {
         font-family: var(--f-body);
         font-size: var(--sz-caption);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.55;
       }
       /* Labels: the one exception — tracked mono uppercase for structural chrome */
@@ -609,7 +604,7 @@
       .stat-value {
         font-family: var(--f-display);
         font-size: 5.5vw;
-        font-weight: 200;
+        font-weight: 400;
         line-height: 1;
         color: var(--c-fg-light);
         letter-spacing: -0.03em;
@@ -618,7 +613,7 @@
         font-family: var(--f-body);
         font-size: var(--sz-body);
         line-height: 1.5;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light);
       }
       /* Source attribution in small mono */
@@ -684,7 +679,7 @@
         gap: 0.5em;
         font-family: var(--f-body);
         font-size: var(--sz-lead);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.5;
       }
       /* Ivory Ledger bullet: em dash in muted tan — never a heavy accent dot */
@@ -803,7 +798,7 @@
         font-family: var(--f-body);
         font-size: var(--sz-body);
         line-height: 1.65;
-        font-weight: 300;
+        font-weight: 400;
         color: rgba(26, 26, 22, 0.75);
         margin-top: auto;
       }
@@ -819,7 +814,7 @@
       .timeline-hl {
         font-family: var(--f-heading);
         font-size: var(--sz-h2);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.2;
         padding-bottom: var(--gap-md);
         border-bottom: 1px solid var(--c-border-light);
@@ -883,7 +878,7 @@
         font-family: var(--f-body);
         font-size: var(--sz-body);
         line-height: 1.6;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
       }
 
@@ -895,7 +890,7 @@
       .dense-hl {
         font-family: var(--f-heading);
         font-size: var(--sz-h2);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.2;
         padding-bottom: var(--gap-md);
         border-bottom: 1px solid var(--c-border-light);
@@ -923,7 +918,7 @@
         font-family: var(--f-body);
         font-size: var(--sz-body);
         line-height: 1.75;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
         margin-bottom: 1.4vh;
       }
@@ -1035,7 +1030,7 @@
       .bar-x-label {
         font-family: var(--f-mono);
         font-size: var(--sz-caption);
-        font-weight: 300;
+        font-weight: 400;
         letter-spacing: 0.1em;
         color: var(--c-fg-light-3);
         white-space: nowrap;
@@ -1044,7 +1039,7 @@
       .bar-val {
         font-family: var(--f-body);
         font-size: var(--sz-body);
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
       }
       .bar-val.hi {
@@ -1060,7 +1055,7 @@
         flex-shrink: 0;
         font-family: var(--f-mono);
         font-size: var(--sz-caption);
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-3);
         letter-spacing: 0.06em;
         margin-top: var(--gap-sm);
@@ -1091,7 +1086,7 @@
       .flow-num {
         font-family: var(--f-display);
         font-size: 3.5vw;
-        font-weight: 200;
+        font-weight: 400;
         line-height: 1;
         color: var(--c-fg-light-3);
         letter-spacing: -0.02em;
@@ -1106,7 +1101,7 @@
       .flow-desc {
         font-family: var(--f-body);
         font-size: var(--sz-body);
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
         line-height: 1.68;
       }
@@ -1162,7 +1157,7 @@
       .pie-item-label {
         font-family: var(--f-body);
         font-size: var(--sz-lead);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.4;
         color: var(--c-fg-light);
       }
@@ -1228,14 +1223,14 @@
       .pyr-name {
         font-family: var(--f-heading);
         font-size: var(--sz-h3);
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.2;
         color: var(--c-fg-light);
       }
       .pyr-desc {
         font-family: var(--f-body);
         font-size: var(--sz-body);
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
         text-align: right;
         max-width: 55%;
@@ -1249,7 +1244,7 @@
       .vt-hl {
         font-family: var(--f-heading);
         font-size: var(--sz-h2);
-        font-weight: 200;
+        font-weight: 400;
         padding-bottom: var(--gap-md);
         border-bottom: 1px solid var(--c-border-light);
       }
@@ -1263,7 +1258,7 @@
       .vt-date {
         font-family: var(--f-mono);
         font-size: var(--sz-caption);
-        font-weight: 300;
+        font-weight: 400;
         letter-spacing: 0.08em;
         color: var(--c-fg-light-3);
         text-align: right;
@@ -1298,7 +1293,7 @@
       .vt-body {
         font-family: var(--f-body);
         font-size: var(--sz-body);
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
         line-height: 1.68;
       }
@@ -1329,7 +1324,7 @@
       .cycle-num {
         font-family: var(--f-display);
         font-size: 3vw;
-        font-weight: 200;
+        font-weight: 400;
         color: var(--c-fg-light-3);
         line-height: 1;
         letter-spacing: -0.02em;
@@ -1344,7 +1339,7 @@
       .cycle-desc {
         font-family: var(--f-body);
         font-size: var(--sz-body);
-        font-weight: 300;
+        font-weight: 400;
         color: var(--c-fg-light-2);
         line-height: 1.65;
       }
@@ -1561,6 +1556,9 @@
         border-radius: 0;
         margin: 0;
       }
+          /* The two-column discussion holds the most text: a step smaller, so it
+         stays above the footer. */
+      .slide--dense p, .slide--dense li { font-size: 1.2vw !important; line-height: 1.5 !important; }
     </style>
   </head>
   <body>
@@ -1574,7 +1572,7 @@
        Lead sentence in muted warm gray below the headline.
        Bottom meta bar: team and round/version info.
        ══════════════════════════════════════════════════════════════════ -->
-      <section class="slide slide--cover light">
+      <section class="slide slide--cover light" data-label="title: the talk title, a one-line summary, the authors and a date">
         <!-- Sidebar: research context above, date below -->
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Research Synthesis</span>
@@ -1600,7 +1598,7 @@
         <div class="cover-body">
           <!-- Display headline: weight 200, two lines -->
           <h1 class="display" data-anim="fade-up" data-delay="2">
-            User Research<br />Synthesis
+            User Research Synthesis
           </h1>
 
           <!-- Thin rule between headline and lead -->
@@ -1629,7 +1627,7 @@
           <span class="label muted">Round [N] · Internal</span>
         </div>
       </section>
-      <section class="slide slide--chapter dark">
+      <section class="slide slide--chapter dark" data-label="section: a part number, a title and one sentence">
         <!-- Sidebar on dark: adapts automatically via .dark .sidebar-label -->
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Context</span>
@@ -1646,7 +1644,7 @@
 
         <!-- Chapter headline: weight 200, very large -->
         <h2 class="h1" data-anim="fade-up" data-delay="3">
-          Why we went back<br />to users
+          Why we went back to users
         </h2>
 
         <!-- Short description: muted, capped at 50% width -->
@@ -1664,7 +1662,7 @@
           metrics couldn't.
         </p>
       </section>
-      <section class="slide slide--statement light">
+      <section class="slide slide--statement light" data-label="key finding: one statement in a sentence or two, with a kicker">
         <!-- Sidebar: three contextual labels -->
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">[Month, Year]</span>
@@ -1711,7 +1709,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--split light">
+      <section class="slide slide--split light" data-label="image and text (only with a real figure or photo)" data-deck-skip>
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">User Behavior</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -1763,7 +1761,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--stats light">
+      <section class="slide slide--stats light" data-label="three figures, each with a sentence and its source">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">By the Numbers</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -1822,7 +1820,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--list light">
+      <section class="slide slide--list light" data-label="numbered list: a title, a sentence and up to five points">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Recommendations</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -1867,7 +1865,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--compare light">
+      <section class="slide slide--compare light" data-label="two columns compared (before and after, or two groups), each a title, a sentence and three points">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Current vs Proposed</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -1917,7 +1915,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--quote dark">
+      <section class="slide slide--quote dark" data-label="quote: a participant or source quotation with who said it">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Participant Voice</span>
           <span class="sidebar-label">[Month of study]</span>
@@ -1945,7 +1943,7 @@
           </span>
         </div>
       </section>
-      <section class="slide slide--dense light">
+      <section class="slide slide--dense light" data-label="discussion: a title and two columns of paragraphs">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Analysis</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -2023,7 +2021,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--chart light">
+      <section class="slide slide--chart light" data-label="bar chart" data-deck-skip>
         <header class="slide-chrome">
           <span class="label muted">Retention Analysis</span>
           <span class="label muted">11</span>
@@ -2032,7 +2030,7 @@
           <div class="chart-header">
             <h2
               class="h2"
-              style="font-weight: 200"
+              style="font-weight: 400"
               data-anim="fade-up"
               data-delay="0"
             >
@@ -2074,10 +2072,10 @@
         </div>
         <footer class="slide-foot">
           <span class="label muted">Research Team · [Month, Year]</span>
-          <span class="label muted">11 / 18</span>
+          <span class="label muted">10 / 16</span>
         </footer>
       </section>
-      <section class="slide slide--diagram light">
+      <section class="slide slide--diagram light" data-label="method: four numbered steps, each a title and a sentence">
         <header class="slide-chrome">
           <span class="label muted">Methodology</span>
           <span class="label muted">12</span>
@@ -2085,7 +2083,7 @@
         <div class="slide-body">
           <h2
             class="h2"
-            style="font-weight: 200"
+            style="font-weight: 400"
             data-anim="fade-up"
             data-delay="0"
           >
@@ -2128,10 +2126,10 @@
         </div>
         <footer class="slide-foot">
           <span class="label muted">Research Team · [Month, Year]</span>
-          <span class="label muted">12 / 18</span>
+          <span class="label muted">11 / 16</span>
         </footer>
       </section>
-      <section class="slide slide--pie light">
+      <section class="slide slide--pie light" data-label="pie chart" data-deck-skip>
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Participants</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -2145,7 +2143,7 @@
         <div class="slide-body">
           <h2
             class="h2"
-            style="font-weight: 200"
+            style="font-weight: 400"
             data-anim="fade-up"
             data-delay="1"
           >
@@ -2224,7 +2222,7 @@
           <span class="label muted">[Research Team] · [Month, Year]</span>
         </footer>
       </section>
-      <section class="slide slide--vtimeline light">
+      <section class="slide slide--vtimeline light" data-label="timeline: up to four dated stages, each a title and a sentence">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Process</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -2289,7 +2287,7 @@
           <span class="label muted">14</span>
         </footer>
       </section>
-      <section class="slide slide--cycle light">
+      <section class="slide slide--cycle light" data-label="cycle: four steps that repeat, each a title and a sentence">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Design Process</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -2303,7 +2301,7 @@
         <div class="slide-body">
           <h2
             class="h2"
-            style="font-weight: 200"
+            style="font-weight: 400"
             data-anim="fade-up"
             data-delay="1"
           >
@@ -2365,7 +2363,7 @@
           <span class="label muted">15</span>
         </footer>
       </section>
-      <section class="slide slide--pyramid light" data-slide="17">
+      <section class="slide slide--pyramid light" data-label="hierarchy: five levels from bottom to top, with a title and a sentence" data-slide="17">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Research Framework</span>
           <span class="sidebar-label">[Month, Year]</span>
@@ -2404,7 +2402,7 @@
           <span class="label muted">Research Team</span>
         </footer>
       </section>
-      <section class="slide slide--end light">
+      <section class="slide slide--end light" data-label="closing: questions, thanks and contact or links">
         <div class="slide-sidebar" data-anim="fade-in" data-delay="0">
           <span class="sidebar-label">Research Team</span>
           <span class="sidebar-label">[Month, Year]</span>

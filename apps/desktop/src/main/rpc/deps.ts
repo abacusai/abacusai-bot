@@ -53,6 +53,16 @@ export interface AppOperations {
     path?: string
   ): Promise<import("@abacus-ai/contract/contract/files").DirectoryListing>;
   mkdir?(path: string, name: string): Promise<{ path: string }>;
+  /** "Try another look": the document printed again in a look or design. */
+  relookDocument?(
+    path: string,
+    look?: string,
+    design?: string
+  ): Promise<{ path: string }>;
+  /** A document's type and the designs it can switch to. */
+  documentDesigns?(
+    path: string
+  ): Promise<{ type: string; designs: Array<{ id: string; name: string }> }>;
   openFolderDialog(): Promise<string | null>;
   openFilesDialog(
     kind?: "all" | "image" | "theme"
