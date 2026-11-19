@@ -9,7 +9,11 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { allowedExternalSchemes, isSafeExternalUrl } from "./external-links";
+import {
+  allowedExternalSchemes,
+  isSafeExternalUrl,
+  withUpgradeReturn,
+} from "./external-links";
 
 describe("isSafeExternalUrl", () => {
   it("allows the schemes a link button is for", () => {
@@ -76,5 +80,52 @@ describe("isSafeExternalUrl", () => {
       "https:",
       "mailto:",
     ]);
+  });
+});
+
+describe("withUpgradeReturn", () => {
+  const host = "https://apps.abacus.ai";
+
+  it("asks the bot's upgrade page to open the app again once paid", () => {
+    // A minted link (a button) and the plain page (a link in a chat reply).
+    expect(
+      withUpgradeReturn("https://apps.abacus.ai/bot/link/upgrade?r=abc", host)
+    ).toBe("https://apps.abacus.ai/bot/link/upgrade?r=abc&back=desktop");
+    expect(
+      withUpgradeReturn(
+        "https://apps.abacus.ai/bot/link/upgrade?src=billing_plan",
+        host
+      )
+    ).toBe(
+      "https://apps.abacus.ai/bot/link/upgrade?src=billing_plan&back=desktop"
+    );
+  });
+
+  it("tags a link once, however many openers it passes", () => {
+    const once = withUpgradeReturn(
+      "https://apps.abacus.ai/bot/link/upgrade?r=abc",
+      host
+    );
+    expect(withUpgradeReturn(once, host)).toBe(once);
+  });
+
+  it("follows the app host the app is pointed at", () => {
+    expect(
+      withUpgradeReturn(
+        "https://preprod-apps.abacus.ai/bot/link/upgrade",
+        "https://preprod-apps.abacus.ai"
+      )
+    ).toBe("https://preprod-apps.abacus.ai/bot/link/upgrade?back=desktop");
+  });
+
+  it("leaves every other link alone", () => {
+    for (const url of [
+      "https://apps.abacus.ai/chatllm/admin/billing",
+      "https://evil.example/bot/link/upgrade",
+      "https://apps.abacus.ai.evil.example/bot/link/upgrade",
+      "mailto:someone@abacus.ai",
+      "not a url",
+    ])
+      expect(withUpgradeReturn(url, host)).toBe(url);
   });
 });
