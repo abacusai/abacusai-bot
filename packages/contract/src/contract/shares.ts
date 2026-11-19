@@ -4,6 +4,8 @@ import * as v from "valibot";
 import {
   ARTIFACT_ACCESS,
   type ArtifactPublished,
+  type LivePage,
+  type PagePreview,
   type ShareCreated,
   type SharedLink,
   type SharePreview,
@@ -22,11 +24,21 @@ export const shares = {
   remove: mutation
     .input(v.object({ shareId: v.string() }))
     .output(type<{ ok: boolean }>()),
-  /** An artifact, live: the same page updates the same link. */
+  /** A web page, live: the same page updates the same link. */
   publishArtifact: mutation
     .input(v.object({ path: v.string(), access: v.picklist(ARTIFACT_ACCESS) }))
     .output(type<ArtifactPublished>()),
   unpublishArtifact: mutation
-    .input(v.object({ path: v.string() }))
+    .input(v.object({ identifier: v.string() }))
     .output(type<{ ok: boolean }>()),
+  /** The live pages, newest first. Null when signed out or the platform did not answer. */
+  pages: query.input(NoInput).output(type<LivePage[] | null>()),
+  /** The page as its live link will show it; nothing leaves the computer. */
+  previewPage: mutation
+    .input(v.object({ path: v.string() }))
+    .output(type<PagePreview>()),
+  /** This file's live page, when it has one. */
+  page: query
+    .input(v.object({ path: v.string() }))
+    .output(type<LivePage | null>()),
 };

@@ -17,6 +17,16 @@ export const sharesRouter = impl.shares.router({
     context.deps.host.publishArtifact(input.path, input.access)
   ),
   unpublishArtifact: impl.shares.unpublishArtifact.handler(
-    ({ input, context }) => context.deps.host.unpublishArtifact(input.path)
+    ({ input, context }) =>
+      context.deps.host.unpublishArtifact(input.identifier)
+  ),
+  previewPage: impl.shares.previewPage.handler(({ input, context }) =>
+    context.deps.host.previewPage(input.path)
+  ),
+  pages: impl.shares.pages.handler(({ context }) =>
+    context.deps.host.listPages()
+  ),
+  page: impl.shares.page.handler(({ input, context }) =>
+    context.deps.host.pageFor(input.path)
   ),
 });

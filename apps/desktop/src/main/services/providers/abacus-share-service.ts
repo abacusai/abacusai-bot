@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { namesSecretFile } from "@abacus-ai/agent/secret-files";
 import {
-  isArtifactPage,
+  isLivePage,
   isShareableFile,
   SHARE_MAX_BYTES,
   SHARE_REFUSALS,
@@ -12,6 +12,8 @@ import {
   shareExtension,
   type ArtifactAccess,
   type ArtifactPublished,
+  type LivePage,
+  type PagePreview,
   type ShareCreated,
   type SharedLink,
   type SharePreview,
@@ -20,6 +22,7 @@ import {
 
 import { scrubKeys } from "../diagnostics/scrub";
 import { abacusApiCall } from "./abacus-connector-service";
+import { bundlePage } from "./share-bundle";
 
 /**
  * Public links to files the bot made. The platform renders and hosts them;
@@ -40,6 +43,14 @@ interface ShareFile {
 type ReadFile =
   | { ok: true; file: ShareFile }
   | { ok: false; code: ShareRefusal };
+
+/** One key per file, from its real path: the same file finds its link again. */
+const sourceKeyOf = (realPath: string): string =>
+  crypto
+    .createHash("sha256")
+    .update(realPath)
+    .digest("hex")
+    .slice(0, SOURCE_KEY_CHARS);
 
 const refusal = (value: unknown): ShareRefusal =>
   SHARE_REFUSALS.find((code) => code === value) ?? "FAILED";
@@ -71,11 +82,7 @@ const readShareFile = async (filePath: string): Promise<ReadFile> => {
       file: {
         fileName: path.basename(filePath),
         contentBase64: content.toString("base64"),
-        sourceKey: crypto
-          .createHash("sha256")
-          .update(real)
-          .digest("hex")
-          .slice(0, SOURCE_KEY_CHARS),
+        sourceKey: sourceKeyOf(real),
       },
     };
   } catch {
@@ -174,21 +181,48 @@ export const removeShare = async (
 const pageTitle = (html: string): string =>
   /<title>([^<]*)<\/title>/i.exec(html)?.[1]?.trim() || "Artifact";
 
+/** The page as one file, with the files it loads from its folder folded in: what the link will show. */
+const bundledPage = async (
+  filePath: string
+): Promise<
+  | { ok: true; content: string; sourceKey: string }
+  | { ok: false; code: ShareRefusal }
+> => {
+  if (!isLivePage(filePath)) return { ok: false, code: "UNSUPPORTED" };
+  const read = await readShareFile(filePath);
+  if (read.ok === false) return read;
+  let content: string;
+  try {
+    content = await bundlePage(
+      Buffer.from(read.file.contentBase64, "base64").toString("utf8"),
+      path.dirname(await fs.realpath(filePath)),
+      scrubForShare
+    );
+  } catch {
+    return { ok: false, code: "FAILED" };
+  }
+  if (Buffer.byteLength(content, "utf8") > SHARE_MAX_BYTES)
+    return { ok: false, code: "TOO_LARGE" };
+  return { ok: true, content, sourceKey: read.file.sourceKey };
+};
+
+export const previewPage = async (filePath: string): Promise<PagePreview> => {
+  const page = await bundledPage(filePath);
+  return page.ok === false ? page : { ok: true, document: page.content };
+};
+
 export const publishArtifact = async (
   filePath: string,
   access: ArtifactAccess
 ): Promise<ArtifactPublished> => {
-  if (!isArtifactPage(filePath)) return { ok: false, code: "UNSUPPORTED" };
-  const read = await readShareFile(filePath);
-  if (read.ok === false) return read;
-  const content = Buffer.from(read.file.contentBase64, "base64").toString(
-    "utf8"
-  );
+  const page = await bundledPage(filePath);
+  if (page.ok === false) return page;
+  const { content } = page;
   const response = await abacusApiCall(
     "_publishAbacusaibotArtifact",
     "POST",
     {
-      identifier: read.file.sourceKey,
+      identifier: page.sourceKey,
       title: pageTitle(content),
       content,
       access,
@@ -206,18 +240,51 @@ export const publishArtifact = async (
     url: result.shareUrl,
     access,
     updated: result.updated === true,
+    identifier: page.sourceKey,
   };
 };
 
 export const unpublishArtifact = async (
-  filePath: string
+  identifier: string
 ): Promise<{ ok: boolean }> => {
-  const read = await readShareFile(filePath);
-  if (read.ok === false) return { ok: false };
   const response = await abacusApiCall(
     "_unpublishAbacusaibotArtifact",
     "POST",
-    { identifier: read.file.sourceKey }
+    { identifier }
   );
   return { ok: response.ok };
+};
+
+const asPage = (value: unknown): LivePage | null => {
+  if (value == null || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.identifier !== "string" || typeof row.shareUrl !== "string")
+    return null;
+  return {
+    identifier: row.identifier,
+    url: row.shareUrl,
+    title: typeof row.title === "string" ? row.title : "",
+    access: row.access === "public" ? "public" : "private",
+    updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : "",
+  };
+};
+
+export const listPages = async (): Promise<LivePage[] | null> => {
+  const response = await abacusApiCall("_listAbacusaibotArtifacts", "POST", {});
+  if (!response.ok || response.result == null) return null;
+  const rows = (response.result as { artifacts?: unknown }).artifacts;
+  if (!Array.isArray(rows)) return null;
+  return rows.flatMap((row) => asPage(row) ?? []);
+};
+
+export const pageFor = async (filePath: string): Promise<LivePage | null> => {
+  let identifier: string;
+  try {
+    identifier = sourceKeyOf(await fs.realpath(filePath));
+  } catch {
+    return null;
+  }
+  return (
+    (await listPages())?.find((page) => page.identifier === identifier) ?? null
+  );
 };

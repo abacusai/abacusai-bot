@@ -5,8 +5,10 @@
  */
 import {
   ARTIFACT_ACCESS,
-  isArtifactPage,
+  isLivePage,
   type ArtifactAccess,
+  type LivePage,
+  type PagePreview,
   type SharedLink,
   type ShareEntry,
   type SharePreview,
@@ -59,10 +61,13 @@ const useShareActions = () => {
 };
 
 const LinkActions = ({
-  link,
+  url,
+  stop,
   onStopped,
 }: {
-  link: SharedLink;
+  url: string;
+  /** Takes the link down; false when the platform did not. */
+  stop(): Promise<boolean>;
   onStopped(): void;
 }) => {
   const { t } = useTranslation();
@@ -75,13 +80,13 @@ const LinkActions = ({
         <Input
           readOnly
           aria-label={t("share.linkLabel")}
-          value={link.url}
+          value={url}
           onFocus={(event) => event.currentTarget.select()}
         />
         <Button
           data-slot="share-copy"
           onClick={async () => {
-            await navigator.clipboard.writeText(link.url);
+            await navigator.clipboard.writeText(url);
             setCopied(true);
             funnel("share_copied");
           }}
@@ -97,7 +102,7 @@ const LinkActions = ({
           data-slot="share-open"
           onClick={() => {
             funnel("share_link_opened");
-            void platformSystem(client).openExternal({ url: link.url });
+            void platformSystem(client).openExternal({ url });
           }}
         >
           <ExternalLink aria-hidden />
@@ -120,7 +125,7 @@ const LinkActions = ({
         description={t("share.stopBody")}
         label={t("share.stop")}
         onConfirm={async () => {
-          const { ok } = await client.shares.remove({ shareId: link.shareId });
+          const ok = await stop().catch(() => false);
           if (!ok) {
             showInfo(t("share.errors.FAILED"));
             return;
@@ -134,18 +139,45 @@ const LinkActions = ({
   );
 };
 
-/** An artifact runs live, so it goes through the page itself, not a static copy. */
+/** A web page runs live, so it goes through the page itself, not a static copy. */
 const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
   const { t } = useTranslation();
   const { client, funnel } = useShareActions();
-  useEffect(() => {
-    reportStep(client, "share_opened", from);
-  }, [client, from]);
-  const [access, setAccess] = useState<ArtifactAccess>("private");
+  // Share is for sending, so a new link opens for anyone; a page already shared keeps its own setting.
+  const [access, setAccess] = useState<ArtifactAccess>("public");
+  const [page, setPage] = useState<LivePage | null | undefined>();
   const [busy, setBusy] = useState(false);
-  const [url, setUrl] = useState<string | null>(null);
   const [failure, setFailure] = useState<ShareRefusal | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [preview, setPreview] = useState<PagePreview | null>(null);
+  useEffect(() => {
+    let live = true;
+    reportStep(client, "share_opened", from);
+    client.shares
+      .previewPage({ path })
+      .catch((): PagePreview => ({ ok: false, code: "FAILED" }))
+      .then((result) => {
+        if (!live) return;
+        setPreview(result);
+        if (result.ok === false) {
+          setFailure(result.code);
+          reportStep(client, "share_failed", result.code);
+        }
+      });
+    client.shares
+      .page({ path })
+      .catch(() => null)
+      .then((found) => {
+        if (!live) return;
+        setPage(found);
+        if (found != null) {
+          setAccess(found.access);
+          markLinked(path);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [client, from, path]);
   const publish = async () => {
     setBusy(true);
     setFailure(null);
@@ -155,18 +187,45 @@ const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
     setBusy(false);
     if (result.ok === false) {
       setFailure(result.code);
+      funnel("share_failed", result.code);
       return;
     }
-    setUrl(result.url);
+    setPage({
+      identifier: result.identifier,
+      title: page?.title ?? "",
+      url: result.url,
+      access: result.access,
+      updatedAt: new Date().toISOString(),
+    });
     markLinked(path);
     funnel("share_created");
   };
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t("share.artifact.title")}</DialogTitle>
+        <DialogTitle>
+          {t(page == null ? "share.artifact.title" : "share.ready")}
+        </DialogTitle>
         <DialogDescription>{t("share.artifact.body")}</DialogDescription>
       </DialogHeader>
+      {preview == null && (
+        <div
+          className="bg-muted text-muted-foreground flex h-80 items-center justify-center rounded-lg text-sm"
+          data-slot="share-loading"
+        >
+          {t("share.preparing")}
+        </div>
+      )}
+      {preview?.ok === true && (
+        <iframe
+          // Scripts run so buttons work as they will on the link; no same-origin, forms or navigation.
+          sandbox="allow-scripts"
+          title={t("share.previewLabel")}
+          srcDoc={preview.document}
+          data-slot="share-preview"
+          className="h-80 w-full rounded-lg border bg-white"
+        />
+      )}
       <div role="radiogroup" className="flex flex-col gap-2">
         {ARTIFACT_ACCESS.map((option) => (
           <label
@@ -177,10 +236,7 @@ const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
               type="radio"
               name="artifact-access"
               checked={access === option}
-              onChange={() => {
-                setAccess(option);
-                setUrl(null);
-              }}
+              onChange={() => setAccess(option)}
             />
             <span>
               {t(
@@ -199,26 +255,18 @@ const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
           </label>
         ))}
       </div>
-      {url != null && (
-        <div className="flex gap-2" data-slot="share-link">
-          <Input
-            readOnly
-            aria-label={t("share.linkLabel")}
-            value={url}
-            onFocus={(event) => event.currentTarget.select()}
-          />
-          <Button
-            data-slot="share-copy"
-            onClick={async () => {
-              await navigator.clipboard.writeText(url);
-              setCopied(true);
-              funnel("share_copied");
-            }}
-          >
-            {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-            {t(copied ? "share.copied" : "share.copy")}
-          </Button>
-        </div>
+      {page != null && (
+        <LinkActions
+          url={page.url}
+          stop={async () =>
+            (
+              await client.shares.unpublishArtifact({
+                identifier: page.identifier,
+              })
+            ).ok
+          }
+          onStopped={closeShareDialog}
+        />
       )}
       {failure != null && (
         <p
@@ -235,10 +283,11 @@ const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
         </Button>
         <Button
           data-slot="share-create"
-          disabled={busy}
+          disabled={busy || page === undefined || preview?.ok !== true}
           onClick={() => void publish()}
         >
-          {t(url == null ? "share.artifact.publish" : "share.artifact.update")}
+          <Link2 aria-hidden />
+          {t(page == null ? "share.artifact.publish" : "share.artifact.update")}
         </Button>
       </DialogFooter>
     </>
@@ -301,7 +350,13 @@ const FileShare = ({ path, from }: { path: string; from: ShareEntry }) => {
           <DialogTitle>{t("share.ready")}</DialogTitle>
           <DialogDescription>{t("share.notice")}</DialogDescription>
         </DialogHeader>
-        <LinkActions link={link} onStopped={closeShareDialog} />
+        <LinkActions
+          url={link.url}
+          stop={async () =>
+            (await client.shares.remove({ shareId: link.shareId })).ok
+          }
+          onStopped={closeShareDialog}
+        />
       </>
     );
   return (
@@ -357,18 +412,44 @@ const FileShare = ({ path, from }: { path: string; from: ShareEntry }) => {
   );
 };
 
+/** One row of Shared links: a file's still copy, or a live page. */
+type SharedRow =
+  | { kind: "file"; key: string; title: string; at: string; link: SharedLink }
+  | { kind: "page"; key: string; title: string; at: string; page: LivePage };
+
 const SharedLinks = () => {
   const { t } = useTranslation();
   const { client } = useShareActions();
-  const [links, setLinks] = useState<SharedLink[] | null | undefined>();
+  const [rows, setRows] = useState<SharedRow[] | null | undefined>();
   useEffect(() => {
     let live = true;
-    client.shares
-      .list({})
-      .catch(() => null)
-      .then((result) => {
-        if (live) setLinks(result);
-      });
+    Promise.all([
+      client.shares.list({}).catch(() => null),
+      client.shares.pages({}).catch(() => null),
+    ]).then(([links, pages]) => {
+      if (!live) return;
+      if (links == null && pages == null) {
+        setRows(null);
+        return;
+      }
+      const merged: SharedRow[] = [
+        ...(links ?? []).map((link) => ({
+          kind: "file" as const,
+          key: `file:${link.shareId}`,
+          title: link.title,
+          at: link.createdAt,
+          link,
+        })),
+        ...(pages ?? []).map((page) => ({
+          kind: "page" as const,
+          key: `page:${page.identifier}`,
+          title: page.title,
+          at: page.updatedAt,
+          page,
+        })),
+      ];
+      setRows(merged.sort((a, b) => b.at.localeCompare(a.at)));
+    });
     return () => {
       live = false;
     };
@@ -379,23 +460,33 @@ const SharedLinks = () => {
         <DialogTitle>{t("share.links")}</DialogTitle>
         <DialogDescription>{t("share.notice")}</DialogDescription>
       </DialogHeader>
-      {links === null && (
+      {rows === null && (
         <p role="alert" className="text-destructive text-sm">
           {t("share.errors.FAILED")}
         </p>
       )}
-      {links?.length === 0 && (
+      {rows?.length === 0 && (
         <p className="text-muted-foreground text-sm">{t("share.linksEmpty")}</p>
       )}
       <ul className="flex max-h-96 flex-col gap-4 overflow-y-auto">
-        {links?.map((link) => (
-          <li key={link.shareId} className="flex flex-col gap-1">
-            <span className="truncate text-sm font-medium">{link.title}</span>
+        {rows?.map((row) => (
+          <li key={row.key} className="flex flex-col gap-1">
+            <span className="truncate text-sm font-medium">{row.title}</span>
             <LinkActions
-              link={link}
+              url={row.kind === "file" ? row.link.url : row.page.url}
+              stop={async () =>
+                row.kind === "file"
+                  ? (await client.shares.remove({ shareId: row.link.shareId }))
+                      .ok
+                  : (
+                      await client.shares.unpublishArtifact({
+                        identifier: row.page.identifier,
+                      })
+                    ).ok
+              }
               onStopped={() =>
-                setLinks((rows) =>
-                  rows?.filter((row) => row.shareId !== link.shareId)
+                setRows((current) =>
+                  current?.filter((item) => item.key !== row.key)
                 )
               }
             />
@@ -417,7 +508,7 @@ export const ShareDialogHost = () => {
     >
       <DialogContent className="sm:max-w-lg" data-slot="share-dialog">
         {request?.kind === "file" &&
-          (isArtifactPage(request.path) ? (
+          (isLivePage(request.path) ? (
             <ArtifactShare
               key={request.path}
               path={request.path}

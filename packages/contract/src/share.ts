@@ -75,12 +75,37 @@ export const isShareableFile = (path: string): boolean =>
 export const isArtifactPage = (path: string): boolean =>
   /[\\/]artifacts[\\/][^\\/]+[\\/]index\.html$/.test(path);
 
+/** A web page shares live, as the app shows it: scripts, buttons and the files beside it come along. */
+export const isLivePage = (path: string): boolean =>
+  ["html", "htm"].includes(shareExtension(path));
+
 export const ARTIFACT_ACCESS = ["private", "public"] as const;
 export type ArtifactAccess = (typeof ARTIFACT_ACCESS)[number];
 
 export type ArtifactPublished =
-  | { ok: true; url: string; access: ArtifactAccess; updated: boolean }
+  | {
+      ok: true;
+      url: string;
+      access: ArtifactAccess;
+      updated: boolean;
+      /** The page's key: the same file publishes to, and stops, this link. */
+      identifier: string;
+    }
   | { ok: false; code: ShareRefusal };
+
+/** A web page as its live link will show it, files beside it folded in. */
+export type PagePreview =
+  | { ok: true; document: string }
+  | { ok: false; code: ShareRefusal };
+
+/** A page shared live, as the platform lists it. */
+export interface LivePage {
+  identifier: string;
+  title: string;
+  url: string;
+  access: ArtifactAccess;
+  updatedAt: string;
+}
 
 /** Where Share was opened: a files card row, the chat's header, or the card under a reply. */
 export const SHARE_ENTRIES = ["row", "header", "card"] as const;

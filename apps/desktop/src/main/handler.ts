@@ -61,6 +61,9 @@ import {
   publishArtifact,
   removeShare,
   unpublishArtifact,
+  listPages,
+  pageFor,
+  previewPage,
 } from "./services/providers/abacus-share-service";
 import {
   fetchBillingPlan,
@@ -580,7 +583,10 @@ export const createHostOperations = (
     removeShare: (shareId: string) => removeShare(shareId),
     publishArtifact: (path: string, access: ArtifactAccess) =>
       publishArtifact(path, access),
-    unpublishArtifact: (path: string) => unpublishArtifact(path),
+    unpublishArtifact: (identifier: string) => unpublishArtifact(identifier),
+    listPages: () => listPages(),
+    pageFor: (path: string) => pageFor(path),
+    previewPage: (path: string) => previewPage(path),
     listReferralGmailContacts: () => listReferralGmailContacts(),
     sendReferralEmailInvites: (emails: unknown, message: unknown) =>
       sendReferralEmailInvites(emails, message),
