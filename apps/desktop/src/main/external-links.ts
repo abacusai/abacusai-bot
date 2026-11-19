@@ -27,3 +27,25 @@ export const isSafeExternalUrl = (url: unknown): url is string => {
 
 /** The schemes `isSafeExternalUrl` accepts, for messages and tests. */
 export const allowedExternalSchemes = (): string[] => [...ALLOWED_SCHEMES];
+
+/** The bot's own upgrade page on the app host (abacus-upgrade.ts). */
+const BOT_UPGRADE_PATH = "/bot/link/upgrade";
+
+/**
+ * The URL to hand the OS for `url`: the bot's upgrade page on `appHost` gets
+ * `back=desktop`, so once paid the page opens the app again by its
+ * abacusaibot:// link instead of the web app. Every way out of the app (a
+ * button, a link in a chat reply, a routine's notice) passes here, so each
+ * comes back. Anything else is returned unchanged.
+ */
+export const withUpgradeReturn = (url: string, appHost: string): string => {
+  if (!URL.canParse(url) || !URL.canParse(appHost)) return url;
+  const parsed = new URL(url);
+  if (
+    parsed.origin !== new URL(appHost).origin ||
+    !parsed.pathname.endsWith(BOT_UPGRADE_PATH)
+  )
+    return url;
+  parsed.searchParams.set("back", "desktop");
+  return parsed.toString();
+};

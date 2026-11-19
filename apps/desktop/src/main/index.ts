@@ -59,7 +59,7 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
-import { isSafeExternalUrl } from "./external-links";
+import { isSafeExternalUrl, withUpgradeReturn } from "./external-links";
 import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
 import { followMainAgentBusy, followRoutineDue } from "./keep-awake";
@@ -158,6 +158,7 @@ import {
 import { logStore, RETENTION_DAYS } from "./services/diagnostics/log-store";
 import { buildZip, type ZipFile } from "./services/diagnostics/zip-write";
 import { fetchAbacusAccount } from "./services/providers/abacus";
+import { abacusAppHost } from "./services/providers/abacus-host";
 import { reportOnboardingOffer } from "./services/providers/abacus-upgrade";
 import {
   readAccountState,
@@ -1039,7 +1040,10 @@ async function createWindow(restored?: RecreatedWindowState) {
 
     contents.setWindowOpenHandler((details) => {
       // Same scheme check as an explicit "open externally" click.
-      if (isSafeExternalUrl(details.url)) void shell.openExternal(details.url);
+      if (isSafeExternalUrl(details.url))
+        void shell.openExternal(
+          withUpgradeReturn(details.url, abacusAppHost())
+        );
       else console.warn("[Shell] Refused to open a window for", details.url);
       return { action: "deny" };
     });
@@ -1470,7 +1474,7 @@ const appOperations: AppOperations = {
       console.warn("[Shell] Refused to open", url);
       return;
     }
-    await shell.openExternal(url);
+    await shell.openExternal(withUpgradeReturn(url, abacusAppHost()));
   },
 
   // Restricted to directories the app works in: the paths include file
