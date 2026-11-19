@@ -57,7 +57,10 @@ describe("what the phone loop's model reads", () => {
       ["malformed", PHONE_MALFORMED_CONTINUATION_PROMPT],
       ...(
         [
-          ...profile.tools(dir, { mediaCheck: async () => true }),
+          ...profile.tools(dir, {
+            mediaCheck: async () => true,
+            ownWordsThisTurn: () => "",
+          }),
           ...progressTools,
         ] as Array<{
           name: string;

@@ -92,6 +92,7 @@ describe("building the roster", () => {
       sessionId: () => undefined,
       emit: () => undefined,
       reloadSkills: () => undefined,
+      ownWordsThisTurn: () => "",
     }) as RosterContext;
 
   it("registers a tool nothing else provides, and skips one something does", () => {

@@ -1295,6 +1295,7 @@ export class AbacusBotSession {
         model: () => this.session?.model ?? model,
         // A document's numbers are checked against the person, not the bot.
         requestSources: () => requestSources(this.session?.messages ?? []),
+        ownWordsThisTurn: () => this.userWords.turn,
         browserModel: () =>
           browserModelOverride ?? this.session?.model ?? model,
         hostServices: hostServices ? this.hostServices : null,
