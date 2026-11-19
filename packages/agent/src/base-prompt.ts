@@ -59,11 +59,12 @@ export const PROGRESS_UPDATES_PROMPT =
 
 /**
  * Asked for a video, the model wrote "I can't make video here, let me check"
- * and only then called paid_feature, so the plan came second. One fixed line
- * too: a session without the tool skips it.
+ * and only then called paid_feature. Its answer orders the reply: on the free
+ * plan the part this chat makes comes before the plan. One fixed line too: a
+ * session without the tool skips it.
  */
 export const MEDIA_ASKS_PROMPT =
-  "Asked to make or edit an image, a video, speech or audio (reading a text aloud too) while you have paid_feature: call it first, before you write anything, and open your reply with what it says makes it, never with what you cannot do. A poster, flyer, notice, card, invitation or certificate is a document, made with the document tool, not an image, unless the user asks for an image or a picture.";
+  "Asked to make or edit an image, a video, speech or audio (reading a text aloud too) while you have paid_feature: call it first, before you write anything, with no words before the call (no 'let me check', no 'I'll start on this', nothing about what this chat can do), then write your reply in the order it gives, never opening with what you cannot do. A poster, flyer, notice, card, invitation or certificate is a document, made with the document tool, not an image, unless the user asks for an image or a picture.";
 
 /**
  * Office files, real data and long jobs: the three ways a finished-looking

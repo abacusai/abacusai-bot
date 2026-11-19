@@ -49,6 +49,8 @@ export interface Scenario {
     deliverables?: boolean;
     /** The shell's upgrade dialog, for a line or card in the chat that opens it. */
     upgradeDialog?: boolean;
+    /** The account's plan, for a card that reads it (the paid-plan card). */
+    accountTier?: "free" | "basic";
   };
   /** Canned answer to a send in the gallery (echo + reply). */
   reply?: string;
@@ -595,6 +597,55 @@ const tasksCopy = (): RelayEvent[] =>
     b.toolResult("c1", { text: "The user sees 2 buttons under your reply." }),
     b.textEnd("a1"),
     b.runFinished("r1", "success", { timestamp: at(1) }),
+  ]);
+
+/** A free plan's video ask, as a real model answered it: the script, then the plan, its buttons and card. */
+const paidFeatureFreePart = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make a 30-second TikTok video for my bakery's new croissant",
+      at(3)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "paid_feature", "a1", {
+      feature: "video_gen",
+      prompt: "A 30-second TikTok video for a bakery's new croissant",
+    }),
+    b.toolResult("c1", {
+      text: "Video generation is not on this account's free plan.",
+    }),
+    b.textEnd("a1"),
+    b.textStart("a2"),
+    b.textDelta(
+      "a2",
+      [
+        "Here's your 30-second script, ready to shoot:",
+        "",
+        '**"The New Croissant" — 30 seconds, vertical 9:16**',
+        "",
+        '- **0:00–0:04** — Close-up: golden croissants pulled hot from the oven, steam rising. "Something new just came out of the oven…"',
+        '- **0:04–0:10** — Slow pan over the tray, butter sheen glinting. "72 layers. Real butter. Baked at 6 a.m."',
+        '- **0:10–0:16** — Hands lift one, gentle squeeze; flakes fall. "Listen to that crunch."',
+        '- **0:16–0:23** — The bite, pulled apart to show the honeycomb crumb. "Flaky outside. Buttery, airy inside."',
+        '- **0:23–0:28** — Croissant on the counter with a coffee, shop name in frame. "The New Croissant — in store this week only."',
+        '- **0:28–0:30** — Logo card. "Come early. They go fast."',
+        "",
+        "Caption: The croissant you'll set an alarm for 🥐✨ In store now — #croissant #bakerytok #freshbaked #smallbusiness #fyp",
+        "",
+        "Basic gives you video generation in Abacus AI Agent on the web: $7 for the first month (30% off the usual $10/mo), then $10/mo.",
+        "",
+        "https://apps.abacus.ai/bot/link/upgrade?src=paid_feature",
+      ].join("\n")
+    ),
+    ...b.toolCall("c2", "suggest_tasks", "a2", {
+      tasks: [{ text: "Write 3 more hooks" }, { text: "Caption in Spanish" }],
+    }),
+    b.toolResult("c2", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a2"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
   ]);
 
 const successSite = (): RelayEvent[] =>
@@ -1226,6 +1277,24 @@ export const SCENARIOS: Scenario[] = [
     skin: "bot",
     events: tasksCopy,
     view: { placeholder: "Message your bot..." },
+  },
+  {
+    id: "paid-feature-free-part",
+    canvas: ["PaidFeatureCard", "free plan"],
+    skin: "session",
+    events: paidFeatureFreePart,
+    view: { accountTier: "free", upgradeDialog: true },
+  },
+  {
+    id: "paid-feature-free-part-bot",
+    canvas: ["PaidFeatureCard", "free plan", "bot"],
+    skin: "bot",
+    events: paidFeatureFreePart,
+    view: {
+      accountTier: "free",
+      upgradeDialog: true,
+      placeholder: "Message your bot...",
+    },
   },
   {
     id: "success-site",
