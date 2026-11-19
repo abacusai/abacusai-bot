@@ -3741,7 +3741,10 @@
       "open": "Otwórz"
     },
     "suggestedTasks": {
-      "label": "Stuknij zadanie, aby je uruchomić",
+      "pickOne": "Wybierz jedno, aby kontynuować",
+      "next": "Dalej",
+      "routineLine": "Działa według harmonogramu, gdy aplikacja jest otwarta",
+      "copied": "Skopiowano",
       "copy": "Skopiuj „{{text}}”, aby wysłać z telefonu",
       "copyFailed": "Nie udało się skopiować"
     },

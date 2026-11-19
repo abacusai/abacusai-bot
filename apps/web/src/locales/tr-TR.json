@@ -3605,7 +3605,10 @@
       "open": "Aç"
     },
     "suggestedTasks": {
-      "label": "Başlatmak için bir göreve dokun",
+      "pickOne": "Devam etmek için birini seçin",
+      "next": "Sıradaki",
+      "routineLine": "Uygulama açıkken kendi zamanlamasına göre çalışır",
+      "copied": "Kopyalandı",
       "copy": "Telefondan göndermek için “{{text}}” metnini kopyala",
       "copyFailed": "Kopyalanamadı"
     },

@@ -3605,7 +3605,10 @@
       "open": "打开"
     },
     "suggestedTasks": {
-      "label": "点击任务即可运行",
+      "pickOne": "选一个继续",
+      "next": "下一步",
+      "routineLine": "应用打开时按计划运行",
+      "copied": "已复制",
       "copy": "复制“{{text}}”，然后从手机发送",
       "copyFailed": "无法复制"
     },

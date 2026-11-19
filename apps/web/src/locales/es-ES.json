@@ -3605,7 +3605,10 @@
       "open": "Abrir"
     },
     "suggestedTasks": {
-      "label": "Toca una tarea para empezarla",
+      "pickOne": "Elige una para seguir",
+      "next": "Siguiente",
+      "routineLine": "Se ejecuta según su horario mientras la app está abierta",
+      "copied": "Copiado",
       "copy": "Copiar «{{text}}» para enviarlo desde tu móvil",
       "copyFailed": "No se ha podido copiar"
     },
