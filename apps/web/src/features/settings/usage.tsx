@@ -6,13 +6,13 @@ import type {
 import type { ModelAvailability } from "@abacus-ai/contract/models";
 import { providerDisplayName } from "@abacus-ai/contract/settings";
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PageNote, AreaPage } from "#renderer/components/form-kit/page";
 import { cn } from "#renderer/lib/cn";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
-import { openTopUp, openUpgrade } from "#renderer/lib/upgrade";
+import { openTopUp, openUpgrade, upgradeSeen } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Badge } from "#renderer/ui/badge";
@@ -556,6 +556,12 @@ export const UsagePage = () => {
     transport.orpc.models.list.queryOptions({ input: {} })
   );
   const account = useAccount();
+  // The view also renders without the app (gallery, tests), so the shown step is reported here.
+  const offersUpgrade =
+    account.data != null && sidebarAccount(account.data).billing === "upgrade";
+  useEffect(() => {
+    if (offersUpgrade) upgradeSeen(transport.client, "settings");
+  }, [offersUpgrade, transport.client]);
   return (
     <UsageView
       snapshot={query.data}
