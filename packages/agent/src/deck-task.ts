@@ -1212,12 +1212,20 @@ export const buildTools = (
         }
 
         // Said in the result, not left for the bot to guess.
-        draft.printNotes =
-          leftOut.length > 0
+        // An overlap sent back once and still there is said, not printed
+        // silently (1.1.17: a timeline line over the footer).
+        draft.printNotes = [
+          ...(leftOut.length > 0
             ? [
                 `Left out ${leftOut.join("; ")}. What it said is not in the deck.`,
               ]
-            : [];
+            : []),
+          ...((result.overlaps ?? []).length > 0
+            ? [
+                `Still drawn over other text: ${result.overlaps!.slice(0, 3).join("; ")}.`,
+              ]
+            : []),
+        ];
 
         draft.printed = {
           pdfPath: result.pdfPath,
