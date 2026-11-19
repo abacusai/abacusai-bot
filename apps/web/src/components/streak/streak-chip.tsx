@@ -46,16 +46,21 @@ export const StreakPanel = ({
               ? t("streak.chip", { count: streak.streak })
               : t("streak.chipStart")}
           </p>
-          <p className="text-muted-foreground">
-            {t("streak.best", { count: Math.max(streak.best, streak.streak) })}
-          </p>
+          {streak.best > streak.streak && (
+            <p className="text-muted-foreground">
+              {t("streak.best", { count: streak.best })}
+            </p>
+          )}
         </div>
       </div>
       <StreakWeek streak={streak} now={now} />
       <div className="bg-muted/60 flex flex-col gap-1.5 rounded-md p-2.5">
         <div className="flex items-baseline justify-between gap-2">
           <span className="font-medium">{t("streak.todayCredits")}</span>
-          <span data-slot="streak-today-left" className="font-semibold">
+          <span
+            data-slot="streak-today-left"
+            className="shrink-0 font-semibold whitespace-nowrap"
+          >
             {t("streak.todayLeft", {
               left: number(left),
               total: number(streak.daily_credits),
@@ -114,23 +119,28 @@ export const StreakPanel = ({
   );
 };
 
-/** Under the home heading while the platform sends a streak. */
-export const StreakChip = () => {
+/** The chip and its panel for one streak. */
+export const StreakChipView = ({
+  streak,
+  now,
+  defaultOpen,
+  onOpen,
+  className,
+}: {
+  streak: AbacusStreak;
+  now: number;
+  defaultOpen?: boolean;
+  onOpen?(): void;
+  className?: string;
+}) => {
   const { t } = useTranslation();
-  const { transport } = useAppContext();
   const number = useNumber();
-  const now = useNow();
-  const { data: account } = useAccount();
-  const streak = account?.streak ?? null;
-  if (streak == null) return null;
   const left = streakCreditsLeft(streak, now);
   return (
     <Popover
+      defaultOpen={defaultOpen}
       onOpenChange={(open) => {
-        if (open)
-          void transport.client.system
-            .funnelStep({ step: "streak_panel_opened", detail: "home" })
-            .catch(() => undefined);
+        if (open) onOpen?.();
       }}
     >
       <PopoverTrigger
@@ -138,7 +148,10 @@ export const StreakChip = () => {
           <button
             type="button"
             data-slot="streak-chip"
-            className="mx-auto flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-900 transition-colors hover:bg-orange-100 dark:border-orange-900/70 dark:bg-orange-950/40 dark:text-orange-100 dark:hover:bg-orange-950/70"
+            className={cn(
+              "mx-auto flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-900 transition-colors hover:bg-orange-100 dark:border-orange-900/70 dark:bg-orange-950/40 dark:text-orange-100 dark:hover:bg-orange-950/70",
+              className
+            )}
           />
         }
       >
@@ -161,5 +174,26 @@ export const StreakChip = () => {
         <StreakPanel streak={streak} now={now} />
       </PopoverContent>
     </Popover>
+  );
+};
+
+/** Under the home heading while the platform sends a streak. */
+export const StreakChip = ({ className }: { className?: string }) => {
+  const { transport } = useAppContext();
+  const now = useNow();
+  const { data: account } = useAccount();
+  const streak = account?.streak ?? null;
+  if (streak == null) return null;
+  return (
+    <StreakChipView
+      streak={streak}
+      now={now}
+      className={className}
+      onOpen={() =>
+        void transport.client.system
+          .funnelStep({ step: "streak_panel_opened", detail: "home" })
+          .catch(() => undefined)
+      }
+    />
   );
 };

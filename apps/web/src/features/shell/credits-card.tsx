@@ -13,6 +13,7 @@ import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { StreakFlame } from "#renderer/components/streak/streak-week";
 import { usePrefs } from "#renderer/data/db/prefs";
 import {
   ABACUS_AGENT_URL,
@@ -39,7 +40,6 @@ import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
-import { StreakFlame } from "../streak/streak-week";
 import { PlanPitchList } from "../upgrade-dialog/plan-pitch";
 import { PromoCharacter } from "./promo-character";
 import { usePromoHost, consumePromoRect } from "./promo-host";
