@@ -93,10 +93,9 @@ export const ModelsPage = () => {
             />
           }
           title={field.label}
+          // A saved key's state is the pill beside it; an unsaved one names its variable.
           detail={
-            keys.data?.includes(field.provider)
-              ? t("phase5.savedUnverified")
-              : field.envVar
+            keys.data?.includes(field.provider) ? undefined : field.envVar
           }
         >
           {connects.rows.waiting(field.provider) ? (
