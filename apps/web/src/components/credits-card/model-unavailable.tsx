@@ -4,6 +4,7 @@ import {
   paidCreditsOffer,
   paidUpgradeOnly,
   planPitch,
+  type UpgradeSrc,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
 import { AlertTriangle, Check, Lock } from "lucide-react";
@@ -11,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { GroupCard } from "#renderer/components/form-kit/page";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { Button } from "#renderer/ui/button";
 
@@ -48,13 +50,20 @@ export const OfferPitch = ({ billing }: { billing: BillingPlan | null }) => {
   );
 };
 
-/** The plan's Upgrade with its price, and See plans beside it. */
+/**
+ * The plan's Upgrade with its price, and See plans beside it. `src` names the
+ * surface, which counts it as shown (UpgradeSeen), once per `item` if given.
+ */
 export const OfferButtons = ({
   billing,
+  src,
+  item,
   onUpgrade,
   onSeePlans,
 }: {
   billing: BillingPlan | null;
+  src: UpgradeSrc;
+  item?: string;
   onUpgrade(): void;
   onSeePlans(): void;
 }) => {
@@ -64,6 +73,7 @@ export const OfferButtons = ({
   const monthly = offer?.priceCents;
   return (
     <>
+      <UpgradeSeen src={src} {...(item != null && { item })} />
       <Button size="sm" data-action="upgrade" onClick={onUpgrade}>
         {first != null && monthly != null && first < monthly
           ? t("outcome.unavailable.upgradeIntro", {
@@ -153,6 +163,7 @@ export const PlanOffer = ({
       <div className="flex flex-col gap-3">
         <OfferButtons
           billing={billing}
+          src="chat_credits"
           onUpgrade={onUpgrade}
           onSeePlans={() =>
             void (upgradeOnly && host.openNextPlan != null
@@ -183,6 +194,7 @@ export const ModelUnavailableCard = ({
   onSwitch,
   onPickModel,
   onUpgrade,
+  upgradeSrc = "model_locked",
   onTopUp,
   onNextPlan,
 }: {
@@ -202,6 +214,8 @@ export const ModelUnavailableCard = ({
   onPickModel?(from: HTMLElement): void;
   /** The upgrade dialog that resumes the turn. */
   onUpgrade?(): void;
+  /** The surface its Upgrade counts as, the same one `onUpgrade`'s dialog is asked with. */
+  upgradeSrc?: UpgradeSrc;
   /** A paid plan's Top up and next plan, with the dialog that resumes the turn. */
   onTopUp?(): void;
   onNextPlan?(): void;
@@ -249,13 +263,13 @@ export const ModelUnavailableCard = ({
       ? onUpgrade()
       : upgradeOnly && nextPlan != null
         ? nextPlan()
-        : void host.openUpgrade("model_locked");
+        : void host.openUpgrade(upgradeSrc);
   const plan = kind === "plan" && !creditsOut;
   const Icon = kind === "plan" ? Lock : AlertTriangle;
   const seePlans = () =>
     void (upgradeOnly && host.openNextPlan != null
       ? host.openNextPlan()
-      : host.openUpgrade("model_locked"));
+      : host.openUpgrade(upgradeSrc));
   return (
     <div data-slot="credits-card" data-variant="model-unavailable">
       <GroupCard>
@@ -329,6 +343,7 @@ export const ModelUnavailableCard = ({
           ) : creditsOut ? (
             <OfferButtons
               billing={billing}
+              src={upgradeSrc}
               onUpgrade={upgrade}
               onSeePlans={seePlans}
             />
@@ -346,6 +361,7 @@ export const ModelUnavailableCard = ({
               {plan ? (
                 <OfferButtons
                   billing={billing}
+                  src={upgradeSrc}
                   onUpgrade={upgrade}
                   onSeePlans={seePlans}
                 />
@@ -490,6 +506,7 @@ export const CutOffCard = ({
             : onUpgrade != null && (
                 <OfferButtons
                   billing={billing}
+                  src="own_key"
                   onUpgrade={onUpgrade}
                   onSeePlans={() =>
                     void (upgradeOnly && host.openNextPlan != null

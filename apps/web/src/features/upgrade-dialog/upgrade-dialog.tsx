@@ -1,4 +1,5 @@
 import {
+  MODEL_UPGRADE_SRCS,
   paidCreditsOffer,
   paidUpgradeOnly,
   planPrice,
@@ -26,6 +27,7 @@ import { useTranslation } from "react-i18next";
 
 import { CoderPitchList } from "#renderer/components/credits-card/coder-pitch";
 import { PaidOfferDetails } from "#renderer/components/credits-card/paid-offer";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { creditsTier } from "#renderer/lib/credits";
 import {
@@ -513,7 +515,9 @@ export const DialogBody = ({
           billing={billing ?? null}
           {...(request.model != null && { model: request.model })}
           lead={
-            ownKey || request.src === "model_locked" || request.model != null
+            ownKey ||
+            (request.src != null && MODEL_UPGRADE_SRCS.includes(request.src)) ||
+            request.model != null
               ? "models"
               : connectors
                 ? "connectors"
@@ -541,6 +545,15 @@ export const DialogBody = ({
             : topModel != null
               ? t("upgradeDialog.creditsTaskCta")
               : upgradeCtaLabel(t, offer)}
+          {/* A surface's own dialog counts with that surface (its src alone);
+              the wall's, connectors' and own key's are surfaces themselves.
+              A checkout already started is past being shown. */}
+          {!paidUpgrade && request.checkout !== true && (
+            <UpgradeSeen
+              src={dialogUpgradeSrc(request)}
+              {...(request.src == null && { item: request.key })}
+            />
+          )}
         </Button>
         <Button
           variant="ghost"

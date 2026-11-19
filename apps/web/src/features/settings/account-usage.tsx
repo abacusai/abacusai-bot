@@ -14,6 +14,7 @@ import {
   PageNote,
   SettingRow,
 } from "#renderer/components/form-kit/page";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { accountIdentity } from "#renderer/lib/account-identity";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -152,6 +153,7 @@ export const AccountPage = () => {
               size="sm"
               onClick={() => void openUpgrade(transport.client, "settings")}
             >
+              {billing === "upgrade" && <UpgradeSeen src="settings" />}
               {t(
                 billing === "upgrade" ? "creditsCard.cta" : "phase5.managePlan"
               )}

@@ -190,7 +190,9 @@ it("the wall asked again on return is counted with “your work is waiting”: s
   await waitFor(() =>
     expect(steps()).toEqual([
       { step: "work_waiting_shown", detail: "wall" },
+      { step: "upgrade_shown", detail: "credit_wall" },
       { step: "work_waiting_clicked", detail: "wall" },
+      { step: "upgrade_tapped", detail: "credit_wall" },
     ])
   );
 });

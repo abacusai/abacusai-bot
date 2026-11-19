@@ -109,7 +109,10 @@ it.runIf(!IS_BROWSER)(
       );
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
       expect(dismissals()?.paidWelcomeTier).toBe("basic");
-      expect(steps).toEqual(["paid_welcome_shown", "paid_welcome_routines"]);
+      expect(steps.filter((step) => step.startsWith("paid_"))).toEqual([
+        "paid_welcome_shown",
+        "paid_welcome_routines",
+      ]);
       await refresh();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(screen.queryByRole("dialog")).toBeNull();
@@ -158,7 +161,10 @@ it.runIf(!IS_BROWSER)(
         within(dialog).getByRole("button", { name: "Back to chat" })
       );
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-      expect(steps).toEqual(["paid_welcome_shown", "paid_welcome_closed"]);
+      expect(steps.filter((step) => step.startsWith("paid_"))).toEqual([
+        "paid_welcome_shown",
+        "paid_welcome_closed",
+      ]);
     } finally {
       app.view.unmount();
       await app.cleanup();
@@ -244,7 +250,10 @@ it.runIf(!IS_BROWSER).each(WAYS_OUT)(
       await waitFor(() => expect(resume).toHaveBeenCalledOnce());
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(resume).toHaveBeenCalledOnce();
-      expect(steps).toEqual(["paid_welcome_shown", step]);
+      expect(steps.filter((step) => step.startsWith("paid_"))).toEqual([
+        "paid_welcome_shown",
+        step,
+      ]);
     } finally {
       app.view.unmount();
       await app.cleanup();

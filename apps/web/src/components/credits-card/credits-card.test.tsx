@@ -472,13 +472,16 @@ describe("the plan's credit milestone card", () => {
     expect(screen.getByRole("dialog").textContent).toContain(
       "That's about 10 more bot messages like today's."
     );
-    await waitFor(() => expect(h.steps()).toEqual(["credit_card_50_shown"]));
+    await waitFor(() =>
+      expect(h.steps()).toEqual(["credit_card_50_shown", "upgrade_shown"])
+    );
     fireEvent.click(screen.getByRole("button", { name: "Continue free" }));
     await waitFor(() =>
       expect(h.cards()).toEqual({ "o1:u1": { shown: 50, answered: 50 } })
     );
     expect(h.steps()).toEqual([
       "credit_card_50_shown",
+      "upgrade_shown",
       "credit_card_50_continue",
     ]);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -568,7 +571,9 @@ describe("the plan's credit milestone card", () => {
       "Enough for about 2 more bot messages. When they run out, “Bakery website” stops mid-task. Upgrade now to keep going, and finish it on Claude Opus 5.5."
     );
     expect(dialog.textContent).toContain("Image and video generation");
-    await waitFor(() => expect(h.steps()).toEqual(["credit_card_95_shown"]));
+    await waitFor(() =>
+      expect(h.steps()).toEqual(["credit_card_95_shown", "upgrade_shown"])
+    );
     expect(
       screen.getByRole("button", { name: "Upgrade · $7 first month" })
     ).toBeTruthy();
@@ -578,6 +583,7 @@ describe("the plan's credit milestone card", () => {
     );
     expect(h.steps()).toEqual([
       "credit_card_95_shown",
+      "upgrade_shown",
       "credit_card_95_continue",
     ]);
   });

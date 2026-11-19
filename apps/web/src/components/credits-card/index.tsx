@@ -23,6 +23,7 @@ import {
   ConnectPending,
 } from "#renderer/components/form-kit/connect-dialog";
 import { GroupCard } from "#renderer/components/form-kit/page";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { connectErrorText } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -85,6 +86,8 @@ export interface CreditWallChoice {
   onTopUp?(): void;
   onNextPlan?(): void;
   expired?: boolean;
+  /** The stopped turn, so each wall's card counts as shown once. */
+  id?: string;
 }
 
 /** The wall's title: what stopped, by the chat's task when it has one, and why. */
@@ -346,6 +349,8 @@ export const CreditsCard = ({
               <div className="flex flex-wrap gap-2">
                 <OfferButtons
                   billing={billing}
+                  src="wall_card"
+                  {...(wall.id != null && { item: wall.id })}
                   onUpgrade={upgrade}
                   onSeePlans={wall.onSeePlans ?? upgrade}
                 />
@@ -353,6 +358,9 @@ export const CreditsCard = ({
             ) : (
               (tier === "free" || upgradeOnly) && (
                 <Button size="sm" data-action="upgrade" onClick={upgrade}>
+                  {wall == null && !upgradeOnly && (
+                    <UpgradeSeen src="chat_credits" />
+                  )}
                   {t("creditsCard.cta")}
                 </Button>
               )

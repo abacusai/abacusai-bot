@@ -35,7 +35,12 @@ import { useCollections, useDb } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { showError, showInfo } from "#renderer/lib/toast";
-import { openNextPlan, openTopUp, openUpgrade } from "#renderer/lib/upgrade";
+import {
+  openNextPlan,
+  openTopUp,
+  openUpgrade,
+  upgradeSeen,
+} from "#renderer/lib/upgrade";
 import { useUpgradeDialogRequest } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -471,6 +476,8 @@ export const CreditThresholdHost = ({
             : `credit_card_${threshold}_shown`,
       })
       .catch(() => undefined);
+    if (plan !== "paid")
+      upgradeSeen(transport.client, "credits_milestone", String(threshold));
     write({ shown: threshold, answered: card?.answered ?? null });
   });
   const showing = visible ? owed : null;
@@ -513,7 +520,7 @@ export const CreditThresholdHost = ({
       {...(topModel != null && { topModel })}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
-        void openUpgrade(transport.client, "low_credits");
+        void openUpgrade(transport.client, "credits_milestone");
         answer("upgrade");
       }}
       onNextPlan={() => {

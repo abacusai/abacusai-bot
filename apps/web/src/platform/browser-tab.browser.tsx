@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilePreview } from "#renderer/components/file-preview";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import type { BrowserTab as Native } from "#renderer/features/sessions/browser/browser-tab";
 import { useSessionsTransport } from "#renderer/features/sessions/data/queries";
 import {
@@ -80,6 +81,7 @@ export const BrowserTab: typeof Native = ({
         <div className="flex flex-wrap justify-center gap-2">
           {tier === "free" && (
             <Button onClick={() => void openUpgrade(client, "web_tab")}>
+              <UpgradeSeen src="web_tab" />
               {t("web.files.browserUpgrade")}
             </Button>
           )}

@@ -15,6 +15,37 @@ import {
 import { creditsTier } from "./credits";
 import { openPendingLink } from "./platform-system";
 
+/** The upgrade surfaces each app client (one per run) already reported: `src` or `src:item`. */
+const seenSurfaces = new WeakMap<AppClient, Set<string>>();
+
+// Never in the way of an upgrade: a report that fails, even at once, is dropped.
+const reportUpgradeStep = (
+  client: AppClient,
+  step: "upgrade_shown" | "upgrade_tapped",
+  src: UpgradeSrc
+): void =>
+  void Promise.resolve()
+    .then(() => client.system.funnelStep({ step, detail: src }))
+    .catch(() => undefined);
+
+/**
+ * An upgrade surface's Upgrade is on screen: reported once per app run for
+ * the surface, or per item of it (a stopped turn, a milestone), so its shown,
+ * tapped and paid counts line up by `src`.
+ */
+export const upgradeSeen = (
+  client: AppClient,
+  src: UpgradeSrc,
+  item?: string
+): void => {
+  const key = item == null ? src : `${src}:${item}`;
+  const seen = seenSurfaces.get(client) ?? new Set<string>();
+  if (seen.has(key)) return;
+  seen.add(key);
+  seenSurfaces.set(client, seen);
+  reportUpgradeStep(client, "upgrade_shown", src);
+};
+
 /** How often the account is read again while checkout is open. */
 const PLAN_POLL_MS = 5_000;
 /** The one-time checkout link lives 30 minutes; the watch stops after it. */
@@ -169,6 +200,7 @@ export const openUpgrade = async (
   client: AppClient,
   src: UpgradeSrc
 ): Promise<void> => {
+  reportUpgradeStep(client, "upgrade_tapped", src);
   await openPendingLink(
     client,
     async () =>

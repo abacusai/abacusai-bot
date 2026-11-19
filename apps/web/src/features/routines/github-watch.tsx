@@ -24,7 +24,7 @@ import { useMutation } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openUpgrade, upgradeSeen } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
@@ -313,6 +313,7 @@ const GithubAlwaysOnLine = () => {
   const { transport } = useAppContext();
   useEffect(() => {
     funnel(transport.client, "github_watch_upsell_shown");
+    upgradeSeen(transport.client, "app_routines");
   }, [transport.client]);
   return (
     <div className="bg-muted/60 flex items-center gap-3 rounded-xl px-3 py-2 text-xs">
