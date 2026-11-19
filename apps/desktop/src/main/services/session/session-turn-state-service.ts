@@ -88,6 +88,14 @@ export class SessionTurnStateService {
     return false;
   }
 
+  /** The sessions `hasBusyTurn` counts, with the same `exclude`. */
+  busySessionIds(exclude?: (sessionId: string) => boolean): string[] {
+    const ids: string[] = [];
+    for (const [sessionId, state] of this.states)
+      if (state.isBusy && exclude?.(sessionId) !== true) ids.push(sessionId);
+    return ids;
+  }
+
   markSent(workspaceId: string, sessionId: string): void {
     this.ledger?.begin(sessionId);
     this.suppressedSessions.delete(sessionId);

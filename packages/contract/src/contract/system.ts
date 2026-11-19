@@ -58,7 +58,27 @@ export type SystemEvent =
       metadata: NotificationMetadata;
     }
   /** An `abacusaibot://` link is waiting: `takeOpenLink` hands it over. */
-  | { type: "open-link" };
+  | { type: "open-link" }
+  /** A quit met running work, or its wait changed; see `quitGuard`. */
+  | { type: "quit-guard"; state: QuitGuardState };
+
+/** One piece of running work a quit would stop. */
+export interface QuitGuardWork {
+  sessionId: string;
+  /** The chat's name; empty when it has none yet. */
+  label: string;
+}
+
+/**
+ * A quit while work runs: `asking` waits on the user's choice, `waiting`
+ * quits by itself once the work is done.
+ */
+export type QuitGuardState =
+  | { phase: "idle" }
+  | { phase: "asking" | "waiting"; work: QuitGuardWork[] };
+
+export const QUIT_GUARD_ANSWERS = ["shown", "wait", "quit", "cancel"] as const;
+export type QuitGuardAnswer = (typeof QUIT_GUARD_ANSWERS)[number];
 
 export interface PickedFile {
   path: string;
@@ -118,6 +138,15 @@ export const system = {
       .output(type<{ openAtLogin: boolean }>()),
   },
   restart: mutation.input(NoInput).output(type<void>()),
+  /** The quit guard now; its changes arrive as `quit-guard` events. */
+  quitGuard: query.input(NoInput).output(type<QuitGuardState>()),
+  /**
+   * The main window's answer to an `asking` quit (`shown`: its dialog is up,
+   * so main shows no native one), or `cancel` to stop a `waiting` one.
+   */
+  answerQuitGuard: mutation
+    .input(v.object({ answer: v.picklist(QUIT_GUARD_ANSWERS) }))
+    .output(type<void>()),
   deleteAllData: mutation
     .input(v.strictObject({ confirmation: v.literal("DELETE_ALL_LOCAL_DATA") }))
     .output(type<void>()),

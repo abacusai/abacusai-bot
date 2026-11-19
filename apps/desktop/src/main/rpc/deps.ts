@@ -13,7 +13,11 @@ import type {
   WindowChromeState,
   WindowState,
 } from "@abacus-ai/contract/contract";
-import type { PickedFile } from "@abacus-ai/contract/contract/system";
+import type {
+  PickedFile,
+  QuitGuardAnswer,
+  QuitGuardState,
+} from "@abacus-ai/contract/contract/system";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
@@ -71,6 +75,11 @@ export interface AppOperations {
   /** Upgraded from the old renderer, as found at launch. */
   legacyInstall(): boolean;
   restartApp(): void;
+  /** Desktop only: the quit asked about running work (quit-guard.ts). */
+  quitGuard?: {
+    state(): QuitGuardState;
+    answer(answer: QuitGuardAnswer): void;
+  };
   deleteAllData(): void;
   /** `once`: the persisted first-time report (`reportFunnelStepOnce`). */
   reportFunnelStep(step: unknown, detail: unknown, once?: boolean): void;

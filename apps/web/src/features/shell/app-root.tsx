@@ -28,6 +28,7 @@ import { CommandMenu } from "./command-menu-loader";
 import { AppHotkeys, AppHotkeysProvider, type ShellActions } from "./hotkeys";
 import { NotificationClicks } from "./notification-clicks";
 import { createOcclusionWatcher } from "./occlusion";
+import { QuitGuard } from "./quit-guard";
 import { ReadinessReporter } from "./readiness";
 import {
   closeFloating,
@@ -143,6 +144,7 @@ export const AppRoot = ({
               collections={db.collections}
             />
             <NotificationClicks transport={transport} db={db} />
+            <QuitGuard transport={transport} />
             <OcclusionEffect />
             <InertHiddenEffect />
             <ShortcutHandler />

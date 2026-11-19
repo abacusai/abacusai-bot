@@ -18,3 +18,20 @@ export const agentTurnBusy = (sources: {
   sources.turnState.hasBusyTurn(
     (sessionId) => sources.wireOf(sessionId) === "agui"
   );
+
+/** The sessions behind `agentTurnBusy`, each once, by the same rule. */
+export const agentBusySessionIds = (sources: {
+  relay: { busyThreadIds(): string[] };
+  turnState: {
+    busySessionIds(exclude?: (sessionId: string) => boolean): string[];
+  };
+  wireOf(sessionId: string): AgentWire | null;
+}): string[] =>
+  Array.from(
+    new Set([
+      ...sources.relay.busyThreadIds(),
+      ...sources.turnState.busySessionIds(
+        (sessionId) => sources.wireOf(sessionId) === "agui"
+      ),
+    ])
+  );

@@ -102,7 +102,14 @@ export type { MemoryEvent } from "./memory";
 export type { MessagingEvent } from "./messaging";
 export type { SettingsEvent } from "./settings";
 export type { StatusEvent } from "./status";
-export type { NotificationMetadata, SystemEvent, SystemInfo } from "./system";
+export type {
+  NotificationMetadata,
+  QuitGuardAnswer,
+  QuitGuardState,
+  QuitGuardWork,
+  SystemEvent,
+  SystemInfo,
+} from "./system";
 export type { TerminalEvent, TerminalOutputChunk } from "./terminal";
 
 export type {
