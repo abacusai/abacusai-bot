@@ -3630,7 +3630,10 @@
       "routineLine": "Berjalan sesuai jadwal selama aplikasi terbuka",
       "copied": "Disalin",
       "copy": "Salin “{{text}}” untuk dikirim dari ponsel",
-      "copyFailed": "Gagal menyalin"
+      "copyFailed": "Gagal menyalin",
+      "formTitle": "Jadikan milik Anda",
+      "formLine": "Satu atau dua baris sudah cukup: saya ganti teks contohnya.",
+      "notNow": "Nanti saja"
     },
     "retryOffer": {
       "title": "Coba lagi dengan {{model}}",

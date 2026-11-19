@@ -3630,7 +3630,10 @@
       "routineLine": "應用程式開啟時依排程執行",
       "copied": "已複製",
       "copy": "複製「{{text}}」，再從手機傳送",
-      "copyFailed": "無法複製"
+      "copyFailed": "無法複製",
+      "formTitle": "換成你的內容",
+      "formLine": "寫一兩行就夠了：我來替換範例文字。",
+      "notNow": "先不要"
     },
     "retryOffer": {
       "title": "用 {{model}} 再試一次",

@@ -3630,7 +3630,10 @@
       "routineLine": "应用打开时按计划运行",
       "copied": "已复制",
       "copy": "复制“{{text}}”，然后从手机发送",
-      "copyFailed": "无法复制"
+      "copyFailed": "无法复制",
+      "formTitle": "换成你的内容",
+      "formLine": "写一两行就够了：我来替换示例文字。",
+      "notNow": "暂不"
     },
     "retryOffer": {
       "title": "用 {{model}} 再试一次",

@@ -5,11 +5,16 @@
  * user to send from their phone. The buttons show once the reply is done
  * and only on the latest offer, until the user writes anything. A next step
  * under a result (contract next-step.ts) is the same card in any chat, with
- * a clock and a line on a routine's.
+ * a clock and a line on a routine's. A call with fields draws a small form
+ * instead, for what only the user knows (their name on a sample page): its
+ * one task is the button, and sends with a "label: value" line per field.
  */
 import {
   isSuggestTasksTool,
+  type SuggestedForm,
   type SuggestedTask,
+  suggestedForm,
+  suggestedFormMessage,
   suggestedTasks,
   suggestsNextStep,
 } from "@abacus-ai/contract/bots/suggested-tasks";
@@ -21,7 +26,7 @@ import { funnelDetail } from "@abacus-ai/contract/funnel";
 import { nextStepAllowed } from "@abacus-ai/contract/next-step";
 import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
-import { ArrowRight, Check, Clock, Copy } from "lucide-react";
+import { ArrowRight, Check, Clock, Copy, PenLine } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,15 +36,24 @@ import { cn } from "#renderer/lib/cn";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { hiddenUserMessage } from "#renderer/lib/user-message";
+import { Button } from "#renderer/ui/button";
+import { Input } from "#renderer/ui/input";
 
 import { useHost, useThreadStore } from "../../store/selectors";
 import { useChatView } from "../context";
 import { retryOfferTarget } from "../retry-offer";
 import { useSendAsUser } from "../send-as-user";
+import { OfferCardFrame } from "../success-pitch";
 import { toolInput } from "./normalize";
 
 /** Calls already counted as shown, so a re-render or a scroll back counts nothing. */
 const shown = new Set<string>();
+
+/** Forms put away with Not now, so a scroll back does not bring one back. */
+const closedForms = new Set<string>();
+
+/** Room for a name or a line about a business; the message stays short. */
+const FORM_VALUE_MAX_CHARS = 200;
 
 const COPIED_MS = 2000;
 
@@ -90,8 +104,11 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   const [copied, setCopied] = useState<string | null>(null);
   // A tap answers the offer at once: a second tap must not send again.
   const [sent, setSent] = useState(false);
+  const [closed, setClosed] = useState(() => closedForms.has(part.id));
+  const [values, setValues] = useState<string[]>([]);
   const input = part.input == null ? null : toolInput(part, parsePartialJSON);
   const tasks = input == null ? [] : suggestedTasks(input);
+  const form = input == null ? null : suggestedForm(input);
   // A next step keeps its caps in prefs, as the deliverable offer does.
   const nextStep = suggestsNextStep(input);
   const card = db?.collections.prefs.get("app")?.dismissals.nextStepOffer;
@@ -104,6 +121,7 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   const ready =
     tasks.length > 0 &&
     !sent &&
+    !closed &&
     !refused &&
     !running &&
     composer.readOnly == null &&
@@ -123,6 +141,11 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
       : null;
   const detail = funnelDetail(template ?? "custom");
   const offersRoutine = tasks.some((task) => task.routine);
+  // A form and buttons count apart, so a form's shown vs sent can be read.
+  const nextStepDetail =
+    form != null ? "form" : offersRoutine ? "routine" : "work";
+  const suggestionsDetail =
+    form != null ? funnelDetail(`form_${detail}`) : detail;
   const reportShown = useEffectEvent(() => {
     // A relaunch redraws an offer already counted.
     if (nextStep && card?.shownOffer === part.id) return;
@@ -148,9 +171,9 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
         nextStep
           ? {
               step: "next_step_shown",
-              detail: offersRoutine ? "routine" : "work",
+              detail: nextStepDetail,
             }
-          : { step: "task_suggestions_shown", detail }
+          : { step: "task_suggestions_shown", detail: suggestionsDetail }
       )
       .catch(() => undefined);
   });
@@ -182,10 +205,15 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
     void transport.client.system
       .funnelStep(
         nextStep
-          ? { step: "next_step_tapped", detail: routine ? "routine" : "work" }
+          ? {
+              step: "next_step_tapped",
+              detail: form != null ? "form" : routine ? "routine" : "work",
+            }
           : {
               step: "task_suggestion_tapped",
-              detail: funnelDetail(`${copy ? "copy_" : ""}${detail}`),
+              detail: funnelDetail(
+                `${copy ? "copy_" : ""}${suggestionsDetail}`
+              ),
             }
       )
       .catch(() => undefined);
@@ -205,6 +233,36 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
         setCopied(text);
       },
       () => showError(t("chat.suggestedTasks.copyFailed"))
+    );
+
+  if (form != null)
+    return (
+      <SuggestedFormCard
+        id={part.id}
+        form={form}
+        values={values}
+        onChange={setValues}
+        onSend={(text) => send(text, false)}
+        onNotNow={() => {
+          closedForms.add(part.id);
+          setClosed(true);
+          // Put away counts as passed over, as an offer left unanswered does.
+          if (nextStep) {
+            const base = card ?? EMPTY_DELIVERABLE_OFFER_CARD;
+            void db
+              ?.updatePrefs({
+                dismissals: {
+                  nextStepOffer: {
+                    ...base,
+                    answered: part.id,
+                    misses: base.misses + 1,
+                  },
+                },
+              })
+              .catch(() => undefined);
+          }
+        }}
+      />
     );
 
   return (
@@ -307,5 +365,90 @@ const SuggestedTaskList = ({
         })}
       </div>
     </div>
+  );
+};
+
+/** The form under a reply, in the offer card: one box per field, the task as its button. */
+const SuggestedFormCard = ({
+  id,
+  form,
+  values,
+  onChange,
+  onSend,
+  onNotNow,
+}: {
+  id: string;
+  form: SuggestedForm;
+  values: readonly string[];
+  onChange(values: string[]): void;
+  onSend(text: string): void;
+  onNotNow(): void;
+}) => {
+  const { t } = useTranslation();
+  const message = suggestedFormMessage(form, values);
+  return (
+    <OfferCardFrame
+      slot="suggested-form"
+      tone="plain"
+      icon={<PenLine className="size-4" />}
+      title={t("chat.suggestedTasks.formTitle")}
+      line={t("chat.suggestedTasks.formLine")}
+      onClose={{ label: t("upgradeDialog.close"), onClick: onNotNow }}
+    >
+      <form
+        aria-label={t("chat.suggestedTasks.formTitle")}
+        className="flex flex-col gap-2.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (message != null) onSend(message);
+        }}
+      >
+        {form.fields.map((field, index) => (
+          <div key={field.label} className="flex flex-col gap-1">
+            <label
+              htmlFor={`suggested-form-${id}-${index}`}
+              className="text-muted-foreground text-xs font-medium"
+            >
+              {field.label}
+            </label>
+            <Input
+              id={`suggested-form-${id}-${index}`}
+              className="bg-background h-8 text-sm"
+              value={values[index] ?? ""}
+              maxLength={FORM_VALUE_MAX_CHARS}
+              {...(field.placeholder != null
+                ? { placeholder: field.placeholder }
+                : {})}
+              onChange={(event) => {
+                const next = form.fields.map((_, at) => values[at] ?? "");
+                next[index] = event.target.value;
+                onChange(next);
+              }}
+            />
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <Button
+            type="submit"
+            size="sm"
+            className="h-auto max-w-full py-1.5 text-left whitespace-normal"
+            data-action="send"
+            disabled={message == null}
+          >
+            {form.task}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground"
+            data-action="not-now"
+            onClick={onNotNow}
+          >
+            {t("chat.suggestedTasks.notNow")}
+          </Button>
+        </div>
+      </form>
+    </OfferCardFrame>
   );
 };

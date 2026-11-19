@@ -730,6 +730,60 @@ const paidFeatureFreePart = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(2) }),
   ]);
 
+const PORTFOLIO_SAMPLE =
+  "Build me a one-page portfolio website: a hero with my name and a one-line intro, a grid of three sample projects, an about section and a contact section. Use placeholder text and images I can swap later, make it clean and modern, and make sure it looks right on a phone. Show me the page when it is ready.";
+
+const PORTFOLIO_FORM_MESSAGE =
+  "Put my details in\nYour name: Ana Ribeiro\nWhat you do, in a few words: Wedding photographer in Lisbon";
+
+/** The first-run portfolio sample, built on placeholder text: a form asks for the user's own. */
+const nextStepFormPortfolio = (sent: boolean) => (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn("r1", "u1", PORTFOLIO_SAMPLE, at(3)),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", {
+      file_path: "/Users/me/portfolio/index.html",
+    }),
+    b.toolResult("c1", { text: "Wrote index.html" }),
+    b.textDelta(
+      "a1",
+      "Your portfolio page is ready in the preview: a hero, three project cards, an about section and a contact form, all with sample text for now. Want me to put your own details in?"
+    ),
+    ...b.toolCall("c2", "suggest_tasks", "a1", {
+      after_result: true,
+      tasks: [{ text: "Put my details in" }],
+      fields: [
+        { label: "Your name", placeholder: "Ana Ribeiro" },
+        {
+          label: "What you do, in a few words",
+          placeholder: "Wedding photographer in Lisbon",
+        },
+      ],
+    }),
+    b.toolResult("c2", {
+      text: "The user sees a form under your reply: Your name, What you do, in a few words.",
+    }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+    ...(sent
+      ? [
+          ...userTurn("r2", "u2", PORTFOLIO_FORM_MESSAGE, at(1)),
+          b.textStart("a2"),
+          ...b.toolCall("c3", "edit", "a2", {
+            file_path: "/Users/me/portfolio/index.html",
+          }),
+          b.toolResult("c3", { text: "Edited index.html" }),
+          b.textDelta(
+            "a2",
+            "Done: the hero now reads Hi, I'm Ana Ribeiro, wedding photographer in Lisbon, and the about section and project cards talk about weddings and Lisbon."
+          ),
+          b.textEnd("a2"),
+          b.runFinished("r2", "success", { timestamp: at(0) }),
+        ]
+      : []),
+  ]);
+
 const successSite = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
@@ -1577,6 +1631,18 @@ export const SCENARIOS: Scenario[] = [
       upgradeDialog: true,
       placeholder: "Message your bot...",
     },
+  },
+  {
+    id: "next-step-form-session",
+    canvas: ["NextStep", "form"],
+    skin: "session",
+    events: nextStepFormPortfolio(false),
+  },
+  {
+    id: "next-step-form-sent",
+    canvas: ["NextStep", "form sent"],
+    skin: "session",
+    events: nextStepFormPortfolio(true),
   },
   {
     id: "success-site",

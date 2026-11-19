@@ -3630,7 +3630,10 @@
       "routineLine": "S'exécute selon son horaire tant que l'app est ouverte",
       "copied": "Copié",
       "copy": "Copier « {{text}} » pour l’envoyer depuis votre téléphone",
-      "copyFailed": "Impossible de copier"
+      "copyFailed": "Impossible de copier",
+      "formTitle": "Personnalisez-le",
+      "formLine": "Une ligne ou deux suffisent : je remplace le texte d'exemple.",
+      "notNow": "Pas maintenant"
     },
     "retryOffer": {
       "title": "Réessayez avec {{model}}",
