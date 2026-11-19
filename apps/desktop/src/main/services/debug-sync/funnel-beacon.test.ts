@@ -47,6 +47,20 @@ import { createUsageReporter } from "./usage-report";
 
 const fetchMock = vi.fn(async () => new Response(null, { status: 404 }));
 
+const STREAK = {
+  day: 2,
+  streak: 2,
+  best: 2,
+  today_done: true,
+  week: ["done", "done", "later", "later", "later", "later", "later"],
+  daily_credits: 100,
+  today_credits_left: 64,
+  bonus_credits: 500,
+  bonus_state: "pending",
+  bonus_in_days: 5,
+  day_ends_at: "2026-11-20T00:00:00+00:00",
+} as const;
+
 beforeEach(() => {
   home.current = fs.mkdtempSync(path.join(os.tmpdir(), "funnel-"));
   settings.current = {};
@@ -187,6 +201,7 @@ describe("usage report: the turn's opening message decides its kind", () => {
           laneOf: () => turn.lane ?? null,
           isRoutineSession: () => turn.routineSession === true,
         },
+        () => undefined,
         fetchMock as unknown as typeof fetch
       )
     );
@@ -204,7 +219,12 @@ describe("usage report: the turn's opening message decides its kind", () => {
     ];
     expect(url).toBe("https://routellm.example.test/v1/abacusaibot_usage");
     const body = JSON.parse(String(init.body)) as Record<string, string>;
-    expect(Object.keys(body).sort()).toEqual(["kind", "surface", "turn_id"]);
+    expect(Object.keys(body).sort()).toEqual([
+      "kind",
+      "surface",
+      "turn_id",
+      "utc_offset_minutes",
+    ]);
     return body.kind;
   };
 
@@ -295,6 +315,7 @@ describe("usage report: the turn's opening message decides its kind", () => {
       createUsageReporter(
         "desktop",
         { laneOf: () => null, isRoutineSession: () => false },
+        () => undefined,
         fetchMock as unknown as typeof fetch
       )
     );
@@ -313,5 +334,31 @@ describe("usage report: the turn's opening message decides its kind", () => {
     ledger.begin(SESSION);
     ledger.end(SESSION, "not_started");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the day's streak", { ok: true, counted: true, streak: STREAK }, STREAK],
+    ["no streak", { ok: true, counted: true }, null],
+    ["an unreadable streak", { ok: true, streak: { day: "two" } }, null],
+  ] as const)("an answer with %s", async (_name, answer, expected) => {
+    settings.current = { apiKeys: { [PROVIDER_ENV_VARS.abacus]: "test-key" } };
+    fetchMock.mockResolvedValueOnce(Response.json(answer));
+    const onStreak = vi.fn();
+    const ledger = new TurnLedger();
+    ledger.onClose(
+      createUsageReporter(
+        "desktop",
+        { laneOf: () => null, isRoutineSession: () => false },
+        onStreak,
+        fetchMock as unknown as typeof fetch
+      )
+    );
+    ledger.noteOpener(SESSION, turnOpenerOf("Build me a site"));
+    ledger.begin(SESSION);
+    ledger.observe(SESSION, idle);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    if (expected == null) expect(onStreak).not.toHaveBeenCalled();
+    else expect(onStreak).toHaveBeenCalledExactlyOnceWith(expected);
   });
 });

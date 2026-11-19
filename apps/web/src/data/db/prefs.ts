@@ -57,6 +57,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     shareOffer: null,
     topModelHint: null,
     wallReopen: null,
+    streakNote: null,
     resumeCard: null,
     topModelRetryClosedAt: null,
     freePlanSeenAt: null,

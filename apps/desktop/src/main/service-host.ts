@@ -576,6 +576,7 @@ import {
   creditSnapshot,
   fetchAbacusAccount,
   lockAbacusModelForPlan,
+  noteAbacusStreak,
   onAbacusAccountPlan,
   onAbacusAccountRead,
   onAbacusPlanChange,
@@ -1062,6 +1063,12 @@ export class ServiceHost {
         laneOf: (id) => this.agentSessionManagerService.laneOf(id),
         isRoutineSession: (id) =>
           this.agentSessionManagerService.isRoutineSession(id),
+      },
+      // The turn made today a streak day: its card shows under this reply
+      // without waiting for the next account read.
+      (streak) => {
+        noteAbacusStreak(streak);
+        this.busDispatcher?.("system", { type: "streak", streak });
       }
     );
     this.turnLedger.onClose((record) => {

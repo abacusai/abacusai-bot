@@ -4,7 +4,8 @@
  * the web app and the desktop app and how much.
  *
  * One POST per turn, carrying only a random turn id, the surface (web or
- * desktop) and the kind of turn, decided by what opened the turn rather than
+ * desktop), the device's offset from UTC (the platform counts the daily
+ * streak's days in it) and the kind of turn, decided by what opened the turn rather than
  * by the session it ran in:
  *
  * - `routine`: a routine's run, in its own session or fired into a chat;
@@ -16,12 +17,15 @@
  * Not reported: a turn the app opened with no words of the user's (a bot's
  * first run, a note, a task one bot passed to another), a turn that never
  * started or was cut off by the app closing, and the phone lane's turns,
- * which the server counts itself. No content. Fire and forget: never
- * awaited, never retried, and nothing here can throw into the caller.
+ * which the server counts itself. No content. Never awaited, never retried,
+ * and nothing here can throw into the caller. The answer carries the daily
+ * streak once the turn made today a streak day; it goes to `onStreak`.
  */
 import { randomUUID } from "crypto";
 
+import type { AbacusStreak } from "@abacus-ai/contract/contracts";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
+import { parseStreak, utcOffsetMinutes } from "@abacus-ai/contract/streak";
 
 import { readSettings } from "../config/settings";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
@@ -60,6 +64,7 @@ export function usageTurnKind(
 export function createUsageReporter(
   surface: UsageSurface,
   facts: UsageSessionFacts,
+  onStreak: (streak: AbacusStreak) => void,
   fetchImpl: typeof fetch = fetch
 ): (record: TurnRecord) => void {
   return (record) => {
@@ -74,11 +79,25 @@ export function createUsageReporter(
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ turn_id: randomUUID(), surface, kind }),
+        // The device's offset: the platform counts the daily streak in the user's own days.
+        body: JSON.stringify({
+          turn_id: randomUUID(),
+          surface,
+          kind,
+          utc_offset_minutes: utcOffsetMinutes(),
+        }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
-      }).catch(() => {
-        // Offline or refused: a lost count is not worth a retry queue.
-      });
+      })
+        .then(async (response) => {
+          if (!response.ok) return;
+          const streak = parseStreak(
+            ((await response.json()) as { streak?: unknown } | null)?.streak
+          );
+          if (streak != null) onStreak(streak);
+        })
+        .catch(() => {
+          // Offline or refused: a lost count is not worth a retry queue.
+        });
     } catch {
       // Never into the caller: counting must not touch the turn.
     }

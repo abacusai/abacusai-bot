@@ -1,4 +1,5 @@
 import { wallOffer } from "@abacus-ai/contract/billing-plan";
+import { streakCreditsLeft } from "@abacus-ai/contract/streak";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
@@ -12,6 +13,7 @@ import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { StreakFlame } from "#renderer/components/streak/streak-week";
 import { usePrefs } from "#renderer/data/db/prefs";
 import {
   ABACUS_AGENT_URL,
@@ -120,6 +122,7 @@ export const UpgradePromo = () => {
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
   const granted = account.data?.credits_granted ?? null;
+  const streakLeft = streakCreditsLeft(account.data?.streak, now);
   const title =
     remaining === 0
       ? "creditsCard.outTitle"
@@ -222,6 +225,19 @@ export const UpgradePromo = () => {
                     total: new Intl.NumberFormat(i18n.language, {
                       maximumFractionDigits: 2,
                     }).format(account.data?.credits_granted ?? 0),
+                  })}
+                </p>
+              ) : null}
+              {!held && streakLeft > 0 ? (
+                <p
+                  data-slot="streak-credits-line"
+                  className="mt-1 flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-300"
+                >
+                  <StreakFlame className="size-3.5" />
+                  {t("streak.sidebarLine", {
+                    credits: new Intl.NumberFormat(i18n.language).format(
+                      streakLeft
+                    ),
                   })}
                 </p>
               ) : null}

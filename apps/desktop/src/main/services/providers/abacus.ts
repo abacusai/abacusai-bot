@@ -8,6 +8,7 @@ import {
   ABACUS_PAYMENT_REASONS,
   type AbacusAccountInfo,
   type AbacusPaymentRequired,
+  type AbacusStreak,
 } from "@abacus-ai/contract/contracts";
 import { creditMilestonePlan } from "@abacus-ai/contract/credit-thresholds";
 import {
@@ -17,6 +18,7 @@ import {
   type ModelAvailability,
   type ModelTier,
 } from "@abacus-ai/contract/models";
+import { parseStreak, streakCreditsLeft } from "@abacus-ai/contract/streak";
 
 import { abacusBotHome } from "../../paths";
 import { credentialFor, hasCredential } from "../config/settings";
@@ -459,6 +461,8 @@ const withCurrentConfigured = (
 };
 
 let accountCache: { value: AbacusAccountInfo; at: number } | null = null;
+/** The streak a finished turn's report was answered with, and when. */
+let streakNote: { streak: AbacusStreak; at: number } | null = null;
 
 /** What is left of the account's credits, as of one read. */
 export interface CreditSnapshot {
@@ -482,7 +486,10 @@ const snapshotOf = (
   } = cached.value;
   if (used == null || granted == null || granted <= 0) return null;
   return {
-    remaining: Math.max(0, granted - used),
+    // The streak's credits for today are spent first, so they count as left.
+    remaining:
+      Math.max(0, granted - used) +
+      streakCreditsLeft(cached.value.streak, cached.at),
     granted,
     at: cached.at,
     ...(planCredits != null ? { planCredits } : {}),
@@ -567,6 +574,7 @@ export const accountMovedPlan = (plan: string | null): void => {
 export const clearAbacusCache = (): void => {
   cache = null;
   accountCache = null;
+  streakNote = null;
   // A new key deserves a fresh verdict.
   credentialRejected = false;
   paymentRequired = null;
@@ -710,6 +718,7 @@ export const requestAbacusAccount = async (
           ABACUS_ACCOUNT_FOCI.find((focus) => focus === body.focus) ?? null,
         onboarding_offer: body.onboarding_offer === true,
         share_artifact: body.share_artifact === true,
+        streak: parseStreak(body.streak),
       },
     };
   } catch {
@@ -735,12 +744,15 @@ export const fetchAbacusAccount = async (
     return accountCache.value;
   }
 
+  const sentAt = Date.now();
   const read = await requestAbacusAccount(key);
   switch (read.kind) {
-    case "account":
+    case "account": {
       setPaymentRequired(null);
-      remember(read.value);
-      return read.value;
+      const value = withNotedStreak(read.value, sentAt);
+      remember(value);
+      return value;
+    }
     case "rejected":
       credentialRejected = true;
       accountCache = null;
@@ -762,6 +774,22 @@ export const abacusAccountAgeMs = (): number | null =>
 /** The account as last read, without a fetch: null before the first read or once signed out. */
 export const cachedAbacusAccount = (): AbacusAccountInfo | null =>
   accountCache?.value ?? null;
+
+/** The streak a finished turn's report was answered with: newer than the last read's. */
+export const noteAbacusStreak = (streak: AbacusStreak): void => {
+  streakNote = { streak, at: Date.now() };
+  if (accountCache == null) return;
+  accountCache = { ...accountCache, value: { ...accountCache.value, streak } };
+};
+
+/** A read sent before the report's answer came back carries the older streak. */
+const withNotedStreak = (
+  value: AbacusAccountInfo,
+  sentAt: number
+): AbacusAccountInfo =>
+  streakNote != null && streakNote.at > sentAt
+    ? { ...value, streak: streakNote.streak }
+    : value;
 
 /** The plan as each agent is told it (ABACUSAI_BOT_PLAN, then the `account_plan` command). */
 export interface AccountPlan {

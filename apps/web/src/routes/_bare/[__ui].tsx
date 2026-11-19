@@ -12,6 +12,11 @@ import {
 } from "#renderer/components/site-deploy/gallery";
 import { SoundSynthesisProbe } from "#renderer/components/sound-preview/probe";
 import {
+  STREAK_GALLERY_STATES,
+  StreakGallery,
+  type StreakGalleryState,
+} from "#renderer/components/streak/gallery";
+import {
   ArtifactsPage,
   ArtifactsStressGallery,
 } from "#renderer/features/artifacts";
@@ -145,6 +150,7 @@ const extension = {
           (variant) => `paid-welcome-${variant}`
         ),
         ...SITE_DEPLOY_GALLERY_STATES.map((state) => `site-deploy-${state}`),
+        ...STREAK_GALLERY_STATES.map((state) => `streak-${state}`),
         ...[
           "idle",
           "working",
@@ -233,6 +239,8 @@ const extension = {
       <SiteDeployCardGallery
         state={props.fixture.slice(12) as SiteDeployGalleryState}
       />
+    ) : props.fixture.startsWith("streak-") ? (
+      <StreakGallery state={props.fixture.slice(7) as StreakGalleryState} />
     ) : props.fixture === "resume-card" ||
       props.fixture === "resume-card-plain" ? (
       <ResumeCardGallery chips={props.fixture === "resume-card"} />

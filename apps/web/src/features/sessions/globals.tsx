@@ -1,3 +1,4 @@
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import {
   conversationRefFromKey,
   type ConversationKey,
@@ -139,6 +140,21 @@ export const SessionsGlobals = ({
           queryKey: transport.orpc.account.abacus.queryKey(),
         });
     });
+    // The turn's report made today a streak day: its card shows under the
+    // reply now, not after the next account read.
+    followNotice(
+      "system",
+      transport,
+      (event) => {
+        if (event.type !== "streak") return;
+        qc.setQueriesData<AbacusAccountInfo | null>(
+          { queryKey: transport.orpc.account.abacus.key() },
+          (account) =>
+            account == null ? account : { ...account, streak: event.streak }
+        );
+      },
+      abort.signal
+    );
     let first = true;
     const waiting = new Set<string>();
     followNotice(
