@@ -149,6 +149,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "context/permission-terminal-action",
     "context/tasks",
     "continuation-links",
+    // The website's prompt line on the chat it started (lib/website-prompt.ts).
+    "website-prompt-label",
     "data/composer-model",
     // The shell hands the credit cards the new-chat hand-off (continue-chat.ts).
     "data/continue-chat",
