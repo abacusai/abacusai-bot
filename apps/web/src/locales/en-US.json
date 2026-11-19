@@ -5579,6 +5579,16 @@
     "line": "Finish it on {{plan}}: {{model}} for the hard parts, credits for a build this size, and a live link when it's done.",
     "lineNoModel": "Finish it on {{plan}}: top models for the hard parts, credits for a build this size, and a live link when it's done."
   },
+  "freeModelDown": {
+    "title": "The free model is overloaded right now",
+    "line": "Finish this on a top model (Claude, GPT, Gemini) with {{plan}}:",
+    "upgrade": "Upgrade and finish this",
+    "retry": "Try free again",
+    "retrying": "Trying again in {{seconds}}s…",
+    "firstRetrying": "Trying it again for you in {{seconds}}s…",
+    "tryNow": "Try now",
+    "history": "The free model was overloaded"
+  },
   "keepRunning": {
     "title": "Keep “{{name}}” running 24/7",
     "titleUnnamed": "Keep it running 24/7",

@@ -5579,6 +5579,16 @@
     "line": "Maak het af met {{plan}}: {{model}} voor de moeilijke delen, credits voor een project van deze omvang en een openbare link als het klaar is.",
     "lineNoModel": "Maak het af met {{plan}}: topmodellen voor de moeilijke delen, credits voor een project van deze omvang en een openbare link als het klaar is."
   },
+  "freeModelDown": {
+    "title": "Het gratis model is nu overbelast",
+    "line": "Maak dit af op een topmodel (Claude, GPT, Gemini) met {{plan}}:",
+    "upgrade": "Upgraden en afmaken",
+    "retry": "Gratis opnieuw proberen",
+    "retrying": "Opnieuw over {{seconds}} s…",
+    "firstRetrying": "Ik probeer het over {{seconds}} s opnieuw voor je…",
+    "tryNow": "Nu proberen",
+    "history": "Het gratis model was overbelast"
+  },
   "keepRunning": {
     "title": "Laat “{{name}}” 24/7 draaien",
     "titleUnnamed": "Laat het 24/7 draaien",

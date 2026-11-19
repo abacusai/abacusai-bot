@@ -5579,6 +5579,16 @@
     "line": "{{plan}}で仕上げましょう：難しい部分には{{model}}、この規模の作業に足りるクレジット、完成したら公開リンク。",
     "lineNoModel": "{{plan}}で仕上げましょう：難しい部分にはトップモデル、この規模の作業に足りるクレジット、完成したら公開リンク。"
   },
+  "freeModelDown": {
+    "title": "無料モデルが現在混み合っています",
+    "line": "{{plan}} なら、トップモデル（Claude、GPT、Gemini）でこれを仕上げられます：",
+    "upgrade": "アップグレードして仕上げる",
+    "retry": "無料でもう一度試す",
+    "retrying": "{{seconds}}秒後に再試行…",
+    "firstRetrying": "{{seconds}}秒後にもう一度試します…",
+    "tryNow": "今すぐ試す",
+    "history": "無料モデルが混み合っていました"
+  },
   "keepRunning": {
     "title": "「{{name}}」を24時間動かし続ける",
     "titleUnnamed": "24時間動かし続ける",

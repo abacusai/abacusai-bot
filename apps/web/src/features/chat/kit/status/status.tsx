@@ -106,6 +106,7 @@ import {
 } from "../../store/thread-store";
 import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
+import { FreeModelDown, freeModelDown } from "../free-model-down";
 import { openModelPicker } from "../open-model-picker";
 import { ProgressMeter, QUIET_AFTER_MS, toolTitle } from "../tools/tool-line";
 import {
@@ -598,12 +599,15 @@ const RunMarkerLine = ({ outcome }: { outcome: RunOutcomeRecord }) => {
   );
 };
 
-/** A busy free pool sells a plan to a free account only; a paying one switches. */
-const wantsUpgradeCard = (actions?: ErrorAction[], paying = false): boolean =>
+/**
+ * The credits card: the wall, or a free pool every source refused. A busy
+ * free model has its own card (FreeModelDown), and a paying plan switches.
+ */
+const wantsUpgradeCard = (actions?: ErrorAction[]): boolean =>
   actions?.some(
     (action) =>
       action.type === "upgrade-abacus" ||
-      (action.type === "free-pool-out" && !(paying && action.cause === "busy"))
+      (action.type === "free-pool-out" && action.cause !== "busy")
   ) === true;
 
 /** The picked model that cannot serve the turn, when that is why it ended. */
@@ -1252,7 +1256,7 @@ export const ErrorCard = ({
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
-  const upgrade = wantsUpgradeCard(actions, paying);
+  const upgrade = wantsUpgradeCard(actions);
   // A paid plan at the wall: its offer picks the card. Basic's (the next plan
   // alone) is the free plan's one line, its dialog carrying the pitch.
   const paidAtWall =
@@ -1434,6 +1438,23 @@ export const ErrorCard = ({
         />
       </div>
     );
+  // The free model is overloaded: a free account's honest card, once its plan
+  // is read (someone who paid must never read the free plan's words).
+  if (freeModelDown(actions) && !paying) {
+    if (providedTier == null && !tierRead) return null;
+    if (tier === "free")
+      return (
+        <div
+          role="group"
+          aria-label={t("chat.error.label")}
+          className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
+          data-slot="error-card"
+          data-variant="free-model-down"
+        >
+          <FreeModelDown outcome={outcome} latest={latest} />
+        </div>
+      );
+  }
   if (upgrade) {
     const ready =
       slots.renderDeliverables == null

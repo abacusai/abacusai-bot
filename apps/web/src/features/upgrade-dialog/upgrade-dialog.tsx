@@ -292,11 +292,13 @@ export const DialogBody = ({
     coder && paidUpgrade && request.kind === "credits" && offer != null;
   // A free wall in a chat with a task: the title names the task and the
   // plan's top model, and once paid the waiting message runs on that model.
+  const wallTask =
+    request.kind === "credits" && !paidUpgrade && request.task != null;
+  // Once paid, the waiting message runs on the plan's top model: the wall's
+  // task, or a card that asked for it (topModel).
   const personal =
-    request.kind === "credits" &&
-    !paidUpgrade &&
-    request.task != null &&
-    request.resume != null;
+    request.resume != null &&
+    (wallTask || (request.topModel === true && !paidUpgrade));
   const { data: catalog } = useQuery({
     ...transport.orpc.models.list.queryOptions({ input: {} }),
     enabled: personal,

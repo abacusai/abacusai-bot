@@ -49,6 +49,12 @@ export interface UpgradeDialogRequest {
   task?: string;
   /** Sends that message again once the plan is active, on `model` if given. */
   resume?: (model?: string) => Promise<unknown>;
+  /**
+   * Once the plan is active, `resume` sends the waiting message on the plan's
+   * top model (the one it unlocks), not the model that failed: a free
+   * account's "finish this on a top model" from a card.
+   */
+  topModel?: boolean;
   /** `plan`: the screen that asked for it (a card, the model picker). */
   src?: UpgradeSrc;
   /** `plan`: the top model a retry asked for, by name; the title names it. */

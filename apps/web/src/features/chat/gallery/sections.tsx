@@ -369,6 +369,12 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
       billing: GALLERY_BILLING,
     },
   }),
+  ...(scenario.view?.freeModelDown != null && {
+    freeModelDownPreview: {
+      ...scenario.view.freeModelDown,
+      billing: GALLERY_BILLING,
+    },
+  }),
   ...(scenario.view?.topModels === true && {
     topModelHintPreview: { choices: TOP_MODEL_PREVIEW },
   }),

@@ -5579,6 +5579,16 @@
     "line": "Termínalo con {{plan}}: {{model}} para las partes difíciles, créditos para un proyecto de este tamaño y un enlace público cuando esté listo.",
     "lineNoModel": "Termínalo con {{plan}}: modelos de primer nivel para las partes difíciles, créditos para un proyecto de este tamaño y un enlace público cuando esté listo."
   },
+  "freeModelDown": {
+    "title": "El modelo gratuito está saturado en este momento",
+    "line": "Termina esto en un modelo top (Claude, GPT, Gemini) con {{plan}}:",
+    "upgrade": "Mejorar y terminar esto",
+    "retry": "Intentar gratis de nuevo",
+    "retrying": "Reintentando en {{seconds}} s…",
+    "firstRetrying": "Lo intento de nuevo por ti en {{seconds}} s…",
+    "tryNow": "Intentar ahora",
+    "history": "El modelo gratuito estaba saturado"
+  },
   "keepRunning": {
     "title": "Mantén “{{name}}” funcionando 24/7",
     "titleUnnamed": "Mantenlo funcionando 24/7",

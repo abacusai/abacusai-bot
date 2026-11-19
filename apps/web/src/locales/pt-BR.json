@@ -5579,6 +5579,16 @@
     "line": "Termine no {{plan}}: {{model}} para as partes difíceis, créditos para um projeto deste tamanho e um link público quando ficar pronto.",
     "lineNoModel": "Termine no {{plan}}: modelos de ponta para as partes difíceis, créditos para um projeto deste tamanho e um link público quando ficar pronto."
   },
+  "freeModelDown": {
+    "title": "O modelo gratuito está sobrecarregado agora",
+    "line": "Termine isto em um modelo top (Claude, GPT, Gemini) com o {{plan}}:",
+    "upgrade": "Fazer upgrade e terminar",
+    "retry": "Tentar grátis de novo",
+    "retrying": "Tentando de novo em {{seconds}} s…",
+    "firstRetrying": "Vou tentar de novo para você em {{seconds}} s…",
+    "tryNow": "Tentar agora",
+    "history": "O modelo gratuito estava sobrecarregado"
+  },
   "keepRunning": {
     "title": "Mantenha “{{name}}” rodando 24/7",
     "titleUnnamed": "Mantenha rodando 24/7",
