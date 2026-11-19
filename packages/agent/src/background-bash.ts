@@ -7,7 +7,7 @@
 import { Type } from "typebox";
 
 import { startBackgroundJob } from "./background-processes.js";
-import { collapseProgress } from "./terminal-progress.js";
+import { screenText } from "./terminal-progress.js";
 
 interface BashLikeDefinition {
   name: string;
@@ -102,7 +102,7 @@ const collapsedResult = (result: unknown): unknown => {
     ...typed,
     content: typed.content.map((part) =>
       part.type === "text" && typeof part.text === "string"
-        ? { ...part, text: collapseProgress(part.text).replace(/\r$/, "") }
+        ? { ...part, text: screenText(part.text) }
         : part
     ),
   };
