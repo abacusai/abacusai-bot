@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { NavList } from "#renderer/components/nav-list";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import { creditsTier } from "#renderer/lib/credits";
@@ -30,6 +31,7 @@ export const RoutineUpgradeActions = () => {
         size="sm"
         onClick={() => void openUpgrade(transport.client, "app_routines")}
       >
+        <UpgradeSeen src="app_routines" />
         {t("routines.hosted.upgrade")}
       </Button>
       {IS_BROWSER && (

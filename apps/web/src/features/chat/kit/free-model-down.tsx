@@ -19,7 +19,7 @@ import { Loader2, Zap } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openUpgrade, upgradeSeen } from "#renderer/lib/upgrade";
 import {
   lastUserText,
   requestUpgradeDialog,
@@ -265,6 +265,8 @@ export const FreeModelDown = ({
     if (shownRuns.has(outcome.runId)) return;
     shownRuns.add(outcome.runId);
     funnel("free_model_down_shown", first ? "first" : (cause ?? "busy"));
+    if (showing && preview == null)
+      upgradeSeen(transport.client, "free_model_down", outcome.runId);
   });
   useEffect(() => {
     if (first || showing) shown();

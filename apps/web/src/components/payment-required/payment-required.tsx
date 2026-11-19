@@ -19,6 +19,7 @@ import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { signOutAbacus } from "#platform/sign-out";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BILLING_URL } from "#renderer/lib/abacus-links";
 import {
   checkPaymentNow,
@@ -348,6 +349,7 @@ const PaymentPlanPanel = ({
             setCheckoutAt(Date.now());
           }}
         >
+          <UpgradeSeen src="payment_lapsed" />
           {t(copy.cta)}
         </Button>
         <Button

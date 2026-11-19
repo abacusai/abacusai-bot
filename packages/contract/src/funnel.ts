@@ -258,6 +258,11 @@ export const FUNNEL_STEPS = [
   "top_model_retry_shown",
   "top_model_retry_tapped",
   "top_model_retry_closed",
+  // Every upgrade surface, one pair: its Upgrade on screen (lib/upgrade.ts
+  // upgradeSeen, once per app run for the surface and its item) and its
+  // upgrade page asked for (openUpgrade). Detail: the surface's UpgradeSrc.
+  "upgrade_shown",
+  "upgrade_tapped",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

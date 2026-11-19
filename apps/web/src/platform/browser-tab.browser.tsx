@@ -13,7 +13,7 @@ import { externalBrowserUrl } from "#renderer/lib/browser/external-browser-url";
 import { creditsTier } from "#renderer/lib/credits";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openUpgrade, upgradeSeen } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
 import { Button } from "#renderer/ui/button";
 
@@ -40,6 +40,10 @@ export const BrowserTab: typeof Native = ({
   const account = useAccount();
   const tier = creditsTier(account.data);
   const paid = sidebarAccount(account.data).paid;
+  // The free plan's Upgrade below, on screen whenever no file is.
+  useEffect(() => {
+    if (!file && tier === "free") upgradeSeen(client, "web_tab");
+  }, [file, tier, client]);
   if (file)
     return (
       <FilePreview

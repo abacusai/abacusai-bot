@@ -13,6 +13,7 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { onPlanActive } from "#renderer/lib/upgrade";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { Button } from "#renderer/ui/button";
@@ -103,6 +104,7 @@ export const PaidFeatureCard = ({
                 data-action="see-plan"
                 onClick={() => requestPlanDialog("paid_feature")}
               >
+                <UpgradeSeen src="paid_feature" />
                 {t("creditsCard.cta")}
               </Button>
             )}

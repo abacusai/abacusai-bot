@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 
+import { upgradeSeen } from "#renderer/lib/upgrade";
 import { startPlanCheckout } from "#renderer/lib/upgrade-dialog";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
@@ -49,6 +50,7 @@ export const OfferStep = ({
     void transport.client.system
       .funnelStep({ step: "onboarding_offer_shown" })
       .catch(() => {});
+    upgradeSeen(transport.client, "onboarding");
   }, [offer, props.preview, transport]);
   const answer = (upgrade: boolean) => {
     // Inside the click: the web build opens checkout's tab here. The plan

@@ -8,6 +8,7 @@ import type { TFunction } from "i18next";
 import { ArrowUpRight, Moon, Sparkles, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import type { AppClient } from "#renderer/data/transport/types";
 import { ABACUS_AGENT_URL } from "#renderer/lib/abacus-links";
@@ -68,6 +69,7 @@ export const AlwaysOnButton = ({
   const action = alwaysOnAction(plan, transport.client, t);
   return (
     <Button size="sm" variant={variant} onClick={action.run}>
+      {plan === "free" ? <UpgradeSeen src="app_routines" /> : null}
       {plan === "free" ? <Sparkles aria-hidden /> : null}
       {action.label}
       {plan === "paid" ? <ArrowUpRight aria-hidden /> : null}

@@ -48,6 +48,7 @@ import {
 } from "#renderer/components/credits-card/model-unavailable";
 import { PaidOfferButtons } from "#renderer/components/credits-card/paid-offer";
 import { GroupCard } from "#renderer/components/form-kit/page";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import {
   ABACUS_AGENT_URL,
@@ -473,6 +474,7 @@ export const FreeLaneChip = ({ provider }: { provider: string | null }) => {
         className="h-auto px-0"
         onClick={() => void runtime.host.openUpgrade("free_lane")}
       >
+        <UpgradeSeen src="free_lane" />
         {t("outcome.freeChipUpgrade")}
       </Button>
     </div>
@@ -685,12 +687,14 @@ const OwnKeyCard = ({
           creditsOut={!credits}
           {...(credits && latest && canReply && { onSwitch: switchToAbacus })}
           {...(pickModel && { onPickModel: openModelPicker })}
+          upgradeSrc="own_key"
           {...(canReply && {
             onUpgrade: () =>
               requestUpgradeDialog(
                 {
                   kind: "own-key",
                   key: `own-key-card:${runId}:${Date.now()}`,
+                  src: "own_key",
                   threadId: session.threadId,
                   pendingText: lastUserText(session.hostStore.state.messages),
                   ownKey: failure,
@@ -838,6 +842,7 @@ const PaymentLapsedCard = () => {
             data-action="renew"
             onClick={() => void runtime.host.openUpgrade("payment_lapsed")}
           >
+            <UpgradeSeen src="payment_lapsed" />
             {t("paymentRequired.renew")}
           </Button>
           {composer.model != null && composer.readOnly == null && (
@@ -996,7 +1001,7 @@ const useCreditsCheckout = (
     // The free plan's: the task, and the waiting message on the top model.
     plan: () =>
       start(
-        () => runtime.host.openUpgrade("chat_credits"),
+        () => runtime.host.openUpgrade("wall_card"),
         wallTask(session.hostStore.state.messages)
       ),
     topUp: () =>
@@ -1167,6 +1172,7 @@ const CutOffError = ({
               {
                 kind: "own-key",
                 key: `cut-off:${outcome.runId}:${Date.now()}`,
+                src: "own_key",
                 threadId: session.threadId,
                 pendingText: lastUserText(session.hostStore.state.messages),
                 ownKey: {
@@ -1428,6 +1434,7 @@ export const ErrorCard = ({
                 {
                   kind: "credits",
                   key: `model-unavailable:${outcome.runId}:${Date.now()}`,
+                  src: "model_locked",
                   threadId: session.threadId,
                   pendingText: lastUserText(session.hostStore.state.messages),
                   resume,
@@ -1483,6 +1490,7 @@ export const ErrorCard = ({
         {
           kind: "credits",
           key: `credit-wall:${outcome.runId}:${Date.now()}`,
+          src: "wall_card",
           threadId: session.threadId,
           pendingText: lastUserText(session.hostStore.state.messages),
           ...(creditsExpired(actions) ? { expired: true } : {}),
@@ -1497,7 +1505,7 @@ export const ErrorCard = ({
       if (canReply)
         return paying ? paidCheckout.nextPlan() : paidCheckout.plan();
       if (paying) return void runtime.host.openNextPlan?.().catch(() => {});
-      startPlanCheckout(transport.client, "credit_wall");
+      startPlanCheckout(transport.client, "wall_card");
     };
     // The free ways on beside the plan: a $0 model by name, the key to fix.
     const alternatives = (size?: "sm") =>
@@ -1579,6 +1587,7 @@ export const ErrorCard = ({
           })}
           {...(atWall && {
             wall: {
+              id: outcome.runId,
               providers: continueFree?.providers ?? [],
               expired: creditsExpired(actions),
               ...(task != null && { task }),
@@ -1705,6 +1714,9 @@ export const ErrorCard = ({
                     void runtime.host.openExternal(action.link);
                 }}
               >
+                {action.type === "upgrade-abacus" && (
+                  <UpgradeSeen src="chat_notice" />
+                )}
                 {action.label ?? t("chat.error.open")}
               </Button>,
             ]
@@ -1795,6 +1807,7 @@ export const ErrorCard = ({
                 {
                   kind: "credits",
                   key: `plan-offer:${outcome.runId}:${Date.now()}`,
+                  src: "chat_credits",
                   threadId: session.threadId,
                   pendingText: lastUserText(session.hostStore.state.messages),
                   resume,
@@ -1911,6 +1924,7 @@ const CreditsLowButtons = () => {
         data-action="upgrade"
         onClick={() => void runtime.host.openUpgrade("low_credits")}
       >
+        <UpgradeSeen src="low_credits" />
         {t("creditsCard.cta")}
       </Button>
     );
@@ -2072,6 +2086,9 @@ export const NoticeRow = ({
                 void runtime.host.openExternal(action.link);
             }}
           >
+            {action.type === "upgrade-abacus" && (
+              <UpgradeSeen src="chat_notice" />
+            )}
             {action.label ?? t("chat.error.open")}
           </Button>
         ))}

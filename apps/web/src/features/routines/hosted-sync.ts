@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import type { Transport } from "#renderer/data/transport";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
-import { openUpgrade } from "#renderer/lib/upgrade";
+import { openUpgrade, upgradeSeen } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 import { routineRefusal } from "./refusal";
@@ -65,6 +65,7 @@ export const showSaveFailure = (
     showError(t("phase5.failed"));
     return;
   }
+  if (refusal.upgrade) upgradeSeen(transport.client, "app_routines");
   showError(
     t(refusal.key),
     refusal.upgrade

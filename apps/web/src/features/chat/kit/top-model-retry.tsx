@@ -22,6 +22,7 @@ import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useOpusRetryArm } from "#renderer/lib/opus-retry";
 import { showError } from "#renderer/lib/toast";
+import { upgradeSeen } from "#renderer/lib/upgrade";
 import {
   lastUserText,
   requestUpgradeDialog,
@@ -116,6 +117,9 @@ export const TopModelRetryRow = ({
     if (showing == null || shownOn.has(showing)) return;
     shownOn.add(showing);
     funnel("top_model_retry_shown");
+    // Only the dialog arm offers the plan; the other retries on credits.
+    if (preview == null && arm != null && arm !== "opus")
+      upgradeSeen(transport.client, "retry_top_model", showing);
   });
   useEffect(() => {
     if (showing != null) shown();

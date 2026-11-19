@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { StreakFlame } from "#renderer/components/streak/streak-week";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { usePrefs } from "#renderer/data/db/prefs";
 import {
   ABACUS_AGENT_URL,
@@ -323,6 +324,7 @@ export const UpgradePromo = () => {
               </>
             ) : (
               <>
+                <UpgradeSeen src="credits_card" />
                 <Sparkles aria-hidden />
                 {t("creditsCard.cta")}
               </>

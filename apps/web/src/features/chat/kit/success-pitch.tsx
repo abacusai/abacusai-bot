@@ -48,7 +48,7 @@ import { useCollections, useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
 import { creditsTier } from "#renderer/lib/credits";
-import { payingAccount } from "#renderer/lib/upgrade";
+import { payingAccount, upgradeSeen } from "#renderer/lib/upgrade";
 import {
   startPlanCheckout,
   useUpgradeDialogRequest,
@@ -511,6 +511,8 @@ export const SuccessPitchRow = ({
   const shown = useEffectEvent((seen: SuccessPitchOffer) => {
     if (card?.shownOffer === seen.id) return;
     funnel(TRIGGER_EVENTS[seen.trigger].shown, triggerDetail(seen));
+    if (!preview)
+      upgradeSeen(transport.client, TRIGGER_EVENTS[seen.trigger].src);
     const previous = base();
     write({
       ...previous,

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import {
   ABACUS_PLAN_URL,
   DESKTOP_DOWNLOAD_URL,
@@ -44,6 +45,7 @@ export const RoutineRefusalNotice = ({
               void openUpgrade(transport.client, "app_routines");
             }}
           >
+            <UpgradeSeen src="app_routines" />
             {t("routines.hosted.upgrade")}
           </Button>
           {IS_BROWSER && (

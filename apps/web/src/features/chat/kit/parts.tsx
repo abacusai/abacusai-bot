@@ -8,6 +8,7 @@ import { Brain, ChevronRight, FileText, Globe, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { cn } from "#renderer/lib/cn";
 import {
   Attachment,
@@ -71,6 +72,7 @@ export const FeatureLimitNotice = ({
           className="max-w-full whitespace-normal"
           onClick={() => void host.openUpgrade("feature_limit")}
         >
+          {action === "upgrade" && <UpgradeSeen src="feature_limit" />}
           {t(action === "upgrade" ? "creditsCard.cta" : "phase5.managePlan")}
         </Button>
       )}

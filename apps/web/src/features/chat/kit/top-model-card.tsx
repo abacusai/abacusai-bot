@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { creditsTier } from "#renderer/lib/credits";
+import { upgradeSeen } from "#renderer/lib/upgrade";
 import { startPlanCheckout } from "#renderer/lib/upgrade-dialog";
 import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -90,7 +91,10 @@ export const TopModelCardRow = ({
       .funnelStep({ step, detail: model ?? "" })
       .catch(() => undefined);
   };
-  const shown = useEffectEvent(() => funnel("top_model_card_shown"));
+  const shown = useEffectEvent(() => {
+    funnel("top_model_card_shown");
+    if (preview == null) upgradeSeen(transport.client, "top_model_card");
+  });
   useEffect(() => {
     if (showing != null) shown();
   }, [showing]);
@@ -120,7 +124,7 @@ export const TopModelCardRow = ({
       billing={billing}
       onUpgrade={() => {
         // Inside the click: the web build opens its checkout tab here.
-        startPlanCheckout(transport.client, "model_locked");
+        startPlanCheckout(transport.client, "top_model_card");
         funnel("top_model_card_upgrade");
         answer();
       }}

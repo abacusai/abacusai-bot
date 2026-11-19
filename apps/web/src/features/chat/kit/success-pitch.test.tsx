@@ -228,6 +228,7 @@ describe("SuccessPitchRow", () => {
     await waitFor(() =>
       expect(h.steps()).toEqual([
         { step: "success_pitch_shown", detail: "deliverable" },
+        { step: "upgrade_shown", detail: "success_pitch" },
       ])
     );
     await waitFor(() =>
@@ -292,6 +293,7 @@ describe("SuccessPitchRow", () => {
     );
     expect(h.steps().map((step) => step.step)).toEqual([
       "success_pitch_shown",
+      "upgrade_shown",
       "success_pitch_not_now",
     ]);
   });
@@ -407,7 +409,10 @@ describe("SuccessPitchRow: a big build", () => {
       box.querySelector('[data-slot="upgrade-pitch"] li')?.textContent
     ).toMatch(/^Build and deploy/);
     await waitFor(() =>
-      expect(h.steps()).toEqual([{ step: "big_task_shown", detail: "15" }])
+      expect(h.steps()).toEqual([
+        { step: "big_task_shown", detail: "15" },
+        { step: "upgrade_shown", detail: "big_task" },
+      ])
     );
     fireEvent.click(screen.getByRole("button", { name: "Upgrade to Basic" }));
     expect(upgradeDialogStore.state.request).toMatchObject({
@@ -461,6 +466,7 @@ describe("SuccessPitchRow: keep it running", () => {
     );
     expect(h.steps()).toEqual([
       { step: "keep_running_shown", detail: "server" },
+      { step: "upgrade_shown", detail: "keep_running" },
       { step: "keep_running_not_now", detail: "server" },
     ]);
     // The success pitch's record is untouched.

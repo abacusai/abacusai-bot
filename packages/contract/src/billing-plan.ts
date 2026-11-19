@@ -36,9 +36,26 @@ export const UPGRADE_SRCS = [
   "keep_running",
   "retry_top_model",
   "free_model_down",
+  // Screens that shared a value before: the free plan's milestone card (was
+  // low_credits), the wall's card in a chat (was chat_credits, or credit_wall
+  // in a read-only chat), and the picker, retry offer and top-model card (all
+  // model_locked). The platform knows each by name; older builds keep theirs.
+  "credits_milestone",
+  "wall_card",
+  "model_picker",
+  "retry_offer",
+  "top_model_card",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
+
+/** The screens that sell the plan's models (model_locked before they split): their pitch leads with the models. */
+export const MODEL_UPGRADE_SRCS: readonly UpgradeSrc[] = [
+  "model_locked",
+  "model_picker",
+  "retry_offer",
+  "top_model_card",
+];
 
 /** A plan the account could be on: its price, monthly credits and what it gives. */
 export interface BillingPlanTier {

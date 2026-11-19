@@ -46,6 +46,7 @@ import { creditsTier } from "#renderer/lib/credits";
 import { useOpusRetryArm } from "#renderer/lib/opus-retry";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
+import { upgradeSeen } from "#renderer/lib/upgrade";
 import {
   lastUserText,
   requestUpgradeDialog,
@@ -262,6 +263,10 @@ export const RetryOfferRow = ({
   const shown = useEffectEvent(() => {
     if (showing == null || card?.shownOffer === showing.id) return;
     funnel("retry_offer_shown", showing.reason);
+    // Only a tap that goes to the plan is an upgrade: a paying plan, or a free
+    // one with the top model already open to it, retries at once.
+    if (preview == null && !direct)
+      upgradeSeen(transport.client, "retry_offer", showing.id);
     write({
       ...base,
       misses: base.misses + (deliverableOfferIgnored(card, showing.id) ? 1 : 0),
@@ -308,7 +313,7 @@ export const RetryOfferRow = ({
         kind: "plan",
         key: `retry:${showing.id}`,
         threadId: session.threadId,
-        src: "model_locked",
+        src: "retry_offer",
         ...(pendingText != null && { pendingText }),
         resume: () =>
           continueOn(model.id, reason).catch((error: unknown) => {

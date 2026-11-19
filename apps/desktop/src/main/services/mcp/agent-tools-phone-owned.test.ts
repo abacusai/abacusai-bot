@@ -659,7 +659,7 @@ describe("paid-plan capabilities", () => {
       planServer("free", ["todo"], { bot: true }),
       "image_gen"
     );
-    expect(billingPlan).toHaveBeenCalledWith(true);
+    expect(billingPlan).toHaveBeenCalledWith(true, undefined, "channel");
     expect(text).toContain("Their upgrade link: https://upgrade.example/basic");
     expect(text).toMatch(
       /image generation and editing on the web in Abacus AI Agent/
