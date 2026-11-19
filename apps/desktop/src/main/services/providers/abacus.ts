@@ -700,6 +700,13 @@ export const requestAbacusAccount = async (
         ...(typeof body.plan_credits === "number"
           ? { plan_credits: body.plan_credits }
           : {}),
+        // Only a server that says so: an older one sends nothing.
+        ...(typeof body.credits_reset_at === "string"
+          ? { credits_reset_at: body.credits_reset_at }
+          : {}),
+        ...(typeof body.free_tier_expires_at === "string"
+          ? { free_tier_expires_at: body.free_tier_expires_at }
+          : {}),
         web_signup: body.web_signup === true,
         google_sign_in: body.google_sign_in === true,
         // Only a server that says so: an older one sends nothing.
