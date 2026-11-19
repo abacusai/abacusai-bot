@@ -1,7 +1,7 @@
 The parity baseline is the sum of the final emitted renderer `.js` files (byte
 length and Node `gzipSync` length, both documents, no maps or metadata) of
-the recorded source commit. `check-desktop-parity.mjs` allows each total to
-grow by at most 1%.
+the recorded source commit. `check-desktop-parity.mjs` warns, without failing
+the build, when a total grows by more than 1%.
 
 The baseline guards against accidental growth (a dependency pulled into the
 renderer, a chunk split by a stray import), not against features. A feature
