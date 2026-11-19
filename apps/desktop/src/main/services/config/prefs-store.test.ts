@@ -268,6 +268,7 @@ describe("PrefsStore", () => {
       nextStepOffer: null,
       retryOffer: null,
       ratingPrompt: null,
+      shareOffer: null,
       topModelHint: null,
       wallReopen: null,
       resumeCard: null,

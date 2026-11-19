@@ -27,6 +27,7 @@ import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
+import { ChatShareAction } from "#renderer/features/shell/chat-share-action";
 import {
   openPanelTab,
   panelScopeKey,
@@ -87,7 +88,8 @@ const ComposedChat = ({
     fixtureState.current && bot.sessionId == null
       ? fixtureState.current.runtime
       : chat;
-  const host = useThreadHost(runtime.session(sessionId));
+  const session = runtime.session(sessionId);
+  const host = useThreadHost(session);
   useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
   const slots = useBotChatSlots(bot, sessionId, expanded, false, (url) =>
     requestBrowserOpen({ sessionId, url })
@@ -117,6 +119,10 @@ const ComposedChat = ({
           onToggle={toggle}
         />
       </TopBarSlot>
+      <ChatShareAction
+        hostStore={session.hostStore}
+        workspaceRoot={slots.workspaceRoot}
+      />
       <ChatView
         threadId={sessionId}
         skin="bot"

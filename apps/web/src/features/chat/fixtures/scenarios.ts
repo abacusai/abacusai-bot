@@ -43,6 +43,8 @@ export interface Scenario {
     /** The retry offer on this model, without its caps. */
     retryOffer?: { label: string; plan: string; freeTop?: boolean };
     topModelCard?: { label: string };
+    /** The "Send it to anyone" card, without its once-per-chat rule. */
+    shareOffer?: boolean;
     /** The composer's top-model hint on a paying plan, without its caps. */
     topModels?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
@@ -887,6 +889,45 @@ const offerScenarios = (locale: string, words: OfferWords): Scenario[] =>
     view: { deliverableOffer: true, ...view },
   }));
 
+// ─── share ──────────────────────────────────────────────────────────────
+
+const SITE_DIR = "/Users/me/Sites/ana-portfolio";
+
+/** A one-page site handed over with its photo: the files card offers Share on both. */
+const sharedSite = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Make my portfolio site. I'm Ana, a wedding photographer in Lisbon",
+      at(3)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "write", "a1", {
+      path: `${SITE_DIR}/index.html`,
+      content: "<!doctype html>",
+    }),
+    b.toolResult("c1", { text: "Wrote index.html" }),
+    ...b.toolCall("c2", "agent-tools_present_deliverable", "a1", {
+      items: [
+        { path: `${SITE_DIR}/index.html` },
+        {
+          path: `${SITE_DIR}/wedding-in-sintra-golden-hour-portrait-of-the-couple.jpg`,
+        },
+      ],
+    }),
+    b.toolResult("c2", {
+      text: `[artifact] ${SITE_DIR}/index.html\n[artifact] ${SITE_DIR}/wedding-in-sintra-golden-hour-portrait-of-the-couple.jpg`,
+    }),
+    b.textDelta(
+      "a1",
+      "Your page is ready in the preview: your name, three galleries, an about section and a contact form."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(2) }),
+  ]);
+
 interface CreditWords {
   ask: string;
   answer: string;
@@ -1192,6 +1233,24 @@ export const SCENARIOS: Scenario[] = [
     view: {
       placeholder: "Message your bot...",
       retryOffer: { label: "Claude Opus 5.5", plan: "Basic" },
+    },
+  },
+  {
+    id: "share-offer-session",
+    canvas: ["ShareOffer", "session"],
+    skin: "session",
+    events: sharedSite,
+    view: { deliverables: true, shareOffer: true },
+  },
+  {
+    id: "share-offer-bot",
+    canvas: ["ShareOffer", "bot"],
+    skin: "bot",
+    events: sharedSite,
+    view: {
+      placeholder: "Message your bot...",
+      deliverables: true,
+      shareOffer: true,
     },
   },
   {

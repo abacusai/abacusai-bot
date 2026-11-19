@@ -21,6 +21,21 @@ const LOCAL_URL_CHECK = [
   "served again when it is opened after a restart.",
 ].join("\n");
 
+/**
+ * Asked how a friend can see a page, the model listed outside hosts, and gave
+ * a 127.0.0.1 link as if it could be sent. The app's Share makes a public
+ * link to one file.
+ */
+const SHARE_RULE = [
+  "A URL on this computer (127.0.0.1, localhost) opens only here: never offer it as a link",
+  "to send. When the user wants someone else to see a page, image, PDF or document, tell",
+  "them to press Share, on the file's row of the files card or at the top of the chat, for",
+  "a public link, and list a page's html file here as well as its URL, so it has that row.",
+  "That is the answer for one file, before any plan. Share sends the one file: a site of",
+  "several pages, or one that needs its own images, scripts or a server, cannot go that",
+  "way; then the answer for a live link applies.",
+].join("\n");
+
 /** What `present_deliverable` does with a file before it presents one. */
 const FILE_CHECK = [
   "A file is opened first: an office file (xlsx, docx, pptx, pdf, csv, jsonl) that does not",
@@ -97,7 +112,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             ]
           : [
               "Then hand the URL to present_deliverable: that is what opens the preview pane. A URL",
-              "in prose is not previewed and not recorded.",
+              "in prose is not previewed and not recorded. The URL opens on this computer only. A",
+              "page meant to be seen by others is best one html file, its styles and scripts inside.",
             ]),
         "",
         "Actions:",
@@ -168,6 +184,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             LOCAL_URL_CHECK,
             "",
             FILE_CHECK,
+            "",
+            SHARE_RULE,
           ].join("\n"),
     inputSchema: (channel) => ({
       type: "object",

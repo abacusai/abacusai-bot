@@ -1490,6 +1490,12 @@
     "stopped": "Link verwijderd",
     "links": "Gedeelde links",
     "linksEmpty": "Nog niets gedeeld. Gebruik Delen bij een bestand dat de bot heeft gemaakt.",
+    "offer": {
+      "title": "Stuur het naar iedereen",
+      "body": "Krijg een link die op elke telefoon of computer opent. Je ziet precies wat zij zien voordat het live gaat.",
+      "getLink": "Link maken",
+      "notNow": "Niet nu"
+    },
     "errors": {
       "TOO_LARGE": "Dit bestand is groter dan de limiet van 5 MB voor links.",
       "TOO_MANY": "Je hebt 50 gedeelde links. Stop met het delen van een link om een nieuwe te maken.",

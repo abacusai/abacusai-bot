@@ -1490,6 +1490,12 @@
     "stopped": "Link removed",
     "links": "Shared links",
     "linksEmpty": "Nothing shared yet. Use Share on a file the bot made.",
+    "offer": {
+      "title": "Send it to anyone",
+      "body": "Get a link that opens on any phone or computer. You see exactly what they will see before it goes live.",
+      "getLink": "Get a link",
+      "notNow": "Not now"
+    },
     "errors": {
       "TOO_LARGE": "This file is over the 5 MB limit for links.",
       "TOO_MANY": "You have 50 shared links. Stop sharing one to make another.",

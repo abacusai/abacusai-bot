@@ -54,6 +54,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     nextStepOffer: null,
     retryOffer: null,
     ratingPrompt: null,
+    shareOffer: null,
     topModelHint: null,
     wallReopen: null,
     resumeCard: null,

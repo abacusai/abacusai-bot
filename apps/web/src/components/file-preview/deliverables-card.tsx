@@ -33,7 +33,7 @@ export interface DeliverablesCardProps {
   onOpen(item: DeliverableItem): void;
   onReveal?(item: DeliverableItem): void;
   onOpenUrl(item: DeliverableItem): void;
-  /** A further action on a row, beside its folder button. */
+  /** A further action at the end of a row, after its folder button. */
   rowAction?(item: DeliverableItem): ReactNode;
 }
 
@@ -114,7 +114,6 @@ export const DeliverablesCard = ({
                 </TooltipTrigger>
                 <TooltipContent>{item.path}</TooltipContent>
               </Tooltip>
-              {rowAction?.(item)}
               {(item.isUrl || onReveal) && (
                 <Button
                   variant="ghost"
@@ -130,6 +129,7 @@ export const DeliverablesCard = ({
                   {item.isUrl ? <ExternalLink /> : <FolderOpen />}
                 </Button>
               )}
+              {rowAction?.(item)}
             </li>
           );
         })}

@@ -1490,6 +1490,12 @@
     "stopped": "Tautan dihapus",
     "links": "Tautan yang dibagikan",
     "linksEmpty": "Belum ada yang dibagikan. Gunakan Bagikan pada file buatan bot.",
+    "offer": {
+      "title": "Kirim ke siapa saja",
+      "body": "Dapatkan tautan yang bisa dibuka di ponsel atau komputer mana pun. Anda melihat persis apa yang akan mereka lihat sebelum tautan aktif.",
+      "getLink": "Dapatkan tautan",
+      "notNow": "Nanti saja"
+    },
     "errors": {
       "TOO_LARGE": "File ini melebihi batas 5 MB untuk tautan.",
       "TOO_MANY": "Anda memiliki 50 tautan. Hentikan salah satu untuk membuat yang baru.",

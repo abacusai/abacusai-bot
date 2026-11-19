@@ -1490,6 +1490,12 @@
     "stopped": "Link removido",
     "links": "Links compartilhados",
     "linksEmpty": "Nada compartilhado ainda. Use Compartilhar em um arquivo feito pelo bot.",
+    "offer": {
+      "title": "Envie para qualquer pessoa",
+      "body": "Gere um link que abre em qualquer celular ou computador. Você vê exatamente o que a pessoa vai ver antes de publicar.",
+      "getLink": "Gerar link",
+      "notNow": "Agora não"
+    },
     "errors": {
       "TOO_LARGE": "Este arquivo passa do limite de 5 MB para links.",
       "TOO_MANY": "Você tem 50 links compartilhados. Pare de compartilhar um para criar outro.",

@@ -1490,6 +1490,12 @@
     "stopped": "Enlace eliminado",
     "links": "Enlaces compartidos",
     "linksEmpty": "Aún no compartiste nada. Usa Compartir en un archivo que haya hecho el bot.",
+    "offer": {
+      "title": "Envíalo a quien quieras",
+      "body": "Obtén un enlace que se abre en cualquier teléfono o computadora. Ves exactamente lo que verán antes de publicarlo.",
+      "getLink": "Obtener enlace",
+      "notNow": "Ahora no"
+    },
     "errors": {
       "TOO_LARGE": "Este archivo supera el límite de 5 MB para enlaces.",
       "TOO_MANY": "Tienes 50 enlaces compartidos. Deja de compartir uno para crear otro.",
