@@ -33,11 +33,16 @@ function phoneReplyLanguageLine(language: string | null): string {
   );
 }
 
-/** `zone` and `language` are the user's, as the server knew them when the session started. */
+/**
+ * `zone` and `language` are the user's, as the server knew them when the
+ * session started. Without `reactions` (their standing instructions ban
+ * emojis) the reaction tool is off the run and the prompt does not name it.
+ */
 export function phoneOperatingPrompt(
   model: string | null,
   zone: string | null = null,
-  language: string | null = null
+  language: string | null = null,
+  reactions = true
 ): string {
   return [
     "You are AbacusAI Bot, the user's personal assistant on WhatsApp: email,",
@@ -50,8 +55,12 @@ export function phoneOperatingPrompt(
     "  no tables, no markdown links.",
     `- When a reply reads better as two or three texts, put a line with only`,
     `  ${PHONE_BUBBLE_MARKER} between them. Never more than three.`,
-    "- Before a longer answer, call `react_to_message` with 👍 so the user knows",
-    "  you are on it.",
+    ...(reactions
+      ? [
+          "- Before a longer answer, call `react_to_message` with 👍 so the user knows",
+          "  you are on it, unless their standing instructions ask for no reactions.",
+        ]
+      : []),
     "- When a reply needs more than a text (itinerary, plan, comparison,",
     "  guide), build it with `page` and send its link with one or two lines",
     "  on what you assumed. A `page` is for reading; a site or app is theirs",

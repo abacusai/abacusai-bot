@@ -763,9 +763,10 @@ export function latestArchiveAt(dir: string): number | null {
  */
 export function phoneStandingPrompt(dir: string, now: Date): string | null {
   const sections: string[] = [];
-  const about = aboutYouEntries().map(
-    (entry) => `- ${clip(flatten(entry), FACT_MAX_CHARS)}`
-  );
+  // Rules and preferences are the standing instructions block (custom-instructions.ts).
+  const about = (memoryOff() ? [] : youNotes())
+    .filter((note) => note.type !== "rule" && note.type !== "preference")
+    .map((note) => `- ${clip(flatten(note.body), FACT_MAX_CHARS)}`);
 
   if (about.length > 0)
     sections.push(

@@ -8,6 +8,7 @@ import { createBashToolDefinition } from "@earendil-works/pi-coding-agent";
 
 import { agentShellOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
+import { standingInstructionsRuleOutEmoji } from "../custom-instructions.js";
 import type { ForeverProfile } from "../forever/profile.js";
 import { ChatMemory, MEMORY_SAVE_CHECK_TYPE } from "../memory/chat.js";
 import { MEMORY_TOOL_NAME } from "../memory/tool.js";
@@ -85,7 +86,9 @@ export function createBotProfile(): ForeverProfile {
       );
       await memory.start();
     },
-    systemPrompt: () => [botOperatingPrompt()],
+    systemPrompt: () => [
+      botOperatingPrompt(undefined, !standingInstructionsRuleOutEmoji()),
+    ],
     components: true,
     tools: (cwd, host) => [
       ...(chatMemory().tool() != null ? [chatMemory().tool()] : []),

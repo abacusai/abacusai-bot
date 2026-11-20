@@ -13,6 +13,8 @@ import {
   customInstructionsPrompt,
   moveInstructionsIn,
   readCustomInstructions,
+  routineFireAsInstructed,
+  standingInstructionsRuleOutEmoji,
   writeCustomInstructions,
 } from "./custom-instructions.js";
 import { commit, listNotes, noteWrite } from "./memory/notes.js";
@@ -113,5 +115,49 @@ describe("what the model is told", () => {
     expect(customInstructionsPrompt() ?? "").toMatch(
       /permission mode still decide/i
     );
+  });
+});
+
+describe("a rule against emojis", () => {
+  it.each([
+    ["never use emojis", true],
+    ["no emojis please", true],
+    ["Please stop using emoji", true],
+    ["Do not add any emojis to what you send me.", true],
+    ["Keep it emoji-free.", true],
+    ["Bitte keine Emojis.", true],
+    ["No uses emojis.", true],
+    ["Sin emojis.", true],
+    ["Não use emojis.", true],
+    ["Emoji kullanma.", true],
+    ["N'utilise pas d'émojis.", true],
+    ["Niente emoji.", true],
+    ["Geen emoji's gebruiken.", true],
+    ["Bez emoji.", true],
+    ["Jangan pakai emoji.", true],
+    ["絵文字は使わないでください。", true],
+    ["不要使用表情符号。", true],
+    ["이모지 사용하지 마세요.", true],
+    // Both words, but the "never" is about something else.
+    ["Use emojis, never plain bullets", false],
+    ["I love emojis", false],
+    // A limit, not a ban: the block still carries it to the model.
+    ["don't overdo the emojis", false],
+    ["No exclamation marks. Emojis are fine.", false],
+    ["Answer in British English.", false],
+  ])("%s → %s", async (rule, expected) => {
+    await writeCustomInstructions(rule);
+    expect(standingInstructionsRuleOutEmoji()).toBe(expected);
+  });
+
+  it("takes a routine fire's emojis out, and leaves every other message and symbol", async () => {
+    const fire =
+      '[routine] "Brief" fired.\n🌅 Morning ☀️\n1️⃣ First 👨‍👩‍👧 🇩🇪 👍🏽 © ™';
+    expect(routineFireAsInstructed(fire)).toBe(fire);
+    await writeCustomInstructions("Never use emojis.");
+    expect(routineFireAsInstructed(fire)).toBe(
+      '[routine] "Brief" fired.\nMorning \n1 First © ™'
+    );
+    expect(routineFireAsInstructed("Thanks 🎉")).toBe("Thanks 🎉");
   });
 });
