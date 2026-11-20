@@ -319,9 +319,10 @@ const ROWS: Row[] = [
     expected: "refused",
     files: { "node_modules/electron/index.js": "x" },
   },
+  // Replacing a file goes ahead with a copy kept, as the write tool does.
   {
     command: "echo x > notes.txt",
-    expected: "refused",
+    expected: "allow",
     files: { "notes.txt": "old" },
   },
   {

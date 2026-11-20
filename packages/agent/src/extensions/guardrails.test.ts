@@ -401,31 +401,11 @@ describe("redirects into scratch space", () => {
     expect(result).toBeUndefined();
   });
 
-  // Skipped on Windows: /etc/hosts is a POSIX path.
-  it.skipIf(process.platform === "win32")(
-    "does not treat a link parked in temp as scratch: the target decides",
-    async () => {
-      // The carve-out is about where the bytes land, not where the name sits.
-      // /etc/hosts is a real file outside every sanctioned area; nothing is
-      // written, the point is that the redirect is refused.
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guardrails-link-"));
-      const link = path.join(dir, "innocent.log");
-      fs.symlinkSync("/etc/hosts", link);
-      const blocked = (await pi.fire(
-        "tool_call",
-        bashCall(`echo x > ${link}`),
-        ctx()
-      )) as { block: boolean; reason: string } | undefined;
-      fs.rmSync(dir, { recursive: true, force: true });
-      expect(blocked?.block).toBe(true);
-    }
-  );
-
-  it("lets only a routine's run rewrite a routine's notes", async () => {
+  it("keeps a copy of a routine's notes when anything but its run rewrites them", async () => {
     const records = path.join(cwd, ".abacusai-bot", "routines", "job-1");
     fs.mkdirSync(records, { recursive: true });
     fs.writeFileSync(path.join(records, "notes.md"), "old");
-    const blocked = (await pi.fire(
+    const blocked = await pi.fire(
       "tool_call",
       {
         toolName: "bash",
@@ -434,11 +414,14 @@ describe("redirects into scratch space", () => {
         },
       },
       ctx()
-    )) as { block?: boolean };
-    expect(blocked?.block).toBe(true);
+    );
+    expect(blocked).toBeUndefined();
+    expect(
+      backupsIn(path.join(".abacusai-bot", "routines", "job-1"))
+    ).toHaveLength(1);
   });
 
-  it("lets a routine rewrite its own notes and state files", async () => {
+  it("lets a routine rewrite its own notes and state files without a copy each run", async () => {
     process.env.ABACUSAI_BOT_ROUTINE_RUN = "1";
     onTestFinished(() => {
       delete process.env.ABACUSAI_BOT_ROUTINE_RUN;
@@ -453,23 +436,242 @@ describe("redirects into scratch space", () => {
     expect(
       await fire("printf 'new' > .abacusai-bot/routines/job-1/notes.md")
     ).toBeUndefined();
-    expect(
-      ((await fire("printf 'new' > notes.md")) as { block?: boolean })?.block
-    ).toBe(true);
+    expect(backupsIn(path.join(".abacusai-bot", "routines", "job-1"))).toEqual(
+      []
+    );
+    // The user's own notes.md is not the routine's: it keeps its copy.
+    expect(await fire("printf 'new' > notes.md")).toBeUndefined();
+    expect(backupsIn()).toHaveLength(1);
+  });
+});
+
+/**
+ * A `>` onto an existing file replaces it, as the write tool does, so it
+ * answers to the same rule: what was there is kept and the result says where.
+ * Refusing it instead protected nothing: models deleted the file in a separate
+ * call and redirected again, or wrote the same bytes with the write tool.
+ */
+describe("a redirect that replaces an existing file", () => {
+  const bashCall = (command: string, toolCallId = "call-1") => ({
+    toolName: "bash",
+    toolCallId,
+    input: { command },
   });
 
-  it("still refuses a redirect that would clobber a file in the workspace", async () => {
-    fs.writeFileSync(path.join(cwd, "server.js"), "the real thing");
+  const keptContents = (): string[] =>
+    backupsIn().map((name) =>
+      fs.readFileSync(path.join(cwd, ".abacusai-bot", "backups", name), "utf8")
+    );
+
+  const resultText = async (toolCallId = "call-1"): Promise<string> => {
+    const result = (await pi.fire(
+      "tool_result",
+      {
+        toolName: "bash",
+        toolCallId,
+        isError: false,
+        input: {},
+        content: [{ type: "text", text: "done" }],
+      },
+      ctx()
+    )) as { content: Array<{ text: string }> } | undefined;
+    // No change to the result comes back as undefined: the text is untouched.
+    return result?.content.map((part) => part.text).join("\n") ?? "done";
+  };
+
+  it("goes ahead, keeps what was there, and says where", async () => {
+    fs.writeFileSync(path.join(cwd, "run.log"), "last run");
+
+    const blocked = await pi.fire(
+      "tool_call",
+      bashCall("npm run build > run.log 2>&1"),
+      ctx()
+    );
+
+    expect(blocked).toBeUndefined();
+    expect(keptContents()).toEqual(["last run"]);
+    const text = await resultText();
+    expect(text).toContain(modelPath(path.join(".abacusai-bot", "backups")));
+    expect(text).toContain("cp ");
+    expect(text).toContain("run.log");
+  });
+
+  it("goes ahead when the same command deletes the file first", async () => {
+    // Judged before the rm runs, the file still exists; the copy is of it.
+    fs.writeFileSync(path.join(cwd, "out.txt"), "previous build");
+
+    const blocked = await pi.fire(
+      "tool_call",
+      bashCall("rm -f out.txt; make > out.txt"),
+      ctx()
+    );
+
+    expect(blocked).toBeUndefined();
+    expect(keptContents()).toEqual(["previous build"]);
+  });
+
+  it("keeps one copy when one command redirects to the same file twice", async () => {
+    fs.writeFileSync(path.join(cwd, "a.txt"), "old");
+
+    await pi.fire(
+      "tool_call",
+      bashCall("echo one > a.txt && echo two > a.txt"),
+      ctx()
+    );
+
+    expect(keptContents()).toEqual(["old"]);
+  });
+
+  it("says nothing about a copy when the file is new", async () => {
+    expect(
+      await pi.fire("tool_call", bashCall("echo x > fresh.txt"), ctx())
+    ).toBeUndefined();
+    expect(backupsIn()).toEqual([]);
+    expect(await resultText()).toBe("done");
+  });
+
+  it("copies what a link in the workspace points at", async () => {
+    fs.mkdirSync(path.join(cwd, "real"));
+    fs.writeFileSync(path.join(cwd, "real", "config.toml"), "real contents");
+    fs.symlinkSync(
+      path.join(cwd, "real", "config.toml"),
+      path.join(cwd, "config.toml")
+    );
+
+    await pi.fire("tool_call", bashCall("echo x > config.toml"), ctx());
+
+    expect(keptContents()).toEqual(["real contents"]);
+  });
+
+  it("is refused when no copy can be kept", async () => {
+    fs.writeFileSync(path.join(cwd, "run.log"), "last run");
+    // A file where the backups folder must go: the copy cannot be made.
+    fs.writeFileSync(path.join(cwd, ".abacusai-bot"), "in the way");
+
     const blocked = (await pi.fire(
       "tool_call",
-      bashCall("echo x > server.js"),
+      bashCall("echo x > run.log"),
       ctx()
-    )) as {
-      block: boolean;
-      reason: string;
-    };
+    )) as { block: boolean; reason: string } | undefined;
+
     expect(blocked?.block).toBe(true);
-    expect(blocked.reason).toContain("overwrite");
+    expect(blocked?.reason).toContain("Could not keep a copy");
+  });
+
+  it("goes ahead on a file too large to copy, and says no copy was kept", async () => {
+    fs.writeFileSync(
+      path.join(cwd, "huge.log"),
+      Buffer.alloc(26 * 1024 * 1024)
+    );
+
+    const blocked = await pi.fire(
+      "tool_call",
+      bashCall("echo x > huge.log"),
+      ctx()
+    );
+
+    expect(blocked).toBeUndefined();
+    expect(backupsIn()).toEqual([]);
+    expect(await resultText()).toContain("no copy");
+  }, 20_000);
+
+  it("keeps a copy when tee replaces a file, not when it appends", async () => {
+    fs.writeFileSync(path.join(cwd, "a.txt"), "tee old");
+    fs.writeFileSync(path.join(cwd, "b.txt"), "appended to");
+
+    expect(
+      await pi.fire("tool_call", bashCall("echo x | tee a.txt"), ctx())
+    ).toBeUndefined();
+    expect(
+      await pi.fire("tool_call", bashCall("echo x | tee -a b.txt"), ctx())
+    ).toBeUndefined();
+
+    expect(keptContents()).toEqual(["tee old"]);
+  });
+
+  it("keeps a copy when cp or mv lands on an existing file", async () => {
+    fs.writeFileSync(path.join(cwd, "app.js"), "working app");
+    fs.writeFileSync(path.join(cwd, "new.js"), "draft");
+
+    expect(
+      await pi.fire("tool_call", bashCall("cp new.js app.js"), ctx())
+    ).toBeUndefined();
+
+    expect(keptContents()).toEqual(["working app"]);
+    expect(await resultText()).toContain("app.js");
+  });
+
+  it("keeps a copy of the file a move into a folder replaces", async () => {
+    fs.mkdirSync(path.join(cwd, "dist"));
+    fs.writeFileSync(path.join(cwd, "dist", "index.html"), "shipped page");
+    fs.writeFileSync(path.join(cwd, "index.html"), "new page");
+
+    expect(
+      await pi.fire("tool_call", bashCall("mv index.html dist/"), ctx())
+    ).toBeUndefined();
+
+    // Copies mirror the project's folders under the backups folder.
+    expect(
+      backupsIn("dist").map((name) =>
+        fs.readFileSync(
+          path.join(cwd, ".abacusai-bot", "backups", "dist", name),
+          "utf8"
+        )
+      )
+    ).toEqual(["shipped page"]);
+  });
+
+  it("keeps nothing when cp makes a new file", async () => {
+    fs.writeFileSync(path.join(cwd, "new.js"), "draft");
+
+    await pi.fire("tool_call", bashCall("cp new.js copy.js"), ctx());
+
+    expect(backupsIn()).toEqual([]);
+  });
+
+  it("leaves a replace outside the workspace to the permission gate, as write does", async () => {
+    const outside = fs.mkdtempSync(
+      path.join(os.homedir(), ".guardrails-redirect-")
+    );
+    fs.writeFileSync(path.join(outside, "notes.md"), "old");
+
+    const blocked = await pi.fire(
+      "tool_call",
+      bashCall(`echo x > ${path.join(outside, "notes.md")}`),
+      ctx()
+    );
+    fs.rmSync(outside, { recursive: true, force: true });
+
+    expect(blocked).toBeUndefined();
+    expect(backupsIn()).toEqual([]);
+  });
+
+  it("still sends an existing secret file to the write tool", async () => {
+    fs.writeFileSync(path.join(cwd, ".env"), "SECRET_TOKEN=x\n");
+
+    const blocked = (await pi.fire(
+      "tool_call",
+      bashCall("echo x > .env"),
+      ctx()
+    )) as { block: boolean; reason: string } | undefined;
+
+    expect(blocked?.block).toBe(true);
+    expect(blocked?.reason).toContain("write or edit tool");
+    expect(backupsIn()).toEqual([]);
+  });
+
+  it("still refuses a target inside .git", async () => {
+    fs.mkdirSync(path.join(cwd, ".git"));
+    fs.writeFileSync(path.join(cwd, ".git", "HEAD"), "ref: refs/heads/main\n");
+
+    const blocked = (await pi.fire(
+      "tool_call",
+      bashCall("echo x > .git/HEAD"),
+      ctx()
+    )) as { block: boolean } | undefined;
+
+    expect(blocked?.block).toBe(true);
+    expect(backupsIn()).toEqual([]);
   });
 });
 

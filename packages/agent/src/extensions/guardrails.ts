@@ -5,10 +5,11 @@ import * as path from "node:path";
 /**
  * Originally ported from codingagent-lite (abacusai/codingagent-lite), MIT.
  *
- * File rules for cheap-model sloppiness: `write` over an existing file keeps
- * a copy; `edit` needs a read first; nothing is hand-written into .git or
- * node_modules; bash does not overwrite an existing secret file or `>` onto
- * an existing file. What a command does to this machine is the shell judge's
+ * File rules for cheap-model sloppiness: replacing an existing file keeps a
+ * copy of what was there, whether `write` or the shell (`>`, tee, cp, mv)
+ * replaces it, and is refused when the copy fails; `edit` needs a read first; nothing is
+ * hand-written into .git or node_modules; bash does not overwrite an existing
+ * secret file. What a command does to this machine is the shell judge's
  * call: the permission gate asks about it, and where there is no gate
  * (sub-agents) this refuses what the gate would have asked about. Whether a
  * write may leave the workspace is the gate's question, not this one's.
@@ -89,9 +90,8 @@ function isHygieneWrite(write: LocalWrite, real: string): boolean {
 }
 
 /**
- * Temp dirs exempt from the overwrite-redirect guard: a server log in /tmp is
- * the agent's own file, rewritten every restart, and "append instead" makes
- * the model read yesterday's crash as today's. The platform temp dir's
+ * Temp dirs where a `>` overwrite needs no copy: a server log in /tmp is the
+ * agent's own file, rewritten every restart. The platform temp dir's
  * realpath is included because the guards judge realpathed targets; it goes
  * through the same realPathOf so both sides agree (on Windows a plain
  * realpath keeps the 8.3 short name, while realPathOf expands it).
@@ -110,7 +110,7 @@ const SCRATCH_PREFIXES = [
 /**
  * A routine's own records folder (`.abacusai-bot/routines/<id>/`, in the app's
  * folder or a project's): its notes and state files are rewritten every run,
- * so a routine's run may overwrite them there.
+ * so a routine's run overwrites them there without a copy each time.
  */
 const ROUTINE_RECORDS = /(^|\/)\.abacusai-bot\/routines\/[^/]+\//;
 
@@ -162,6 +162,33 @@ function backUpExistingFile(abs: string, cwd: string): string | null {
   return destination;
 }
 
+/** What a result says after a replace, so the model can undo it. */
+const copyNote = (target: string, backup: string): string =>
+  `The previous contents of ${target} were saved to ${modelPath(backup)}. ` +
+  `If this rewrite lost something, restore it with: cp ${modelPath(backup)} ${target}`;
+
+/**
+ * The existing files a shell write would replace, with the name to show for
+ * each: a `>` or tee target, or a cp/mv destination. A destination that is a
+ * folder replaces the file of each source's name inside it.
+ */
+function filesReplacedBy(write: LocalWrite): Array<[string, string]> {
+  if (write.kind === "overwrite") return [[write.path, write.target]];
+  if (write.kind !== "copy") return [];
+  let folder = /[\\/]$/.test(write.target);
+  try {
+    folder ||= fs.statSync(write.path).isDirectory();
+  } catch {
+    // A destination that doesn't exist yet replaces nothing.
+    if (!folder) return [];
+  }
+  if (!folder) return [[write.path, write.target]];
+  return (write.sources ?? []).map((source) => {
+    const name = path.basename(source);
+    return [path.join(write.path, name), path.join(write.target, name)];
+  });
+}
+
 /** Keep the newest few copies of one file; drop the rest. */
 function pruneOldBackups(directory: string, name: string, keep: number): void {
   try {
@@ -208,8 +235,8 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
   // restart the model must re-read before editing, which is the safe default.
   const knownFiles = new Set<string>();
 
-  // Judged commands that ran with nobody to approve them, by call: the note
-  // their result carries so the run's report says so.
+  // Notes a command's result carries, by call: that it ran with nobody to
+  // approve it, so the run's report says so, and where a `>` kept its copy.
   const reports = new Map<string, string>();
 
   // Files replaced this session and where the copy went. Consumed once by the
@@ -381,34 +408,71 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
         }
       }
 
+      // Replacing an existing file from the shell answers to write's rule: a
+      // `>`, a tee, or a cp/mv onto a file (or into a folder holding one of
+      // the same name) keeps the previous contents first. The copy is taken
+      // before the command runs, so `rm -f X; build > X` keeps the X the rm
+      // removes. Through a link, the copy is of what it points at.
+      const replaced = new Map<string, string>();
+      const uncopied: string[] = [];
       for (const write of judgement.localWrites) {
-        if (write.kind !== "overwrite") continue;
-        // A project checked out under /tmp keeps the guard; judged on the real
-        // target so a link parked in /tmp cannot carry the redirect elsewhere.
-        if (
-          isRealScratch(write.path) &&
-          !isInsideWorkspace(write.path, ctx.cwd)
-        )
-          continue;
-        const real = realPathOf(write.path);
-        if (
-          runOrigin() === "routine" &&
-          real !== null &&
-          ROUTINE_RECORDS.test(real.replace(/\\/g, "/"))
-        )
-          continue;
-        try {
-          if (fs.statSync(write.path).isFile()) {
-            return {
-              block: true,
-              reason:
-                `The redirect \`> ${write.target}\` would overwrite an existing file. ` +
-                `Use the edit tool for file changes, or \`>>\` to append.`,
-            };
+        for (const [abs, shown] of filesReplacedBy(write)) {
+          if (replaced.has(abs)) continue;
+          // A project checked out under /tmp keeps the copy; judged on the real
+          // target so a link parked in /tmp cannot carry the write elsewhere.
+          if (isRealScratch(abs) && !isInsideWorkspace(abs, ctx.cwd)) continue;
+          const real = realPathOf(abs);
+          if (
+            runOrigin() === "routine" &&
+            real !== null &&
+            ROUTINE_RECORDS.test(real.replace(/\\/g, "/"))
+          )
+            continue;
+          let stat: fs.Stats;
+          try {
+            stat = fs.statSync(abs);
+          } catch {
+            continue;
           }
-        } catch {
-          // Target doesn't exist → creating a new file via redirect is fine.
+          // A new file, a folder, or a device like /dev/stdout: nothing to keep.
+          if (!stat.isFile()) continue;
+          // The shell has no in-place alternative to offer, so a file too large
+          // to copy is replaced, and the result says no copy was kept.
+          if (stat.size > MAX_BACKUP_BYTES) uncopied.push(shown);
+          else replaced.set(abs, shown);
         }
+      }
+
+      const kept: string[] = [];
+      for (const [abs, target] of replaced) {
+        let backup: string | null;
+        try {
+          backup = backUpExistingFile(abs, ctx.cwd);
+        } catch (error) {
+          // No copy means no safety net; refuse, as the write tool does.
+          return {
+            block: true,
+            reason:
+              `Could not keep a copy of ${target} before this command replaces it ` +
+              `(${error instanceof Error ? error.message : String(error)}). ` +
+              `Write the output to a new file instead.`,
+          };
+        }
+        // Outside the workspace no copy is kept, as with write: whether the
+        // command may write there is the permission gate's question.
+        if (backup != null)
+          kept.push(copyNote(target, path.relative(ctx.cwd, backup)));
+      }
+      for (const target of uncopied)
+        kept.push(
+          `${target} was over ${MAX_BACKUP_BYTES / 1024 / 1024} MB, so no copy of its previous contents was kept.`
+        );
+      if (kept.length > 0) {
+        const note = reports.get(event.toolCallId);
+        reports.set(
+          event.toolCallId,
+          [...kept, ...(note == null ? [] : [note])].join("\n")
+        );
       }
       return;
     }
@@ -440,12 +504,7 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
       return {
         content: [
           ...event.content,
-          {
-            type: "text" as const,
-            text:
-              `The previous contents of ${input.path} were saved to ${modelPath(backup)}. ` +
-              `If this rewrite lost something, restore it with: cp ${modelPath(backup)} ${input.path}`,
-          },
+          { type: "text" as const, text: copyNote(input.path, backup) },
         ],
       };
     }
