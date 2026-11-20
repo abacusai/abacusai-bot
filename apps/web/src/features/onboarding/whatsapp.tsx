@@ -672,8 +672,9 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
   );
 };
 
-/** The bot's upgrade page on this host: it mints the account's own upgrade link once signed in. */
-const BOT_UPGRADE_PATH = "/bot/link/upgrade";
+/** The bot's upgrade page on this host: it mints the account's own upgrade link once signed in. `src` names this
+ * screen, so the platform's upgrade counts tell it apart from the other ways to the page. */
+const BOT_UPGRADE_PATH = "/bot/link/upgrade?src=phone";
 
 /** The desktop installer for this computer (the download page picks the build; a Mac's chip is read there). */
 export const DESKTOP_INSTALLER_URL = `${DESKTOP_DOWNLOAD_URL}/download?platform=auto`;
