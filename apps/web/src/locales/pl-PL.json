@@ -3448,6 +3448,7 @@
         "generic": "Użyć {{tool}}?",
         "guard_disk": "To wymaże lub nadpisze dysk.",
         "guard_forcePush": "To wymusi push lub usunie historię git na zdalnym repozytorium.",
+        "guard_install": "To zainstaluje oprogramowanie na tym komputerze.",
         "guard_killAll": "To zatrzyma wszystkie uruchomione przez ciebie procesy.",
         "guard_power": "To wyłączy lub uruchomi ponownie komputer.",
         "guard_privileged": "To zostanie uruchomione jako administrator na tym komputerze.",

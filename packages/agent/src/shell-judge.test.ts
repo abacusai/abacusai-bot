@@ -14,7 +14,7 @@ import { fakePi } from "@abacus-ai/test-support/fake-pi";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createGuardrails } from "./extensions/guardrails.js";
-import { judgeCommand } from "./shell-judge.js";
+import { confirmRules, installsNamedBy, judgeCommand } from "./shell-judge.js";
 
 type Outcome = "allow" | "confirm" | "never" | "refused";
 
@@ -487,5 +487,187 @@ describe("the shell judge", () => {
       cwd: os.tmpdir(),
     });
     expect(localWrites).toEqual([]);
+  });
+});
+
+/**
+ * Software for the whole computer needs a yes, as an administrator command
+ * does: a research question once ended in a tool and a gigabyte of its
+ * dependencies the user never asked for. A library a project or a script
+ * installs for itself is the task's own business.
+ */
+describe("software installs", () => {
+  const rules = (command: string): string[] =>
+    confirmRules(judgeCommand(command, { cwd: os.tmpdir() }));
+
+  it.each([
+    "winget install --id Google.PlatformTools -e --accept-package-agreements",
+    "choco install flutter -y",
+    "scoop install ffmpeg",
+    "npm install -g some-cli",
+    "npm i --global @scope/some-cli@2",
+    "pnpm add -g some-cli",
+    "yarn global add some-cli",
+    "brew install --cask some-app",
+    "pacman -S some-tool",
+    "pipx install some-tool",
+    "cargo install ripgrep",
+    "go install golang.org/x/tools/gopls@latest",
+    "dotnet tool install --global some-tool",
+    "uv tool install some-tool",
+    'powershell -NoProfile -Command "winget install Some.App -e"',
+    "cmd /c msiexec /i setup.msi /qn",
+  ])("%s asks", (command) => {
+    expect(rules(command)).toEqual(["install"]);
+  });
+
+  it("asks for both reasons when an install runs as administrator", () => {
+    expect(rules("sudo apt-get install -y nginx")).toEqual([
+      "privileged",
+      "install",
+    ]);
+  });
+
+  it.each([
+    "npm install",
+    "npm install express exceljs",
+    "pnpm add zod",
+    "pip install pandas openpyxl",
+    "python -m pip install --quiet pillow",
+    "conda install numpy",
+    "cargo install --path .",
+    "go install ./...",
+    "winget list",
+    "winget search flutter",
+    "apt list --installed",
+    "brew search ffmpeg",
+    "npm ls -g",
+    'powershell -c "Get-Package"',
+  ])("%s does not ask", (command) => {
+    expect(rules(command)).toEqual([]);
+  });
+
+  it.each([
+    ["choco install flutter", "instale o Flutter no drive E:", true],
+    ["winget install OpenJS.NodeJS.LTS", "please install node for me", true],
+    [
+      "winget install --id Google.PlatformTools -e",
+      "set up platform tools",
+      true,
+    ],
+    ["npm install -g @scope/some-cli", "install some-cli globally", true],
+    [
+      "npm install -g some-cli",
+      "research the best free coding tools for me",
+      false,
+    ],
+    ["winget install Some.App", "", false],
+    // A name built at run time is never what the user named.
+    ['choco install "$PKG"', "install flutter", false],
+    ["powershell -c 'choco install $pkg'", "install pkg", false],
+    // Every install must be named, not just one of them.
+    ["choco install flutter && choco install vlc", "install flutter", false],
+  ])("%s, user said %j: named %s", (command, words, expected) => {
+    expect(
+      installsNamedBy(judgeCommand(command, { cwd: os.tmpdir() }), words)
+    ).toBe(expected);
+  });
+});
+
+/**
+ * A command that starts a Windows script does what the script's lines do:
+ * an elevated `Start-Process x.bat -Verb RunAs` once deleted system app
+ * folders after the user had allowed administrator commands for the chat,
+ * because only the elevation was judged, never the deletes inside.
+ */
+describe("the Windows scripts a command starts", () => {
+  const SCRIPT = [
+    "@echo off",
+    'takeown /f "C:\\Program Files\\WindowsApps\\Some.App_1.0_x64" /r /d Y',
+    'rd /s /q "C:\\Program Files\\WindowsApps\\Some.App_1.0_x64"',
+    "echo done",
+  ].join("\r\n");
+
+  const workspace = (files: Record<string, string>): string => {
+    const cwd = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), "shell-judge-"))
+    );
+    dirs.push(cwd);
+    for (const [name, content] of Object.entries(files))
+      fs.writeFileSync(path.join(cwd, name), content);
+    return cwd;
+  };
+
+  it.each([
+    [
+      "Start-Process -Verb RunAs",
+      (bat: string) =>
+        `powershell -NoProfile -Command '$bat = "${bat}"; $p = Start-Process $bat -Verb RunAs -Wait -PassThru'`,
+      ["privileged", "systemDelete"],
+    ],
+    ["cmd /c", (bat: string) => `cmd /c "${bat}"`, ["systemDelete"]],
+    ["run by name", () => "./fix.bat", ["systemDelete"]],
+  ])("reads the script under %s", (_, command, expected) => {
+    const cwd = workspace({ "fix.bat": SCRIPT });
+    const judgement = judgeCommand(command(path.join(cwd, "fix.bat")), {
+      cwd,
+    });
+    expect(confirmRules(judgement).sort()).toEqual([...expected].sort());
+  });
+
+  it.each([
+    'powershell -c "Get-AppxPackage *Some* | Remove-AppxPackage -AllUsers"',
+    'powershell -c "Get-AppxProvisionedPackage -Online | Remove-AppxProvisionedPackage -Online"',
+  ])("%s deletes from a system folder", (command) => {
+    expect(confirmRules(judgeCommand(command, { cwd: os.tmpdir() }))).toEqual([
+      "systemDelete",
+    ]);
+  });
+
+  it("leaves removing an app for this user alone", () => {
+    expect(
+      judgeCommand(
+        'powershell -c "Get-AppxPackage *Some* | Remove-AppxPackage"',
+        {
+          cwd: os.tmpdir(),
+        }
+      ).verdict
+    ).toBe("allow");
+  });
+
+  it("reads a PowerShell command the script runs", () => {
+    const cwd = workspace({
+      "remove.bat": [
+        "@echo off",
+        `powershell -NoProfile -Command "Get-AppxPackage -AllUsers -Name '*Some*' | ForEach-Object { Remove-AppxPackage -Package $_.PackageFullName -AllUsers }" >> "%LOG%" 2>&1`,
+      ].join("\r\n"),
+    });
+    const command = `powershell -NoProfile -Command '$bat = "${path.join(cwd, "remove.bat")}"; Start-Process $bat -Verb RunAs -Wait'`;
+    expect(confirmRules(judgeCommand(command, { cwd })).sort()).toEqual([
+      "privileged",
+      "systemDelete",
+    ]);
+  });
+
+  it("reads an installer inside the script", () => {
+    const cwd = workspace({
+      "setup.bat": "@echo off\r\nwinget install Some.App -e\r\n",
+    });
+    expect(
+      confirmRules(
+        judgeCommand(`cmd /c "${path.join(cwd, "setup.bat")}"`, { cwd })
+      )
+    ).toEqual(["install"]);
+  });
+
+  it("lets a script that changes nothing on the system through", () => {
+    const cwd = workspace({ "build.bat": "@echo off\r\nnpm run build\r\n" });
+    const command = `powershell -c "& '${path.join(cwd, "build.bat")}'"`;
+    expect(judgeCommand(command, { cwd }).verdict).toBe("allow");
+  });
+
+  it("does not loop on a script that starts itself", () => {
+    const cwd = workspace({ "self.bat": "@echo off\r\ncall self.bat\r\n" });
+    expect(judgeCommand("cmd /c self.bat", { cwd }).verdict).toBe("allow");
   });
 });

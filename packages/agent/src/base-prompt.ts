@@ -96,6 +96,16 @@ export const CONNECTION_PROMPT = [
   'A send that failed or timed out midway may have gone through: say it "may not have gone through", never that nothing was sent, and do not send it again unless the user asks.',
 ].join(" ");
 
+/**
+ * Asked a research question, the model installed a tool with a gigabyte of
+ * dependencies to try it; asked to remove one shortcut, it ran elevated
+ * deletes on a different app's system folders. The permission gate asks
+ * before software installs and system deletes; this keeps a question a
+ * question. Fixed, so the cached prefix holds.
+ */
+export const ASKED_FOR_PROMPT =
+  "Do what the user's message asks, to the thing it names, and nothing heavier. A question, or a request to research, explain, compare or plan, is answered, not tried out: reading this computer's specs and searching the web are fine, but do not install software, tools or packages (not even to test or benchmark one), download models, delete, uninstall or change settings on this computer to answer it; a library a script needs to read the user's own file is the one exception. If a real test would help, answer first and then offer it, saying what it would install. When the user names what to change (a file, a shortcut, an app, a setting), change that one; before you delete, uninstall or run as administrator anything else, ask.";
+
 /** How to use the file tools; a session without one skips its lines. */
 function toolGuidelinesPrompt(edit: EditTool): string {
   const lines = [
@@ -131,6 +141,7 @@ ${PLAN_ASKS_PROMPT}
 ${DELIVERABLE_QUALITY_PROMPT}
 ${ATTACHMENTS_PROMPT}
 ${CONNECTION_PROMPT}
+${ASKED_FOR_PROMPT}
 
 ${toolGuidelinesPrompt(edit)}`;
 }

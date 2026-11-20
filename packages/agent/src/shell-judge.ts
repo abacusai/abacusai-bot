@@ -40,6 +40,8 @@ export interface Finding {
   tier: "confirm" | "never";
   /** The local command that raised it, as written. */
   command: string;
+  /** For `install`: what it installs, as written; empty when not readable. */
+  packages?: string[];
 }
 
 /** A file this command writes on this machine. */
@@ -91,6 +93,7 @@ export const RULE_REASONS: Record<ConfirmRule | NeverRule, string> = {
   power: "shuts down or restarts the computer",
   forcePush: "force-pushes or deletes remote git history",
   killAll: "stops every process the user is running",
+  install: "installs software on this computer",
   deleteRoot: "deletes the whole disk, the home folder or a folder holding it",
   emptyTrash: "empties the Trash",
   forkBomb: "is a fork bomb",
@@ -170,6 +173,40 @@ const SYSTEM_DIRS = [
 ];
 const WINDOWS_SYSTEM =
   /^[a-z]:[\\/](?:windows|program files|program files \(x86\)|programdata)(?:[\\/]|$)/i;
+
+/**
+ * Package managers that put software on this computer for every folder, by
+ * the verb that installs. A library for a script (`pip install`, `npm install`
+ * in a project, `gem`, `conda`) is the task's own business and not judged.
+ */
+const SOFTWARE_INSTALLERS: Record<string, RegExp> = {
+  winget: /^(?:install|add)$/i,
+  choco: /^(?:install|upgrade)$/i,
+  scoop: /^install$/i,
+  apt: /^install$/,
+  "apt-get": /^install$/,
+  aptitude: /^install$/,
+  dnf: /^install$/,
+  yum: /^install$/,
+  zypper: /^(?:install|in)$/,
+  apk: /^add$/,
+  pacman: /^(?:-S[yu]*|--sync)$/,
+  brew: /^(?:install|reinstall)$/,
+  port: /^install$/,
+  snap: /^install$/,
+  flatpak: /^install$/,
+  pipx: /^install$/,
+  cargo: /^install$/,
+  go: /^install$/,
+};
+/** Node package managers: software only with a global flag. */
+const NODE_INSTALLERS = new Set(["npm", "pnpm", "bun", "yarn"]);
+const NODE_INSTALL_VERBS = /^(?:install|i|add|isntall)$/;
+/** Options whose value is not a package name. */
+const INSTALL_VALUE_OPTIONS =
+  /^(?:-s|-l|-v|-a|--source|--scope|--location|--version|--override|--log|--architecture|--locale|--root|--path|--git|--registry)$/;
+/** Scripts Windows runs: a command that names one is judged by what it holds. */
+const WINDOWS_SCRIPT = /\.(?:bat|cmd|ps1)$/i;
 
 interface Context {
   options: Required<JudgeOptions>;
@@ -314,6 +351,19 @@ function add(
   command: string
 ): void {
   context.findings.push({ rule, tier, command: command.trim().slice(0, 200) });
+}
+
+function addInstall(
+  context: Context,
+  packages: readonly string[],
+  command: string
+): void {
+  context.findings.push({
+    rule: "install",
+    tier: "confirm",
+    command: command.trim().slice(0, 200),
+    packages: [...packages],
+  });
 }
 
 /** Run `body` in a child process's view: its `cd` does not leak out. */
@@ -1113,6 +1163,11 @@ function judgeWords(
     judgeWindowsShell(context, tool, args, text);
     return;
   }
+  // A Windows script run by name is judged by what it holds, as cmd reads it.
+  if (WINDOWS_SCRIPT.test(raw(rest[0]!))) {
+    judgeWindowsShell(context, "cmd", [rest.map(raw).join(" ")], text);
+    return;
+  }
   if (raw(rest[0]!).includes("/") && !rest[0]!.includes("\\")) {
     if (judgeScriptFile(context, rest[0], scope, text, "path")) return;
   }
@@ -1308,9 +1363,29 @@ function judgeWindowsShell(
       add(context, "disk", "confirm", text);
     if (/^(?:runas|gsudo)$/.test(lower) || /^-verb:runas$/i.test(token))
       add(context, "privileged", "confirm", text);
+    // An app removed from the Windows image, or for every user, is deleted
+    // from its system folder (Program Files\WindowsApps).
+    if (
+      /^remove-appxprovisionedpackage$/i.test(token) ||
+      (/^remove-appxpackage$/i.test(token) && has(/^-allusers$/i))
+    )
+      add(context, "systemDelete", "confirm", text);
   }
   if (has(/^-verb$/i) && has(/^runas$/i))
     add(context, "privileged", "confirm", text);
+  judgeWindowsInstalls(context, args, text);
+  // `powershell -Command "..."` inside a script or a cmd line: its quoted
+  // command is one token here, so it is read again on its own.
+  tokens.forEach((token, at) => {
+    if (!/^(?:powershell|pwsh)(?:\.exe)?$/i.test(token)) return;
+    const inner = tokens.slice(at + 1).find((word) => !word.startsWith("-"));
+    if (inner != null && /\s/.test(inner))
+      judgeWindowsShell(context, "powershell", [inner], text);
+  });
+  // A script it starts (`Start-Process x.bat -Verb RunAs`, `cmd /c x.bat`,
+  // `powershell -File x.ps1`) does what its lines do; read them too.
+  for (const token of tokens)
+    if (WINDOWS_SCRIPT.test(token)) judgeWindowsScript(context, token, text);
   const home = windowsPath(context.options.home);
   tokens.forEach((token, at) => {
     if (!WINDOWS_DELETERS.test(token)) return;
@@ -1319,6 +1394,173 @@ function judgeWindowsShell(
       .find((word) => !/^-\w+(?::.*)?$/.test(word) && !/^\/[a-z]$/i.test(word));
     if (target != null) judgeWindowsDelete(context, target, home, text);
   });
+}
+
+/** A Windows script's lines, judged as cmd reads them, once per command. */
+function judgeWindowsScript(
+  context: Context,
+  file: string,
+  text: string
+): void {
+  const resolved = resolve(context, file);
+  if (resolved == null || context.seen.has(resolved)) return;
+  const source = readScript(context, file);
+  if (typeof source !== "string") return;
+  context.seen.add(resolved);
+  judgeWindowsShell(context, "cmd", [source], text);
+}
+
+/**
+ * Installs in PowerShell or cmd, one statement at a time so a name is never
+ * read from the next one: the same package managers as the shell, plus an
+ * installer package (`msiexec /i x.msi`, `Add-AppxPackage x.msix`).
+ */
+function judgeWindowsInstalls(
+  context: Context,
+  args: readonly string[],
+  text: string
+): void {
+  const statements = args
+    .map(raw)
+    .join(" ")
+    .split(/[;|&\r\n]+/);
+  for (const statement of statements) {
+    const tokens = (statement.match(/"[^"]*"|'[^']*'|[^\s(){}]+/g) ?? [])
+      .map((token) => token.replace(/^(["'])([\s\S]*)\1$/, "$2"))
+      .filter((token) => token.length > 0);
+    tokens.forEach((token, at) => {
+      const tool = token.toLowerCase().replace(/\.exe$/, "");
+      const rest = tokens.slice(at + 1);
+      const installs = installedSoftware(tool, rest);
+      if (installs != null) {
+        addInstall(context, installs, text);
+        return;
+      }
+      const isPackage =
+        (tool === "msiexec" && rest.some((word) => /^[/-]i$/i.test(word))) ||
+        /^add-appxpackage$/i.test(token);
+      if (!isPackage) return;
+      const file = rest.find(
+        (word) =>
+          !/^[/-]/.test(word) &&
+          /\.(?:msi|msix|appx|msixbundle|appxbundle)$/i.test(word)
+      );
+      addInstall(context, file == null ? [] : [windowsBaseName(file)], text);
+    });
+  }
+}
+
+const windowsBaseName = (file: string): string =>
+  file
+    .split(/[\\/]/)
+    .at(-1)!
+    .replace(/\.[a-z]+$/i, "");
+
+/**
+ * Software installed for the whole computer: an OS package manager, a global
+ * Node install, or a tool installer (pipx, cargo, go, dotnet, uv). The names
+ * it installs as written, [] when one is computed, or null when it installs
+ * no software: a project's own build (`cargo install --path .`, `go install
+ * ./...`) or a library for a script.
+ */
+function installedSoftware(
+  tool: string,
+  args: readonly string[]
+): string[] | null {
+  const operands = operandsOf(args);
+  const global = args.some((arg) =>
+    /^(?:-g|--global|--location=global)$/.test(raw(arg))
+  );
+  let from: number;
+  const verb = SOFTWARE_INSTALLERS[tool];
+  if (verb != null) {
+    from =
+      tool === "pacman"
+        ? args.findIndex((arg) => verb.test(raw(arg)))
+        : args.findIndex((arg) => !raw(arg).startsWith("-"));
+    if (from === -1 || !verb.test(raw(args[from]!))) return null;
+  } else if (NODE_INSTALLERS.has(tool)) {
+    if (tool === "yarn" && operands[0] === "global" && operands[1] === "add")
+      from = args.indexOf("add");
+    else if (global && NODE_INSTALL_VERBS.test(raw(operands[0] ?? "")))
+      from = args.indexOf(operands[0]!);
+    else return null;
+  } else if (tool === "dotnet" && global) {
+    if (operands[0] !== "tool" || operands[1] !== "install") return null;
+    from = args.indexOf("install");
+  } else if (tool === "uv") {
+    if (operands[0] !== "tool" || operands[1] !== "install") return null;
+    from = args.indexOf("install");
+  } else return null;
+
+  const names: string[] = [];
+  let computed = false;
+  const rest = args.slice(from + 1);
+  for (let at = 0; at < rest.length; at += 1) {
+    const word = rest[at]!;
+    if (INSTALL_VALUE_OPTIONS.test(raw(word))) {
+      at += 1;
+      continue;
+    }
+    if (raw(word).startsWith("-") && !isDyn(word)) continue;
+    // `$x` or `%x%` from PowerShell or cmd is computed there too.
+    if (isDyn(word) || /^\$|%/.test(word)) computed = true;
+    else if (!/^(?:\.{1,2}(?:[\\/]|$)|[\\/~]|[a-z]:[\\/])/i.test(word))
+      names.push(word);
+  }
+  if (computed) return [];
+  return names.length > 0 ? names : null;
+}
+
+/** Parts of a package name too generic to say the user named it. */
+const GENERIC_NAME_PARTS = new Set([
+  "app",
+  "cli",
+  "core",
+  "desktop",
+  "dev",
+  "lts",
+  "sdk",
+  "stable",
+  "tool",
+  "tools",
+]);
+
+/**
+ * Whether the user's own words name every install this command makes, by
+ * the name or a distinctive part of it ("flutter" for `choco install
+ * flutter`, "node" for `winget install OpenJS.NodeJS`): then it is what they
+ * asked for. A computed name is never named, so it asks.
+ */
+export function installsNamedBy(judgement: Judgement, words: string): boolean {
+  const said = words.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  const saidSet = new Set(said);
+  const named = (name: string): boolean => {
+    const bare = name
+      .toLowerCase()
+      .replace(/^@/, "")
+      .split(/[@=<>~^!\s]/)[0]!;
+    const parts = bare
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(
+        (part) =>
+          part.length >= 3 &&
+          /\p{L}/u.test(part) &&
+          !GENERIC_NAME_PARTS.has(part)
+      );
+    return parts.some(
+      (part) =>
+        saidSet.has(part) ||
+        said.some((word) => word.length >= 4 && part.startsWith(word))
+    );
+  };
+  const installs = judgement.findings.filter(
+    (finding) => finding.rule === "install"
+  );
+  return (
+    installs.length > 0 &&
+    installs.every((finding) => (finding.packages ?? []).some(named))
+  );
 }
 
 /** A path in one spelling: backslashes, lower case, no trailing `\` or `\*`. */
@@ -1364,6 +1606,9 @@ function judgeVerb(
   scope: Scope
 ): void {
   const operands = operandsOf(args);
+
+  const installs = installedSoftware(tool, args);
+  if (installs != null) addInstall(context, installs, text);
 
   if (DELETERS.has(tool)) judgeDeletes(context, operands, text);
   if (tool === "ddrescue" && BLOCK_DEVICE.test(operands[1] ?? ""))

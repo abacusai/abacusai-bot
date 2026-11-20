@@ -561,6 +561,7 @@
       "generic",
       "guard_disk",
       "guard_forcePush",
+      "guard_install",
       "guard_killAll",
       "guard_power",
       "guard_privileged",

@@ -3768,6 +3768,7 @@ export class AbacusBotSession {
           commands: this.config.allowedCommands,
           readPaths: this.config.allowedReadPaths,
         }),
+        userWords: this.userWords.window,
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
         // A routine's run has nobody at a card, even with the app attached.
