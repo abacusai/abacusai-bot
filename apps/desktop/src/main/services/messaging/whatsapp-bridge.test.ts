@@ -96,12 +96,129 @@ describe("resolveJid", () => {
     // "Raj" is exact for one chat, fine. "ra" is a prefix of two.
     expect(resolveJid("Raj", chats)).toEqual({ jid: "918888800000@c.us" });
     const result = resolveJid("ra", chats);
-    expect("error" in result && result.error).toMatch(/More than one/);
+    expect("miss" in result && result.miss.ambiguous).toBe(true);
   });
 
   it("says when nothing matches", () => {
     const result = resolveJid("Nobody", chats);
-    expect("error" in result && result.error).toMatch(/No WhatsApp chat/);
+    expect(result).toEqual({ miss: { ambiguous: false, candidates: [] } });
+  });
+});
+
+describe("resolveJid: a person the user has no chat with yet", () => {
+  // Two groups the user is in. Priya is in both and has no chat of her own;
+  // Arjun is two different people, one per group.
+  const family = {
+    jid: "120363111@g.us",
+    name: "Family",
+    isGroup: true,
+    isMe: false,
+    unreadCount: 0,
+  };
+  const groupChats = [
+    family,
+    {
+      jid: "120363222@g.us",
+      name: "Priya's Farewell",
+      isGroup: true,
+      isMe: false,
+      unreadCount: 0,
+    },
+    ...chats,
+  ];
+  const members = [
+    {
+      jid: "15550001234@c.us",
+      ids: ["15550001234@c.us", "55500001@lid"],
+      name: "Priya Shah",
+      groups: ["Family", "Priya's Farewell"],
+    },
+    {
+      jid: "15550009999@c.us",
+      ids: ["15550009999@c.us"],
+      name: "Arjun",
+      groups: ["Family"],
+    },
+    {
+      jid: "55500003@lid",
+      ids: ["55500003@lid"],
+      name: "Arjun",
+      groups: ["Priya's Farewell"],
+    },
+    // Meghna has a chat already: that chat is how she is reached.
+    {
+      jid: "919876543210@c.us",
+      ids: ["919876543210@c.us"],
+      name: "Meghna",
+      groups: ["Family"],
+    },
+  ];
+
+  it("reaches a group member directly by name, never the group", () => {
+    expect(resolveJid("Priya", groupChats, members)).toEqual({
+      jid: "15550001234@c.us",
+    });
+    expect(resolveJid("priya shah", groupChats, members)).toEqual({
+      jid: "15550001234@c.us",
+    });
+  });
+
+  it("never lands a partial name in a group", () => {
+    // "Fam" is only the start of a group's name: that is not who to send to.
+    const result = resolveJid("Fam", groupChats, members);
+    expect(result).toEqual({
+      miss: {
+        ambiguous: false,
+        candidates: [{ name: "Family", to: "Family", isGroup: true }],
+      },
+    });
+    // The group by its whole name is still the group.
+    expect(resolveJid("family", groupChats, members)).toEqual({
+      jid: family.jid,
+    });
+  });
+
+  it("asks when two members share the name, telling them apart by number", () => {
+    expect(resolveJid("Arjun", groupChats, members)).toEqual({
+      miss: {
+        ambiguous: true,
+        candidates: [
+          {
+            name: "Arjun",
+            to: "+15550009999",
+            groups: ["Family"],
+          },
+          { name: "Arjun", to: "55500003@lid", groups: ["Priya's Farewell"] },
+        ],
+      },
+    });
+  });
+
+  it("does not count a person with a chat twice", () => {
+    expect(resolveJid("Meghna", groupChats, members)).toEqual({
+      jid: "919876543210@c.us",
+    });
+  });
+
+  it("lists the closest names, with the groups a member is in, on a miss", () => {
+    const result = resolveJid("Priyanka Shah", groupChats, members);
+    expect(result).toEqual({
+      miss: {
+        ambiguous: false,
+        candidates: [
+          {
+            name: "Priya's Farewell",
+            to: "Priya's Farewell",
+            isGroup: true,
+          },
+          {
+            name: "Priya Shah",
+            to: "Priya Shah",
+            groups: ["Family", "Priya's Farewell"],
+          },
+        ],
+      },
+    });
   });
 });
 
