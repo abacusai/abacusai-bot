@@ -29,6 +29,29 @@ describe("isWorkCall", () => {
     [`${GATEWAY}_Jira_Tool`, { action: "update_issue" }, true],
     [`${GATEWAY}_Slack_Tool`, { action: "post_message" }, true],
     [`${GATEWAY}_Slack_Tool`, { action: "search_messages" }, false],
+    // REST-style gateway connectors: judged by the HTTP method.
+    [
+      `${GATEWAY}_Youtube_Tool`,
+      { endpoint: "/channels", method: "GET" },
+      false,
+    ],
+    [`${GATEWAY}_Youtube_Tool`, { endpoint: "/videos", method: "POST" }, true],
+    [
+      `${GATEWAY}_Github_Tool`,
+      { endpoint: "/repos/o/r", method: "get" },
+      false,
+    ],
+    [
+      `${GATEWAY}_Github_Tool`,
+      { endpoint: "/repos/o/r", method: "PATCH" },
+      true,
+    ],
+    [
+      `${GATEWAY}_Github_Tool`,
+      { endpoint: "/repos/o/r", method: "DELETE" },
+      true,
+    ],
+    [`${GATEWAY}_Gmail_Tool`, {}, true],
     // A server the user added, in its own spelling.
     ["notion_createPage", {}, true],
     ["notion_getPage", {}, false],

@@ -181,10 +181,28 @@ const verbSays = (name: string): boolean | null => {
   return null;
 };
 
+/** HTTP methods that only read. */
+const LOOK_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+/** HTTP methods that change something. */
+const WORK_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/**
+ * What a REST-style call's `method` says (a gateway connector such as
+ * `Youtube_Tool` or `Github_Tool` takes `endpoint` and `method`, no verb).
+ */
+const methodSays = (method: unknown): boolean | null => {
+  if (typeof method !== "string") return null;
+  const upper = method.trim().toUpperCase();
+  if (WORK_METHODS.has(upper)) return true;
+  if (LOOK_METHODS.has(upper)) return false;
+  return null;
+};
+
 /**
  * Whether this call built or changed something. A multi-action tool (a
  * connector's `Gmail_Tool`, `serve`, `cronjob`) is judged by its `action`
- * when that names a verb, so `serve list` is a look and `send_email` work.
+ * when that names a verb, so `serve list` is a look and `send_email` work;
+ * a REST-style one by its HTTP `method`, so a GET is a look and a POST work.
  */
 export const isWorkCall = (
   name: string,
@@ -196,5 +214,5 @@ export const isWorkCall = (
   if (ANSWER_TOOLS.has(bare)) return false;
   const action =
     typeof input.action === "string" ? verbSays(input.action) : null;
-  return action ?? verbSays(bare) ?? true;
+  return action ?? methodSays(input.method) ?? verbSays(bare) ?? true;
 };
