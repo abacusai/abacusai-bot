@@ -782,7 +782,10 @@ export class ForeverEngine {
     );
 
     const customTools = [
-      ...this.profile.tools(this.options.cwd, { mediaCheck }),
+      ...this.profile.tools(this.options.cwd, {
+        mediaCheck,
+        ownWordsThisTurn: () => this.userWords.turn,
+      }),
       ...browserTaskTools,
       ...componentTools,
       ...mcpTools,

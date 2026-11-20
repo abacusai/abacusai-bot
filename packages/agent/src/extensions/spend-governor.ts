@@ -28,6 +28,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import { onBilledCredits } from "../abacus-credits.js";
+import { asleepBetween } from "../connectivity.js";
 import {
   hostCreditBalance,
   lowCreditBase,
@@ -1012,7 +1013,10 @@ export class SpendGovernor {
           unasked.used >= unasked.calls ||
           this.turnCredits - unasked.creditsAt >= unasked.credits;
       }
-      const elapsed = Date.now() - (this.memoryStart?.at ?? this.turnStartedAt);
+      // Time the machine slept is not work: the hour is the hour awake.
+      const now = Date.now();
+      const startedAt = this.memoryStart?.at ?? this.turnStartedAt;
+      const elapsed = now - startedAt - asleepBetween(startedAt, now);
       const hit: SpendLimitHit | null =
         this.turns > cap
           ? { cause: "calls", amount: cap }

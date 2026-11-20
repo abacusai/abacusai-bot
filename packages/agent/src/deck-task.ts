@@ -72,7 +72,9 @@ const SYSTEM_PROMPT = [
   "     what the brief holds (key figures, steps, a comparison or table, a quote, a timeline)",
   "     and pick a template whose best_for names slides for those, so no slide is left empty.",
   "     When several suit, take the first of them in the list. A colour the brief asks for",
-  '     ("make it green") picks a template whose colours have it.',
+  '     ("make it green") picks a template whose colours have it. A look the brief asks for',
+  "     (calm, academic, playful) outweighs the list's order. slide_count is how many",
+  "     different slides a template prints: among those that suit, prefer one with enough.",
   "  3. `deck_slots`: every slide the template has, each with its role and its text slots.",
   "  4. Choose the slides: as many as deck_slots says to pick. Start with the template's first",
   "     slide (the title) and, when its last slide is a closing or thank-you slide, end with it.",
@@ -298,12 +300,25 @@ export const audienceOf = (words: string): Audience =>
 const SERIOUS =
   /\b(war|wars|holocaust|genocide|disaster|tragedy|death|terror\w*|partition|pandemic|famine|slavery|ww\s*[12i]+|world war)\b/i;
 
+/** The quiet, formal templates: wrong for children, right for a lecture or a report. */
+const FORMAL_MOOD =
+  /\b(restrained|quiet|calm|institutional|professional|scholarly|literary|trustworthy|archival)\b/i;
+
 /**
- * The catalogue as the filler sees it. A school or casual deck is not offered
- * the quiet, formal templates (calm, restrained, institutional, scholarly);
- * a school deck sees the ones made for lessons first, the most playful of
- * them first, then the other playful ones; a sombre subject loses the
- * cheerful ones. The order turns by the deck's name so decks vary.
+ * The catalogue as the filler sees it: every template that suits, in the order
+ * to try them. Only a sure mismatch is left out: a cheerful template for a
+ * sombre subject, and for a school deck the quiet, formal ones and those that
+ * say they are wrong for school (the user, 18 Nov: a class 10 deck came out
+ * plainer than main's). Anything else is a guess from English words, so it
+ * only orders: a lecture asked for in another language, with a calm, academic
+ * look, read as casual, lost every formal template and its slide count left
+ * one loud poster template, which the deck had to use.
+ *
+ * Order: the audience's own groups (a school deck the ones made for lessons,
+ * then the playful ones; a casual one the playful ones first and the formal
+ * ones last), each turned by the deck's name so decks vary; within a group,
+ * those that print the slides asked for first (a 15-slide ask got a 6-slide
+ * template), then the rest, the most slides first.
  */
 export const catalogueFor = (
   list: Array<Record<string, unknown>>,
@@ -312,69 +327,78 @@ export const catalogueFor = (
   words = "",
   wanted = 0
 ): Array<Record<string, unknown>> => {
-  // Enough slides for the count asked: a 15-slide ask got a 6-slide
-  // template. Where none of the rest has enough, those with the most.
-  const enough = (items: Array<Record<string, unknown>>) => {
-    const count = (t: Record<string, unknown>): number =>
-      typeof t.slide_count === "number" ? t.slide_count : 99;
-    const fit = items.filter((t) => count(t) >= wanted);
-    if (fit.length > 0 || items.length === 0) return fit;
-    const most = Math.max(...items.map(count));
-    return items.filter((t) => count(t) === most);
-  };
   let seed = 0;
   for (const ch of seedText) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const turn = <T>(items: T[]): T[] => {
     const at = items.length > 0 ? seed % items.length : 0;
     return [...items.slice(at), ...items.slice(0, at)];
   };
-  // A list the ask counts ("12 tips"): templates whose list slide holds it first.
-  const listed = listCount(words);
-  const holdsList = (items: Array<Record<string, unknown>>) =>
-    listed == null
-      ? items
-      : [
-          ...items.filter((t) => Number(t.max_items ?? 0) >= listed),
-          ...items.filter((t) => Number(t.max_items ?? 0) < listed),
-        ];
-  if (audience == null || audience === "business")
-    return holdsList(turn(enough(list)));
   const text = (t: Record<string, unknown>, ...keys: string[]): string =>
     keys.map((k) => String(t[k] ?? "")).join(" ");
+  const formal = (t: Record<string, unknown>): boolean =>
+    FORMAL_MOOD.test(text(t, "mood")) ||
+    /^high$/i.test(String(t.formality ?? ""));
+  const playful = (t: Record<string, unknown>): boolean =>
+    /\b(playful|cheerful|colou?rful|bright|bold|warm)\b/i.test(text(t, "mood"));
+  const forLessons = (t: Record<string, unknown>): boolean =>
+    /school lesson|children's lesson|school assembly|classroom|explainer/i.test(
+      text(t, "occasion")
+    ) || /\bfor school\b/i.test(text(t, "best_for"));
+
   const serious = SERIOUS.test(words);
-  const fits = list.filter(
+  const suits = list.filter(
     (t) =>
-      !/\b(restrained|quiet|calm|institutional|professional|scholarly|literary|trustworthy|archival)\b/i.test(
-        text(t, "mood")
-      ) &&
-      !/^high$/i.test(String(t.formality ?? "")) &&
       !(
         serious &&
         /\b(cheerful|sunny|kawaii|whimsical)\b/i.test(text(t, "mood"))
       ) &&
       !(
         audience === "school" &&
-        /\b(school|lessons?|children'?s?|student)/i.test(text(t, "avoid_for"))
+        (formal(t) ||
+          /\b(school|lessons?|children'?s?|student)/i.test(
+            text(t, "avoid_for")
+          ))
       )
   );
-  if (audience === "casual") return holdsList(turn(enough(fits)));
-  const made = fits.filter(
-    (t) =>
-      /school lesson|children's lesson|school assembly|classroom|explainer/i.test(
-        text(t, "occasion")
-      ) || /\bfor school\b/i.test(text(t, "best_for"))
-  );
-  const low = made.filter((t) => /^low$/i.test(String(t.formality ?? "")));
-  const rest = made.filter((t) => !low.includes(t));
-  const playful = fits.filter(
-    (t) =>
-      !made.includes(t) &&
-      /\b(playful|cheerful|colou?rful|bright|bold|warm)\b/i.test(
-        text(t, "mood")
-      )
-  );
-  const ordered = [...turn(low), ...turn(rest), ...turn(playful)];
-  return holdsList(ordered.filter((t) => enough(ordered).includes(t)));
+  const count = (t: Record<string, unknown>): number =>
+    typeof t.slide_count === "number" ? t.slide_count : 99;
+  const sized = (group: Array<Record<string, unknown>>) => [
+    ...group.filter((t) => count(t) >= wanted),
+    ...group
+      .filter((t) => count(t) < wanted)
+      .sort((a, b) => count(b) - count(a)),
+  ];
+
+  // The audience's groups, each turned on its own. A school deck is offered
+  // only the ones made for lessons and the playful ones.
+  const groups: Array<Array<Record<string, unknown>>> =
+    audience === "school"
+      ? [
+          suits.filter(
+            (t) => forLessons(t) && /^low$/i.test(String(t.formality ?? ""))
+          ),
+          suits.filter(
+            (t) => forLessons(t) && !/^low$/i.test(String(t.formality ?? ""))
+          ),
+          suits.filter((t) => !forLessons(t) && playful(t)),
+        ]
+      : audience === "casual"
+        ? [
+            suits.filter((t) => !formal(t) && playful(t)),
+            suits.filter((t) => !formal(t) && !playful(t)),
+            suits.filter(formal),
+          ]
+        : [suits];
+  const ordered = groups.flatMap((group) => sized(turn(group)));
+
+  // A list the ask counts ("12 tips"): templates whose list slide holds it first.
+  const listed = listCount(words);
+  return listed == null
+    ? ordered
+    : [
+        ...ordered.filter((t) => Number(t.max_items ?? 0) >= listed),
+        ...ordered.filter((t) => Number(t.max_items ?? 0) < listed),
+      ];
 };
 
 const NUMBER_WORDS = [

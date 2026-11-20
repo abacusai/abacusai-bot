@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { noteBilledCredits } from "../abacus-credits.js";
 import { HostCore } from "../agui/queue.js";
+import { setHostSleep } from "../connectivity.js";
 import { hostCreditBalance, setCreditRefresher } from "../credit-balance.js";
 import type { SpendKind, SpendLane } from "../spend-policy.js";
 import {
@@ -180,6 +181,37 @@ describe("a run that runs long", () => {
       await pi.fire("agent_start", {});
       await pi.fire("turn_start", {}, ctx);
       expect(closeOuts(pi)).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not count the time the machine slept toward the hour", async () => {
+    vi.useFakeTimers();
+    // Far from the other tests' clocks: the host's sleeps are process-wide.
+    vi.setSystemTime(Date.UTC(2100, 0, 1));
+    try {
+      const { pi, hits } = governed("attended", "own-key");
+      const ctx = ctxOn(undefined);
+      await pi.fire("input", { text: "fix it", source: "interactive" });
+      await pi.fire("agent_start", {});
+      await pi.fire("turn_start", {}, ctx);
+      vi.advanceTimersByTime(10 * 60_000);
+      // The lid closes mid-command; the first call after the wake lands
+      // before the host's resume does.
+      const lidClosed = Date.now();
+      setHostSleep(lidClosed, null);
+      vi.advanceTimersByTime(102 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      expect(hits).toEqual([]);
+      setHostSleep(lidClosed, Date.now());
+      vi.advanceTimersByTime(45 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      expect(hits).toEqual([]);
+      // Ten minutes before the sleep and fifty after: the hour awake is up.
+      vi.advanceTimersByTime(5 * 60_000);
+      await pi.fire("turn_start", {}, ctx);
+      expect(hits).toEqual([{ cause: "time", amount: 60 }]);
     } finally {
       vi.useRealTimers();
     }

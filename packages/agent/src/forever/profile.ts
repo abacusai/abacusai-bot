@@ -52,6 +52,8 @@ export interface ForeverContinuations {
 export interface ProfileToolHost {
   /** Whether the app holds a media id for this session (`send_media`). */
   mediaCheck: MediaCheck;
+  /** This turn's own words (user-text.ts `ownWords`); "" when the app started it. */
+  ownWordsThisTurn: () => string;
 }
 
 export interface ForeverProfile {

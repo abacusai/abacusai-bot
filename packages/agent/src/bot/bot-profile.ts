@@ -87,13 +87,15 @@ export function createBotProfile(): ForeverProfile {
     },
     systemPrompt: () => [botOperatingPrompt()],
     components: true,
-    tools: (cwd) => [
+    tools: (cwd, host) => [
       ...(chatMemory().tool() != null ? [chatMemory().tool()] : []),
       buildBotTimeTool(),
       buildBotReactionTool(),
       ...buildOwnerTools({ recentUserText }),
       // Only the user's own chat saves their language: a sender is someone else.
-      ...(isOwnerAudience() ? [buildSetUserLanguageTool()] : []),
+      ...(isOwnerAudience()
+        ? [buildSetUserLanguageTool(host.ownWordsThisTurn)]
+        : []),
       botBashTool(cwd),
     ],
     // The chat's own memory tool; no MCP server serves one.
