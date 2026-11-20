@@ -1,7 +1,8 @@
 /**
  * `abacusaibot://open?session=<id>&draft=<text>&src=<code>`: a link (an email,
- * a web page) that brings the app up at one chat. Any page can fire it, so
- * every parameter is untrusted text: nothing is run, sent or approved from it.
+ * a web page) that brings the app up at one chat, or with no `session` at a
+ * new chat with the draft in its box. Any page can fire it, so every
+ * parameter is untrusted text: nothing is run, sent or approved from it.
  */
 
 export const OPEN_LINK_SCHEME = "abacusaibot";
@@ -19,7 +20,7 @@ const OPEN_LINK_SESSION_MAX = 128;
 export interface OpenLink {
   /** A well-formed id; whether that chat exists here is the renderer's call. */
   sessionId: string | null;
-  /** Text for that chat's composer, never sent by the app. */
+  /** Text for that chat's composer (a new chat's without one), never sent by the app. */
   draft: string | null;
   /** The campaign code, `[a-z0-9_]{0,40}`. */
   src: string;
@@ -71,12 +72,16 @@ export const parseOpenLink = (raw: unknown): OpenLink | null => {
     (url.pathname !== "" && url.pathname !== "/")
   )
     return null;
-  const sessionId = openLinkSessionId(url.searchParams.get("session"));
+  const session = url.searchParams.get("session");
+  const sessionId = openLinkSessionId(session);
   return {
     sessionId,
-    // A draft belongs to a chat; with none it has nowhere to go.
+    // A draft written for a chat goes with that chat when its id fails; one
+    // sent without a chat is for a new one.
     draft:
-      sessionId == null ? null : openLinkDraft(url.searchParams.get("draft")),
+      session != null && sessionId == null
+        ? null
+        : openLinkDraft(url.searchParams.get("draft")),
     src: openLinkSrc(url.searchParams.get("src")),
   };
 };
