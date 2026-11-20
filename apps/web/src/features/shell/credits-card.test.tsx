@@ -29,6 +29,8 @@ const state = vi.hoisted(() => ({
   },
   marks: {} as Record<string, CreditThresholdMark>,
   chat: null as { label: string } | null,
+  chatFails: false,
+  billingFailed: false,
   funnelStep: vi.fn(async (_step: { step: string; detail?: string }) => {}),
   upgradeUrl: vi.fn(
     async (_input: { src: string }) => "https://checkout.example/once"
@@ -48,9 +50,11 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: (options: { queryKey?: unknown }) => {
     state.query(options);
     if ((options.queryKey as unknown[])[0] === "billingPlan")
-      return state.billing == null
-        ? { data: undefined, status: "pending" }
-        : { data: state.billing, status: "success" };
+      return state.billingFailed
+        ? { data: undefined, status: "error" }
+        : state.billing == null
+          ? { data: undefined, status: "pending" }
+          : { data: state.billing, status: "success" };
     return {
       data: state.account,
       dataUpdatedAt: Date.now(),
@@ -102,7 +106,10 @@ vi.mock("#renderer/lib/motion", async (original) => ({
   useMotionPreference: () => "reduced",
 }));
 vi.mock("#renderer/components/credits-card/current-chat", () => ({
-  useCurrentChat: () => ({ chat: state.chat, turnRunning: false }),
+  useCurrentChat: () => {
+    if (state.chatFails) throw new Error("chat list unavailable");
+    return { chat: state.chat, turnRunning: false };
+  },
 }));
 vi.mock("./promo-character", () => ({
   PromoCharacter: ({ excited }: { excited: boolean }) => (
@@ -159,6 +166,8 @@ beforeEach(async () => {
   state.account.free_credits_held = undefined;
   state.marks = {};
   state.chat = null;
+  state.chatFails = false;
+  state.billingFailed = false;
   state.funnelStep.mockClear();
   state.upgradeUrl.mockClear();
   upgradeDialogStore.setState(() => ({ request: null }));
@@ -525,4 +534,57 @@ it("a paid plan past half its credits gets the web card, never the free plan's c
     document.querySelector('[data-slot="credits-card-context"]')
   ).toBeNull();
   expect(screen.queryByText(/Upgrade/)).toBeNull();
+});
+
+it.each([50, 80, 95, 100])(
+  "at %i%% used with no mark, no chat or no plan read, the card still shows with its Upgrade",
+  (used) => {
+    state.account.credits_used = used;
+    state.billingFailed = true;
+    render(promo());
+    expect(document.querySelector('[data-slot="upgrade-promo"]')).toBeTruthy();
+    expect(screen.getByRole("progressbar")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+  }
+);
+
+it("held credits past half used: the unlock card, never hidden", () => {
+  state.account.free_credits_held = true;
+  state.account.credits_used = 90;
+  state.chat = { label: "Invoice app" };
+  render(promo());
+  expect(screen.getByText("Credits locked — verify your phone")).toBeTruthy();
+  expect(
+    document.querySelector('[data-slot="credits-card-context"]')
+  ).toBeNull();
+});
+
+it("if the context fails to render, the card as it was before stays, with the plan and plain checkout", async () => {
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  state.billing = FULL_BILLING;
+  state.account.credits_used = 85;
+  state.chatFails = true;
+  render(promo());
+  expect(screen.getByText("Running low on credits")).toBeTruthy();
+  expect(
+    document.querySelector('[data-slot="credits-card-context"]')
+  ).toBeNull();
+  expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
+  await waitFor(() =>
+    expect(state.upgradeUrl).toHaveBeenCalledWith({ src: "credits_card" })
+  );
+  expect(upgradeDialogStore.state.request).toBeNull();
+  logged.mockRestore();
+});
+
+it("if the plan's pitch fails to render too, the plain card stays with its Upgrade", () => {
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  state.billing = { ...FULL_BILLING, upgrades: null } as unknown as BillingPlan;
+  state.account.credits_used = 85;
+  render(promo());
+  expect(screen.getByText("Running low on credits")).toBeTruthy();
+  expect(document.querySelector('[data-slot="upgrade-pitch"]')).toBeNull();
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+  logged.mockRestore();
 });

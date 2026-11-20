@@ -3,6 +3,7 @@ import {
   planPrice,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import {
   CREDIT_THRESHOLD_COPY,
   creditAccountKey,
@@ -19,7 +20,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AnimatePresence, motion, animate } from "motion/react";
-import { useEffect, useLayoutEffect, useState, useRef } from "react";
+import {
+  Component,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useRef,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -138,8 +146,6 @@ export const UpgradePromo = () => {
     : promoState(account.data, prefs.creditsExhaustedAt, now);
   const tier = creditsTier(account.data);
   const web = state === "web";
-  const { chat } = useCurrentChat();
-  const markKey = creditAccountKey(account.data);
   const verifyPhone = () => {
     startFreeCreditsWatch();
     void platformSystem(transport.client).openExternal({
@@ -155,14 +161,29 @@ export const UpgradePromo = () => {
     enabled: pitching,
     staleTime: 60_000,
   });
-  // From half the free credits used, the card speaks of the user's own work.
-  const context = pitching
-    ? creditsCardContext(
-        account.data,
-        markKey != null ? prefs.creditThresholds?.[markKey] : undefined,
-        chat?.label.trim()
-      )
-    : null;
+  const onCta = (context: CreditsCardContext | null) => {
+    if (held) verifyPhone();
+    else if (web)
+      void platformSystem(transport.client).openExternal({
+        url: ABACUS_AGENT_URL,
+      });
+    // Inside the click: the web build opens its checkout tab here.
+    else if (context != null)
+      startPlanCheckout(
+        transport.client,
+        "credits_card",
+        String(context.level)
+      );
+    else void openUpgrade(transport.client, "credits_card");
+  };
+  const body = {
+    held,
+    web,
+    granted: account.data?.credits_granted ?? null,
+    used: account.data?.credits_used ?? null,
+    streakLeft: streakCreditsLeft(account.data?.streak, now),
+    routinesHeld: prefs.routineCreditHold != null,
+  };
   if ((!held && tier !== "free" && !web) || !host)
     return createPortal(null, target);
   return createPortal(
@@ -179,7 +200,6 @@ export const UpgradePromo = () => {
                 : "creditsCard.upsellTitle"
           )}
           data-state={held ? "held" : undefined}
-          data-level={context?.level}
           className={CREDITS_CARD_FRAME}
           initial={{
             opacity: 0,
@@ -193,37 +213,104 @@ export const UpgradePromo = () => {
               : { duration: durations.crossFade / 1000, ease: easings.standard }
           }
         >
-          <CreditsCardBody
-            held={held}
-            web={web}
-            granted={account.data?.credits_granted ?? null}
-            used={account.data?.credits_used ?? null}
-            streakLeft={streakCreditsLeft(account.data?.streak, now)}
-            routinesHeld={prefs.routineCreditHold != null}
-            billing={pitching ? (billing.data ?? null) : null}
-            context={context}
-            onCta={() => {
-              if (held) verifyPhone();
-              else if (web)
-                void platformSystem(transport.client).openExternal({
-                  url: ABACUS_AGENT_URL,
-                });
-              // Inside the click: the web build opens its checkout tab here.
-              else if (context != null)
-                startPlanCheckout(
-                  transport.client,
-                  "credits_card",
-                  String(context.level)
-                );
-              else void openUpgrade(transport.client, "credits_card");
-            }}
-          />
+          {/* Everything the card says from half used renders under the
+              inner boundary, which falls back to the card as it was before;
+              if that fails too, the outer one keeps the plain card. */}
+          <CreditsCardBoundary
+            resetKey={key}
+            fallback={
+              <CreditsCardBody
+                {...body}
+                billing={null}
+                context={null}
+                onCta={() => onCta(null)}
+              />
+            }
+          >
+            <CreditsCardBoundary
+              resetKey={key}
+              fallback={
+                <CreditsCardBody
+                  {...body}
+                  billing={pitching ? (billing.data ?? null) : null}
+                  context={null}
+                  onCta={() => onCta(null)}
+                />
+              }
+            >
+              <ContextualCreditsCard
+                {...body}
+                account={pitching ? account.data : null}
+                billing={pitching ? (billing.data ?? null) : null}
+                onCta={onCta}
+              />
+            </CreditsCardBoundary>
+          </CreditsCardBoundary>
         </motion.aside>
       ) : null}
     </AnimatePresence>,
     target
   );
 };
+
+/**
+ * The free plan's card with its context from half the credits used: the chat
+ * the user is on (the newest named chat) and the threshold mark the milestone
+ * cards left, read here so that a failure in any of it stays inside
+ * CreditsCardBoundary.
+ */
+const ContextualCreditsCard = ({
+  account,
+  onCta,
+  ...body
+}: Omit<CreditsCardBodyProps, "context" | "onCta"> & {
+  /** A free account's info while the card pitches the plan; null otherwise. */
+  account: AbacusAccountInfo | null | undefined;
+  onCta(context: CreditsCardContext | null): void;
+}) => {
+  const prefs = usePrefs();
+  const { chat } = useCurrentChat();
+  const markKey = account != null ? creditAccountKey(account) : null;
+  const context =
+    account != null
+      ? creditsCardContext(
+          account,
+          markKey != null ? prefs.creditThresholds?.[markKey] : undefined,
+          chat?.label.trim()
+        )
+      : null;
+  return (
+    <CreditsCardBody {...body} context={context} onCta={() => onCta(context)} />
+  );
+};
+
+/**
+ * The card never disappears over its own content: a render failure under it
+ * shows `fallback` instead, until the account changes.
+ */
+class CreditsCardBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode; resetKey: string },
+  { failed: boolean; resetKey: string }
+> {
+  override state = { failed: false, resetKey: this.props.resetKey };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  static getDerivedStateFromProps(
+    props: { resetKey: string },
+    state: { resetKey: string }
+  ) {
+    return props.resetKey !== state.resetKey
+      ? { failed: false, resetKey: props.resetKey }
+      : null;
+  }
+  override componentDidCatch(error: unknown) {
+    console.error("[renderer] credits card fell back to the plain card", error);
+  }
+  override render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
 
 /** The card's frame, shared by the sidebar and the gallery. */
 export const CREDITS_CARD_FRAME =

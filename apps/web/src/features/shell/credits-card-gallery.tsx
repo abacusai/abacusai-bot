@@ -38,11 +38,7 @@ export const CreditsSidebarGallery = ({
 }) => (
   <div className="flex h-full items-end p-6">
     <div className="w-[var(--sidebar-w)] px-2" data-slot="credits-card-gallery">
-      <aside
-        data-slot="upgrade-promo"
-        data-level={CONTEXTS[level]?.level}
-        className={CREDITS_CARD_FRAME}
-      >
+      <aside data-slot="upgrade-promo" className={CREDITS_CARD_FRAME}>
         <CreditsCardBody
           held={false}
           web={false}
