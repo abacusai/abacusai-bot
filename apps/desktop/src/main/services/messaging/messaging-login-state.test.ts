@@ -20,6 +20,7 @@ const stored = vi.hoisted(() => ({
   linkLost: false,
   appStopped: {} as Record<string, "login-not-finished" | null>,
   enabled: [] as string[],
+  configured: ["discord"] as string[],
 }));
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
@@ -41,7 +42,8 @@ vi.mock("./messaging-config-service", async (importOriginal) => ({
   }),
   isPlatformEnabled: (id: MessagingPlatformId) =>
     id === "discord" || id === "abacus_discord",
-  isPlatformConfigured: (id: MessagingPlatformId) => id === "discord",
+  isPlatformConfigured: (id: MessagingPlatformId) =>
+    stored.configured.includes(id),
 }));
 
 // No OS events to watch here: hints have their own test (lane-supervisor.test.ts).
@@ -78,9 +80,12 @@ const service = (
 ): {
   gateway: InstanceType<typeof MessagingGatewayService>;
   captured: Callbacks[];
+  /** The latest connector's callbacks per lane. */
+  lanes: Map<MessagingPlatformId, Callbacks>;
   board: InstanceType<typeof StatusBoard>;
 } => {
   const captured: Callbacks[] = [];
+  const lanes = new Map<MessagingPlatformId, Callbacks>();
   // The real status board, in memory: the gateway reports, the board tells.
   const board = new StatusBoard({
     file: () => null,
@@ -114,6 +119,7 @@ const service = (
     const real = build(id) as { callbacks?: Callbacks };
     const callbacks = (real as unknown as { callbacks: Callbacks }).callbacks;
     captured.push(callbacks);
+    lanes.set(id, callbacks);
     return {
       id,
       start: async () => {},
@@ -130,7 +136,7 @@ const service = (
     };
   };
 
-  return { gateway, captured, board };
+  return { gateway, captured, lanes, board };
 };
 
 const platformState = (
@@ -147,6 +153,7 @@ afterEach(() => {
   vi.useRealTimers();
   stored.appStopped = {};
   stored.enabled = [];
+  stored.configured = ["discord"];
 });
 
 describe("a lost link", () => {
@@ -362,6 +369,20 @@ describe("a login whose connect dialog closed unlinked", () => {
     });
     await vi.advanceTimersByTimeAsync(STATUS_BATCH_MS);
     expect(told).toContain("Discord isn't connected");
+  });
+
+  it("leaves its shared-bot lane running when that one is connected", async () => {
+    // The shared bot is linked on its own; only the personal login was left.
+    stored.configured = ["discord", "abacus_discord"];
+    const { gateway, lanes } = service();
+    await gateway.syncConnectors();
+    lanes.get("abacus_discord")!.onState("connected");
+    lanes.get("discord")!.onState("needs_login", "Scan the QR to connect.");
+    gateway.releaseLogin("discord");
+    await vi.advanceTimersByTimeAsync(RELEASED_LOGIN_MS);
+    expect(stored.appStopped).toEqual({ discord: "login-not-finished" });
+    expect(gateway.runningPlatforms()).toContain("abacus_discord");
+    expect(gateway.runningPlatforms()).not.toContain("discord");
   });
 
   it("is not started again by a sync while the app holds it; Connect clears the hold", async () => {

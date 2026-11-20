@@ -3035,7 +3035,7 @@ export class MessagingGatewayService {
    * Its connect dialog closed without a link: stop showing the login, but
    * leave it running, since a scan already made may still land. Unfinished
    * after RELEASED_LOGIN_MS, the platform is turned off (with its shared-bot
-   * lane, as Unlink does).
+   * lane, unless that one is connected).
    */
   releaseLogin(platformId: MessagingPlatformId): void {
     const state = this.states.get(platformId)?.state;
@@ -3073,7 +3073,8 @@ export class MessagingGatewayService {
    * A login left unfinished: the connector stops, and the lane is held by the
    * app (`appStopped`), never by writing the user's own switch. It stays on,
    * so routines skip and make up through it and Connect brings it back; the
-   * status board tells the user.
+   * status board tells the user. Only an unfinished lane is stopped: a shared
+   * bot lane the user already connected has no login to abandon.
    */
   private async abandonLogin(platformId: MessagingPlatformId): Promise<void> {
     const state = this.states.get(platformId)?.state;
@@ -3090,6 +3091,8 @@ export class MessagingGatewayService {
     const shared = SHARED_BOT_PLATFORM_OF[platformId];
     for (const id of shared != null ? [shared, platformId] : [platformId]) {
       if (!isPlatformEnabled(id)) continue;
+      const laneState = this.states.get(id)?.state;
+      if (laneState === "connected" || laneState === "syncing") continue;
       savePlatformAppStopped(id, "login-not-finished");
       await this.stopPlatform(id);
       this.supervisor.forget(id);
