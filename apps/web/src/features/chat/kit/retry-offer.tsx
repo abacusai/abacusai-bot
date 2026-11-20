@@ -25,6 +25,7 @@ import {
 } from "@abacus-ai/contract/deliverable-offer";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import {
+  isPlanHandoffTool,
   modelIdentity,
   retryOfferModel,
   type RetryOfferReason,
@@ -72,8 +73,8 @@ export interface RetryOfferTarget {
 
 /**
  * The latest turn's reply, when the task went badly: the user's own words
- * opened the turn, it shows no buttons of its own, and retryOfferReason finds
- * why.
+ * opened the turn, it shows no buttons or plan card of its own, and
+ * retryOfferReason finds why.
  */
 export const retryOfferTarget = (
   messages: readonly UIMessage[]
@@ -114,6 +115,7 @@ export const retryOfferTarget = (
     reply: turnReplyText(assistants),
     ranWork: ranWork(turn.assistantIndices),
     earlierRanWork: ranWork(earlier[0]?.assistantIndices ?? []),
+    handedOff: tools.some((tool) => isPlanHandoffTool(tool.name)),
   });
   return reason == null ? null : { id: carrier.id, turn: turns.length, reason };
 };

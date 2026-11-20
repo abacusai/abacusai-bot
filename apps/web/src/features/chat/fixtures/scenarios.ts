@@ -741,6 +741,30 @@ const paidFeatureFreePart = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(2) }),
   ]);
 
+const VIDEO_ASK = "Make a 30-second TikTok video for my bakery's new croissant";
+
+/** A paid plan's video ask, sent again: each reply is the plan's card, so the retry offer stays down. */
+const paidFeatureRepeat = (): RelayEvent[] =>
+  seqd(
+    (["r1", "r2"] as const).flatMap((run, index) => [
+      ...userTurn(run, `${run}-u`, VIDEO_ASK, at(6 - index * 3)),
+      b.textStart(`${run}-a`),
+      ...b.toolCall(`${run}-c`, "paid_feature", `${run}-a`, {
+        feature: "video_gen",
+        prompt: "A 30-second TikTok video for a bakery's new croissant",
+      }),
+      b.toolResult(`${run}-c`, {
+        text: "Basic makes video in Abacus AI Agent on the web.",
+      }),
+      b.textDelta(
+        `${run}-a`,
+        "Abacus AI Agent on the web makes your video on your Basic plan: open it with the button below, your request is filled in."
+      ),
+      b.textEnd(`${run}-a`),
+      b.runFinished(run, "success", { timestamp: at(5 - index * 3) }),
+    ])
+  );
+
 const PORTFOLIO_SAMPLE =
   "Build me a one-page portfolio website: a hero with my name and a one-line intro, a grid of three sample projects, an about section and a contact section. Use placeholder text and images I can swap later, make it clean and modern, and make sure it looks right on a phone. Show me the page when it is ready.";
 
@@ -1655,6 +1679,16 @@ export const SCENARIOS: Scenario[] = [
       accountTier: "free",
       upgradeDialog: true,
       placeholder: "Message your bot...",
+    },
+  },
+  {
+    id: "retry-offer-plan-handoff",
+    canvas: ["RetryOffer", "after the plan's card"],
+    skin: "session",
+    events: paidFeatureRepeat,
+    view: {
+      accountTier: "basic",
+      retryOffer: { label: "Claude Opus 5.5", plan: "Basic" },
     },
   },
   {
