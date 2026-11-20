@@ -247,11 +247,32 @@ describe("Roblox Studio", () => {
   });
 
   it("offers the model a short tool list, and every tool its instructions name is on it", () => {
-    expect(ROBLOX_STUDIO_TOOLS.length).toBeLessThanOrEqual(10);
+    expect(ROBLOX_STUDIO_TOOLS.length).toBeLessThanOrEqual(12);
+    expect(
+      ROBLOX_STUDIO_TOOLS.some((tool) => tool.startsWith("generate_"))
+    ).toBe(false);
     const named = roblox?.usage?.match(/\b[a-z]+(?:_[a-z]+)+\b/g) ?? [];
     expect(named.length).toBeGreaterThan(0);
     for (const tool of named.filter((name) => name !== "studio_id"))
       expect(ROBLOX_STUDIO_TOOLS as readonly string[], tool).toContain(tool);
+  });
+
+  it("lets the model see and play the game, and has it do so before it calls anything fixed", () => {
+    expect(ROBLOX_STUDIO_TOOLS).toContain("screen_capture");
+    expect(ROBLOX_STUDIO_TOOLS).toContain("user_mouse_input");
+    const usage = roblox?.usage ?? "";
+    const check = usage.indexOf("before saying it works or is fixed");
+    expect(check).toBeGreaterThan(-1);
+    const after = usage.slice(check);
+    for (const step of [
+      "screen_capture",
+      "start_stop_play",
+      "user_mouse_input",
+      "get_console_output",
+    ])
+      expect(after, step).toContain(step);
+    expect(after).toContain("Report what you saw, not what you expect");
+    expect(after).toContain("say what you could not check");
   });
 });
 

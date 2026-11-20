@@ -2,7 +2,7 @@
  * Roblox Studio's connector, end to end against a stand-in for Studio's own
  * MCP server: a real stdio process that answers the way Studio's does, with
  * a few of its tools (list_roblox_studios, multi_edit, script_read,
- * start_stop_play, get_console_output). Installed as the registry's entry
+ * start_stop_play, get_console_output, screen_capture, user_mouse_input). Installed as the registry's entry
  * would install it, it reaches the agent's tool list and answers calls; a
  * server that cannot start (Studio closed or its MCP switch off) is an
  * error the app shows as "not ready", not a hang.
@@ -18,6 +18,7 @@ import { connectorById, mcpEntryOn } from "@abacus-ai/connectors/registry";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { connectMcpServers, type ConnectedMcp } from "./index.js";
+import { buildMcpToolDefinitions } from "./tools.js";
 
 /** Newline-delimited JSON-RPC over stdio, as Studio's server speaks it. */
 const STAND_IN = String.raw`
@@ -44,6 +45,8 @@ const call = (name, args) => {
   if (name === "script_read") return text(scripts.get(args.path) ?? null);
   if (name === "start_stop_play") return text({ playing: true });
   if (name === "get_console_output") return text(["Hello from Luau"]);
+  if (name === "screen_capture") return { content: [{ type: "image", data: "iVBORw0KGgo=", mimeType: "image/png" }] };
+  if (name === "user_mouse_input") return text({ ok: true });
   return { ...text("unknown tool"), isError: true };
 };
 readline.createInterface({ input: process.stdin }).on("line", (line) => {
@@ -135,17 +138,37 @@ describe("Roblox Studio over stdio", () => {
       "roblox-studio_get_console_output",
       "roblox-studio_list_roblox_studios",
       "roblox-studio_multi_edit",
+      "roblox-studio_screen_capture",
       "roblox-studio_script_read",
       "roblox-studio_start_stop_play",
+      "roblox-studio_user_mouse_input",
     ]);
-    for (const left of [
-      "generate_mesh",
-      "screen_capture",
-      "user_mouse_input",
-    ]) {
-      expect(mcp.routes.has(`roblox-studio_${left}`)).toBe(false);
-      expect(mcp.routes.has(left)).toBe(false);
-    }
+    expect(mcp.routes.has("roblox-studio_generate_mesh")).toBe(false);
+    expect(mcp.routes.has("generate_mesh")).toBe(false);
+  });
+
+  it("hands the model the playtest it clicked through as an image", async () => {
+    const roblox = connectorById("roblox-studio");
+    if (roblox?.kind !== "mcp") throw new Error("missing");
+    const mcp = await connect(
+      configWith({ tools: mcpEntryOn(roblox, "darwin")?.tools })
+    );
+    const tools = buildMcpToolDefinitions(() => mcp);
+    const tool = (name: string) => {
+      const found = tools.find((t) => t.name === `roblox-studio_${name}`);
+      if (found == null) throw new Error(`no ${name}`);
+      return found;
+    };
+    await tool("start_stop_play").execute("call-1", {});
+    expect((await tool("user_mouse_input").execute("call-2", {})).isError).toBe(
+      false
+    );
+    const shot = await tool("screen_capture").execute("call-3", {});
+    expect(shot.content).toContainEqual({
+      type: "image",
+      data: "iVBORw0KGgo=",
+      mimeType: "image/png",
+    });
   });
 
   it("offers every tool of a server whose entry names none", async () => {

@@ -225,9 +225,10 @@ const PLATFORM_CALL_CREDITS = 10;
 
 /**
  * The Studio tools the model is offered: finding things, editing scripts,
- * running Luau and playtesting. Studio ships some thirty, and a long tool
- * list costs every turn and confuses smaller models; image capture and the
- * asset generators are left out, since execute_luau covers building.
+ * running Luau, playtesting, and seeing and clicking the playtest the way the
+ * player does. Studio ships some thirty, and a long tool list costs every turn
+ * and confuses smaller models; the asset generators are left out, since
+ * execute_luau covers building.
  */
 export const ROBLOX_STUDIO_TOOLS = [
   "list_roblox_studios",
@@ -240,6 +241,8 @@ export const ROBLOX_STUDIO_TOOLS = [
   "execute_luau",
   "start_stop_play",
   "get_console_output",
+  "screen_capture",
+  "user_mouse_input",
 ] as const;
 
 const remote = (url: string): McpEntry => ({ url });
@@ -443,7 +446,13 @@ export const CONNECTORS: readonly Connector[] = [
     usage:
       "Work inside the user's open place, not in chat: call list_roblox_studios first and pass its studio_id; " +
       "find things with search_game_tree, inspect_instance, script_search and script_read; write or change " +
-      "scripts with multi_edit; build or change the world with execute_luau; then test with start_stop_play and get_console_output and fix what the output shows. Do not paste Luau " +
+      "scripts with multi_edit; build or change the world with execute_luau. Code that runs is not a game " +
+      "that works, so check every change as the player would before saying it works or is fixed: after a " +
+      "change to how it looks (lighting, colours, UI), take a screen_capture and look at it; for anything the " +
+      "player does (placing, buttons, a round starting), start a playtest with start_stop_play, do it with " +
+      "user_mouse_input, then screen_capture and read get_console_output. Report what you saw, not what you " +
+      "expect, and fix and check again while it is wrong. If a capture comes back with no image you can see, " +
+      "say what you could not check. Do not paste Luau " +
       "for the user to copy unless they ask for it. If list_roblox_studios finds no Studio or a call fails, " +
       "tell the user in one line: open the place in Roblox Studio, then in Assistant choose … > Manage MCP " +
       "Servers and turn on Enable Studio as MCP server.",
