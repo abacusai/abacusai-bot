@@ -2,7 +2,8 @@
  * `abacusaibot://open` links (contract open-link.ts), once the user is signed
  * in: main holds the latest link and this takes it, at mount and whenever
  * main says one arrived. A chat this app has opens with the link's text in
- * its composer, never sent; the upgrade page's link reads the account where
+ * its composer, never sent; text with no chat starts a new one with it in the
+ * box (an email's first task); the upgrade page's link reads the account where
  * the app is; anything else opens home.
  */
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
@@ -61,13 +62,25 @@ export const draftWithText = (
         selectionEnd: text.length,
       };
 
-/** Opens the chat (else home), with `text` waiting in its composer. */
+/**
+ * Opens the chat (else home), with `text` waiting in its composer. With no
+ * chat named, `text` starts a new chat: a fresh draft, so nothing the user
+ * left half-written is replaced, taken once per link.
+ */
 export const openChatWithText = (
   sessionId: string | null,
   text: string | null,
   db: Pick<Db, "collections">,
   navigate: ReturnType<typeof useAppNavigate>
 ): void => {
+  if (sessionId == null && text != null) {
+    void navigate({
+      to: "/sessions/new",
+      search: { prompt: text, offer: `open-link-${crypto.randomUUID()}` },
+      transition: "nav-lateral",
+    });
+    return;
+  }
   const target = chatTarget(sessionId, db);
   // Only an empty composer takes it: what the user wrote there stays.
   if (target.sessionId != null && text != null)
