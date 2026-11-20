@@ -178,6 +178,7 @@ describe("a name that is a person in the user's groups, with no chat yet", () =>
     jid: "15550001234@c.us",
     ids: ["15550001234@c.us"],
     name: "Priya Shah",
+    saved: true,
     groups: ["Family"],
   };
   const bridgeWith = (
@@ -220,6 +221,7 @@ describe("a name that is a person in the user's groups, with no chat yet", () =>
           jid: "917700000009@c.us",
           ids: ["917700000009@c.us"],
           name: "Priya Rao",
+          saved: true,
           groups: ["Family"],
         },
       ])

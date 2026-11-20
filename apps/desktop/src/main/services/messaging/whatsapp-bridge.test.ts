@@ -131,18 +131,21 @@ describe("resolveJid: a person the user has no chat with yet", () => {
       jid: "15550001234@c.us",
       ids: ["15550001234@c.us", "55500001@lid"],
       name: "Priya Shah",
+      saved: true,
       groups: ["Family", "Priya's Farewell"],
     },
     {
       jid: "15550009999@c.us",
       ids: ["15550009999@c.us"],
       name: "Arjun",
+      saved: true,
       groups: ["Family"],
     },
     {
       jid: "55500003@lid",
       ids: ["55500003@lid"],
       name: "Arjun",
+      saved: true,
       groups: ["Priya's Farewell"],
     },
     // Meghna has a chat already: that chat is how she is reached.
@@ -150,6 +153,7 @@ describe("resolveJid: a person the user has no chat with yet", () => {
       jid: "919876543210@c.us",
       ids: ["919876543210@c.us"],
       name: "Meghna",
+      saved: true,
       groups: ["Family"],
     },
   ];
@@ -198,6 +202,57 @@ describe("resolveJid: a person the user has no chat with yet", () => {
     expect(resolveJid("Meghna", groupChats, members)).toEqual({
       jid: "919876543210@c.us",
     });
+  });
+
+  it("never sends to a member known only by the name they gave themselves", () => {
+    // Someone in a big group calls themselves "Ravi"; the user saved nobody so.
+    const stranger = {
+      jid: "15550007777@c.us",
+      ids: ["15550007777@c.us"],
+      name: "Ravi",
+      saved: false,
+      groups: ["Neighbourhood"],
+    };
+    expect(resolveJid("Ravi", groupChats, [stranger])).toEqual({
+      miss: {
+        ambiguous: false,
+        candidates: [{ name: "Ravi", to: "Ravi", groups: ["Neighbourhood"] }],
+      },
+    });
+  });
+
+  it("settles a name among the user's chats before any group member", () => {
+    // Two chats start with "Ravi": the user is asked, even though a member
+    // in some group is called exactly "Ravi".
+    const ravis = [
+      ...groupChats,
+      {
+        jid: "15550001111@c.us",
+        name: "Ravi Kumar",
+        isGroup: false,
+        isMe: false,
+        unreadCount: 0,
+      },
+      {
+        jid: "15550002222@c.us",
+        name: "Ravi Mehta",
+        isGroup: false,
+        isMe: false,
+        unreadCount: 0,
+      },
+    ];
+    const member = {
+      jid: "15550007777@c.us",
+      ids: ["15550007777@c.us"],
+      name: "Ravi",
+      saved: true,
+      groups: ["Neighbourhood"],
+    };
+    const result = resolveJid("Ravi", ravis, [member]);
+    expect("miss" in result && result.miss.ambiguous).toBe(true);
+    expect(
+      "miss" in result && result.miss.candidates.map((row) => row.name)
+    ).toEqual(["Ravi Kumar", "Ravi Mehta"]);
   });
 
   it("lists the closest names, with the groups a member is in, on a miss", () => {

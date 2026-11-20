@@ -101,6 +101,8 @@ export type BridgeMember = {
   /** Every id they go by (phone and lid), to match a chat already open with them. */
   ids: string[];
   name: string;
+  /** The name is the user's own for them (their address book), not one they chose. */
+  saved: boolean;
   /** The groups they share with the user, by name. */
   groups: string[];
 };
@@ -138,38 +140,50 @@ export const resolveJid = (
   if (digits.length > 0 && /^\+?[\d\s().-]+$/.test(trimmed))
     return { jid: `${digits}@c.us` };
 
+  const chatRows: Reachable[] = chats.map((chat) => ({
+    jid: chat.jid,
+    name: chat.name,
+    isGroup: chat.isGroup,
+  }));
   const chatJids = new Set(chats.map((chat) => chat.jid));
-  const rows: Reachable[] = [
-    ...chats.map((chat) => ({
-      jid: chat.jid,
-      name: chat.name,
-      isGroup: chat.isGroup,
-    })),
-    // Someone with a chat already is reached through it.
-    ...members
-      .filter((member) => !member.ids.some((id) => chatJids.has(id)))
-      .map((member) => ({
-        jid: member.jid,
-        name: member.name,
-        isGroup: false,
-        groups: member.groups,
-      })),
-  ];
+  // Someone with a chat already is reached through it.
+  const memberRows = members
+    .filter((member) => !member.ids.some((id) => chatJids.has(id)))
+    .map((member) => ({
+      jid: member.jid,
+      name: member.name,
+      isGroup: false,
+      groups: member.groups,
+      saved: member.saved,
+    }));
   const lower = trimmed.toLowerCase();
-  const tiers = [
-    rows.filter((row) => row.name === trimmed),
-    rows.filter((row) => row.name.toLowerCase() === lower),
-    rows.filter(
-      (row) => !row.isGroup && row.name.toLowerCase().startsWith(lower)
-    ),
-  ];
-  for (const tier of tiers) {
-    if (tier.length === 0) continue;
-    if (new Set(tier.map((row) => row.jid)).size === 1)
-      return { jid: tier[0]!.jid };
-    return { miss: { ambiguous: true, candidates: candidatesOf(tier) } };
-  }
-  const close = rows.filter(
+  const matchIn = (
+    rows: ReadonlyArray<Reachable>
+  ): { jid: string } | { miss: JidMiss } | null => {
+    const tiers = [
+      rows.filter((row) => row.name === trimmed),
+      rows.filter((row) => row.name.toLowerCase() === lower),
+      rows.filter(
+        (row) => !row.isGroup && row.name.toLowerCase().startsWith(lower)
+      ),
+    ];
+    for (const tier of tiers) {
+      if (tier.length === 0) continue;
+      if (new Set(tier.map((row) => row.jid)).size === 1)
+        return { jid: tier[0]!.jid };
+      return { miss: { ambiguous: true, candidates: candidatesOf(tier) } };
+    }
+    return null;
+  };
+  // The user's chats decide first: a name that matches any of them, once or
+  // several times, is settled there. Only a name no chat answers to is looked
+  // for among the people in their groups, and only under the name the user
+  // saved them as: a name someone gave themselves is shown, never sent to.
+  const inChats = matchIn(chatRows);
+  if (inChats != null) return inChats;
+  const inMembers = matchIn(memberRows.filter((row) => row.saved));
+  if (inMembers != null) return inMembers;
+  const close = [...chatRows, ...memberRows].filter(
     (row) =>
       row.name.toLowerCase().includes(lower) || nameIsClose(trimmed, row.name)
   );
@@ -634,7 +648,8 @@ const GROUP_MEMBERS_SCRIPT = pageScript`
         const jid = serial(phone) || serial(wid);
         const name = (contact && (contact.name || contact.pushname || contact.verifiedName)) || "";
         if (!jid || name.length === 0) continue;
-        const row = people.get(jid) || { jid, ids: [], name, groups: [] };
+        const saved = !!(contact && contact.name);
+        const row = people.get(jid) || { jid, ids: [], name, saved, groups: [] };
         for (const id of ids) if (!row.ids.includes(id)) row.ids.push(id);
         if (groupName && !row.groups.includes(groupName)) row.groups.push(groupName);
         people.set(jid, row);
