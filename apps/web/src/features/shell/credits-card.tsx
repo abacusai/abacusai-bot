@@ -1,18 +1,37 @@
-import { wallOffer } from "@abacus-ai/contract/billing-plan";
+import {
+  type BillingPlan,
+  planPrice,
+  wallOffer,
+} from "@abacus-ai/contract/billing-plan";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import {
+  CREDIT_THRESHOLD_COPY,
+  creditAccountKey,
+} from "@abacus-ai/contract/credit-thresholds";
 import { streakCreditsLeft } from "@abacus-ai/contract/streak";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   FileText,
+  Gauge,
   Globe,
   ImageIcon,
+  MessageSquareText,
   Sparkles,
 } from "lucide-react";
 import { AnimatePresence, motion, animate } from "motion/react";
-import { useEffect, useLayoutEffect, useState, useRef } from "react";
+import {
+  Component,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useRef,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { useCurrentChat } from "#renderer/components/credits-card/current-chat";
 import { StreakFlame } from "#renderer/components/streak/streak-week";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { usePrefs } from "#renderer/data/db/prefs";
@@ -36,12 +55,19 @@ import {
 } from "#renderer/lib/motion";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { openUpgrade } from "#renderer/lib/upgrade";
+import { startPlanCheckout } from "#renderer/lib/upgrade-dialog";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
-import { PlanPitchList } from "../upgrade-dialog/plan-pitch";
+import { PlanPitchList, upgradeCtaLabel } from "../upgrade-dialog/plan-pitch";
+import {
+  type CreditsCardContext,
+  type CreditsCardLevel,
+  creditsCardContext,
+  estimateKey,
+} from "./credits-card-context";
 import { PromoCharacter } from "./promo-character";
 import { usePromoHost, consumePromoRect } from "./promo-host";
 import { promoAccountKey, promoState } from "./promo-state";
@@ -61,7 +87,9 @@ const WEB_LINES = [
  * credits are held, the way to unlock them; a paid plan the card that points
  * at AbacusAI Agent on the web. The free card already lists the plan's whole
  * pitch, so its Upgrade goes straight to the payment page, with no dialog
- * repeating it; the account is watched until the plan is active.
+ * repeating it; the account is watched until the plan is active. From half
+ * the free credits used it also names the chat the user is on and what the
+ * credits left still pay for, and the plan dialog waits beside checkout.
  */
 export const UpgradePromo = () => {
   const { transport } = useAppContext();
@@ -72,7 +100,7 @@ export const UpgradePromo = () => {
     element.dataset.slot = "promo-portal";
     return element;
   });
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const prefs = usePrefs();
   const now = useNow();
   const preference = useMotionPreference();
@@ -116,23 +144,7 @@ export const UpgradePromo = () => {
   const state = held
     ? "held"
     : promoState(account.data, prefs.creditsExhaustedAt, now);
-  const [excited, setExcited] = useState(false);
   const tier = creditsTier(account.data);
-  const remaining =
-    account.data?.credits_granted != null && account.data.credits_used != null
-      ? Math.max(0, account.data.credits_granted - account.data.credits_used)
-      : null;
-  const granted = account.data?.credits_granted ?? null;
-  const streakLeft = streakCreditsLeft(account.data?.streak, now);
-  const title =
-    remaining === 0
-      ? "creditsCard.outTitle"
-      : remaining != null &&
-          granted != null &&
-          granted > 0 &&
-          remaining / granted < LOW_CREDITS_SHARE
-        ? "creditsCard.lowTitle"
-        : "creditsCard.levelUpTitle";
   const web = state === "web";
   const verifyPhone = () => {
     startFreeCreditsWatch();
@@ -140,7 +152,6 @@ export const UpgradePromo = () => {
       url: ABACUS_VERIFY_PHONE_URL,
     });
   };
-  const lines = web ? WEB_LINES : [];
   // A free account's card lists the plan's whole pitch, in the same order for
   // every account whether it uses bots or sessions; it waits for the plan (or
   // its failure) so the card does not grow once on screen.
@@ -150,7 +161,29 @@ export const UpgradePromo = () => {
     enabled: pitching,
     staleTime: 60_000,
   });
-  const offer = wallOffer(billing.data ?? null);
+  const onCta = (context: CreditsCardContext | null) => {
+    if (held) verifyPhone();
+    else if (web)
+      void platformSystem(transport.client).openExternal({
+        url: ABACUS_AGENT_URL,
+      });
+    // Inside the click: the web build opens its checkout tab here.
+    else if (context != null)
+      startPlanCheckout(
+        transport.client,
+        "credits_card",
+        String(context.level)
+      );
+    else void openUpgrade(transport.client, "credits_card");
+  };
+  const body = {
+    held,
+    web,
+    granted: account.data?.credits_granted ?? null,
+    used: account.data?.credits_used ?? null,
+    streakLeft: streakCreditsLeft(account.data?.streak, now),
+    routinesHeld: prefs.routineCreditHold != null,
+  };
   if ((!held && tier !== "free" && !web) || !host)
     return createPortal(null, target);
   return createPortal(
@@ -167,7 +200,7 @@ export const UpgradePromo = () => {
                 : "creditsCard.upsellTitle"
           )}
           data-state={held ? "held" : undefined}
-          className="bg-background pointer-events-auto relative isolate w-full overflow-hidden rounded-(--pane-radius) border p-3"
+          className={CREDITS_CARD_FRAME}
           initial={{
             opacity: 0,
             y: preference === "reduced" ? 0 : offsets.drill,
@@ -180,159 +213,337 @@ export const UpgradePromo = () => {
               : { duration: durations.crossFade / 1000, ease: easings.standard }
           }
         >
-          <div className="phone-glow pointer-events-none -z-10" aria-hidden />
-          <div className="flex items-center gap-3">
-            <PromoCharacter
-              remaining={held ? null : remaining}
-              total={account.data?.credits_granted ?? null}
-              excited={excited}
-              upgraded={false}
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">
-                {t(
-                  held
-                    ? "creditsCard.lockedTitle"
-                    : web
-                      ? "creditsCard.paidWebTitle"
-                      : title
-                )}
-              </p>
-              {lines.length > 0 && (
-                <ul className="text-muted-foreground mt-0.5 flex flex-col gap-0.5 text-xs">
-                  {lines.map(({ key, icon: Icon }) => (
-                    <li key={key} className="flex gap-1.5">
-                      <Icon aria-hidden className="mt-0.5 size-3 shrink-0" />
-                      <span>{t(key)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!held && !web && prefs.routineCreditHold != null && (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t("creditsCard.routinesHeld")}
-                </p>
-              )}
-              {held ? (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t("creditsCard.lockedBody")}
-                </p>
-              ) : remaining != null ? (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t("creditsCard.progress", {
-                    remaining: new Intl.NumberFormat(i18n.language, {
-                      maximumFractionDigits: 2,
-                    }).format(remaining),
-                    total: new Intl.NumberFormat(i18n.language, {
-                      maximumFractionDigits: 2,
-                    }).format(account.data?.credits_granted ?? 0),
-                  })}
-                </p>
-              ) : null}
-              {!held && streakLeft > 0 ? (
-                <p
-                  data-slot="streak-credits-line"
-                  className="mt-1 flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-300"
-                >
-                  <StreakFlame className="size-3.5" />
-                  {t("streak.sidebarLine", {
-                    credits: new Intl.NumberFormat(i18n.language).format(
-                      streakLeft
-                    ),
-                  })}
-                </p>
-              ) : null}
-              {!held &&
-              account.data?.credits_granted != null &&
-              account.data.credits_granted > 0 &&
-              remaining != null ? (
-                <div
-                  role="progressbar"
-                  aria-label={t("creditsCard.used")}
-                  aria-valuemin={0}
-                  aria-valuemax={account.data.credits_granted}
-                  aria-valuenow={Math.min(
-                    account.data.credits_granted,
-                    Math.max(0, account.data.credits_used ?? 0)
-                  )}
-                  className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full"
-                >
-                  <motion.div
-                    className="bg-primary h-full origin-left rounded-full"
-                    initial={false}
-                    animate={{
-                      scaleX: Math.min(
-                        1,
-                        Math.max(
-                          0,
-                          (account.data.credits_used ?? 0) /
-                            account.data.credits_granted
-                        )
-                      ),
-                    }}
-                    transition={
-                      preference === "reduced"
-                        ? reducedTransition
-                        : springs.panel
-                    }
-                  />
-                </div>
-              ) : null}
-            </div>
-          </div>
-          {pitching && billing.data != null ? (
-            <div className="mt-3 flex min-h-0 flex-col gap-1.5">
-              {offer != null && (
-                <p className="text-muted-foreground text-xs font-medium">
-                  {t("upgradeDialog.planTitle", { plan: offer.planName })}
-                </p>
-              )}
-              {/* Whole from an 800px window up, three sessions still above it; shorter, it scrolls in place. */}
-              <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_28rem),24rem)] overflow-y-auto overscroll-contain">
-                <PlanPitchList
-                  billing={billing.data}
-                  sameForEveryone
-                  className="gap-1.5 [&_li]:gap-2 [&_li]:text-xs/4 [&_svg]:mt-px [&_svg]:size-3.5"
-                />
-              </div>
-            </div>
-          ) : null}
-          <Button
-            size="sm"
-            className="mt-3 h-8 rounded-lg"
-            onMouseEnter={() => setExcited(true)}
-            onMouseLeave={() => setExcited(false)}
-            onFocus={() => setExcited(true)}
-            onBlur={() => setExcited(false)}
-            data-action={held ? "verify-phone" : undefined}
-            onClick={() =>
-              held
-                ? verifyPhone()
-                : void (web
-                    ? platformSystem(transport.client).openExternal({
-                        url: ABACUS_AGENT_URL,
-                      })
-                    : openUpgrade(transport.client, "credits_card"))
+          {/* Everything the card says from half used renders under the
+              inner boundary, which falls back to the card as it was before;
+              if that fails too, the outer one keeps the plain card. */}
+          <CreditsCardBoundary
+            resetKey={key}
+            fallback={
+              <CreditsCardBody
+                {...body}
+                billing={null}
+                context={null}
+                onCta={() => onCta(null)}
+              />
             }
           >
-            {held ? (
-              t("outcome.verifyPhone.cta")
-            ) : web ? (
-              <>
-                {t("creditsCard.paidWebCta")}
-                <ArrowUpRight aria-hidden />
-              </>
-            ) : (
-              <>
-                <UpgradeSeen src="credits_card" />
-                <Sparkles aria-hidden />
-                {t("creditsCard.cta")}
-              </>
-            )}
-          </Button>
+            <CreditsCardBoundary
+              resetKey={key}
+              fallback={
+                <CreditsCardBody
+                  {...body}
+                  billing={pitching ? (billing.data ?? null) : null}
+                  context={null}
+                  onCta={() => onCta(null)}
+                />
+              }
+            >
+              <ContextualCreditsCard
+                {...body}
+                account={pitching ? account.data : null}
+                billing={pitching ? (billing.data ?? null) : null}
+                onCta={onCta}
+              />
+            </CreditsCardBoundary>
+          </CreditsCardBoundary>
         </motion.aside>
       ) : null}
     </AnimatePresence>,
     target
   );
 };
+
+/**
+ * The free plan's card with its context from half the credits used: the chat
+ * the user is on (the newest named chat) and the threshold mark the milestone
+ * cards left, read here so that a failure in any of it stays inside
+ * CreditsCardBoundary.
+ */
+const ContextualCreditsCard = ({
+  account,
+  onCta,
+  ...body
+}: Omit<CreditsCardBodyProps, "context" | "onCta"> & {
+  /** A free account's info while the card pitches the plan; null otherwise. */
+  account: AbacusAccountInfo | null | undefined;
+  onCta(context: CreditsCardContext | null): void;
+}) => {
+  const prefs = usePrefs();
+  const { chat } = useCurrentChat();
+  const markKey = account != null ? creditAccountKey(account) : null;
+  const context =
+    account != null
+      ? creditsCardContext(
+          account,
+          markKey != null ? prefs.creditThresholds?.[markKey] : undefined,
+          chat?.label.trim()
+        )
+      : null;
+  return (
+    <CreditsCardBody {...body} context={context} onCta={() => onCta(context)} />
+  );
+};
+
+/**
+ * The card never disappears over its own content: a render failure under it
+ * shows `fallback` instead, until the account changes.
+ */
+class CreditsCardBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode; resetKey: string },
+  { failed: boolean; resetKey: string }
+> {
+  override state = { failed: false, resetKey: this.props.resetKey };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  static getDerivedStateFromProps(
+    props: { resetKey: string },
+    state: { resetKey: string }
+  ) {
+    return props.resetKey !== state.resetKey
+      ? { failed: false, resetKey: props.resetKey }
+      : null;
+  }
+  override componentDidCatch(error: unknown) {
+    console.error("[renderer] credits card fell back to the plain card", error);
+  }
+  override render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+/** The card's frame, shared by the sidebar and the gallery. */
+export const CREDITS_CARD_FRAME =
+  "bg-background pointer-events-auto relative isolate w-full overflow-hidden rounded-(--pane-radius) border p-3";
+
+export interface CreditsCardBodyProps {
+  /** The free credits are held until the phone is verified. */
+  held: boolean;
+  /** A paid plan: the card points at AbacusAI Agent on the web. */
+  web: boolean;
+  granted: number | null;
+  used: number | null;
+  streakLeft: number;
+  routinesHeld: boolean;
+  /** The free plan's pitch, once read; null for any other card. */
+  billing: BillingPlan | null;
+  /** The free plan's own work, from half its credits used (credits-card-context.ts). */
+  context: CreditsCardContext | null;
+  onCta(): void;
+}
+
+/** What the card holds inside its frame: the sidebar's and the gallery's. */
+export const CreditsCardBody = ({
+  held,
+  web,
+  granted,
+  used,
+  streakLeft,
+  routinesHeld,
+  billing,
+  context,
+  onCta,
+}: CreditsCardBodyProps) => {
+  const { t, i18n } = useTranslation();
+  const preference = useMotionPreference();
+  const [excited, setExcited] = useState(false);
+  const remaining =
+    granted != null && used != null ? Math.max(0, granted - used) : null;
+  const whole = (value: number) =>
+    new Intl.NumberFormat(i18n.language).format(Math.max(0, Math.round(value)));
+  const title = held
+    ? t("creditsCard.lockedTitle")
+    : web
+      ? t("creditsCard.paidWebTitle")
+      : context != null
+        ? levelTitle(t, context.level, whole(remaining ?? 0))
+        : t(
+            remaining === 0
+              ? "creditsCard.outTitle"
+              : remaining != null &&
+                  granted != null &&
+                  granted > 0 &&
+                  remaining / granted < LOW_CREDITS_SHARE
+                ? "creditsCard.lowTitle"
+                : "creditsCard.levelUpTitle"
+          );
+  const lines = web ? WEB_LINES : [];
+  const offer = wallOffer(billing);
+  const level = context != null ? String(context.level) : undefined;
+  return (
+    <>
+      <div className="phone-glow pointer-events-none -z-10" aria-hidden />
+      <div className="flex items-center gap-3">
+        <PromoCharacter
+          remaining={held ? null : remaining}
+          total={granted}
+          excited={excited}
+          upgraded={false}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{title}</p>
+          {lines.length > 0 && (
+            <ul className="text-muted-foreground mt-0.5 flex flex-col gap-0.5 text-xs">
+              {lines.map(({ key, icon: Icon }) => (
+                <li key={key} className="flex gap-1.5">
+                  <Icon aria-hidden className="mt-0.5 size-3 shrink-0" />
+                  <span>{t(key)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!held && !web && routinesHeld && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("creditsCard.routinesHeld")}
+            </p>
+          )}
+          {held ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("creditsCard.lockedBody")}
+            </p>
+          ) : remaining != null ? (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("creditsCard.progress", {
+                remaining: new Intl.NumberFormat(i18n.language, {
+                  maximumFractionDigits: 2,
+                }).format(remaining),
+                total: new Intl.NumberFormat(i18n.language, {
+                  maximumFractionDigits: 2,
+                }).format(granted ?? 0),
+              })}
+            </p>
+          ) : null}
+          {!held && streakLeft > 0 ? (
+            <p
+              data-slot="streak-credits-line"
+              className="mt-1 flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-300"
+            >
+              <StreakFlame className="size-3.5" />
+              {t("streak.sidebarLine", {
+                credits: new Intl.NumberFormat(i18n.language).format(
+                  streakLeft
+                ),
+              })}
+            </p>
+          ) : null}
+          {!held && granted != null && granted > 0 && remaining != null ? (
+            <div
+              role="progressbar"
+              aria-label={t("creditsCard.used")}
+              aria-valuemin={0}
+              aria-valuemax={granted}
+              aria-valuenow={Math.min(granted, Math.max(0, used ?? 0))}
+              className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full"
+            >
+              <motion.div
+                className="bg-primary h-full origin-left rounded-full"
+                initial={false}
+                animate={{
+                  scaleX: Math.min(1, Math.max(0, (used ?? 0) / granted)),
+                }}
+                transition={
+                  preference === "reduced" ? reducedTransition : springs.panel
+                }
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+      {context != null &&
+      (context.project != null ||
+        (context.estimate != null && context.level !== 100)) ? (
+        <ul
+          data-slot="credits-card-context"
+          className="bg-muted/60 mt-3 flex flex-col gap-1.5 rounded-lg px-2.5 py-2 text-xs/4"
+        >
+          {context.project != null && (
+            <li className="flex gap-2">
+              <MessageSquareText
+                aria-hidden
+                className="text-muted-foreground mt-px size-3.5 shrink-0"
+              />
+              <span className="min-w-0 break-words">
+                {t("creditsCard.context.project", {
+                  project: context.project,
+                })}
+              </span>
+            </li>
+          )}
+          {context.estimate != null && context.level !== 100 && (
+            <li className="flex gap-2">
+              <Gauge
+                aria-hidden
+                className="text-muted-foreground mt-px size-3.5 shrink-0"
+              />
+              <span>
+                {t(estimateKey(context.level, context.estimate.kind), {
+                  count: context.estimate.count,
+                })}
+              </span>
+            </li>
+          )}
+        </ul>
+      ) : null}
+      {billing != null ? (
+        <div className="mt-3 flex min-h-0 flex-col gap-1.5">
+          {offer != null && (
+            <p className="text-muted-foreground text-xs font-medium">
+              {t("upgradeDialog.planTitle", { plan: offer.planName })}
+              {context != null && (
+                <span
+                  data-slot="credits-card-price"
+                  className="text-foreground block font-semibold"
+                >
+                  {planPrice(t, offer, i18n.language)}
+                </span>
+              )}
+            </p>
+          )}
+          {/* Whole from an 800px window up, three sessions still above it; shorter, it scrolls in place. */}
+          <div className="scroll-fade-y max-h-[clamp(5rem,calc(100vh_-_28rem),24rem)] overflow-y-auto overscroll-contain">
+            <PlanPitchList
+              billing={billing}
+              sameForEveryone
+              className="gap-1.5 [&_li]:gap-2 [&_li]:text-xs/4 [&_svg]:mt-px [&_svg]:size-3.5"
+            />
+          </div>
+        </div>
+      ) : null}
+      <Button
+        size="sm"
+        className="mt-3 h-8 rounded-lg"
+        onMouseEnter={() => setExcited(true)}
+        onMouseLeave={() => setExcited(false)}
+        onFocus={() => setExcited(true)}
+        onBlur={() => setExcited(false)}
+        data-action={held ? "verify-phone" : undefined}
+        onClick={onCta}
+      >
+        {held ? (
+          t("outcome.verifyPhone.cta")
+        ) : web ? (
+          <>
+            {t("creditsCard.paidWebCta")}
+            <ArrowUpRight aria-hidden />
+          </>
+        ) : (
+          <>
+            <UpgradeSeen src="credits_card" {...(level != null && { level })} />
+            <Sparkles aria-hidden />
+            {context != null ? upgradeCtaLabel(t, offer) : t("creditsCard.cta")}
+          </>
+        )}
+      </Button>
+    </>
+  );
+};
+
+/** The milestone card's own title for the level, so both say the same. */
+const levelTitle = (
+  t: (key: string, values?: Record<string, string>) => string,
+  level: CreditsCardLevel,
+  left: string
+): string =>
+  level === 100
+    ? t("creditsCard.outTitle")
+    : t(CREDIT_THRESHOLD_COPY[level].title, { left });

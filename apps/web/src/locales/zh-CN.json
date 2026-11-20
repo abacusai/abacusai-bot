@@ -919,7 +919,10 @@
     "paidWebMedia": "用顶级模型生成图片和视频",
     "paidWebCta": "前往网页版 AbacusAI Agent",
     "lockedTitle": "积分已锁定，请验证手机",
-    "lockedBody": "验证手机后即可解锁你的免费积分。"
+    "lockedBody": "验证手机后即可解锁你的免费积分。",
+    "context": {
+      "project": "你正在处理“{{project}}”。"
+    }
   },
   "execBackends": {
     "daytona": {

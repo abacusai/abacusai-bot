@@ -65,6 +65,11 @@ import {
   UsageGallery,
   type UsageGalleryFixture,
 } from "#renderer/features/settings/usage-gallery";
+import {
+  CREDITS_SIDEBAR_GALLERY_LEVELS,
+  CreditsSidebarGallery,
+  type CreditsSidebarGalleryLevel,
+} from "#renderer/features/shell";
 import { TourGallery } from "#renderer/features/tour/gallery";
 import { NewLookCard } from "#renderer/features/tour/new-look";
 import {
@@ -138,6 +143,9 @@ const extension = {
         "new-look",
         "resume-card",
         "resume-card-plain",
+        ...CREDITS_SIDEBAR_GALLERY_LEVELS.map(
+          (level) => `credits-sidebar-${level}`
+        ),
         "credit-card-50",
         "credit-card-80",
         "credit-card-80-project",
@@ -199,6 +207,10 @@ const extension = {
       <NotchGallery state={props.fixture.slice(6)} />
     ) : USAGE_GALLERY_FIXTURES.some((id) => id === props.fixture) ? (
       <UsageGallery fixture={props.fixture as UsageGalleryFixture} />
+    ) : props.fixture.startsWith("credits-sidebar-") ? (
+      <CreditsSidebarGallery
+        level={props.fixture.slice(16) as CreditsSidebarGalleryLevel}
+      />
     ) : props.fixture.startsWith("coder-") ? (
       <CoderGallery fixture={props.fixture} />
     ) : props.fixture.startsWith("credit-card-paid-") ? (

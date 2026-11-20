@@ -919,7 +919,10 @@
     "paidWebMedia": "用頂尖模型產生圖片和影片",
     "paidWebCta": "前往網頁版 AbacusAI Agent",
     "lockedTitle": "點數已鎖定，請驗證手機",
-    "lockedBody": "驗證手機後即可解鎖你的免費點數。"
+    "lockedBody": "驗證手機後即可解鎖你的免費點數。",
+    "context": {
+      "project": "你正在處理「{{project}}」。"
+    }
   },
   "execBackends": {
     "daytona": {

@@ -57,6 +57,8 @@ export interface UpgradeDialogRequest {
   topModel?: boolean;
   /** `plan`: the screen that asked for it (a card, the model picker). */
   src?: UpgradeSrc;
+  /** `plan`: the credit level that screen showed, for its beacons (lib/upgrade.ts). */
+  level?: string;
   /** `plan`: the top model a retry asked for, by name; the title names it. */
   model?: string;
   /** `credits`: asked again after the user came back to a wall (wall-reopen.tsx). */
@@ -156,8 +158,12 @@ export const requestPlanDialog = (src: UpgradeSrc): void =>
  * pitch: checkout opens (call it inside the click: the web build opens its
  * tab there) and the dialog waits for the plan, as after its own Upgrade.
  */
-export const startPlanCheckout = (client: AppClient, src: UpgradeSrc): void => {
-  void openUpgrade(client, src);
+export const startPlanCheckout = (
+  client: AppClient,
+  src: UpgradeSrc,
+  level?: string
+): void => {
+  void openUpgrade(client, src, level);
   requestUpgradeDialog(
     {
       kind: "plan",
@@ -165,6 +171,7 @@ export const startPlanCheckout = (client: AppClient, src: UpgradeSrc): void => {
       threadId: src,
       checkout: true,
       src,
+      ...(level != null && { level }),
     },
     true
   );

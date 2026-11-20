@@ -919,7 +919,10 @@
     "paidWebMedia": "Images and videos with top models",
     "paidWebCta": "Go to AbacusAI Agent on the web",
     "lockedTitle": "크레딧 잠김 — 휴대폰을 인증하세요",
-    "lockedBody": "휴대폰을 인증하면 무료 크레딧을 사용할 수 있습니다."
+    "lockedBody": "휴대폰을 인증하면 무료 크레딧을 사용할 수 있습니다.",
+    "context": {
+      "project": "“{{project}}” 작업 중입니다."
+    }
   },
   "execBackends": {
     "daytona": {

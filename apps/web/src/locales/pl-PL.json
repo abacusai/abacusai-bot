@@ -931,7 +931,10 @@
     "paidWebMedia": "Obrazy i filmy z najlepszymi modelami",
     "paidWebCta": "Przejdź do AbacusAI Agent w sieci",
     "lockedTitle": "Kredyty zablokowane – zweryfikuj telefon",
-    "lockedBody": "Darmowe kredyty odblokują się po weryfikacji numeru telefonu."
+    "lockedBody": "Darmowe kredyty odblokują się po weryfikacji numeru telefonu.",
+    "context": {
+      "project": "Pracujesz nad „{{project}}”."
+    }
   },
   "execBackends": {
     "daytona": {

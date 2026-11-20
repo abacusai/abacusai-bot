@@ -919,7 +919,10 @@
     "paidWebMedia": "Afbeeldingen en video's met topmodellen",
     "paidWebCta": "Naar AbacusAI Agent op het web",
     "lockedTitle": "Credits vergrendeld — verifieer je telefoon",
-    "lockedBody": "Je gratis credits worden ontgrendeld zodra je je telefoon verifieert."
+    "lockedBody": "Je gratis credits worden ontgrendeld zodra je je telefoon verifieert.",
+    "context": {
+      "project": "Je werkt aan “{{project}}”."
+    }
   },
   "execBackends": {
     "daytona": {

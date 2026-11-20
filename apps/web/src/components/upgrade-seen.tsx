@@ -6,12 +6,21 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 
 /**
  * Rendered beside an upgrade surface's Upgrade: reports it on screen once per
- * app run for the surface, or per `item` (lib/upgrade.ts upgradeSeen).
+ * app run for the surface, or per `item` or `level` (lib/upgrade.ts upgradeSeen).
  */
-export function UpgradeSeen({ src, item }: { src: UpgradeSrc; item?: string }) {
+export function UpgradeSeen({
+  src,
+  item,
+  level,
+}: {
+  src: UpgradeSrc;
+  item?: string;
+  /** The credit level the surface shows (lib/upgrade.ts upgradeDetail). */
+  level?: string;
+}) {
   const { transport } = useAppContext();
   useEffect(() => {
-    upgradeSeen(transport.client, src, item);
-  }, [transport.client, src, item]);
+    upgradeSeen(transport.client, src, item, level);
+  }, [transport.client, src, item, level]);
   return null;
 }

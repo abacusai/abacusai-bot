@@ -919,7 +919,10 @@
     "paidWebMedia": "En iyi modellerle görseller ve videolar",
     "paidWebCta": "Web'de AbacusAI Agent'a git",
     "lockedTitle": "Krediler kilitli — telefonunu doğrula",
-    "lockedBody": "Telefonunu doğruladığında ücretsiz kredilerin açılır."
+    "lockedBody": "Telefonunu doğruladığında ücretsiz kredilerin açılır.",
+    "context": {
+      "project": "“{{project}}” üzerinde çalışıyorsun."
+    }
   },
   "execBackends": {
     "daytona": {
