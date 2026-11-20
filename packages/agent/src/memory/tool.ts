@@ -95,6 +95,23 @@ const ABOUT_YOU_TYPES: ReadonlySet<NoteType> = new Set([
   "preference",
 ]);
 
+/**
+ * What each type holds, as the model reads it when it picks one. A type with
+ * no meaning gets read from its name ("reference" became pasted material).
+ */
+const TYPE_MEANINGS: Record<(typeof NOTE_TYPES)[number], string> = {
+  profile:
+    "who the user is in a few lines (name, work, language, place); never their projects' content",
+  rule: "how the user said you must work, in their words",
+  preference: "what the user said they like or want by default",
+  fact: "a lasting fact the user told you, or what a later chat must know about the project (what it is, its stack, who is in it)",
+  decision: "a choice the user made, and why",
+  reference:
+    "where something is and how to reach it (a file, folder, link, account or command); never what it contains",
+  status:
+    'something about the user that stops being true by a date (away, waiting on someone); needs "expires" (YYYY-MM-DD, 14 days at most)',
+};
+
 const SEARCH_LIMIT = 8;
 
 /** The user's own words in memory are theirs: a model adds beside them, never over them. */
@@ -312,11 +329,12 @@ export function buildMemoryTool(
       '"update" a note by name (new text and/or description), "forget" a note by name,',
       '"read" a note by name, "search" notes and journals (query),',
       '"status" set where the work stands on the project card (text: what is done, what is next, open threads); it replaces the last status,',
-      '"note" a dated journal line for a finished task worth finding later (text; once, when it is done),',
+      '"note" a dated journal line for a finished task worth finding later (text: what was done and the file holding the result; once, when it is done),',
       '"open" a project when this chat turns out to be about one (project: its name, or a new name for ongoing work the user returns to).',
       "",
       `Sizes: a note holds ${MAX_NOTE_CHARS} characters, the project card ${MAX_CARD_CHARS}, a journal line ${MAX_JOURNAL_CHARS}.`,
-      `Types: ${NOTE_TYPES.join(", ")}. "status" needs "expires" (YYYY-MM-DD, 14 days at most).`,
+      "Types (only the user's own words make a rule or preference):",
+      ...NOTE_TYPES.map((type) => `- ${type}: ${TYPE_MEANINGS[type]}.`),
       'about: "you" (who the user is, their rules and preferences) or "project" (this project). Leave it out to let the app choose.',
       `The project card is the note "${CARD_NAME}": "status" sets its Status; "update" it when the goal or a decision changes.`,
       "replaces: the name of a note this one supersedes; that note is removed.",

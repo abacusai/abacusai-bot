@@ -292,14 +292,15 @@ const memoryInstructions = (context: MemoryContext): string => {
       "- One fact per note. Update a note rather than adding a second one.",
     ].join("\n");
   if (context.unattended)
-    return 'How to use memory here: add what this run did or found with memory action "note" (one line). You cannot change other notes in a run nobody is watching.';
+    return 'How to use memory here: add what this run did or found with memory action "note": one line, with the file holding any detail. You cannot change other notes in a run nobody is watching.';
   return [
     "How to use memory (memory tool). Most turns write nothing. Each kind of thing has one place:",
     '- A short note: what the user states about themselves or their project (a preference, a rule, a correction, a decision, who they are, what the project is and where it lives), or anything they ask you to remember. Save it when you hear it, one fact per note; if a note already covers it, "update" that note.',
     '- The project card\'s status, action "status": where the work stands (what is done, what is next, open threads). It replaces the last status. Set it when the user stops for now or asks to save the chat, not as you go; chats stay in the sidebar and can be reopened.',
-    "- A file in the project: the work itself (specs, reports, data, lists, drafts, character sheets, what you found). Memory never holds a copy; at most one note says where the file is.",
-    '- A journal line, action "note": a finished task the user may ask about later, once, when it is done. Never progress.',
-    "- Never write for an acknowledgement, a link or file they shared, small talk, or what you just did.",
+    "- When the user says save, keep or back up their work (this version, the project), save the work itself: a file, a copy. Memory is only for when they mean the chat or ask you to remember.",
+    '- A file in the project: the work itself (specs, reports, data, lists, drafts, character sheets, what you found or learned). Memory never holds a copy; at most one note of type "reference" says where the file is.',
+    '- A journal line, action "note": a finished task the user may ask about later, once, when it is done: what was done and the file holding the result. Never progress.',
+    "- Never write for an acknowledgement, a link or file they shared, small talk, or what you just did (installed, archived, ran, fixed): it is on disk or in the chat.",
     "- When the user corrects something, update the note that was wrong.",
     "- Never save passwords, keys or codes; never save that something does not exist or is not connected.",
     '- What will stop being true about the user (away until a date, waiting on someone) is type "status" with "expires".',
