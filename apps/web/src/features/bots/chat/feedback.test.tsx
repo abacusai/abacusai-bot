@@ -73,6 +73,43 @@ it("asks a question that matches the pressed thumb", async () => {
   expect(send).toHaveBeenLastCalledWith("down", undefined);
 });
 
+it("says the comment reaches the chat's agent, by name when it has one, and only where it does", async () => {
+  const send = vi.fn(async () => ({ ok: true as const }));
+  current = await renderWithDb(
+    <MessageFeedback reader={{ name: "Juno" }} send={send} />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  await screen.findByText("Thanks for the feedback");
+  expect(placeholder()).toBe("Tell Juno what to change…");
+  expect(
+    screen.getByText(
+      "Juno reads this and replies in the chat. Our team sees it too."
+    )
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Good response" }));
+  await waitFor(() => expect(pressed("Good response")).toBe("true"));
+  expect(placeholder()).toBe("Tell Juno what you liked…");
+  await current.cleanup();
+
+  current = await renderWithDb(<MessageFeedback reader={{}} send={send} />);
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  await screen.findByText("Thanks for the feedback");
+  expect(placeholder()).toBe("Tell the agent what to change…");
+  expect(
+    screen.getByText(
+      "The agent reads this and replies in the chat. Our team sees it too."
+    )
+  ).toBeTruthy();
+  await current.cleanup();
+
+  // A chat nobody steers from here (another person's, a routine run): the team's copy.
+  current = await renderWithDb(<MessageFeedback send={send} />);
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  await screen.findByText("Thanks for the feedback");
+  expect(placeholder()).toBe("What went wrong?");
+  expect(screen.queryByText(/replies in the chat/)).toBeNull();
+});
+
 it("keeps a failed rating pressed with its comment, and retries it rather than clearing", async () => {
   const send = vi
     .fn<(rating: string, comment?: string) => Promise<TurnFeedbackOutcome>>()

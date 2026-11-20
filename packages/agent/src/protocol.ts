@@ -679,6 +679,14 @@ export type DesktopCommand =
       excerpt: string;
     }
   | {
+      /** What the user wrote in a reply's thumbs box: their reply to it. */
+      type: "message.feedback";
+      messageId: string;
+      rating: "up" | "down";
+      excerpt: string;
+      comment: string;
+    }
+  | {
       type: "send";
       message: string;
       conversationId?: string;

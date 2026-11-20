@@ -17,6 +17,7 @@ import { StreamProcessor } from "@tanstack/ai";
 import { describe, expect, it } from "vitest";
 
 import type { PermissionDecision, PermissionRequest } from "../protocol.js";
+import { ownWords } from "../user-text.js";
 import { violations } from "./__tests__/invariants.js";
 import { Relay } from "./__tests__/relay.js";
 import {
@@ -918,6 +919,82 @@ it("acknowledges a reaction change and delivers a hidden operator turn verbatim"
     // A withdrawal and an emoji off the list say nothing to the agent.
     expect(s.session.sent.length).toBe(sent + 1);
     expect(s.custom("message.reactions")).toEqual([]);
+  } finally {
+    await s.close();
+  }
+});
+
+it("turns a thumbs comment into the user's reply to that message: a note for the agent, their words in the chat", async () => {
+  const s = await scripted(async (api) => {
+    api.settled();
+  });
+  try {
+    s.send({
+      type: "message.feedback",
+      messageId: "a",
+      rating: "up",
+      excerpt: "Shall I restart\n\nthe home server now?",
+      comment: "  yes please  ",
+    });
+    await s.waitFor(
+      () => s.events().some((event) => event.type === "RUN_FINISHED"),
+      "feedback turn"
+    );
+    const prompt = s.session.sent.at(-1)!;
+    expect(prompt).toMatch(
+      /^\[feedback\] The user rated your message "Shall I restart the home server now\?" 👍 \(good\) and wrote what follows in the feedback box under it\. It is their reply to that message: act on it here/
+    );
+    expect(prompt.endsWith("\n\nyes please")).toBe(true);
+    const processor = new StreamProcessor();
+    for (const event of s.events()) processor.processChunk(event as never);
+    const user = processor
+      .getMessages()
+      .find((message) => message.role === "user");
+    const userText = user?.metadata?.abacus?.userText;
+    // The chat shows their words under a quote of the reply.
+    expect(userText).toEqual({
+      replyTo: {
+        messageId: "a",
+        role: "assistant",
+        excerpt: "Shall I restart the home server now?",
+      },
+      visibleFrom: prompt.length - "yes please".length,
+    });
+    // Only their words are theirs: the English note never names their language.
+    expect(ownWords(prompt, userText)).toBe("yes please");
+    expect(ownWords(prompt)).toBe("yes please");
+    // A malformed command or an empty comment starts nothing.
+    const sent = s.session.sent.length;
+    for (const command of [
+      {
+        type: "message.feedback",
+        messageId: "a",
+        rating: "up",
+        excerpt: "x",
+        comment: "   ",
+      },
+      {
+        type: "message.feedback",
+        messageId: "a",
+        rating: "meh",
+        excerpt: "x",
+        comment: "do it",
+      },
+    ])
+      s.send(command);
+    s.send({
+      type: "message.feedback",
+      messageId: "b",
+      rating: "down",
+      excerpt: "Here is the header",
+      comment: "no logo image there",
+    });
+    await s.waitFor(
+      () => s.session.sent.some((text) => text.endsWith("no logo image there")),
+      "second feedback turn"
+    );
+    expect(s.session.sent.length).toBe(sent + 1);
+    expect(s.session.sent.at(-1)).toContain('"Here is the header" 👎 (bad)');
   } finally {
     await s.close();
   }

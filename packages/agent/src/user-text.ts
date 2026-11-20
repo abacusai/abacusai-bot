@@ -143,6 +143,7 @@ export const APP_NOTE_TAGS = {
     "routine report sent",
     "github watch",
     "late",
+    "feedback",
   ],
 } as const;
 

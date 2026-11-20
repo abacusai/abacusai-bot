@@ -76,6 +76,8 @@ export interface BotDecorationOptions {
   model?: string | null;
   /** An Abacus.AI account exists (`account.abacus`); else no controls. */
   feedbackEnabled: boolean;
+  /** The bot reads a thumb's comment too (the user's own chat with it); absent, the team only. */
+  feedbackReader?: string;
   sendFeedback(input: TurnFeedbackInput): Promise<TurnFeedbackOutcome>;
   /** The viewed session's workspace root; relative paths resolve against it. */
   workspaceRoot: string | null;
@@ -699,6 +701,9 @@ export const botMessageDecorations = (
       segmentId != null ? (
         <MessageFeedback
           id={`${options.sessionId}:${segmentId}`}
+          {...(options.feedbackReader != null && {
+            reader: { name: options.feedbackReader },
+          })}
           send={(rating, comment) =>
             options.sendFeedback({
               sessionId: options.sessionId,

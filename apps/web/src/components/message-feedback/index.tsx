@@ -12,6 +12,11 @@ import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
  * menu, so the rating, the comment and the send status live in a small
  * store keyed by `id` (the reply's feedback segment): whichever menu rated
  * the reply, the other shows it pressed and its outcome.
+ *
+ * With `reader` (a chat the user can write in), main also hands the comment
+ * to the chat's agent as their reply to that message (service-host
+ * `deliverFeedbackComment`), so the box says who reads it. Without it (a
+ * bot's chat with someone else, a routine run) the copy is the team's.
  */
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useId, useSyncExternalStore } from "react";
@@ -34,6 +39,8 @@ export const ACTION_ICON_STROKE = 1.75;
 export interface MessageFeedbackProps {
   /** The reply's feedback segment; absent, the controls keep their own state. */
   id?: string;
+  /** The chat's agent, which reads the comment too; `name` absent: "the agent". */
+  reader?: { name?: string };
   send(
     rating: Rating | "clear",
     comment?: string
@@ -101,8 +108,10 @@ export const clearFeedbackStates = (): void => {
   states.clear();
 };
 
-export const MessageFeedback = ({ id, send }: MessageFeedbackProps) => {
+export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
   const { t } = useTranslation();
+  // Who reads the comment besides the team: the chat's agent, by name when it has one.
+  const name = reader?.name;
   const own = useId();
   const key = id ?? own;
   const { rating, held, comment, status } = useSyncExternalStore(
@@ -192,17 +201,42 @@ export const MessageFeedback = ({ id, send }: MessageFeedbackProps) => {
             >
               <Textarea
                 aria-label={t("bots.chat.feedback.tellUsMore")}
-                placeholder={t(
-                  rating === "up"
-                    ? "bots.chat.feedback.placeholderUp"
-                    : "bots.chat.feedback.placeholderDown"
-                )}
+                placeholder={
+                  reader == null
+                    ? t(
+                        rating === "up"
+                          ? "bots.chat.feedback.placeholderUp"
+                          : "bots.chat.feedback.placeholderDown"
+                      )
+                    : name == null
+                      ? t(
+                          rating === "up"
+                            ? "bots.chat.feedback.placeholderUpAgent"
+                            : "bots.chat.feedback.placeholderDownAgent"
+                        )
+                      : t(
+                          rating === "up"
+                            ? "bots.chat.feedback.placeholderUpNamed"
+                            : "bots.chat.feedback.placeholderDownNamed",
+                          { name }
+                        )
+                }
                 value={comment}
                 onChange={(event) =>
                   writeState(key, { comment: event.target.value })
                 }
                 className="min-h-16 text-xs"
               />
+              {reader != null && (
+                <p
+                  data-slot="feedback-reader"
+                  className="text-muted-foreground text-xs"
+                >
+                  {name == null
+                    ? t("bots.chat.feedback.readerAgent")
+                    : t("bots.chat.feedback.readerNamed", { name })}
+                </p>
+              )}
               <Button
                 type="submit"
                 size="sm"
