@@ -1,6 +1,11 @@
 import type { BillingPlan, UpgradeSrc } from "@abacus-ai/contract/billing-plan";
 import type { OnboardingOfferAccountStep } from "@abacus-ai/contract/funnel";
 
+import {
+  isBotUpgradeLink,
+  withUpgradeReturn,
+  withUpgradeSignIn,
+} from "../../external-links";
 import { credentialFor } from "../config/settings";
 import { abacusApiCall } from "./abacus-connector-service";
 import { abacusAppHost } from "./abacus-host";
@@ -22,6 +27,38 @@ export const botUpgradePage = (src: UpgradeSrc): string => {
   const url = new URL("/bot/link/upgrade", abacusAppHost());
   url.searchParams.set("src", src);
   return url.toString();
+};
+
+/** Opening the link waits at most this long for the code, then opens without it. */
+const UPGRADE_SIGNIN_CODE_TIMEOUT_MS = 3000;
+
+/**
+ * A one-time code that signs the browser in to this account on the upgrade
+ * page, for a bot-only free account (the platform answers null for any
+ * other, or when the call fails, and the page signs in as before). Asked for
+ * each time a link is opened, never cached: it lives two minutes.
+ */
+export const fetchUpgradeSignInCode = async (): Promise<string | null> => {
+  const { ok, result } = await abacusApiCall(
+    "_createAbacusbotWebSigninCode",
+    "POST",
+    undefined,
+    UPGRADE_SIGNIN_CODE_TIMEOUT_MS
+  );
+  if (!ok || result == null || typeof result !== "object") return null;
+  const code = (result as Record<string, unknown>).code;
+  return typeof code === "string" && code.length > 0 ? code : null;
+};
+
+/**
+ * What the app hands the OS for an external link: the bot's upgrade page
+ * comes back to the app once paid (withUpgradeReturn) and signs a
+ * signed-out browser in with a fresh code; anything else is unchanged.
+ */
+export const externalLinkTarget = async (url: string): Promise<string> => {
+  const target = withUpgradeReturn(url, abacusAppHost());
+  if (!isBotUpgradeLink(target, abacusAppHost())) return target;
+  return withUpgradeSignIn(target, await fetchUpgradeSignInCode());
 };
 
 /** The surface AbacusAI Bot's WhatsApp number tags its upgrade links with. */

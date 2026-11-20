@@ -39,13 +39,30 @@ const BOT_UPGRADE_PATH = "/bot/link/upgrade";
  * comes back. Anything else is returned unchanged.
  */
 export const withUpgradeReturn = (url: string, appHost: string): string => {
-  if (!URL.canParse(url) || !URL.canParse(appHost)) return url;
+  if (!isBotUpgradeLink(url, appHost)) return url;
   const parsed = new URL(url);
-  if (
-    parsed.origin !== new URL(appHost).origin ||
-    !parsed.pathname.endsWith(BOT_UPGRADE_PATH)
-  )
-    return url;
   parsed.searchParams.set("back", "desktop");
+  return parsed.toString();
+};
+
+/** Whether `url` is the bot's upgrade page on `appHost`. */
+export const isBotUpgradeLink = (url: string, appHost: string): boolean => {
+  if (!URL.canParse(url) || !URL.canParse(appHost)) return false;
+  const parsed = new URL(url);
+  return (
+    parsed.origin === new URL(appHost).origin &&
+    parsed.pathname.endsWith(BOT_UPGRADE_PATH)
+  );
+};
+
+/**
+ * The upgrade page with the one-time code that signs a signed-out browser in
+ * to this app's account (`sc`, spent by the page). Only ever added here, as
+ * the link is opened: links in chats, notices and caches never carry one.
+ */
+export const withUpgradeSignIn = (url: string, code: string | null): string => {
+  if (code == null || code.length === 0) return url;
+  const parsed = new URL(url);
+  parsed.searchParams.set("sc", code);
   return parsed.toString();
 };
