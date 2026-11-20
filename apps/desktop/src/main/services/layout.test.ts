@@ -142,6 +142,7 @@ const MAIN_ROOT_FILES = [
   "service-host.bot-ask.test.ts",
   "service-host.channel-work.test.ts",
   "service-host.continuation.test.ts",
+  "service-host.feedback-comment.test.ts",
   "service-host.routines.test.ts",
   "service-host.ts",
   "spellcheck-dictionary.ts",

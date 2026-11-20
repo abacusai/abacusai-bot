@@ -44,6 +44,7 @@ import type {
   AgentSessionStatus,
   SessionOwner,
 } from "@abacus-ai/contract/contracts";
+import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
 import {
   isPlainNativeId,
   RESERVED_ID_DELIMITER,
@@ -346,6 +347,59 @@ interface ReactionCommand {
   excerpt: string;
 }
 
+/** What the user wrote in a reply's thumbs box, for the agent to act on. */
+interface FeedbackCommand {
+  type: "message.feedback";
+  messageId: string;
+  rating: "up" | "down";
+  excerpt: string;
+  comment: string;
+}
+
+/** A note owed to the thread's agent, in the order the user gave them. */
+type MessageNoteCommand = ReactionCommand | FeedbackCommand;
+
+/** Comments already handed to an agent, over every thread. */
+const FEEDBACK_KEPT = 1_000;
+
+const feedbackKey = (
+  threadId: string,
+  messageId: string,
+  comment: string
+): string => `${threadId}\u0000${messageId}\u0000${comment}`;
+
+/** A message's text parts, joined. */
+const messageText = (message: UIMessage): string =>
+  message.parts
+    .flatMap((part) => (part.type === "text" ? [part.content] : []))
+    .join("");
+
+/** The start of a message, as a reaction or comment note names it. */
+const noteExcerpt = (message: UIMessage): string =>
+  messageText(message).slice(0, 80);
+
+/**
+ * Whether the thread already holds the user's reply to `messageId` in these
+ * words: the comment an agent took, echoed back and saved, survives restarts.
+ */
+const holdsReply = (
+  messages: readonly UIMessage[],
+  messageId: string,
+  comment: string
+): boolean =>
+  messages.some((message) => {
+    if (message.role !== "user") return false;
+    const tags = (
+      message.metadata as { abacus?: { userText?: UserTextTags } } | undefined
+    )?.abacus?.userText;
+    if (tags?.replyTo?.messageId !== messageId) return false;
+    return (
+      messageText(message)
+        .slice(tags.visibleFrom ?? 0)
+        .trim() === comment
+    );
+  });
+
 export class AguiRelayService implements AguiSource {
   /** This main process's relay lifetime; seqs are never reused within it. */
   readonly epoch = crypto.randomUUID();
@@ -369,11 +423,14 @@ export class AguiRelayService implements AguiSource {
   /** threadId → run ids acked `started` whose `RUN_STARTED` has not come. */
   readonly #awaitingStart = new Map<string, Map<string, object | null>>();
   /**
-   * Reaction notes for agents that are not running: a reaction is applied
-   * and persisted by main at once (never a reason to start an agent), and
-   * the hidden `user-reaction` note goes out with the runtime's next hello.
+   * Notes owed to agents that are not running, in order. A reaction is
+   * applied and persisted by main at once (never a reason to start an
+   * agent), and its hidden `user-reaction` note goes out with the runtime's
+   * next hello. A thumbs comment starts the agent: the user is waiting.
    */
-  readonly #pendingReactions = new Map<string, ReactionCommand[]>();
+  readonly #pendingNotes = new Map<string, MessageNoteCommand[]>();
+  /** `feedbackKey`s of comments queued or handed to an agent. Bounded. */
+  readonly #feedbackTaken = new Set<string>();
   /** threadId → the runtime start in progress (one at a time per thread). */
   readonly #starting = new Map<string, Promise<void>>();
   readonly #startAdmissions = new Map<string, Promise<AiSendAck>>();
@@ -425,7 +482,7 @@ export class AguiRelayService implements AguiSource {
       for (const [runId, process] of awaiting ?? [])
         if (process !== runtime) awaiting?.delete(runId);
       if (awaiting?.size === 0) this.#awaitingStart.delete(threadId);
-      this.#flushReactions(threadId);
+      this.#flushNotes(threadId);
     }
     if (chunk == null) return;
 
@@ -623,7 +680,7 @@ export class AguiRelayService implements AguiSource {
   /** The session is gone: forget everything about the thread. */
   forgetThread(threadId: string): void {
     this.#forgotten.add(threadId);
-    this.#pendingReactions.delete(threadId);
+    this.#pendingNotes.delete(threadId);
     // Admissions still in flight get a definitive answer now: nothing will
     // ack them, and one not yet written must not start the agent again.
     const waiting = this.#waiting.get(threadId);
@@ -1142,13 +1199,15 @@ export class AguiRelayService implements AguiSource {
       } as unknown as RelayEvent,
       null
     );
-    const pending = this.#pendingReactions.get(threadId) ?? [];
+    const pending = this.#pendingNotes.get(threadId) ?? [];
     const remaining = pending.filter(
       (command) =>
-        command.messageId !== input.messageId || command.emoji !== input.emoji
+        command.type !== "message.react" ||
+        command.messageId !== input.messageId ||
+        command.emoji !== input.emoji
     );
     if (!input.selected) {
-      this.#setPendingReactions(threadId, remaining);
+      this.#setPendingNotes(threadId, remaining);
       return;
     }
     if (target.role === "assistant")
@@ -1164,37 +1223,99 @@ export class AguiRelayService implements AguiSource {
       } catch (error) {
         this.#log(`${threadId}: a reaction listener threw: ${String(error)}`);
       }
-    const excerpt = target.parts
-      .flatMap((part) => (part.type === "text" ? [part.content] : []))
-      .join("")
-      .slice(0, 80);
     const command: ReactionCommand = {
       type: "message.react",
       messageId: input.messageId,
       emoji: input.emoji,
       selected: true,
-      excerpt,
+      excerpt: noteExcerpt(target),
     };
-    this.#setPendingReactions(threadId, [...remaining, command]);
-    this.#flushReactions(threadId);
+    this.#setPendingNotes(threadId, [...remaining, command]);
+    this.#flushNotes(threadId);
   }
 
-  /** The queued reaction notes, to a running agui runtime only. */
-  #flushReactions(threadId: string): void {
-    const pending = this.#pendingReactions.get(threadId);
+  /**
+   * What the user wrote in the thumbs box under a reply (named by its
+   * feedback segment), handed to the thread's agent as their reply to it,
+   * once per distinct comment: a repeat of the same words, while queued,
+   * after it went out or once the thread saved the agent's echo of it, is
+   * dropped. Unlike a reaction it starts a stopped agent, as a sent message
+   * does: the user asked for something and is waiting. False when there is
+   * nothing to deliver (no such reply, an empty comment, a repeat).
+   */
+  async feedback(input: {
+    threadId: string;
+    segmentId: string;
+    rating: "up" | "down";
+    comment: string;
+  }): Promise<boolean> {
+    const { threadId } = input;
+    const comment = input.comment.trim();
+    if (comment.length === 0) return false;
+    const thread = this.#known(threadId);
+    const messages = thread.checkpoint().messages;
+    const target = messages.find(
+      (message) =>
+        message.role === "assistant" &&
+        feedbackSegmentId(message as never) === input.segmentId
+    );
+    if (target == null) return false;
+    const key = feedbackKey(threadId, target.id, comment);
+    if (
+      this.#feedbackTaken.has(key) ||
+      holdsReply(messages, target.id, comment)
+    )
+      return false;
+    this.#feedbackTaken.add(key);
+    trim(this.#feedbackTaken, FEEDBACK_KEPT);
+    const command: FeedbackCommand = {
+      type: "message.feedback",
+      messageId: target.id,
+      rating: input.rating,
+      excerpt: noteExcerpt(target),
+      comment,
+    };
+    this.#setPendingNotes(threadId, [
+      ...(this.#pendingNotes.get(threadId) ?? []),
+      command,
+    ]);
+    try {
+      // The runtime's hello flushes the queue; a running one takes it now.
+      await this.#ensureAguiRuntime(threadId);
+    } catch (error) {
+      this.#log(
+        `${threadId}: no agent for a feedback comment yet: ${String(error)}`
+      );
+      return true;
+    }
+    try {
+      // The running agent takes the effective model before the turn, as for a send.
+      await this.#host.beforeRun?.(threadId);
+    } catch (error) {
+      this.#log(
+        `${threadId}: re-pinning before a feedback turn failed: ${String(error)}`
+      );
+    }
+    this.#flushNotes(threadId);
+    return true;
+  }
+
+  /** The queued notes, in order, to a running agui runtime only. */
+  #flushNotes(threadId: string): void {
+    const pending = this.#pendingNotes.get(threadId);
     if (pending == null || pending.length === 0) return;
     const runtime = this.#host.runtime(threadId);
     if (runtime?.status !== "running" || runtime.wire !== "agui") return;
-    const unsent: ReactionCommand[] = [];
+    const unsent: MessageNoteCommand[] = [];
     for (const command of pending)
       if (unsent.length > 0 || this.#host.send(threadId, command) == null)
         unsent.push(command);
-    this.#setPendingReactions(threadId, unsent);
+    this.#setPendingNotes(threadId, unsent);
   }
 
-  #setPendingReactions(threadId: string, commands: ReactionCommand[]): void {
-    if (commands.length === 0) this.#pendingReactions.delete(threadId);
-    else this.#pendingReactions.set(threadId, commands);
+  #setPendingNotes(threadId: string, commands: MessageNoteCommand[]): void {
+    if (commands.length === 0) this.#pendingNotes.delete(threadId);
+    else this.#pendingNotes.set(threadId, commands);
   }
 
   async cancel(threadId: string, runId?: string): Promise<void> {

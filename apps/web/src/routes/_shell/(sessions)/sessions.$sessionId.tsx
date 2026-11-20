@@ -616,6 +616,10 @@ const SessionRoute = () => {
                       actions: (
                         <MessageFeedback
                           id={`${sessionId}:${segmentId}`}
+                          // Main hands a comment to the agent where the user can write.
+                          {...(!row.routineId &&
+                            workspace?.status !== "deleted" &&
+                            !model.missing && { reader: {} })}
                           send={(rating, comment) =>
                             transport.client.agent.feedback({
                               sessionId,

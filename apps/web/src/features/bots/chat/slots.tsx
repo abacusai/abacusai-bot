@@ -171,6 +171,8 @@ export const useBotChatSlots = (
     sessionId,
     model: session?.model,
     feedbackEnabled: account.data != null,
+    // Main hands a comment to the bot only in the user's own chat with it.
+    ...(readOnly == null && { feedbackReader: bot.name }),
     sendFeedback: feedbackSender(transport),
     workspaceRoot,
     onOpenFile: openFile,

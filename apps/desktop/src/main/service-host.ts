@@ -501,7 +501,10 @@ import {
   DiagnosticsSyncService,
   type McpRuntimeSummary,
 } from "./services/debug-sync/diagnostics-sync-service";
-import { FeedbackService } from "./services/debug-sync/feedback-service";
+import {
+  FeedbackService,
+  sanitizeFeedback,
+} from "./services/debug-sync/feedback-service";
 import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
 import { syncLogFor } from "./services/debug-sync/sync-log";
@@ -5431,7 +5434,37 @@ export class ServiceHost {
     // A thumbs-up on a reply is praise for the success pitch.
     if (outcome.ok && feedback.rating === "up")
       void this.successPitch.reacted(feedback.sessionId);
+    this.deliverFeedbackComment(feedback);
     return outcome;
+  }
+
+  /**
+   * A comment under a thumb is also the user talking to the agent about that
+   * reply: it goes to the chat's agent (the relay keeps it to once per
+   * comment), whatever became of the team's copy. Only in the user's own
+   * conversation; a bot's chat with someone else or a routine run is not
+   * theirs to steer, and its thumbs stay with the team.
+   */
+  private deliverFeedbackComment(input: TurnFeedbackInput): void {
+    const feedback = sanitizeFeedback(input);
+    if (
+      feedback?.comment == null ||
+      feedback.rating === "clear" ||
+      !this.isOwnerSession(feedback.sessionId)
+    )
+      return;
+    this.aguiRelay
+      .feedback({
+        threadId: feedback.sessionId,
+        segmentId: feedback.segmentId,
+        rating: feedback.rating,
+        comment: feedback.comment,
+      })
+      .catch((error: unknown) =>
+        console.warn(
+          `[feedback] ${feedback.sessionId}: the comment did not reach the agent: ${String(error)}`
+        )
+      );
   }
 
   /** The chat's rating line, sent with the model the chat runs on. */

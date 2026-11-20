@@ -1439,6 +1439,134 @@ it("routes reactions through the agent and persists the acknowledgement across r
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
+/** A finished run whose reply asks the user something. */
+const askedRun = (agent: ScriptedAgent, text: string): void => {
+  for (const event of [
+    ...started("r"),
+    { type: "TEXT_MESSAGE_START", messageId: "a", role: "assistant" },
+    { type: "TEXT_MESSAGE_CONTENT", messageId: "a", delta: text },
+    { type: "TEXT_MESSAGE_END", messageId: "a" },
+    finished("r"),
+  ])
+    agent.emit("s1", event);
+};
+
+const feedbackCommands = (agent: ScriptedAgent) =>
+  agent.commands.filter((command) => command.type === "message.feedback");
+
+it("hands a thumbs comment to the agent once: a repeat is dropped while queued, after it went out, and after a restart", async () => {
+  const first = setup();
+  first.agent.boot();
+  askedRun(first.agent, "Shall I restart the home server now?");
+  const comment = {
+    threadId: "s1",
+    segmentId: "a",
+    rating: "up" as const,
+    comment: "  yes please ",
+  };
+  await expect(first.relay.feedback(comment)).resolves.toBe(true);
+  // The same words again (the user pressing Send three times), even as the
+  // other thumb: one turn.
+  await expect(first.relay.feedback(comment)).resolves.toBe(false);
+  await expect(
+    first.relay.feedback({ ...comment, rating: "down", comment: "yes please" })
+  ).resolves.toBe(false);
+  expect(feedbackCommands(first.agent)).toEqual([
+    {
+      type: "message.feedback",
+      messageId: "a",
+      rating: "up",
+      excerpt: "Shall I restart the home server now?",
+      comment: "yes please",
+    },
+  ]);
+  // New words are a new reply; an empty comment or an unknown reply is nothing.
+  await expect(
+    first.relay.feedback({ ...comment, comment: "and update it first" })
+  ).resolves.toBe(true);
+  await expect(
+    first.relay.feedback({ ...comment, comment: "   " })
+  ).resolves.toBe(false);
+  await expect(
+    first.relay.feedback({ ...comment, segmentId: "missing" })
+  ).resolves.toBe(false);
+  expect(feedbackCommands(first.agent)).toHaveLength(2);
+  // The agent took it: its echo, the user's reply to "a", is saved.
+  const note = "[feedback] The user rated your message.";
+  for (const event of [
+    ...started("fb"),
+    {
+      type: "TEXT_MESSAGE_START",
+      messageId: "fb-user",
+      role: "user",
+      metadata: {
+        abacus: {
+          userText: {
+            replyTo: { messageId: "a", role: "assistant", excerpt: "Shall" },
+            visibleFrom: note.length + 2,
+          },
+        },
+      },
+    },
+    {
+      type: "TEXT_MESSAGE_CONTENT",
+      messageId: "fb-user",
+      delta: `${note}\n\nyes please`,
+    },
+    { type: "TEXT_MESSAGE_END", messageId: "fb-user" },
+    finished("fb"),
+  ])
+    first.agent.emit("s1", event);
+  await vi.waitFor(() =>
+    expect(
+      first.store
+        .readCurrentFile("s1")
+        ?.messages.some((message) => message.id === "fb-user")
+    ).toBe(true)
+  );
+  // A new main process (the app restarted) reads the thread, not its memory.
+  const second = setup();
+  second.agent.boot();
+  await expect(second.relay.feedback(comment)).resolves.toBe(false);
+  expect(feedbackCommands(second.agent)).toEqual([]);
+  // Its own memory is empty: other words to the same reply still go.
+  await expect(
+    second.relay.feedback({ ...comment, comment: "and update it first" })
+  ).resolves.toBe(true);
+});
+
+it("starts a stopped agent for a thumbs comment, after the reaction notes owed before it", async () => {
+  const { agent, relay, client } = setup();
+  agent.boot();
+  askedRun(agent, "Email, daily plan, or marketing content first?");
+  agent.runtimeState = null;
+  await client.ai.react({
+    threadId: "s1",
+    messageId: "a",
+    emoji: "👍",
+    selected: true,
+  });
+  expect(agent.starts).toBe(0);
+  await expect(
+    relay.feedback({
+      threadId: "s1",
+      segmentId: "a",
+      rating: "up",
+      comment: "marketing content",
+    })
+  ).resolves.toBe(true);
+  // The user is waiting on an answer: the agent is started, as for a message.
+  expect(agent.starts).toBe(1);
+  expect(
+    agent.commands
+      .filter((command) => command.type.startsWith("message."))
+      .map((command) => command.type)
+  ).toEqual(["message.react", "message.feedback"]);
+  expect(feedbackCommands(agent)[0]).toMatchObject({
+    comment: "marketing content",
+  });
+});
+
 it("applies a reaction without starting a stopped agent and delivers the note on its next start", async () => {
   const { agent, client, store } = setup();
   agent.boot();
