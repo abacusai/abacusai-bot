@@ -3394,6 +3394,7 @@
         "generic": "使用 {{tool}}？",
         "guard_disk": "This erases or overwrites a disk.",
         "guard_forcePush": "This force-pushes or deletes git history on the remote.",
+        "guard_install": "这会在这台电脑上安装软件。",
         "guard_killAll": "This stops every process you are running.",
         "guard_power": "This shuts down or restarts the computer.",
         "guard_privileged": "This runs as administrator on this computer.",

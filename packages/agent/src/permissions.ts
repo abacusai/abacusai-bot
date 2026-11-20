@@ -28,7 +28,12 @@ import {
 } from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import { namesSecretFile } from "./secret-files.js";
-import { confirmRules, judgeCommand, neverMessage } from "./shell-judge.js";
+import {
+  confirmRules,
+  installsNamedBy,
+  judgeCommand,
+  neverMessage,
+} from "./shell-judge.js";
 import {
   ownEntry,
   sourceAllows,
@@ -276,6 +281,11 @@ export interface GateOptions {
   allowedCredentialPaths?: readonly string[];
   /** Shell judge rules the user allowed for this chat ("administrator commands"). */
   allowedGuardRules?: readonly GuardRule[];
+  /**
+   * The user's own words in this chat's recent turns: software they name is
+   * software they asked to install, so installing it needs no card.
+   */
+  userWords?: string;
   /**
    * Nobody can answer a card here (a routine's run, or the app not attached):
    * a judged command runs, and the gate says which rules it skipped.
@@ -815,8 +825,9 @@ function credentialGate(tool: ToolRequest, options: GateOptions): Gate | null {
 /**
  * The shell judge's answer, or null when it has nothing to say. `never` is
  * refused outright; `confirm` is the run-command card with the reason, unless
- * the user already allowed that rule for this chat. A command prefix the user
- * always allows does not lift it: allowing `sudo apt-get` is not `sudo rm`.
+ * the user already allowed that rule for this chat, or (for an install) named
+ * the software in their own words. A command prefix the user always allows
+ * does not lift it: allowing `sudo apt-get` is not `sudo rm`.
  */
 function guardGate(tool: ToolRequest, options: GateOptions): Gate | null {
   const command = String(tool.input.command ?? "");
@@ -831,8 +842,9 @@ function guardGate(tool: ToolRequest, options: GateOptions): Gate | null {
       },
     };
   const allowed = options.allowedGuardRules ?? [];
+  const asked = installsNamedBy(judgement, options.userWords ?? "");
   const rules = confirmRules(judgement).filter(
-    (rule) => !allowed.includes(rule)
+    (rule) => !allowed.includes(rule) && !(rule === "install" && asked)
   );
   if (rules.length === 0) return null;
   // Nobody to ask: it runs, and the run's report says so.

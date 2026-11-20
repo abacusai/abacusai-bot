@@ -2936,6 +2936,7 @@ export class ForeverEngine {
           tools: [...this.profile.alwaysAllowedTools],
           readPaths: this.config.allowedReadPaths,
         }),
+        userWords: this.userWords.window,
         // A bot's routine run, or one that cannot ask, runs it and reports.
         noAnswerer: this.noAnswerer() || runOrigin() === "routine",
         ...(this.options.unattended != null

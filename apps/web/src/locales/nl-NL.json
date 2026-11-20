@@ -3394,6 +3394,7 @@
         "generic": "{{tool}} gebruiken?",
         "guard_disk": "Dit wist of overschrijft een schijf.",
         "guard_forcePush": "Dit doet een force-push of verwijdert git-geschiedenis op de remote.",
+        "guard_install": "Dit installeert software op deze computer.",
         "guard_killAll": "Dit stopt al je actieve processen.",
         "guard_power": "Dit sluit de computer af of start hem opnieuw op.",
         "guard_privileged": "Dit wordt als beheerder op deze computer uitgevoerd.",

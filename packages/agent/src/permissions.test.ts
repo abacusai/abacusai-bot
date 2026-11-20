@@ -17,7 +17,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from "vitest";
 
 import { Allowances } from "./allowances.js";
 import { modelPath } from "./model-path.js";
@@ -113,7 +120,7 @@ describe("the shell judge at the gate", () => {
     expect(gate.kind).toBe("ask");
     if (gate.kind !== "ask" || gate.request.type !== "run_terminal")
       throw new Error("expected a run-command card");
-    expect(gate.request.guard?.rules).toEqual(["privileged"]);
+    expect(gate.request.guard?.rules).toEqual(["privileged", "install"]);
   });
 
   it("refuses the never tier in every mode, Full access included", () => {
@@ -157,13 +164,101 @@ describe("the shell judge at the gate", () => {
       call("bash", { command: "sudo apt-get install -y x" }),
       options({ mode: AgentMode.Yolo, noAnswerer: true })
     );
-    expect(gate).toEqual({ kind: "allow", unasked: ["privileged"] });
+    expect(gate).toEqual({
+      kind: "allow",
+      unasked: ["privileged", "install"],
+    });
     expect(
       gateToolCall(
         call("bash", { command: "rm -rf ~" }),
         options({ mode: AgentMode.Yolo, noAnswerer: true })
       ).kind
     ).toBe("refuse");
+  });
+
+  /**
+   * A research question ended in a tool installed for the whole computer,
+   * unasked; Full access ran it without a word. Software the user's own words
+   * name is what they asked for, and needs no card.
+   */
+  it.each([AgentMode.Yolo, AgentMode.Auto])(
+    "%s asks before installing software the user never named",
+    (mode) => {
+      const gate = gateToolCall(
+        call("bash", { command: "npm install -g some-cli" }),
+        options({
+          mode,
+          userWords: "What are the best free coding agents? Research it.",
+        })
+      );
+      if (gate.kind !== "ask" || gate.request.type !== "run_terminal")
+        throw new Error("expected a run-command card");
+      expect(gate.request.guard?.rules).toEqual(["install"]);
+    }
+  );
+
+  it("installs without a card what the user asked to install", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "choco install flutter -y" }),
+      options({
+        mode: AgentMode.Yolo,
+        userWords: "instale o Flutter no drive E:",
+      })
+    );
+    expect(gate.kind).toBe("allow");
+  });
+
+  it("still asks for the administrator part of an install the user named", () => {
+    const gate = gateToolCall(
+      call("bash", { command: "sudo apt-get install -y nginx" }),
+      options({ mode: AgentMode.Yolo, userWords: "install nginx" })
+    );
+    if (gate.kind !== "ask" || gate.request.type !== "run_terminal")
+      throw new Error("expected a run-command card");
+    expect(gate.request.guard?.rules).toEqual(["privileged"]);
+  });
+
+  it("leaves a project's own installs to the mode", () => {
+    for (const command of [
+      "npm install",
+      "pip install pandas openpyxl",
+      "npm install express",
+    ])
+      expect(
+        gateToolCall(
+          call("bash", { command }),
+          options({ mode: AgentMode.Yolo })
+        ).kind
+      ).toBe("allow");
+  });
+
+  /**
+   * Administrator commands allowed for the chat lift the elevation, not what
+   * the elevated script then does: its system-folder deletes still ask.
+   */
+  it("asks about the system deletes inside a script started as administrator", () => {
+    const dir = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), "gate-script-"))
+    );
+    onTestFinished(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const bat = path.join(dir, "remove.bat");
+    fs.writeFileSync(
+      bat,
+      '@echo off\r\nrd /s /q "C:\\Program Files\\WindowsApps\\Some.App_1.0_x64"\r\n'
+    );
+    const gate = gateToolCall(
+      call("bash", {
+        command: `powershell -NoProfile -Command '$bat = "${bat}"; Start-Process $bat -Verb RunAs -Wait'`,
+      }),
+      options({
+        mode: AgentMode.Yolo,
+        cwd: dir,
+        allowedGuardRules: ["privileged"],
+      })
+    );
+    if (gate.kind !== "ask" || gate.request.type !== "run_terminal")
+      throw new Error("expected a run-command card");
+    expect(gate.request.guard?.rules).toEqual(["systemDelete"]);
   });
 
   it("leaves a remote command to the mode", () => {

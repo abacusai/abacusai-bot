@@ -430,7 +430,8 @@ export type GuardRule =
   | "disk"
   | "power"
   | "forcePush"
-  | "killAll";
+  | "killAll"
+  | "install";
 
 interface PermissionRequestBase {
   tool: ToolRequest;
