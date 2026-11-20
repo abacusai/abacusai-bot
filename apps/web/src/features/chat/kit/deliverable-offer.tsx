@@ -13,6 +13,7 @@ import {
   EMPTY_DELIVERABLE_OFFER_CARD,
 } from "@abacus-ai/contract/deliverable-offer";
 import { funnelDetail, type FunnelStep } from "@abacus-ai/contract/funnel";
+import { isWorkCall } from "@abacus-ai/contract/work-tools";
 import type { UIMessage } from "@tanstack/ai-client";
 import { FileText, X } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
@@ -20,7 +21,6 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { componentToolBase } from "#renderer/lib/bot-turns/component-tools";
 import { turnDeliverables } from "#renderer/lib/bot-turns/deliverables";
 import { messageTools } from "#renderer/lib/bot-turns/tool-parts";
 import {
@@ -37,22 +37,6 @@ import { useChatView } from "./context";
 import { useSendAsUser } from "./send-as-user";
 import { useTailCardClaim } from "./tail-cards";
 import { isLive } from "./upgrade-triggers";
-
-/** Tools that build or change something: such a turn was work, not an answer. */
-const WORK_TOOLS = [
-  "write",
-  "edit",
-  "write_file",
-  "multi_edit",
-  "patch",
-  "notebook_edit",
-  "bash",
-  "serve",
-];
-
-export const isWorkTool = (name: string): boolean =>
-  componentToolBase(name) != null ||
-  WORK_TOOLS.some((tool) => name === tool || name.endsWith(`_${tool}`));
 
 export interface DeliverableOfferTarget {
   /** The reply's message id. */
@@ -87,7 +71,7 @@ export const deliverableOfferTarget = (
   if (
     !quiet ||
     assistants.some((message) =>
-      messageTools(message).some((tool) => isWorkTool(tool.name))
+      messageTools(message).some((tool) => isWorkCall(tool.name, tool.input))
     ) ||
     turnDeliverables(assistants).length > 0
   )

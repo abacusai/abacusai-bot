@@ -600,6 +600,49 @@ const retryAfterComplaint = (): RelayEvent[] =>
     b.runFinished("r2", "success", { timestamp: at(1) }),
   ]);
 
+/** A game built through a connector's own tools, then "it still looks wrong", in German. */
+const retryAfterConnectorWork = (): RelayEvent[] =>
+  seqd([
+    ...b.sessionReady("inc-1", "YOLO"),
+    ...userTurn(
+      "r1",
+      "u1",
+      "Mach die Häuser schöner, sie sehen klobig aus",
+      at(6)
+    ),
+    b.textStart("a1"),
+    ...b.toolCall("c1", "roblox-studio_search_game_tree", "a1", {
+      query: "House",
+    }),
+    b.toolResult("c1", { text: "Workspace.House1, Workspace.House2" }),
+    ...b.toolCall("c2", "roblox-studio_execute_luau", "a1", {
+      code: "workspace.House1.Roof.Size = Vector3.new(12, 1, 12)",
+    }),
+    b.toolResult("c2", { text: "ok" }),
+    ...b.toolCall("c3", "roblox-studio_start_stop_play", "a1", {
+      mode: "start_play",
+    }),
+    b.toolResult("c3", { text: "Play started" }),
+    b.textDelta(
+      "a1",
+      "Behoben: die Häuser haben jetzt flachere, glattere Dächer."
+    ),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(5) }),
+    ...userTurn("r2", "u2", "es sieht immer noch zu klobig aus", at(2)),
+    b.textStart("a2"),
+    ...b.toolCall("c4", "roblox-studio_execute_luau", "a2", {
+      code: "workspace.House1.Roof.Size = Vector3.new(10, 1, 10)",
+    }),
+    b.toolResult("c4", { text: "ok" }),
+    b.textDelta(
+      "a2",
+      "Ich habe die Dächer schmaler gemacht. Drück auf Play, um es dir anzusehen."
+    ),
+    b.textEnd("a2"),
+    b.runFinished("r2", "success", { timestamp: at(1) }),
+  ]);
+
 const headerAnswered = (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
@@ -1559,6 +1602,15 @@ export const SCENARIOS: Scenario[] = [
     canvas: ["RetryOffer", "free plan, Opus"],
     skin: "session",
     events: retryAfterComplaint,
+    view: {
+      retryOffer: { label: "Claude Opus 5.5", plan: "Basic", freeTop: true },
+    },
+  },
+  {
+    id: "retry-offer-connector",
+    canvas: ["RetryOffer", "after a connector's work"],
+    skin: "session",
+    events: retryAfterConnectorWork,
     view: {
       retryOffer: { label: "Claude Opus 5.5", plan: "Basic", freeTop: true },
     },

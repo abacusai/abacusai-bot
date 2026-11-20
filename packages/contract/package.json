@@ -38,6 +38,7 @@
     "./models": "./src/models.ts",
     "./not-found": "./src/not-found.ts",
     "./open-link": "./src/open-link.ts",
+    "./work-tools": "./src/work-tools.ts",
     "./website-prompt": "./src/website-prompt.ts",
     "./pptx": "./src/pptx.ts",
     "./quiet-hours": "./src/quiet-hours.ts",
