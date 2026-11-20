@@ -919,7 +919,10 @@
     "paidWebMedia": "Images and videos with top models",
     "paidWebCta": "Go to AbacusAI Agent on the web",
     "lockedTitle": "Credits locked — verify your phone",
-    "lockedBody": "Your free credits unlock once you verify your phone."
+    "lockedBody": "Your free credits unlock once you verify your phone.",
+    "context": {
+      "project": "You're working on “{{project}}”."
+    }
   },
   "execBackends": {
     "daytona": {

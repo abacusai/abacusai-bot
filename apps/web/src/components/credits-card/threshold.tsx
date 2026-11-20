@@ -25,7 +25,6 @@ import {
 } from "@abacus-ai/contract/credit-thresholds";
 import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
-import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Check, CodeXml, Gauge, Leaf } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
@@ -53,6 +52,7 @@ import {
 } from "#renderer/ui/dialog";
 
 import { CoderPitchList, coderCta } from "./coder-pitch";
+import { useCurrentChat } from "./current-chat";
 
 /**
  * An account's credit milestone card (contract credit-thresholds.ts): half,
@@ -361,28 +361,7 @@ export const CreditThresholdHost = ({
   const { data: account } = useAccount();
   const upgradeAsked = useUpgradeDialogRequest() != null;
   const collections = useCollections();
-  const { data: sessions } = useLiveQuery((q) =>
-    q.from({ s: collections.sessions })
-  );
-  const turnRunning = (sessions ?? []).some(
-    (session) => session.turn?.isBusy === true
-  );
-  // The chat the user worked in last; not a routine run's or a bot's.
-  const latest = (sessions ?? [])
-    .filter(
-      (session) =>
-        session.routineId == null &&
-        session.editorFor == null &&
-        !session.botOwned &&
-        session.label.trim().length > 0
-    )
-    .reduce<SessionRow | null>(
-      (latest, session) =>
-        latest == null || session.updatedAt > latest.updatedAt
-          ? session
-          : latest,
-      null
-    );
+  const { chat: latest, turnRunning } = useCurrentChat();
   const project = latest?.label.trim();
   const key = creditAccountKey(account);
   const mark = key != null ? prefs.creditThresholds?.[key] : undefined;

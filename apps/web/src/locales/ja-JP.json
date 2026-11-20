@@ -919,7 +919,10 @@
     "paidWebMedia": "Images and videos with top models",
     "paidWebCta": "Go to AbacusAI Agent on the web",
     "lockedTitle": "クレジットはロック中です。電話番号を認証してください",
-    "lockedBody": "電話番号を認証すると、無料クレジットが使えるようになります。"
+    "lockedBody": "電話番号を認証すると、無料クレジットが使えるようになります。",
+    "context": {
+      "project": "「{{project}}」に取り組み中です。"
+    }
   },
   "execBackends": {
     "daytona": {

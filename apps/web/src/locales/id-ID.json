@@ -919,7 +919,10 @@
     "paidWebMedia": "Images and videos with top models",
     "paidWebCta": "Go to AbacusAI Agent on the web",
     "lockedTitle": "Kredit terkunci — verifikasi ponsel Anda",
-    "lockedBody": "Kredit gratis Anda terbuka setelah Anda memverifikasi ponsel."
+    "lockedBody": "Kredit gratis Anda terbuka setelah Anda memverifikasi ponsel.",
+    "context": {
+      "project": "Kamu sedang mengerjakan “{{project}}”."
+    }
   },
   "execBackends": {
     "daytona": {

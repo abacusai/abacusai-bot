@@ -15,35 +15,48 @@ import {
 import { creditsTier } from "./credits";
 import { openPendingLink } from "./platform-system";
 
-/** The upgrade surfaces each app client (one per run) already reported: `src` or `src:item`. */
+/** The upgrade surfaces each app client (one per run) already reported: `src`, `src:item` or `src_level`. */
 const seenSurfaces = new WeakMap<AppClient, Set<string>>();
+
+/**
+ * A surface's beacon detail: its `src`, then the credit level it was shown at
+ * when the surface changes with it ("credits_card_80"), so shown and tapped
+ * rates compare by level. The upgrade link's own `src` never carries it.
+ */
+const upgradeDetail = (src: UpgradeSrc, level?: string): string =>
+  level == null ? src : `${src}_${level}`;
 
 // Never in the way of an upgrade: a report that fails, even at once, is dropped.
 const reportUpgradeStep = (
   client: AppClient,
   step: "upgrade_shown" | "upgrade_tapped",
-  src: UpgradeSrc
+  src: UpgradeSrc,
+  level?: string
 ): void =>
   void Promise.resolve()
-    .then(() => client.system.funnelStep({ step, detail: src }))
+    .then(() =>
+      client.system.funnelStep({ step, detail: upgradeDetail(src, level) })
+    )
     .catch(() => undefined);
 
 /**
  * An upgrade surface's Upgrade is on screen: reported once per app run for
- * the surface, or per item of it (a stopped turn, a milestone), so its shown,
- * tapped and paid counts line up by `src`.
+ * the surface, or per item of it (a stopped turn, a milestone) or credit
+ * level, so its shown, tapped and paid counts line up by `src`.
  */
 export const upgradeSeen = (
   client: AppClient,
   src: UpgradeSrc,
-  item?: string
+  item?: string,
+  level?: string
 ): void => {
-  const key = item == null ? src : `${src}:${item}`;
+  const detail = upgradeDetail(src, level);
+  const key = item == null ? detail : `${detail}:${item}`;
   const seen = seenSurfaces.get(client) ?? new Set<string>();
   if (seen.has(key)) return;
   seen.add(key);
   seenSurfaces.set(client, seen);
-  reportUpgradeStep(client, "upgrade_shown", src);
+  reportUpgradeStep(client, "upgrade_shown", src, level);
 };
 
 /** How often the account is read again while checkout is open. */
@@ -193,14 +206,16 @@ export const planReturned = (client: AppClient): void => {
  * Upgrade: the account's own upgrade page, asked for at click time (its link
  * is one-time and short-lived), or the plan page when the account has none.
  * `src` is the screen it is opened from, so the platform can tell which
- * screens lead to upgrades. The account is then watched until the plan is
- * active, so the app changes the moment the payment lands.
+ * screens lead to upgrades; `level` is the credit level it showed, for the
+ * beacons only (upgradeDetail). The account is then watched until the plan
+ * is active, so the app changes the moment the payment lands.
  */
 export const openUpgrade = async (
   client: AppClient,
-  src: UpgradeSrc
+  src: UpgradeSrc,
+  level?: string
 ): Promise<void> => {
-  reportUpgradeStep(client, "upgrade_tapped", src);
+  reportUpgradeStep(client, "upgrade_tapped", src, level);
   await openPendingLink(
     client,
     async () =>

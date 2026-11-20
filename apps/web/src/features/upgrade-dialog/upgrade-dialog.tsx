@@ -536,7 +536,11 @@ export const DialogBody = ({
             // Called inside the click: the web build opens its tab here.
             void (paidUpgrade
               ? openNextPlan(transport.client)
-              : openUpgrade(transport.client, dialogUpgradeSrc(request)));
+              : openUpgrade(
+                  transport.client,
+                  dialogUpgradeSrc(request),
+                  request.level
+                ));
             setWaiting(true);
           }}
         >
@@ -552,6 +556,7 @@ export const DialogBody = ({
             <UpgradeSeen
               src={dialogUpgradeSrc(request)}
               {...(request.src == null && { item: request.key })}
+              {...(request.level != null && { level: request.level })}
             />
           )}
         </Button>
