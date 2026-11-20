@@ -113,6 +113,23 @@ const COMPLAINT: StreamChunk[] = [
   b.runFinished("r2", "success"),
 ];
 
+const VIDEO_ASK = "Make a 30-second video for my bakery's new croissant";
+
+/** The same video ask twice, each answered by paid_feature's card: the repeat reason, on a hand-off. */
+const REPEATED_VIDEO_ASK: StreamChunk[] = ["r1", "r2"].flatMap((run) => [
+  b.runStarted(run),
+  ...b.text(`${run}-u`, "user", VIDEO_ASK),
+  b.textStart(`${run}-a`),
+  ...b.toolCall(`${run}-c`, "agent-tools_paid_feature", `${run}-a`, {
+    feature: "video_gen",
+    prompt: VIDEO_ASK,
+  }),
+  b.toolResult(`${run}-c`, { text: "Basic makes videos on the web." }),
+  b.textDelta(`${run}-a`, "Basic makes it in Abacus AI Agent on the web."),
+  b.textEnd(`${run}-a`),
+  b.runFinished(run, "success"),
+]);
+
 let current: Awaited<ReturnType<typeof renderRelay>> | undefined;
 afterEach(async () => {
   await current?.cleanup();
@@ -134,7 +151,12 @@ const mount = async (
   {
     continues = true,
     answer = () => Promise.resolve(),
-  }: { continues?: boolean; answer?: () => Promise<void> } = {}
+    events = COMPLAINT,
+  }: {
+    continues?: boolean;
+    answer?: () => Promise<void>;
+    events?: StreamChunk[];
+  } = {}
 ) => {
   const steps: Array<{ step: string; detail?: string }> = [];
   const continued: Array<[string, string | undefined]> = [];
@@ -185,7 +207,7 @@ const mount = async (
       models: { list: os.models.list.handler(() => catalog(tier)) },
     }
   );
-  await act(async () => relay.emitAll(COMPLAINT));
+  await act(async () => relay.emitAll(events));
   const prefs = () => current!.db.collections.prefs.get("app")?.dismissals;
   return { relay, steps, continued, moved, prefs };
 };
@@ -279,5 +301,16 @@ describe("RetryOfferRow in a chat that cannot be continued", () => {
     await settled();
     await settled();
     expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
+  });
+});
+
+describe("RetryOfferRow under a plan hand-off", () => {
+  it("stays down on a repeated media ask: a top model gives the same card", async () => {
+    const h = await mount("basic", { events: REPEATED_VIDEO_ASK });
+    await settled();
+    await settled();
+    expect(document.querySelector('[data-slot="paid-feature"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
+    expect(h.steps).toEqual([]);
   });
 });

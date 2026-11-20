@@ -5,8 +5,13 @@
  * once paid the message runs again on that model. Every free account gets it.
  * A paying account's plan already runs the model: a tap moves the chat onto
  * it and runs the message again. Either way the chat stays on that model.
+ *
+ * It is only for a turn a better model could do better: a turn answered by
+ * the plan (isPlanHandoffTool) gets none, whatever went wrong, since a top
+ * model gives the same hand-off and the plan's card already holds the next step.
  */
 import { isCleanReply, normalizedText, wordsPattern } from "./success-pitch";
+import { PAID_FEATURE_TOOL } from "./toolsets";
 
 export const RETRY_OFFER_REASONS = ["failed", "complaint", "repeat"] as const;
 export type RetryOfferReason = (typeof RETRY_OFFER_REASONS)[number];
@@ -314,6 +319,13 @@ export const isSameAsk = (a: string, b: string): boolean => {
   return shared / (first.size + second.size - shared) >= SAME_ASK_OVERLAP;
 };
 
+/** Tools whose answer is the plan: what it makes and where, or its price and upgrade. */
+const PLAN_HANDOFF_TOOLS = [PAID_FEATURE_TOOL, "billing_plan"];
+
+/** A plan hand-off, under its MCP server's prefix (`agent-tools_paid_feature`) or bare. */
+export const isPlanHandoffTool = (name: string): boolean =>
+  PLAN_HANDOFF_TOOLS.some((tool) => name === tool || name.endsWith(`_${tool}`));
+
 export interface RetryOfferTurn {
   /** The user's words that opened the latest turn. */
   ask: string;
@@ -325,6 +337,8 @@ export interface RetryOfferTurn {
   ranWork: boolean;
   /** So did the turn before it. */
   earlierRanWork: boolean;
+  /** The turn called a plan hand-off (isPlanHandoffTool). */
+  handedOff: boolean;
 }
 
 /**
@@ -334,6 +348,7 @@ export interface RetryOfferTurn {
 export const retryOfferReason = (
   turn: RetryOfferTurn
 ): RetryOfferReason | null => {
+  if (turn.handedOff) return null;
   if (turn.ranWork && !isCleanReply(turn.reply)) return "failed";
   if (turn.earlierRanWork && isStuckMessage(turn.ask)) return "complaint";
   if (turn.earlierAsks.slice(0, 2).some((ask) => isSameAsk(ask, turn.ask)))
