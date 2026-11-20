@@ -404,6 +404,95 @@ export class PollScheduler {
  */
 export class UndeliverableChatError extends Error {}
 
+/** A chat or person a name that did not resolve might have meant. */
+export type RecipientCandidate = {
+  name: string;
+  /** The `to:` value that reaches it. */
+  to: string;
+  isGroup?: boolean;
+  /** A person with no chat yet: the groups they are in with the user. */
+  groups?: string[];
+};
+
+/**
+ * A name that is not exactly one chat. Final, like any undeliverable send:
+ * nothing went, and the only fix is the user saying who they meant. The
+ * message is the one every chat app hands the model.
+ */
+export class RecipientNotFoundError extends UndeliverableChatError {
+  constructor(
+    readonly platformLabel: string,
+    readonly asked: string,
+    readonly candidates: RecipientCandidate[],
+    readonly ambiguous: boolean,
+    /** A read says so, rather than talk of a send nobody asked for. */
+    purpose: "send" | "read" = "send"
+  ) {
+    super(
+      recipientMissMessage(platformLabel, asked, candidates, ambiguous, purpose)
+    );
+    this.name = "RecipientNotFoundError";
+  }
+}
+
+const describeCandidate = (row: RecipientCandidate): string => {
+  const notes = [
+    row.isGroup === true ? "a group" : null,
+    row.groups != null && row.groups.length > 0
+      ? `no chat yet, a member of ${row.groups
+          .slice(0, 3)
+          .map((group) => `"${group}"`)
+          .join(" and ")}`
+      : null,
+    row.to !== row.name ? `to: "${row.to}"` : null,
+  ].filter((note) => note != null);
+  return notes.length > 0
+    ? `"${row.name}" (${notes.join(", ")})`
+    : `"${row.name}"`;
+};
+
+const recipientMissMessage = (
+  platformLabel: string,
+  asked: string,
+  candidates: RecipientCandidate[],
+  ambiguous: boolean,
+  purpose: "send" | "read"
+): string =>
+  [
+    `${purpose === "send" ? "Not sent" : "Not read"}: ${
+      ambiguous
+        ? `"${asked}" matches more than one ${platformLabel} chat or person.`
+        : `no ${platformLabel} chat or person is called "${asked}".`
+    }`,
+    candidates.length > 0
+      ? `Closest: ${candidates.slice(0, 8).map(describeCandidate).join("; ")}.`
+      : "Nothing close either.",
+    ...(purpose === "send"
+      ? [
+          "Nothing went to anyone. Ask the user who they meant (or for a phone number), and send only once they say.",
+          "Never send it to a group, or to someone else, in that person's place.",
+        ]
+      : ["Ask the user which chat they mean."]),
+  ].join(" ");
+
+/** Whether `name` is close to what the user typed: a word of one starts a word of the other. */
+export const nameIsClose = (asked: string, name: string): boolean => {
+  const words = (text: string): string[] =>
+    text
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length >= 2);
+  const wanted = words(asked);
+  const have = words(name);
+  return wanted.some((a) =>
+    have.some(
+      (b) =>
+        (b.startsWith(a) || a.startsWith(b)) &&
+        Math.min(a.length, b.length) >= 3
+    )
+  );
+};
+
 /**
  * A send refused before it began, because the link was down: nothing went,
  * so it is safe to keep and send once the link is back.

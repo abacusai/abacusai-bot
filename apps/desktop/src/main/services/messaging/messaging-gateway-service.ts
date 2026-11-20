@@ -80,11 +80,17 @@ import {
   type TurnFailure,
 } from "./chat-failure-reply";
 import { forChat } from "./chat-markdown";
-import { looksLikeBotOutput, UndeliverableChatError } from "./connector";
+import {
+  looksLikeBotOutput,
+  nameIsClose,
+  RecipientNotFoundError,
+  UndeliverableChatError,
+} from "./connector";
 import type {
   BacklogCandidate,
   InboundMessage,
   MessagingConnector,
+  RecipientCandidate,
 } from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
 import {
@@ -3817,8 +3823,11 @@ export class MessagingGatewayService {
 
   /**
    * Turn whatever the user called the recipient into a deliverable id. Ids
-   * pass through; a name resolves exact match first, then unique substring.
-   * Several hits is an error: "hi Mom" to the wrong Mo is worse than asking.
+   * pass through; a name resolves exact match first, then a unique substring
+   * of a person's name: a group answers only to its exact name, so a partial
+   * name never lands in a group. Several hits is an error: "hi Mom" to the
+   * wrong Mo is worse than asking. No hit goes on to the connector, which
+   * knows chats this list does not.
    */
   private resolveTarget(platformId: MessagingPlatformId, to: string): string {
     const target = to.trim();
@@ -3854,22 +3863,42 @@ export class MessagingGatewayService {
     const matches =
       exact.length > 0
         ? exact
-        : candidates.filter((row) => row.name.toLowerCase().includes(needle));
+        : candidates.filter(
+            (row) =>
+              row.isGroup !== true && row.name.toLowerCase().includes(needle)
+          );
 
     if (matches.length === 1) return matches[0]!.chatId;
-    if (matches.length === 0) {
-      // The connector is the arbiter, not this list, which is only the
-      // rendered sidebar window (archived chats never render). Every
-      // connector fails honestly on a genuine miss.
-      return target;
-    }
-    const listed = matches
-      .slice(0, 5)
-      .map((row) => `${row.name} (${row.chatId})`)
-      .join(", ");
-    throw new Error(
-      `"${target}" matches more than one contact on ${platformLabel(platformId)}: ${listed}. ` +
-        "Ask the user which one, then send to that chat id."
+    if (matches.length === 0) return target;
+    throw new RecipientNotFoundError(
+      platformLabel(platformId),
+      target,
+      matches.map(asCandidate),
+      true
+    );
+  }
+
+  /**
+   * A name the connector could not place either: the same refusal, with the
+   * closest names this list knows when the connector had none of its own.
+   */
+  private withCloseNames(
+    platformId: MessagingPlatformId,
+    error: unknown
+  ): unknown {
+    if (!(error instanceof RecipientNotFoundError)) return error;
+    if (error.candidates.length > 0) return error;
+    const close = this.allKnownChats(platformId).filter(
+      (row) =>
+        row.name.toLowerCase().includes(error.asked.toLowerCase()) ||
+        nameIsClose(error.asked, row.name)
+    );
+    if (close.length === 0) return error;
+    return new RecipientNotFoundError(
+      error.platformLabel,
+      error.asked,
+      close.map(asCandidate),
+      error.ambiguous
     );
   }
 
@@ -3947,7 +3976,11 @@ export class MessagingGatewayService {
     // A send during startup waits rather than failing on "who is me".
     await this.awaitReady(platformId);
     const target = this.resolveTarget(platformId, chatId);
-    await this.sendAs(connector, platformId, target, text, from);
+    try {
+      await this.sendAs(connector, platformId, target, text, from);
+    } catch (error) {
+      throw this.withCloseNames(platformId, error);
+    }
     return {
       platform: platformId,
       chatId: target,
@@ -4060,7 +4093,11 @@ export class MessagingGatewayService {
 
     await this.awaitReady(platformId);
     const target = this.resolveTarget(platformId, chatId);
-    await connector.sendFile(target, filePath, caption);
+    try {
+      await connector.sendFile(target, filePath, caption);
+    } catch (error) {
+      throw this.withCloseNames(platformId, error);
+    }
     this.noteAgentSent(platformId, target);
     this.appendLog({
       platform: platformId,
@@ -4567,6 +4604,17 @@ const accountKind = (): AccountKind => {
   if (account == null) return "unknown";
   return onFreePlan(account) ? "free" : "paid";
 };
+
+/** A known chat as a refused send lists it. */
+const asCandidate = (row: {
+  chatId: string;
+  name: string;
+  isGroup?: boolean;
+}): RecipientCandidate => ({
+  name: row.name,
+  to: row.chatId,
+  ...(row.isGroup === true ? { isGroup: true } : {}),
+});
 
 const platformLabel = (platformId: MessagingPlatformId): string =>
   platformId === "abacus_discord"

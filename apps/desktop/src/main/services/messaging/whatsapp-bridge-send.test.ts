@@ -31,6 +31,7 @@ type Internals = {
       text: string
     ) => Promise<{ id: string; ack: number }>;
     ackOf: (id: string) => Promise<number>;
+    listGroupMembers?: () => Promise<unknown[] | null>;
   } | null;
   bridgeReady: boolean;
   chatListRead: boolean;
@@ -43,6 +44,7 @@ type Internals = {
   sendChunk: (chatId: string, text: string) => Promise<void>;
   matchingOutCount: (chatId: string, text: string) => Promise<number>;
   sendTextNow: (chatId: string, text: string) => Promise<void>;
+  fileTarget: (chatId: string) => Promise<string>;
 };
 
 const connectorWith = (
@@ -143,6 +145,7 @@ describe("sending through the bridge", () => {
         refreshed += 1;
         return [];
       },
+      listGroupMembers: async () => [],
       sendText: async () => {
         throw new Error("must not be called");
       },
@@ -154,10 +157,100 @@ describe("sending through the bridge", () => {
     internals.bridgeReady = true;
 
     await expect(internals.sendTextNow("Nobody", "hi")).rejects.toThrow(
-      /No WhatsApp chat called "Nobody"/
+      /Not sent: no WhatsApp chat or person is called "Nobody"/
     );
     // One refresh of the list before giving up on the name.
     expect(refreshed).toBe(1);
+  });
+});
+
+describe("a name that is a person in the user's groups, with no chat yet", () => {
+  // The case behind this: "message Priya hi". Priya has no chat with the
+  // user, only the family group does; the send must reach her, or ask, and
+  // never land in the group.
+  const family = {
+    jid: "120363111@g.us",
+    name: "Family",
+    isGroup: true,
+    isMe: false,
+  };
+  const priya = {
+    jid: "15550001234@c.us",
+    ids: ["15550001234@c.us"],
+    name: "Priya Shah",
+    saved: true,
+    groups: ["Family"],
+  };
+  const bridgeWith = (
+    sent: Array<[string, string]>,
+    members: unknown[]
+  ): NonNullable<Internals["bridge"]> => ({
+    ensure: async () => true,
+    listChats: async () => [{ ...family, unreadCount: 0 }],
+    listGroupMembers: async () => members,
+    sendText: async (jid, text) => {
+      sent.push([jid, text]);
+      return { id: `m${sent.length}`, ack: 1 };
+    },
+    ackOf: async () => 1,
+  });
+
+  it("sends to the person directly", async () => {
+    const sent: Array<[string, string]> = [];
+    const { internals } = connectorWith(bridgeWith(sent, [priya]));
+    internals.bridgeChats = [family];
+
+    await internals.sendTextNow("Priya", "hi whats up");
+
+    expect(sent).toEqual([["15550001234@c.us", "hi whats up"]]);
+  });
+
+  it("puts a file in the person's own chat, by number", async () => {
+    const { internals } = connectorWith(bridgeWith([], [priya]));
+    internals.bridgeChats = [family];
+
+    expect(await internals.fileTarget("Priya")).toBe("+15550001234");
+  });
+
+  it("asks when the name is two people, and sends nothing", async () => {
+    const sent: Array<[string, string]> = [];
+    const { internals } = connectorWith(
+      bridgeWith(sent, [
+        priya,
+        {
+          jid: "917700000009@c.us",
+          ids: ["917700000009@c.us"],
+          name: "Priya Rao",
+          saved: true,
+          groups: ["Family"],
+        },
+      ])
+    );
+    internals.bridgeChats = [family];
+
+    await expect(internals.sendTextNow("Priya", "hi")).rejects.toThrow(
+      /Not sent: "Priya" matches more than one WhatsApp chat or person\. Closest: "Priya Shah" \(no chat yet, a member of "Family"\); "Priya Rao".*Ask the user who they meant.*Never send it to a group/
+    );
+    expect(sent).toEqual([]);
+  });
+
+  it("refuses a name nobody has, naming the closest, and sends nothing", async () => {
+    const sent: Array<[string, string]> = [];
+    const { internals } = connectorWith(bridgeWith(sent, [priya]));
+    internals.bridgeChats = [family];
+
+    const error = await internals
+      .sendTextNow("Priyanka Shah", "hi")
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(UndeliverableChatError);
+    expect((error as Error).message).toBe(
+      'Not sent: no WhatsApp chat or person is called "Priyanka Shah". ' +
+        'Closest: "Priya Shah" (no chat yet, a member of "Family"). ' +
+        "Nothing went to anyone. Ask the user who they meant (or for a phone number), and send only once they say. " +
+        "Never send it to a group, or to someone else, in that person's place."
+    );
+    expect(sent).toEqual([]);
   });
 });
 

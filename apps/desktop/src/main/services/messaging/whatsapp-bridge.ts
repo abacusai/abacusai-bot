@@ -1,7 +1,12 @@
 import fs from "fs";
 
 import { resourcePath } from "../../resources";
-import { type PageScript, pageScript } from "./connector";
+import {
+  nameIsClose,
+  type PageScript,
+  pageScript,
+  type RecipientCandidate,
+} from "./connector";
 
 /**
  * WhatsApp through its own store, not its pixels: wa-js (wppconnect-team,
@@ -66,6 +71,8 @@ const READY_WAIT_MS = 30_000;
 /** How long a chat listing may take before the next sweep asks again; right
  * after a link it waits on history sync. */
 export const CHAT_LIST_WAIT_MS = 15_000;
+/** How long reading the people in the user's groups may take, all groups together. */
+const GROUP_MEMBERS_WAIT_MS = 8_000;
 
 /**
  * WhatsApp servers whose ids are not conversations: `status@broadcast` (the
@@ -87,12 +94,45 @@ export const isConversationJid = (chatId: string): boolean => {
   return !NON_CONVERSATION_SERVERS.has(server);
 };
 
-/** App ids (display names and numbers) to WhatsApp ids: a number is a user
- * chat by construction, `@` passes through, a name is looked up in the list. */
+/** A person in one of the user's groups, as the group lists them. */
+export type BridgeMember = {
+  /** Their own chat's id: the phone id where WhatsApp knows it, else the lid. */
+  jid: string;
+  /** Every id they go by (phone and lid), to match a chat already open with them. */
+  ids: string[];
+  name: string;
+  /** The name is the user's own for them (their address book), not one they chose. */
+  saved: boolean;
+  /** The groups they share with the user, by name. */
+  groups: string[];
+};
+
+/** Why a name is not one chat: nothing like it, or several. */
+export type JidMiss = {
+  ambiguous: boolean;
+  candidates: RecipientCandidate[];
+};
+
+type Reachable = {
+  jid: string;
+  name: string;
+  isGroup: boolean;
+  groups?: string[];
+};
+
+/**
+ * App ids (display names and numbers) to WhatsApp ids: a number is a user
+ * chat by construction, `@` passes through, a name is looked up in the chats
+ * and then among the people in the user's groups, so someone the user has no
+ * chat with yet is still reached directly. A group answers only to its exact
+ * name: a partial name is a person's, never a group's. Anything short of one
+ * match is a miss with the closest names, and nothing is sent.
+ */
 export const resolveJid = (
   chatId: string,
-  chats: ReadonlyArray<BridgeChat>
-): { jid: string } | { error: string } => {
+  chats: ReadonlyArray<BridgeChat>,
+  members: ReadonlyArray<BridgeMember> = []
+): { jid: string } | { error: string } | { miss: JidMiss } => {
   const trimmed = chatId.trim();
   if (trimmed.length === 0) return { error: "No chat given." };
   if (trimmed.includes("@")) return { jid: trimmed };
@@ -100,21 +140,75 @@ export const resolveJid = (
   if (digits.length > 0 && /^\+?[\d\s().-]+$/.test(trimmed))
     return { jid: `${digits}@c.us` };
 
-  const exact = chats.filter((chat) => chat.name === trimmed);
-  if (exact.length === 1) return { jid: exact[0]!.jid };
+  const chatRows: Reachable[] = chats.map((chat) => ({
+    jid: chat.jid,
+    name: chat.name,
+    isGroup: chat.isGroup,
+  }));
+  const chatJids = new Set(chats.map((chat) => chat.jid));
+  // Someone with a chat already is reached through it.
+  const memberRows = members
+    .filter((member) => !member.ids.some((id) => chatJids.has(id)))
+    .map((member) => ({
+      jid: member.jid,
+      name: member.name,
+      isGroup: false,
+      groups: member.groups,
+      saved: member.saved,
+    }));
   const lower = trimmed.toLowerCase();
-  const loose = chats.filter((chat) => chat.name.toLowerCase() === lower);
-  if (loose.length === 1) return { jid: loose[0]!.jid };
-  const prefix = chats.filter((chat) =>
-    chat.name.toLowerCase().startsWith(lower)
+  const matchIn = (
+    rows: ReadonlyArray<Reachable>
+  ): { jid: string } | { miss: JidMiss } | null => {
+    const tiers = [
+      rows.filter((row) => row.name === trimmed),
+      rows.filter((row) => row.name.toLowerCase() === lower),
+      rows.filter(
+        (row) => !row.isGroup && row.name.toLowerCase().startsWith(lower)
+      ),
+    ];
+    for (const tier of tiers) {
+      if (tier.length === 0) continue;
+      if (new Set(tier.map((row) => row.jid)).size === 1)
+        return { jid: tier[0]!.jid };
+      return { miss: { ambiguous: true, candidates: candidatesOf(tier) } };
+    }
+    return null;
+  };
+  // The user's chats decide first: a name that matches any of them, once or
+  // several times, is settled there. Only a name no chat answers to is looked
+  // for among the people in their groups, and only under the name the user
+  // saved them as: a name someone gave themselves is shown, never sent to.
+  const inChats = matchIn(chatRows);
+  if (inChats != null) return inChats;
+  const inMembers = matchIn(memberRows.filter((row) => row.saved));
+  if (inMembers != null) return inMembers;
+  const close = [...chatRows, ...memberRows].filter(
+    (row) =>
+      row.name.toLowerCase().includes(lower) || nameIsClose(trimmed, row.name)
   );
-  if (prefix.length === 1) return { jid: prefix[0]!.jid };
-  if (exact.length > 1 || loose.length > 1 || prefix.length > 1)
-    return {
-      error: `More than one WhatsApp chat is called "${trimmed}". Say which one.`,
-    };
-  return { error: `No WhatsApp chat called "${trimmed}".` };
+  return { miss: { ambiguous: false, candidates: candidatesOf(close) } };
 };
+
+/** As the model is shown them: a name it can send to, or a number where two share it. */
+const candidatesOf = (rows: ReadonlyArray<Reachable>): RecipientCandidate[] =>
+  rows.slice(0, 8).map((row) => {
+    const shared = rows.some(
+      (other) =>
+        other !== row && other.name.toLowerCase() === row.name.toLowerCase()
+    );
+    const to = !shared
+      ? row.name
+      : row.jid.endsWith("@c.us")
+        ? `+${row.jid.split("@")[0]}`
+        : row.jid;
+    return {
+      name: row.name,
+      to,
+      ...(row.isGroup ? { isGroup: true } : {}),
+      ...(row.groups != null ? { groups: row.groups } : {}),
+    };
+  });
 
 /** The wire-level checks the send makes; exported so a test can pin them. */
 export const isServerAck = (ack: number): boolean => ack >= 1;
@@ -244,6 +338,16 @@ export class WhatsAppBridge {
     return Array.isArray(rows)
       ? rows.filter((chat) => isConversationJid(chat.jid))
       : null;
+  }
+
+  /** The people in the user's groups, one row per person; null when the
+   * page did not answer. Only read when a name is not a chat. */
+  async listGroupMembers(): Promise<BridgeMember[] | null> {
+    const rows = await this.host.run<BridgeMember[] | null>(
+      GROUP_MEMBERS_SCRIPT,
+      { timeoutMs: GROUP_MEMBERS_WAIT_MS }
+    );
+    return Array.isArray(rows) ? rows : null;
   }
 
   /** Send and wait for the server ack. A message stuck at ack 0 IS in the
@@ -492,6 +596,69 @@ const LIST_CHATS_SCRIPT = pageScript`
   return args.onlyUnread ? rows.filter((row) => row.unreadCount !== 0) : rows;
 `;
 
+/**
+ * Everyone in the user's groups, from the store: the groups' loaded member
+ * lists first, WhatsApp asked only for a group it has not loaded, all within
+ * one deadline. Named as the user's address book names them, else as they
+ * name themselves. The phone id is preferred, a lid kept where it is all
+ * WhatsApp has.
+ */
+const GROUP_MEMBERS_SCRIPT = pageScript`
+  const deadline = Date.now() + (args.timeoutMs || 8000);
+  let me = null;
+  try { me = WPP.conn.getMyUserId(); } catch (e) {}
+  let myLid = null;
+  try { myLid = WPP.whatsapp.UserPrefs.getMaybeMeLidUser(); } catch (e) {}
+  const serial = (wid) => (wid && (wid._serialized || String(wid))) || null;
+  const people = new Map();
+  const groups = WPP.whatsapp.ChatStore.getModelsArray().filter((chat) => {
+    try { return !!chat.isGroup; } catch (e) { return false; }
+  });
+  for (const chat of groups) {
+    if (Date.now() > deadline) break;
+    const groupName = chat.formattedTitle || chat.name || "";
+    let participants = null;
+    try {
+      const meta = chat.groupMetadata || WPP.whatsapp.GroupMetadataStore.get(chat.id);
+      if (meta && meta.participants) participants = meta.participants.getModelsArray();
+    } catch (e) {}
+    if (participants == null || participants.length === 0) {
+      try {
+        participants = await Promise.race([
+          WPP.group.getParticipants(chat.id),
+          new Promise((resolve) => setTimeout(() => resolve(null), Math.max(0, Math.min(2000, deadline - Date.now())))),
+        ]);
+      } catch (e) { participants = null; }
+    }
+    if (!Array.isArray(participants)) continue;
+    for (const participant of participants) {
+      try {
+        const wid = participant.id;
+        if (!wid) continue;
+        if (me && wid.user === me.user) continue;
+        if (myLid && wid.user === myLid.user) continue;
+        const contact = participant.contact || WPP.whatsapp.ContactStore.get(wid) || null;
+        if (contact && contact.isMe) continue;
+        let phone = null;
+        if (wid.server === "lid") {
+          try { phone = WPP.whatsapp.lidPnCache.getPhoneNumber(wid) || null; } catch (e) {}
+          if (!phone && contact && contact.phoneNumber) phone = contact.phoneNumber;
+        }
+        const ids = [serial(wid), serial(phone)].filter((id) => id != null);
+        const jid = serial(phone) || serial(wid);
+        const name = (contact && (contact.name || contact.pushname || contact.verifiedName)) || "";
+        if (!jid || name.length === 0) continue;
+        const saved = !!(contact && contact.name);
+        const row = people.get(jid) || { jid, ids: [], name, saved, groups: [] };
+        for (const id of ids) if (!row.ids.includes(id)) row.ids.push(id);
+        if (groupName && !row.groups.includes(groupName)) row.groups.push(groupName);
+        people.set(jid, row);
+      } catch (e) {}
+    }
+  }
+  return [...people.values()];
+`;
+
 /** Send, then wait for the server ack. The poll after \`waitForAck\` catches
  * an ack that lands a moment late; one that never arrives is not assumed. */
 const SEND_SCRIPT = pageScript`
@@ -632,6 +799,7 @@ export const BRIDGE_PAGE_SCRIPTS: Record<string, string> = {
   WAIT_READY_SCRIPT,
   MY_ID_SCRIPT,
   LIST_CHATS_SCRIPT,
+  GROUP_MEMBERS_SCRIPT,
   SEND_SCRIPT,
   ACK_SCRIPT,
   READ_SCRIPT,

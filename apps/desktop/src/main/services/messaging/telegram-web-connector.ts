@@ -27,6 +27,7 @@ import {
   type PageScript,
   pageScript,
   PollScheduler,
+  RecipientNotFoundError,
   runPageScript,
 } from "./connector";
 import type { LaneFailure } from "./lane-supervisor";
@@ -244,13 +245,17 @@ export class TelegramWebConnector implements MessagingConnector {
     for (const chunk of chunkMessage(text, MAX_MESSAGE_LENGTH)) {
       const attempt = async (): Promise<{
         ok: boolean;
+        notFound?: boolean;
         error?: string;
       } | null> =>
-        this.run<{ ok: boolean; error?: string }>(TALK_SCRIPT, {
-          target,
-          requirePeerId: /^-?\d+$/.test(target) ? target : "",
-          text: chunk,
-        });
+        this.run<{ ok: boolean; notFound?: boolean; error?: string }>(
+          TALK_SCRIPT,
+          {
+            target,
+            requirePeerId: /^-?\d+$/.test(target) ? target : "",
+            text: chunk,
+          }
+        );
       let result = await attempt();
       if (
         result?.ok !== true &&
@@ -272,6 +277,9 @@ export class TelegramWebConnector implements MessagingConnector {
         }
         result = await attempt();
       }
+      // No chat by that name, even on a fresh page: nothing was typed.
+      if (result?.notFound === true)
+        throw new RecipientNotFoundError("Telegram", target, [], false);
       if (result?.ok !== true) {
         throw new Error(
           result?.error ?? `Could not send the Telegram message to ${chatId}.`
@@ -919,7 +927,7 @@ const TALK_SCRIPT = pageScript`
       if (title === wanted || title.replace(/\\s+/g, '') === wanted) { row = el; break; }
     }
   }
-  if (!row) return { ok: false, error: 'No chat row for "' + target + '".' };
+  if (!row) return { ok: false, notFound: true, error: 'No chat row for "' + target + '".' };
   press(row);
 
   const composer = await waitFor('.input-message-input[contenteditable="true"], .input-message-input', 8000);

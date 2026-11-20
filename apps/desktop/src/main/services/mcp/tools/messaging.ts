@@ -6,6 +6,15 @@ import type { ToolDefinition } from "./definition";
  * but are hidden, so one platform's chats never sit beside another's.
  */
 
+/** Who a send may go to, said once for every send tool. */
+const SEND_RULE = [
+  "You are messaging a real person on the user's behalf: ONLY send when the user",
+  "asked you to in this conversation, and only what they asked. Never on your own",
+  "initiative. The recipient is exactly who the user named: when a name does not",
+  "resolve, or you are unsure who they mean, ask the user. Never send to a group,",
+  "or to someone else, in that person's place.",
+];
+
 /** Every auto_reply tool's actions, the platform-scoped ones included. */
 const AUTO_REPLY_ACTIONS = [
   "on",
@@ -37,9 +46,8 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "",
       "On WhatsApp this sends from the USER'S OWN account: the recipient sees it as them.",
       "Telegram and Discord send as the user's bot. Either way you are messaging a",
-      "real person on their behalf: ONLY send when the user asked you to in this",
-      "conversation, only what they asked, to who they asked. Never send on your own",
-      "initiative. Quote the message back to them if there is any doubt.",
+      "real person on their behalf.",
+      ...SEND_RULE,
       "",
       '"to" can be a contact NAME ("Mom", "Ravi"), resolved against the known contacts (an',
       "ambiguous or unknown name is an error); a chat id from list_chats; or, on",
@@ -151,6 +159,7 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "value to reach each. Use this rather than list_chats when the user means WhatsApp: " +
       "one platform's address book can never crowd another's out here. Pass a query to " +
       "search by name. On WhatsApp, a contact's or group's name IS its chat id, so the `to:` value is the name; a phone number in international format also works. " +
+      "Someone in the user's groups with no chat yet is not listed, but send_whatsapp_message reaches them by name. " +
       "Pass `only_unread` to list just the chats and groups with messages waiting, each with " +
       'its unread count: the answer to "which groups have new messages?".',
     inputSchema: {
@@ -226,12 +235,11 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
     description: [
       "Send a message to a person or chat on WhatsApp.",
       "",
-      'Sends from the USER\'S OWN WhatsApp account: the recipient sees it as them. `to` is a contact or group NAME as WhatsApp shows it (the name IS the chat id), a phone number in international format ("+14155551234"), or "me" for the user\'s own chat.',
+      'Sends from the USER\'S OWN WhatsApp account: the recipient sees it as them. `to` is a contact or group NAME as WhatsApp shows it (the name IS the chat id), a person in one of the user\'s groups by name (even with no chat yet), a phone number in international format ("+15550001234"), or "me" for the user\'s own chat.',
       "",
-      "You are messaging a real person on the user's behalf: ONLY send when the user",
-      "asked you to in this conversation, only what they asked, to who they asked.",
-      "Never send on your own initiative. Quote the message back to them if there is",
-      "any doubt. A name that is ambiguous or unknown errors rather than guessing.",
+      "A file (a PDF, a photo) goes as attachment_path, with the message as its caption. Never send a text in place of a file the user asked you to send.",
+      "",
+      ...SEND_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -240,7 +248,16 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
           type: "string",
           description: "Who to send to, on WhatsApp. See the description.",
         },
-        message: { type: "string", description: "The text to send." },
+        message: {
+          type: "string",
+          description:
+            "The text to send; with a file, its caption (may be empty).",
+        },
+        attachment_path: {
+          type: "string",
+          description:
+            "Absolute path of a file to send (the message becomes its caption). Up to 25MB.",
+        },
       },
       required: ["to", "message"],
     },
@@ -343,10 +360,7 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "",
       "Sends as the user's Telegram bot. `to` is a contact name or a chat id from list_telegram_chats, or \"me\" for the user's own chat with the bot.",
       "",
-      "You are messaging a real person on the user's behalf: ONLY send when the user",
-      "asked you to in this conversation, only what they asked, to who they asked.",
-      "Never send on your own initiative. Quote the message back to them if there is",
-      "any doubt. A name that is ambiguous or unknown errors rather than guessing.",
+      ...SEND_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -448,10 +462,7 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
       "",
       "Sends as the user's Discord account. `to` is a DM id or a `guild/channel` id from list_discord_chats, or a username; display names are not ids. \"me\" reaches the user too: it is delivered through the Abacus AI bot's DM when that is linked.",
       "",
-      "You are messaging a real person on the user's behalf: ONLY send when the user",
-      "asked you to in this conversation, only what they asked, to who they asked.",
-      "Never send on your own initiative. Quote the message back to them if there is",
-      "any doubt. A name that is ambiguous or unknown errors rather than guessing.",
+      ...SEND_RULE,
     ].join("\n"),
     inputSchema: {
       type: "object",

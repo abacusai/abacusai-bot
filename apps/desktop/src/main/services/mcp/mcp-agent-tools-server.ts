@@ -3570,7 +3570,9 @@ export class McpAgentToolsServer extends McpHttpServer {
             'someone said ("taco bell", "the invoice"), that is a MESSAGE search: use ' +
             "the platform's read tool with `query`: it searches message content " +
             "through the platform's own search. Omit the query here to see every " +
-            "name. On WhatsApp you can still send to a phone number." +
+            "name. On WhatsApp you can still send to a phone number, or by name to " +
+            "someone in one of the user's groups who has no chat yet: the send finds " +
+            "them, or says who is close." +
             downNote +
             selfNote,
         ].join("\n")

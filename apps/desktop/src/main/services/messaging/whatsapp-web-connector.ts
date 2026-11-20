@@ -33,6 +33,7 @@ import {
   pageScript,
   PageStalledError,
   PollScheduler,
+  RecipientNotFoundError,
   runPageScript,
   setFileInput,
   UndeliverableChatError,
@@ -917,22 +918,38 @@ export class WhatsAppWebConnector implements MessagingConnector {
     );
   }
 
-  /** A chat id as the app uses it -> the WhatsApp id, via the bridge's list. */
-  private async toJid(chatId: string): Promise<string> {
+  /**
+   * A chat id as the app uses it -> the WhatsApp id, via the bridge's list
+   * and, for a name that is no chat, the people in the user's groups. A name
+   * that is not exactly one of them throws with the closest, never guesses.
+   */
+  private async toJid(
+    chatId: string,
+    purpose: "send" | "read" = "send"
+  ): Promise<string> {
     if (this.self != null && chatId === this.self && this.selfJid != null)
       return this.selfJid;
     // A number or an id needs no list; a name does, and right after a link
     // WhatsApp is still syncing it: wait for it rather than call the name unknown.
-    if ("error" in resolveJid(chatId, []) && !this.contactsReady())
+    if (!("jid" in resolveJid(chatId, [])) && !this.contactsReady())
       await this.waitForChatList(chatId);
     let resolved = resolveJid(chatId, this.bridgeChats);
-    if ("error" in resolved) {
+    if (!("jid" in resolved)) {
       // The list is a snapshot; a chat that started since is worth one
-      // refresh before the name is declared unknown.
+      // refresh, and someone with no chat yet may be in a group with the user.
       await this.refreshBridgeChats();
-      resolved = resolveJid(chatId, this.bridgeChats);
+      const members = (await this.bridge?.listGroupMembers()) ?? [];
+      resolved = resolveJid(chatId, this.bridgeChats, members);
     }
     if ("error" in resolved) throw new Error(resolved.error);
+    if ("miss" in resolved)
+      throw new RecipientNotFoundError(
+        "WhatsApp",
+        chatId.trim(),
+        resolved.miss.candidates,
+        resolved.miss.ambiguous,
+        purpose
+      );
     return resolved.jid;
   }
 
@@ -1154,9 +1171,12 @@ export class WhatsAppWebConnector implements MessagingConnector {
     if (!this.loggedIn)
       throw new Error("WhatsApp is not linked yet. Scan the QR first.");
 
+    // Who it goes to is settled the way a text's is, before anything opens:
+    // the page's search takes the first row that merely contains the name.
+    const target = await this.fileTarget(chatId);
     // Waits out the same not-yet-mounted pane a text send does; the attach
     // button appears no sooner than the composer.
-    await this.openComposer(chatId);
+    await this.openComposer(target);
 
     const attach = await this.run<{
       ok: boolean;
@@ -1190,6 +1210,25 @@ export class WhatsAppWebConnector implements MessagingConnector {
         `The file was staged but did not send to ${chatId}. The preview is still open.`
       );
     this.rememberSent(chatId, caption ?? "");
+  }
+
+  /**
+   * Where the page opens to send a file: the chat the bridge resolved, by its
+   * number when it has one (the deterministic route), else by its exact name.
+   * Without the bridge the name goes as given, as a text's does.
+   */
+  private async fileTarget(chatId: string): Promise<string> {
+    if (this.bridge == null || !(await this.useBridge())) return chatId;
+    const jid = await this.toJid(chatId);
+    const [user, server] = jid.split("@");
+    if (server === "c.us" && user != null && /^\d{7,15}$/.test(user))
+      return `+${user}`;
+    const chat = this.bridgeChats.find((row) => row.jid === jid);
+    if (chat != null) return chat.name;
+    throw new Error(
+      `WhatsApp has no chat with "${chatId}" to put a file in yet, and no number for them. ` +
+        "Nothing was sent. Send them a text first, then the file."
+    );
   }
 
   /** Open a chat by name or number. The script finds the row (on screen or
@@ -1374,7 +1413,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
   > {
     if (!this.loggedIn) return [];
     if (this.bridge != null && (await this.useBridge())) {
-      const jid = await this.toJid(chatId);
+      const jid = await this.toJid(chatId, "read");
       const read: BridgeRead = await this.bridge.readChat(jid, limit);
       if (read.ok === true) {
         const chat = this.bridgeChats.find((row) => row.jid === jid);

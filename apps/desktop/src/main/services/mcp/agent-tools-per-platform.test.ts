@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
+import { MESSAGING_TOOLS } from "./tools/messaging";
 
 type Sent = { platform: string; chatId: string; text: string };
 
@@ -20,6 +21,7 @@ const harness = (running: string[]) => {
   const sent: Sent[] = [];
   const reads: Array<Record<string, unknown>> = [];
   const allowed: Array<{ platform: string; name: string }> = [];
+  const files: Array<{ platform: string; chatId: string; path: string }> = [];
   const server = new McpAgentToolsServer({
     skillsService: {} as never,
     enabledToolsets: () => new Set(["messaging"]),
@@ -31,6 +33,9 @@ const harness = (running: string[]) => {
       listChats: () => [],
       send: async (platform: string, chatId: string, text: string) => {
         sent.push({ platform, chatId, text });
+      },
+      sendFile: async (platform: string, chatId: string, path: string) => {
+        files.push({ platform, chatId, path });
       },
       readMessages: async (filter: Record<string, unknown>) => {
         reads.push(filter);
@@ -67,7 +72,7 @@ const harness = (running: string[]) => {
     ).executeTool(name, args, "bot-session");
     return result.content.map((part) => part.text ?? "").join("\n");
   };
-  return { server, sent, reads, allowed, call };
+  return { server, sent, reads, allowed, files, call };
 };
 
 describe("the model's messaging tools", () => {
@@ -110,6 +115,29 @@ describe("the model's messaging tools", () => {
     expect(sent).toEqual([
       { platform: "discord", chatId: "123/456", text: "hi" },
     ]);
+  });
+
+  it("a WhatsApp send carries a file, and no text goes in its place", async () => {
+    const { sent, files, call } = harness(["whatsapp"]);
+    // Offered to the model, not only accepted when it guesses the field.
+    const tool = MESSAGING_TOOLS.find(
+      (definition) => definition.name === "send_whatsapp_message"
+    );
+    const schema = tool?.inputSchema as { properties?: object } | undefined;
+    expect(Object.keys(schema?.properties ?? {})).toContain("attachment_path");
+    const dir = mkdtempSync(join(tmpdir(), "wa-file-"));
+    const path = join(dir, "notes.pdf");
+    writeFileSync(path, "%PDF-1.4");
+
+    const text = await call("send_whatsapp_message", {
+      to: "Priya",
+      message: "",
+      attachment_path: path,
+    });
+
+    expect(files).toEqual([{ platform: "whatsapp", chatId: "Priya", path }]);
+    expect(sent).toEqual([]);
+    expect(text).toMatch(/Sent the file to Priya on whatsapp/);
   });
 
   it("read is scoped to its own platform", async () => {

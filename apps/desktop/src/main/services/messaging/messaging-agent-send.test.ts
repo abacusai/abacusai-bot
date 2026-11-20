@@ -47,6 +47,7 @@ vi.mock("./messaging-config-service", async (importOriginal) => {
 });
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
+const { RecipientNotFoundError } = await import("./connector");
 
 const gatewayWith = (
   connector: { sendText: (chatId: string, text: string) => Promise<void> },
@@ -300,7 +301,7 @@ describe("sending by name", () => {
     const gateway = gatewayWith(contactsConnector(sent), "whatsapp");
 
     await expect(gateway.sendToChat("whatsapp", "Ravi", "hi")).rejects.toThrow(
-      /more than one contact.*Ravi Kumar.*Ravi Verma/s
+      /Not sent: "Ravi" matches more than one WhatsApp chat.*Ravi Kumar.*Ravi Verma.*Ask the user/s
     );
     expect(sent).toEqual([]);
   });
@@ -315,6 +316,52 @@ describe("sending by name", () => {
     await gateway.sendToChat("whatsapp", "Taco Bell", "hi");
 
     expect(sent).toEqual([["Taco Bell", "hi"]]);
+  });
+
+  it("never lands a partial name in a group: the connector decides who it is", async () => {
+    // "Priya" is only part of a group's name. Sending there would put a
+    // message meant for one person in front of the whole group.
+    const sent: Array<[string, string]> = [];
+    const gateway = gatewayWith(
+      {
+        sendText: async (chatId, text) => {
+          sent.push([chatId, text]);
+        },
+        listContacts: () => [
+          {
+            chatId: "Priya's Farewell",
+            name: "Priya's Farewell",
+            isGroup: true,
+          },
+        ],
+      } as never,
+      "whatsapp"
+    );
+
+    await gateway.sendToChat("whatsapp", "Priya", "hi");
+
+    expect(sent).toEqual([["Priya", "hi"]]);
+  });
+
+  it("gives a connector's miss the closest names it knows, and nothing is sent", async () => {
+    const gateway = gatewayWith(
+      {
+        sendText: async (chatId) => {
+          throw new RecipientNotFoundError("Telegram", chatId, [], false);
+        },
+        listContacts: () => [
+          { chatId: "501", name: "Priya Shah" },
+          { chatId: "-502", name: "Family", isGroup: true },
+        ],
+      } as never,
+      "telegram"
+    );
+
+    await expect(
+      gateway.sendToChat("telegram", "Priyanka", "hi")
+    ).rejects.toThrow(
+      'Not sent: no Telegram chat or person is called "Priyanka". Closest: "Priya Shah" (to: "501"). Nothing went to anyone.'
+    );
   });
 
   it("still passes ids and phone numbers straight through", async () => {
