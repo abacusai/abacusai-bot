@@ -69,7 +69,7 @@ import {
   CREDITS_SIDEBAR_GALLERY_LEVELS,
   CreditsSidebarGallery,
   type CreditsSidebarGalleryLevel,
-} from "#renderer/features/shell/credits-card-gallery";
+} from "#renderer/features/shell";
 import { TourGallery } from "#renderer/features/tour/gallery";
 import { NewLookCard } from "#renderer/features/tour/new-look";
 import {
