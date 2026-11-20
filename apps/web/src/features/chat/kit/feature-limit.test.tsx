@@ -143,7 +143,7 @@ it.each([
 
 it("bot_help's card names the place in the app's words and opens it", async () => {
   const rendered = await renderWithDb(
-    <BotHelpCard place={botHelpPlace("models", "gemini")} />
+    <BotHelpCard place={botHelpPlace("models", "gemini")!} />
   );
   cleanup = rendered.cleanup;
   const card = rendered.view.container.querySelector('[data-slot="bot-help"]');

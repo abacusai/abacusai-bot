@@ -129,3 +129,54 @@ describe("the routine editor", () => {
     expect(other.text).toContain("can only change its routine");
   });
 });
+
+/**
+ * Asked how to dictate or how to start a new chat, the model answered from
+ * memory and named controls the app does not have: bot_help had nothing on
+ * the app's own buttons. It now answers from the same entries the renderer's
+ * tests hold to the message box, the rail and its pages.
+ */
+describe("bot_help on the app's own controls", () => {
+  it.each([
+    ["microphone", "mic"],
+    ["microphone", "dictation"],
+    ["microphone", "voice"],
+  ])("finds the %s by %s, with how to stop it", async (_what, name) => {
+    const { text } = await ask({ topic: "app", name }, "main");
+    expect(text).toContain("- Dictate (also shown as Stop dictating):");
+    expect(text).toContain("message box");
+    expect(text).toContain("Escape cancels");
+    // It is in the chat on screen: no page to send them to.
+    expect(text).not.toContain("Where: ");
+  });
+
+  it("starts a new chat from Sessions, /new or the shortcut", async () => {
+    const { text } = await ask({ topic: "app", name: "new chat" }, "main");
+    expect(text).toContain("- New session:");
+    expect(text).toContain("/new");
+    expect(text).toContain("⌘N on a Mac, Ctrl+N on Windows and Linux");
+    expect(text).toContain("Where: Sessions → New session.");
+    expect(text).not.toContain("- Dictate");
+  });
+
+  it("is reached from the name alone, as the model words it", async () => {
+    const { text } = await ask({ name: "dictate" }, "main");
+    expect(text).toContain("- Dictate (also shown as Stop dictating):");
+  });
+
+  it("says it is not sure of a control the app has not got, never a guess", async () => {
+    const { text } = await ask({ topic: "app", name: "hologram" }, "main");
+    expect(text).toContain('Nothing in the app is called "hologram"');
+    expect(text).toContain("never describe a button");
+  });
+
+  it("names every control in the overview, and their use only when asked", async () => {
+    const overview = (await ask({}, "main")).text;
+    expect(overview).toMatch(/New session, Dictate, Attach, Models/);
+    expect(overview).toContain("call bot_help with topic app");
+    expect(overview).not.toContain("Escape cancels");
+    const all = (await ask({ topic: "app" }, "main")).text;
+    expect(all).toContain("Escape cancels");
+    expect(all).toMatch(/- Settings pages: General, Appearance/);
+  });
+});
