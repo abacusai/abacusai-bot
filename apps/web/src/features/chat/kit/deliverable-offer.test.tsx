@@ -178,6 +178,20 @@ describe("DeliverableOfferRow", () => {
       ),
     ],
     [
+      "a turn that sent the comparison through a connector",
+      turn(
+        "r1",
+        "Email the comparison to my team",
+        b.textStart("r1-a"),
+        ...b.toolCall("c1", "abacus-connectors_Gmail_Tool", "r1-a", {
+          action: "send_email",
+        }),
+        b.toolResult("c1", { text: "Sent" }),
+        b.textDelta("r1-a", ANSWER),
+        b.textEnd("r1-a")
+      ),
+    ],
+    [
       "a failed turn",
       [
         b.runStarted("r1"),
@@ -190,6 +204,27 @@ describe("DeliverableOfferRow", () => {
     await mount({ live });
     await settled();
     expect(offer()).toBeNull();
+  });
+
+  it("offers a report under a comparison that only looked things up", async () => {
+    await mount({
+      live: turn(
+        "r1",
+        "Compare Notion, Obsidian and Logseq",
+        b.textStart("r1-a"),
+        ...b.toolCall("c1", "web_search", "r1-a", { query: "Logseq pricing" }),
+        b.toolResult("c1", { text: "Free" }),
+        ...b.toolCall("c2", "abacus-connectors_Gmail_Tool", "r1-a", {
+          action: "search_email",
+        }),
+        b.toolResult("c2", { text: "No mail" }),
+        b.textDelta("r1-a", ANSWER),
+        b.textEnd("r1-a")
+      ),
+    });
+    expect(
+      await screen.findByRole("button", { name: "Turn into a report" })
+    ).toBeTruthy();
   });
 
   it("is not offered on a reply that was already there when the chat opened", async () => {

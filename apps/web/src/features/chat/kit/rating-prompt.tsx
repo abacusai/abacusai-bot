@@ -26,6 +26,7 @@ import {
 } from "@abacus-ai/contract/rating-prompt";
 import { isComplaint } from "@abacus-ai/contract/success-pitch";
 import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-target";
+import { isWorkCall } from "@abacus-ai/contract/work-tools";
 import type { UIMessage } from "@tanstack/ai-client";
 import { X } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
@@ -47,7 +48,6 @@ import { Input } from "#renderer/ui/input";
 
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
-import { isWorkTool } from "./deliverable-offer";
 import { useTailCards } from "./tail-cards";
 import { isLive } from "./upgrade-triggers";
 
@@ -103,8 +103,12 @@ export const ratingPromptTarget = (
       messageTools(messages[index]!).map((tool) => tool.name)
     );
   const latestTools = toolsOf(turn.assistantIndices);
-  if (own.length < RATING_PROMPT_MIN_TURNS && !latestTools.some(isWorkTool))
-    return null;
+  const latestWork = turn.assistantIndices.some((index) =>
+    messageTools(messages[index]!).some((tool) =>
+      isWorkCall(tool.name, tool.input)
+    )
+  );
+  if (own.length < RATING_PROMPT_MIN_TURNS && !latestWork) return null;
   const previous = turns.at(-2);
   const previousAssistants = (previous?.assistantIndices ?? []).map(
     (index) => messages[index]!

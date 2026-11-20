@@ -33,6 +33,7 @@ import {
   TOP_MODEL_FAMILIES,
 } from "@abacus-ai/contract/retry-offer";
 import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
+import { isWorkCall } from "@abacus-ai/contract/work-tools";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, RotateCcw, Sparkles, X } from "lucide-react";
@@ -59,7 +60,7 @@ import { Button } from "#renderer/ui/button";
 
 import { useHost, useThreadStore } from "../store/selectors";
 import { useChatView } from "./context";
-import { deliverableOfferTarget, isWorkTool } from "./deliverable-offer";
+import { deliverableOfferTarget } from "./deliverable-offer";
 import { useTailCardClaim } from "./tail-cards";
 import { isLive } from "./upgrade-triggers";
 
@@ -98,7 +99,9 @@ export const retryOfferTarget = (
     return null;
   const ranWork = (indices: readonly number[]): boolean =>
     indices.some((index) =>
-      messageTools(messages[index]!).some((tool) => isWorkTool(tool.name))
+      messageTools(messages[index]!).some((tool) =>
+        isWorkCall(tool.name, tool.input)
+      )
     );
   const earlier = turns
     .slice(0, -1)

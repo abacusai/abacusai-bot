@@ -333,7 +333,7 @@ export interface RetryOfferTurn {
   earlierAsks: readonly string[];
   /** The turn's final reply. */
   reply: string;
-  /** The turn ran tools that build or change something. */
+  /** The turn ran tools that build or change something (work-tools.ts isWorkCall). */
   ranWork: boolean;
   /** So did the turn before it. */
   earlierRanWork: boolean;

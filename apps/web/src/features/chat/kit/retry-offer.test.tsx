@@ -113,6 +113,66 @@ const COMPLAINT: StreamChunk[] = [
   b.runFinished("r2", "success"),
 ];
 
+/**
+ * A game built through a connector's own tools (no file tool at all): it
+ * runs Luau in Studio and playtests, says it is fixed, and the user writes
+ * back that it still looks wrong.
+ */
+const CONNECTOR_COMPLAINT: StreamChunk[] = [
+  b.runStarted("r1"),
+  ...b.text("r1-u", "user", "Mach die Häuser schöner, sie sehen klobig aus"),
+  b.textStart("r1-a"),
+  ...b.toolCall("c1", "roblox-studio_search_game_tree", "r1-a", {
+    query: "House",
+  }),
+  b.toolResult("c1", { text: "Workspace.House1, Workspace.House2" }),
+  ...b.toolCall("c2", "roblox-studio_execute_luau", "r1-a", {
+    code: "workspace.House1.Roof.Size = Vector3.new(12, 1, 12)",
+  }),
+  b.toolResult("c2", { text: "ok" }),
+  ...b.toolCall("c3", "roblox-studio_start_stop_play", "r1-a", {
+    mode: "start_play",
+  }),
+  b.toolResult("c3", { text: "Play started" }),
+  ...b.toolCall("c4", "roblox-studio_get_console_output", "r1-a", {}),
+  b.toolResult("c4", { text: "" }),
+  b.textDelta("r1-a", "Behoben: die Häuser haben jetzt flachere Dächer."),
+  b.textEnd("r1-a"),
+  b.runFinished("r1", "success"),
+  b.runStarted("r2"),
+  ...b.text("r2-u", "user", "es sieht immer noch zu klobig aus"),
+  b.textStart("r2-a"),
+  ...b.toolCall("c5", "roblox-studio_execute_luau", "r2-a", {
+    code: "workspace.House1.Roof.Size = Vector3.new(10, 1, 10)",
+  }),
+  b.toolResult("c5", { text: "ok" }),
+  b.textDelta("r2-a", "Ich habe die Dächer schmaler gemacht."),
+  b.textEnd("r2-a"),
+  b.runFinished("r2", "success"),
+];
+
+/** A research answer that only looked things up, then the same complaint. */
+const RESEARCH_COMPLAINT: StreamChunk[] = [
+  b.runStarted("r1"),
+  ...b.text("r1-u", "user", "Which Roblox genres are popular this year?"),
+  b.textStart("r1-a"),
+  ...b.toolCall("c1", "web_search", "r1-a", { query: "popular Roblox genres" }),
+  b.toolResult("c1", { text: "Tycoons, obbies, simulators" }),
+  ...b.toolCall("c2", "roblox-studio_search_game_tree", "r1-a", {
+    query: "Workspace",
+  }),
+  b.toolResult("c2", { text: "Workspace.Baseplate" }),
+  b.textDelta("r1-a", "Tycoons, obbies and simulators lead this year."),
+  b.textEnd("r1-a"),
+  b.runFinished("r1", "success"),
+  b.runStarted("r2"),
+  ...b.text("r2-u", "user", "es sieht immer noch zu klobig aus"),
+  b.textStart("r2-a"),
+  b.textDelta("r2-a", "Was genau sieht klobig aus?"),
+  b.textEnd("r2-a"),
+  b.runFinished("r2", "success"),
+];
+
 const VIDEO_ASK = "Make a 30-second video for my bakery's new croissant";
 
 /** The same video ask twice, each answered by paid_feature's card: the repeat reason, on a hand-off. */
@@ -310,6 +370,24 @@ describe("RetryOfferRow under a plan hand-off", () => {
     await settled();
     await settled();
     expect(document.querySelector('[data-slot="paid-feature"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
+    expect(h.steps).toEqual([]);
+  });
+});
+
+describe("RetryOfferRow after a connector's work", () => {
+  it("offers the retry on a complaint after a turn that built through a connector's tools", async () => {
+    await mount("free", { events: CONNECTOR_COMPLAINT });
+    const line = await findLine();
+    expect(
+      line.closest('[data-slot="retry-offer"]')?.getAttribute("data-reason")
+    ).toBe("complaint");
+  });
+
+  it("stays down on the same complaint after a turn that only looked things up", async () => {
+    const h = await mount("free", { events: RESEARCH_COMPLAINT });
+    await settled();
+    await settled();
     expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
     expect(h.steps).toEqual([]);
   });
