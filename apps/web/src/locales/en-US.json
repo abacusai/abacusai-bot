@@ -2279,6 +2279,11 @@
       "into": "Continued in",
       "startsFrom": "Starts from a summary of “{{label}}”",
       "drop": "Start without it"
+    },
+    "websitePrompt": {
+      "label": "Your task from the website",
+      "stop": "Stop",
+      "edit": "Edit"
     }
   },
   "terminalShells": {

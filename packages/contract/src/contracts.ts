@@ -1693,6 +1693,12 @@ export interface AbacusAccountInfo {
   share_artifact?: boolean;
   /** The daily streak of a new free account; absent or null when the platform offers none today. */
   streak?: AbacusStreak | null;
+  /**
+   * What the person typed on the website before signing up, until the app
+   * takes it (contract website-prompt.ts). Absent when there is none, and
+   * from older servers.
+   */
+  website_prompt?: string;
 }
 
 /** One day of the streak's week, as the platform reads it in the user's time zone. */

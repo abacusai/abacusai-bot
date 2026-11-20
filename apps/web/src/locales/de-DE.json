@@ -2279,6 +2279,11 @@
       "into": "Fortgesetzt in",
       "startsFrom": "Beginnt mit einer Zusammenfassung von „{{label}}“",
       "drop": "Ohne sie beginnen"
+    },
+    "websitePrompt": {
+      "label": "Deine Aufgabe von der Website",
+      "stop": "Stoppen",
+      "edit": "Bearbeiten"
     }
   },
   "terminalShells": {

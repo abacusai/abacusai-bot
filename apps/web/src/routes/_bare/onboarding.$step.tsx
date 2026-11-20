@@ -7,6 +7,7 @@ import {
 import { isPayingAbacusTier } from "@abacus-ai/contract/models";
 import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import { abacusAgentPromptUrl } from "@abacus-ai/contract/toolsets";
+import { websitePromptSize } from "@abacus-ai/contract/website-prompt";
 import { isCancelledError } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
@@ -69,6 +70,11 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 
+import {
+  passOverWebsitePrompt,
+  planWebsitePrompt,
+  startWebsitePrompt,
+} from "../-website-prompt";
 import { WELCOME_STARTS } from "../-welcome-starts";
 const OnboardingRoute = () => {
   const { t } = useTranslation();
@@ -291,6 +297,38 @@ const OnboardingRoute = () => {
         return;
     }
   };
+  // The prompt the person typed on the website runs as their first task, in
+  // place of the first-run picks; once per install (-website-prompt.ts).
+  const websitePromptHandled = useRef(false);
+  const takeWebsitePrompt = useEffectEvent(
+    (plan: NonNullable<FlowFacts["websitePrompt"]>) => {
+      if (plan.kind === "skip") {
+        passOverWebsitePrompt();
+        void transport.client.system
+          .funnelStep({ step: "website_prompt_skipped", detail: plan.reason })
+          .catch(() => {});
+        return;
+      }
+      startWebsitePrompt(plan.prompt);
+      void (async () => {
+        await transport.client.system
+          .funnelStep({
+            step: "website_prompt_run",
+            detail: websitePromptSize(plan.prompt),
+          })
+          .catch(() => {});
+        await finish({ to: "new-session" });
+      })().catch((error) =>
+        console.warn("[onboarding] website prompt failed", error)
+      );
+    }
+  );
+  useEffect(() => {
+    if (step !== "first-bot" || facts.provisional) return;
+    if (facts.websitePrompt == null || websitePromptHandled.current) return;
+    websitePromptHandled.current = true;
+    takeWebsitePrompt(facts.websitePrompt);
+  }, [step, facts.provisional, facts.websitePrompt]);
   const automaticallySignIn = useEffectEvent(() => {
     if (onboardingStore.state.signIn?.status !== "pending") auth("signin");
   });
@@ -367,14 +405,27 @@ const OnboardingRoute = () => {
  */
 const factsOf = async (
   context: import("#renderer/router").RouterContext,
-  signal: AbortSignal
+  signal: AbortSignal,
+  step?: OnboardingStepId
 ): Promise<FlowFacts> => {
   const [settings, account] = await Promise.all([
     context.transport.client.settings.get({}, { signal }),
     context.transport.client.account.abacus({}, { signal }),
+    // The first-run step counts this install's chats (the website's prompt).
+    step === "first-bot"
+      ? context.db.collections.sessions.preload()
+      : Promise.resolve(),
   ]);
   const payingTier = isPayingAbacusTier(account?.subscription_tier);
   return {
+    ...(step === "first-bot"
+      ? {
+          websitePrompt: planWebsitePrompt(
+            account,
+            context.db.collections.sessions.toArray.length
+          ),
+        }
+      : {}),
     signedIn: canSignOutOfAbacus(settings),
     payingTier,
     ownsBot: context.db.collections.bots.toArray.length > 0,
@@ -432,7 +483,10 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
   loader: async ({ context, params, cause, abortController }) => {
     if (context.provisional) return { facts: UNKNOWN_FACTS };
     const { signal } = abortController;
-    if (cause === "preload") return { facts: await factsOf(context, signal) };
+    if (cause === "preload")
+      return {
+        facts: await factsOf(context, signal, params.step as OnboardingStepId),
+      };
     if (params.step === "connected")
       await context.transport.client.account.abacus(
         { refresh: true },
@@ -470,7 +524,9 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
           })
         )
       ).catch(() => undefined);
-    return { facts: await factsOf(context, signal) };
+    return {
+      facts: await factsOf(context, signal, params.step as OnboardingStepId),
+    };
   },
   component: OnboardingRoute,
 });

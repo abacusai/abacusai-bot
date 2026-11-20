@@ -1,5 +1,6 @@
 import type { AccountState } from "@abacus-ai/contract/account";
 import type { PrefsRow } from "@abacus-ai/contract/contract";
+import type { websitePromptDecision } from "@abacus-ai/contract/website-prompt";
 
 import {
   ONBOARDING_STEPS,
@@ -17,6 +18,12 @@ export interface FlowFacts {
   offer?: boolean;
   /** Not from the host yet (spec 09 D12): render, but act on nothing. */
   provisional?: boolean;
+  /**
+   * On the first-run step: the prompt the person typed on the website, to run
+   * as their first task instead of the first-run picks (`run`), or to let go
+   * of (`skip`). Null or absent: there is none.
+   */
+  websitePrompt?: ReturnType<typeof websitePromptDecision>;
 }
 export type FlowEvent =
   | { type: "sign-up" | "sign-in" | "retry"; attempt: string }

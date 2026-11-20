@@ -263,6 +263,11 @@ export const FUNNEL_STEPS = [
   // upgrade page asked for (openUpgrade). Detail: the surface's UpgradeSrc.
   "upgrade_shown",
   "upgrade_tapped",
+  // The prompt typed on the website before sign-up (website-prompt.ts): run
+  // as the first task (detail: its length bucket), or not run because the
+  // install already had chats or the person had typed their own words.
+  "website_prompt_run",
+  "website_prompt_skipped",
 ] as const;
 
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];

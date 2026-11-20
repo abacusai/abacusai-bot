@@ -28,6 +28,7 @@ import {
   hasAgentBrowserTab,
 } from "#renderer/features/sessions/dock/agent-browser";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
+import { withWebsitePrompt } from "#renderer/features/sessions/website-prompt-label";
 import {
   useChatCommands,
   type ComposerCommand,
@@ -35,6 +36,7 @@ import {
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
+import { websitePromptSessionId } from "#renderer/lib/website-prompt";
 /**
  * The chat's Markdown for text a dock tab shows (a PR's description and
  * conversation). That text is anyone's, so it renders untrusted: no
@@ -578,54 +580,77 @@ const SessionRoute = () => {
               ),
               renderDeliverables: (items) =>
                 sessionDeliverablesCard(items, deliverableOptions),
-              decorateMessage: withContinuationLinks(
-                withRunReports((message, context) => {
-                  if (message.role !== "assistant") return null;
-                  // A coalesced row is keyed by its host; the turn's carrier
-                  // may be any message folded into it, so use the last of them.
-                  const at = rowEndIndex(message, context);
-                  const files =
-                    at < 0
-                      ? null
-                      : deliverablesAfter(
-                          context.messages,
-                          at,
-                          context.runActive
+              decorateMessage: withWebsitePrompt(
+                withContinuationLinks(
+                  withRunReports((message, context) => {
+                    if (message.role !== "assistant") return null;
+                    // A coalesced row is keyed by its host; the turn's carrier
+                    // may be any message folded into it, so use the last of them.
+                    const at = rowEndIndex(message, context);
+                    const files =
+                      at < 0
+                        ? null
+                        : deliverablesAfter(
+                            context.messages,
+                            at,
+                            context.runActive
+                          );
+                    const after =
+                      files == null
+                        ? undefined
+                        : sessionDeliverablesCard(files, deliverableOptions);
+                    if (context.runActive && at === context.messages.length - 1)
+                      return after != null ? { after } : null;
+                    // Keyed on the stored host message, not the shown row: the
+                    // key counts stored parts, and the tool-only messages folded
+                    // in after it hold no text. Nothing spoken, nothing to rate.
+                    const stored = context.messages.find(
+                      (row) => row.id === message.id
+                    );
+                    const segmentId =
+                      stored == null ? null : feedbackSegmentId(stored);
+                    if (segmentId == null)
+                      return after != null ? { after } : null;
+                    return {
+                      ...(after != null ? { after } : {}),
+                      actions: (
+                        <MessageFeedback
+                          id={`${sessionId}:${segmentId}`}
+                          send={(rating, comment) =>
+                            transport.client.agent.feedback({
+                              sessionId,
+                              segmentId,
+                              rating,
+                              ...(comment ? { comment } : {}),
+                            })
+                          }
+                        />
+                      ),
+                    };
+                  }, reports),
+                  continuations
+                ),
+                // The chat the website's prompt started: its first message is
+                // labelled as the person's task from the website.
+                websitePromptSessionId() === sessionId
+                  ? {
+                      stop: () =>
+                        void runtime
+                          .session(sessionId)
+                          .cancel()
+                          .catch(() => {}),
+                      edit: (text) => {
+                        updateDraft(sessionId, (draft) => ({ ...draft, text }));
+                        requestAnimationFrame(() =>
+                          document
+                            .querySelector<HTMLTextAreaElement>(
+                              '[data-slot="composer"] textarea'
+                            )
+                            ?.focus()
                         );
-                  const after =
-                    files == null
-                      ? undefined
-                      : sessionDeliverablesCard(files, deliverableOptions);
-                  if (context.runActive && at === context.messages.length - 1)
-                    return after != null ? { after } : null;
-                  // Keyed on the stored host message, not the shown row: the
-                  // key counts stored parts, and the tool-only messages folded
-                  // in after it hold no text. Nothing spoken, nothing to rate.
-                  const stored = context.messages.find(
-                    (row) => row.id === message.id
-                  );
-                  const segmentId =
-                    stored == null ? null : feedbackSegmentId(stored);
-                  if (segmentId == null)
-                    return after != null ? { after } : null;
-                  return {
-                    ...(after != null ? { after } : {}),
-                    actions: (
-                      <MessageFeedback
-                        id={`${sessionId}:${segmentId}`}
-                        send={(rating, comment) =>
-                          transport.client.agent.feedback({
-                            sessionId,
-                            segmentId,
-                            rating,
-                            ...(comment ? { comment } : {}),
-                          })
-                        }
-                      />
-                    ),
-                  };
-                }, reports),
-                continuations
+                      },
+                    }
+                  : null
               ),
               permissionActions: (descriptor) => (
                 <SessionPermissionAction

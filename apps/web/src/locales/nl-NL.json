@@ -2279,6 +2279,11 @@
       "into": "Vervolgd in",
       "startsFrom": "Begint met een samenvatting van ‘{{label}}’",
       "drop": "Zonder beginnen"
+    },
+    "websitePrompt": {
+      "label": "Je taak van de website",
+      "stop": "Stoppen",
+      "edit": "Bewerken"
     }
   },
   "terminalShells": {

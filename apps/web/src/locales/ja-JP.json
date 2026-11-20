@@ -2279,6 +2279,11 @@
       "into": "続きの先:",
       "startsFrom": "「{{label}}」の要約から始まります",
       "drop": "要約なしで始める"
+    },
+    "websitePrompt": {
+      "label": "ウェブサイトからのあなたのタスク",
+      "stop": "停止",
+      "edit": "編集"
     }
   },
   "terminalShells": {

@@ -2279,6 +2279,11 @@
       "into": "Dilanjutkan di",
       "startsFrom": "Dimulai dari ringkasan “{{label}}”",
       "drop": "Mulai tanpa ringkasan"
+    },
+    "websitePrompt": {
+      "label": "Tugas Anda dari situs web",
+      "stop": "Hentikan",
+      "edit": "Edit"
     }
   },
   "terminalShells": {

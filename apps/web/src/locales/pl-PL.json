@@ -2301,6 +2301,11 @@
       "into": "Kontynuowane w",
       "startsFrom": "Zaczyna od podsumowania „{{label}}”",
       "drop": "Zacznij bez niego"
+    },
+    "websitePrompt": {
+      "label": "Twoje zadanie ze strony",
+      "stop": "Zatrzymaj",
+      "edit": "Edytuj"
     }
   },
   "terminalShells": {

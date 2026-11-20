@@ -2279,6 +2279,11 @@
       "into": "Suite dans",
       "startsFrom": "Commence par un résumé de « {{label}} »",
       "drop": "Commencer sans"
+    },
+    "websitePrompt": {
+      "label": "Votre tâche depuis le site web",
+      "stop": "Arrêter",
+      "edit": "Modifier"
     }
   },
   "terminalShells": {
