@@ -6,8 +6,8 @@ import * as path from "node:path";
  * Originally ported from codingagent-lite (abacusai/codingagent-lite), MIT.
  *
  * File rules for cheap-model sloppiness: replacing an existing file keeps a
- * copy of what was there, whether `write` or a shell `>` replaces it, and is
- * refused when no copy can be kept; `edit` needs a read first; nothing is
+ * copy of what was there, whether `write` or the shell (`>`, tee, cp, mv)
+ * replaces it, and is refused when the copy fails; `edit` needs a read first; nothing is
  * hand-written into .git or node_modules; bash does not overwrite an existing
  * secret file. What a command does to this machine is the shell judge's
  * call: the permission gate asks about it, and where there is no gate
@@ -166,6 +166,28 @@ function backUpExistingFile(abs: string, cwd: string): string | null {
 const copyNote = (target: string, backup: string): string =>
   `The previous contents of ${target} were saved to ${modelPath(backup)}. ` +
   `If this rewrite lost something, restore it with: cp ${modelPath(backup)} ${target}`;
+
+/**
+ * The existing files a shell write would replace, with the name to show for
+ * each: a `>` or tee target, or a cp/mv destination. A destination that is a
+ * folder replaces the file of each source's name inside it.
+ */
+function filesReplacedBy(write: LocalWrite): Array<[string, string]> {
+  if (write.kind === "overwrite") return [[write.path, write.target]];
+  if (write.kind !== "copy") return [];
+  let folder = /[\\/]$/.test(write.target);
+  try {
+    folder ||= fs.statSync(write.path).isDirectory();
+  } catch {
+    // A destination that doesn't exist yet replaces nothing.
+    if (!folder) return [];
+  }
+  if (!folder) return [[write.path, write.target]];
+  return (write.sources ?? []).map((source) => {
+    const name = path.basename(source);
+    return [path.join(write.path, name), path.join(write.target, name)];
+  });
+}
 
 /** Keep the newest few copies of one file; drop the rest. */
 function pruneOldBackups(directory: string, name: string, keep: number): void {
@@ -386,45 +408,39 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
         }
       }
 
-      // A `>` onto an existing file replaces it, as `write` does, so it
-      // answers to the same rule: the previous contents are kept first. The
-      // copy is taken before the command runs, so `rm -f X; build > X` keeps
-      // the X the rm removes. Through a link, the copy is of what it points at.
+      // Replacing an existing file from the shell answers to write's rule: a
+      // `>`, a tee, or a cp/mv onto a file (or into a folder holding one of
+      // the same name) keeps the previous contents first. The copy is taken
+      // before the command runs, so `rm -f X; build > X` keeps the X the rm
+      // removes. Through a link, the copy is of what it points at.
       const replaced = new Map<string, string>();
+      const uncopied: string[] = [];
       for (const write of judgement.localWrites) {
-        if (write.kind !== "overwrite" || replaced.has(write.path)) continue;
-        // A project checked out under /tmp keeps the copy; judged on the real
-        // target so a link parked in /tmp cannot carry the redirect elsewhere.
-        if (
-          isRealScratch(write.path) &&
-          !isInsideWorkspace(write.path, ctx.cwd)
-        )
-          continue;
-        const real = realPathOf(write.path);
-        if (
-          runOrigin() === "routine" &&
-          real !== null &&
-          ROUTINE_RECORDS.test(real.replace(/\\/g, "/"))
-        )
-          continue;
-        let size: number;
-        try {
-          const stat = fs.statSync(write.path);
-          // A new file, or a device like /dev/stdout: nothing to keep.
+        for (const [abs, shown] of filesReplacedBy(write)) {
+          if (replaced.has(abs)) continue;
+          // A project checked out under /tmp keeps the copy; judged on the real
+          // target so a link parked in /tmp cannot carry the write elsewhere.
+          if (isRealScratch(abs) && !isInsideWorkspace(abs, ctx.cwd)) continue;
+          const real = realPathOf(abs);
+          if (
+            runOrigin() === "routine" &&
+            real !== null &&
+            ROUTINE_RECORDS.test(real.replace(/\\/g, "/"))
+          )
+            continue;
+          let stat: fs.Stats;
+          try {
+            stat = fs.statSync(abs);
+          } catch {
+            continue;
+          }
+          // A new file, a folder, or a device like /dev/stdout: nothing to keep.
           if (!stat.isFile()) continue;
-          size = stat.size;
-        } catch {
-          continue;
+          // The shell has no in-place alternative to offer, so a file too large
+          // to copy is replaced, and the result says no copy was kept.
+          if (stat.size > MAX_BACKUP_BYTES) uncopied.push(shown);
+          else replaced.set(abs, shown);
         }
-        if (size > MAX_BACKUP_BYTES) {
-          return {
-            block: true,
-            reason:
-              `${write.target} is too large to keep a copy of before \`>\` replaces it. ` +
-              `Write the output to a new file, or \`>>\` to append.`,
-          };
-        }
-        replaced.set(write.path, write.target);
       }
 
       const kept: string[] = [];
@@ -437,23 +453,20 @@ function guardrails(pi: ExtensionAPI, options: GuardrailsOptions): void {
           return {
             block: true,
             reason:
-              `Could not keep a copy of ${target} before \`>\` replaces it ` +
+              `Could not keep a copy of ${target} before this command replaces it ` +
               `(${error instanceof Error ? error.message : String(error)}). ` +
-              `Write the output to a new file, or \`>>\` to append.`,
+              `Write the output to a new file instead.`,
           };
         }
-        // Outside the workspace there is nowhere to keep the copy.
-        if (backup == null) {
-          return {
-            block: true,
-            reason:
-              `The redirect \`> ${target}\` would overwrite an existing file outside the ` +
-              `workspace, where no copy of it can be kept. Write the output to a new file, ` +
-              `or \`>>\` to append.`,
-          };
-        }
-        kept.push(copyNote(target, path.relative(ctx.cwd, backup)));
+        // Outside the workspace no copy is kept, as with write: whether the
+        // command may write there is the permission gate's question.
+        if (backup != null)
+          kept.push(copyNote(target, path.relative(ctx.cwd, backup)));
       }
+      for (const target of uncopied)
+        kept.push(
+          `${target} was over ${MAX_BACKUP_BYTES / 1024 / 1024} MB, so no copy of its previous contents was kept.`
+        );
       if (kept.length > 0) {
         const note = reports.get(event.toolCallId);
         reports.set(

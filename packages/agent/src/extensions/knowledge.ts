@@ -53,7 +53,7 @@ const TOOL_CARDS: Record<string, string> = {
     "bash usage: non-interactive commands only; big outputs get trimmed, so pipe exploration through " +
     "grep/head/tail. For file changes use edit/batch_edit/write/ast_edit, not shell redirects. Sending " +
     "a command's output to a file (`cmd > run.log`) is fine; replacing an existing file that way keeps " +
-    "a copy under .abacusai-bot/backups/, as write does.",
+    "a copy under .abacusai-bot/backups/, as write does, and so does tee, cp or mv onto an existing file.",
 };
 
 function detectStack(cwd: string): string[] {

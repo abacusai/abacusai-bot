@@ -53,6 +53,8 @@ export interface LocalWrite {
    * be a folder it writes into), or a verb that changes only metadata.
    */
   kind: "overwrite" | "append" | "command" | "delete" | "copy" | "meta";
+  /** For a copy or move: what it copies, resolved, so a folder destination names the files it replaces. */
+  sources?: string[];
 }
 
 /** One simple command this machine runs, wrappers stepped over. */
@@ -125,7 +127,6 @@ const WINDOWS_DELETERS = /^(?:remove-item|ri|rm|rmdir|rd|del|erase|rni)$/i;
 
 /** Writer verbs: every operand, or only the last. */
 const WRITES_EVERY_OPERAND = new Set([
-  "tee",
   "rm",
   "rmdir",
   "unlink",
@@ -651,15 +652,25 @@ function addWrite(
   target: string,
   kind: LocalWrite["kind"],
   scope: Scope,
-  text: string
+  text: string,
+  sources?: readonly string[]
 ): void {
   if (target === "/dev/null" || target.length === 0 || isDyn(target)) return;
   if (BLOCK_DEVICE.test(target)) add(context, "disk", "confirm", text);
   if (!scope.collectWrites) return;
   // An unknown `cd` leaves the original folder as the best guess for the file rules.
-  const resolved =
-    resolve(context, target) ?? path.resolve(context.options.cwd, target);
-  context.writes.push({ target, path: resolved, kind });
+  const at = (file: string): string =>
+    resolve(context, file) ?? path.resolve(context.options.cwd, file);
+  context.writes.push(
+    sources == null
+      ? { target, path: at(target), kind }
+      : {
+          target,
+          path: at(target),
+          kind,
+          sources: sources.filter((file) => !isDyn(file)).map(at),
+        }
+  );
 }
 
 /**
@@ -1556,6 +1567,16 @@ function writesOf(
   const write = (target: string, kind: LocalWrite["kind"]): void =>
     addWrite(context, target, kind, scope, text);
 
+  // tee replaces each file it names unless told to append.
+  if (tool === "tee") {
+    const append = args.some(
+      (word) => word === "--append" || isFlagWith(word, "a")
+    );
+    for (const operand of operands)
+      write(operand, append ? "append" : "overwrite");
+    return;
+  }
+
   if (tool === "sed") {
     if (args.some((word) => /^-[a-zA-Z]*i/.test(word) || word === "--in-place"))
       for (const operand of operands.slice(1)) write(operand, "command");
@@ -1570,7 +1591,8 @@ function writesOf(
       write(operand, "meta");
   } else if (WRITES_LAST_OPERAND.has(tool) && operands.length > 1) {
     const last = operands[operands.length - 1]!;
-    if (local(last)) write(last, "copy");
+    if (local(last))
+      addWrite(context, last, "copy", scope, text, operands.slice(0, -1));
   } else if (tool === "curl" || tool === "wget") {
     const output = optionValue(
       args,
