@@ -120,23 +120,31 @@ describe("what the model is told", () => {
 
 describe("a rule against emojis", () => {
   it.each([
-    ["Never use emojis.", true],
-    ["No emojis in anything you send me", true],
+    ["never use emojis", true],
+    ["no emojis please", true],
     ["Please stop using emoji", true],
-    ["Keine Emojis, bitte.", true],
+    ["Do not add any emojis to what you send me.", true],
+    ["Keep it emoji-free.", true],
+    ["Bitte keine Emojis.", true],
+    ["No uses emojis.", true],
     ["Sin emojis.", true],
+    ["Não use emojis.", true],
+    ["Emoji kullanma.", true],
     ["N'utilise pas d'émojis.", true],
-    ["Niente emoji, mai.", true],
+    ["Niente emoji.", true],
     ["Geen emoji's gebruiken.", true],
     ["Bez emoji.", true],
-    ["Emoji kullanma.", true],
     ["Jangan pakai emoji.", true],
     ["絵文字は使わないでください。", true],
     ["不要使用表情符号。", true],
     ["이모지 사용하지 마세요.", true],
-    ["Use lots of emojis!", false],
-    ["Answer in British English.", false],
+    // Both words, but the "never" is about something else.
+    ["Use emojis, never plain bullets", false],
+    ["I love emojis", false],
+    // A limit, not a ban: the block still carries it to the model.
+    ["don't overdo the emojis", false],
     ["No exclamation marks. Emojis are fine.", false],
+    ["Answer in British English.", false],
   ])("%s → %s", async (rule, expected) => {
     await writeCustomInstructions(rule);
     expect(standingInstructionsRuleOutEmoji()).toBe(expected);

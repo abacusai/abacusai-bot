@@ -10,6 +10,7 @@ import {
 } from "../bot/bot-reaction-tool.js";
 import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "../bot/bot-time-tool.js";
 import { WHATSAPP_CHANNEL } from "../channel.js";
+import { standingInstructionsRuleOutEmoji } from "../custom-instructions.js";
 import type { ForeverProfile } from "../forever/profile.js";
 import { buildOwnerTools, OWNER_TOOL_NAMES } from "../owner-tools.js";
 import { languageCodeScript } from "../reply-language.js";
@@ -120,7 +121,8 @@ export function createPhoneProfile(
   const recentUserText = new RecentUserText();
 
   return {
-    // Read at session start; `current_time` reads the zone on every call.
+    // Read when the prompt is built (at start, or when the rules change);
+    // `current_time` reads the zone on every call.
     // The server's language for the user is the reply fallback, not the app's.
     statesReplyLanguage: true,
     // The check-in language is set from the words the user writes in.
@@ -133,7 +135,8 @@ export function createPhoneProfile(
       phoneOperatingPrompt(
         options.model,
         phoneZone(home),
-        phoneReplyLanguage(home)
+        phoneReplyLanguage(home),
+        !standingInstructionsRuleOutEmoji()
       ),
     ],
     tools: (_cwd, host) => [

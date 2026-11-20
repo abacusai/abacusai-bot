@@ -204,8 +204,7 @@ describe("standing instructions everywhere the bot writes to the user", () => {
     expect(subAgentMemory().join("\n")).toContain(FORMAL);
   }, 120_000);
 
-  it("reach a bot's chat with its owner, reactions included", async () => {
-    await seedStanding();
+  it("reach a bot's chat with its owner; a ban on emojis takes reactions off the run, once, from the next turn", async () => {
     process.env.ABACUSAI_BOT_BOT_DIR = path.join(home, "bot");
     fs.mkdirSync(process.env.ABACUSAI_BOT_BOT_DIR);
     process.env.ABACUSAI_BOT_AUDIENCE = "owner";
@@ -218,17 +217,26 @@ describe("standing instructions everywhere the bot writes to the user", () => {
     } as never);
     await bot.start();
     await bot.send("Thank you, that was great work!");
+    await bot.send("And another thing.");
+    await seedStanding();
+    await bot.send("Thanks again!");
+    await bot.send("One more.");
 
-    const prompt = systemPrompt(0);
+    const reacts = (index: number): boolean =>
+      provider.calls[index]!.tools.includes("react_to_message");
+    // Before the rule: the tool and its guidance are there, and nothing moves.
+    expect(reacts(0) && reacts(1)).toBe(true);
+    expect(systemPrompt(0)).toContain("react_to_message");
+    expect(systemPrompt(1)).toBe(systemPrompt(0));
+    // After it: the block arrives, the tool and every word of it go, and stay gone.
+    const last = provider.calls.length - 1;
+    const prompt = systemPrompt(last);
     expect(prompt).toContain(NO_EMOJI);
     expect(prompt).toContain(FORMAL);
     expect(prompt).toMatch(/routine's saved instruction/);
-    const reaction = JSON.stringify(
-      (provider.calls[0]!.body.tools as unknown[]).find((tool) =>
-        JSON.stringify(tool).includes('"react_to_message"')
-      )
-    );
-    expect(reaction).toMatch(/standing instructions come first/);
+    expect(prompt).not.toContain("react_to_message");
+    expect(reacts(last) || reacts(last - 1)).toBe(false);
+    expect(systemPrompt(last - 1)).toBe(prompt);
   }, 120_000);
 
   it("give someone else's chat the rules but never the user's preferences", async () => {

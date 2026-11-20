@@ -1,5 +1,3 @@
-import { standingInstructionsRuleOutEmoji } from "../custom-instructions.js";
-
 /** Reactions are persisted as tool results alongside the turn they acknowledge. */
 export const BOT_REACTION_TOOL_NAME = "react_to_message";
 export const BOT_REACTION_EMOJIS = [
@@ -23,7 +21,7 @@ export function buildBotReactionTool() {
     name: BOT_REACTION_TOOL_NAME,
     label: BOT_REACTION_TOOL_NAME,
     description:
-      "Attach one emoji reaction badge to the user's message in this turn. Invoke this tool to react; never send an emoji-only assistant message or use reply text as a substitute. Use this proactively for clear feelings, praise, thanks, humor, achievements, or dissatisfaction with your work, in any language, even when the same message also requests a task. Match the tone: support for distress, appreciation for praise, acknowledgement for criticism. Skip neutral task-only, automated, scheduled, or internal messages. A reaction supplements your answer or work; it never replaces it. Calling again replaces the reaction. The user's standing instructions come first: when they ask for no emojis or no reactions, never call this.",
+      "Attach one emoji reaction badge to the user's message in this turn. Invoke this tool to react; never send an emoji-only assistant message or use reply text as a substitute. Use this proactively for clear feelings, praise, thanks, humor, achievements, or dissatisfaction with your work, in any language, even when the same message also requests a task. Match the tone: support for distress, appreciation for praise, acknowledgement for criticism. Skip neutral task-only, automated, scheduled, or internal messages. A reaction supplements your answer or work; it never replaces it. Calling again replaces the reaction. When the user's standing instructions ask for no reactions, never call this.",
     parameters: {
       type: "object",
       properties: { emoji: { type: "string", enum: [...BOT_REACTION_EMOJIS] } },
@@ -47,11 +45,6 @@ export function buildBotReactionTool() {
           isError: true,
         };
       }
-      // Thrown, so the call fails and nothing applies it: a reaction is nothing but an emoji.
-      if (standingInstructionsRuleOutEmoji())
-        throw new Error(
-          "Not reacted: the user's standing instructions rule out emojis. Go on without a reaction."
-        );
       return {
         content: [{ type: "text" as const, text: JSON.stringify({ emoji }) }],
         details: { emoji },

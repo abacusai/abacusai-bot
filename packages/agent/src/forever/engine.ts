@@ -25,6 +25,7 @@ import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
 import { notifyConversationQueueCleared } from "../background-processes.js";
 import { basePrompt } from "../base-prompt.js";
 import { tidyBotText } from "../bot/bot-output.js";
+import { BOT_REACTION_TOOL_NAME } from "../bot/bot-reaction-tool.js";
 import {
   browserTaskEnabled,
   buildBrowserTaskTool,
@@ -53,6 +54,7 @@ import {
   customInstructionsPrompt,
   readStandingInstructions,
   routineFireAsInstructed,
+  standingInstructionsRuleOutEmoji,
 } from "../custom-instructions.js";
 import { deckToolEnabled } from "../deck-tool.js";
 import { documentToolEnabled } from "../document-tool.js";
@@ -611,8 +613,8 @@ export class ForeverEngine {
       // Every prompt pi builds starts from ours; see base-prompt.ts. No
       // edit-tool extension here, so `edit` is pi's built-in.
       systemPromptOverride: () => basePrompt("builtin"),
+      // The profile's prompt is in the override below: it changes with the rules.
       appendSystemPrompt: [
-        ...this.profile.systemPrompt(),
         components.length > 0 ? componentsPrompt(new Set(components)) : null,
         githubPrompt(),
         windowsShellPrompt(),
@@ -638,6 +640,7 @@ export class ForeverEngine {
 
         return [
           ...(persona == null ? [] : [persona]),
+          ...this.profile.systemPrompt(),
           ...base,
           ...(mcp == null ? [] : [mcp]),
           // After the static blocks: a plan change rebuilds only from here.
@@ -828,6 +831,7 @@ export class ForeverEngine {
     this.mcpTools.rebind(
       new Set(this.session.getAllTools().map((tool) => tool.name))
     );
+    this.applyReactionRule();
     // A resumed chat: its earlier turns tell whose words the replies follow.
     this.userWords.seed(this.session.messages, (text) => ownWords(text));
     // The language model loads off the turn's path; a turn before it has is judged by script.
@@ -1302,7 +1306,33 @@ export class ForeverEngine {
     if (loader == null || this.session == null) return;
 
     await loader.reload();
+    this.applyReactionRule();
     this.session.setActiveToolsByName(this.session.getActiveToolNames());
+  }
+
+  /**
+   * The reaction tool is off the run while the user's standing instructions
+   * ban emojis (a reaction is nothing but one), and back when they stop.
+   * Changed only with the rules, so the cached prefix holds between edits.
+   */
+  private applyReactionRule(): void {
+    const session = this.session;
+    if (
+      session == null ||
+      !session
+        .getAllTools()
+        .some((tool) => tool.name === BOT_REACTION_TOOL_NAME)
+    )
+      return;
+    const active = session.getActiveToolNames();
+    const on = active.includes(BOT_REACTION_TOOL_NAME);
+    const allowed = !standingInstructionsRuleOutEmoji();
+    if (allowed === on) return;
+    session.setActiveToolsByName(
+      allowed
+        ? [...active, BOT_REACTION_TOOL_NAME]
+        : active.filter((name) => name !== BOT_REACTION_TOOL_NAME)
+    );
   }
 
   /**
@@ -2408,6 +2438,7 @@ export class ForeverEngine {
       this.mcpTools.rebind(
         new Set(this.session.getAllTools().map((tool) => tool.name))
       );
+      this.applyReactionRule();
       // A degenerate summary from a cheap model must not erase the history.
       anchorCompactions(this.session.sessionManager, {
         anchorRequest: this.profile.anchorCompaction !== false,
