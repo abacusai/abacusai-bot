@@ -222,6 +222,22 @@ export function buildDeckTool(
           ? params.slides
           : undefined;
       const wanted = asked ?? 5;
+      // A template deck that printed is done for this turn, as on the design
+      // system: no polishing passes (deck-speed.md). Checked before
+      // the deck row opens: a refused call showed a row that never finished.
+      const turn = turnOf(context);
+      if (passedThisTurn(turn, "deck"))
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "This deck already printed in this turn: it is done. Hand it over with present_deliverable now. Call ppt again only when the user asks for a change.",
+            },
+          ],
+          details: { stoppedBy: "passed" },
+          isError: true,
+        };
+
       const subtaskId = `deck-${Date.now()}-${++counter}`;
       emit(
         tagEvent(
@@ -266,21 +282,6 @@ export function buildDeckTool(
           (await madeByDesignSystem(outputPath)))
       )
         return await plain();
-
-      // A template deck that printed is done for this turn, as on the design
-      // system: no polishing passes (deck-speed.md).
-      const turn = turnOf(context);
-      if (passedThisTurn(turn, "deck"))
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: "This deck already printed in this turn: it is done. Hand it over with present_deliverable now. Call ppt again only when the user asks for a change.",
-            },
-          ],
-          details: { stoppedBy: "passed" },
-          isError: true,
-        };
 
       let result;
       let status: "completed" | "failed" = "failed";
@@ -375,6 +376,8 @@ export const deckResultText = (
     slides?: number;
     template?: string;
     splitNote?: string;
+    printNotes?: string[];
+    offered?: number;
   },
   wanted: number
 ): string =>
@@ -397,12 +400,21 @@ export const deckResultText = (
     ...(result.splitNote != null
       ? ["", `${result.splitNote} Say so to the user in one line.`]
       : []),
+    ...((result.printNotes ?? []).length > 0
+      ? ["", ...result.printNotes!, "Tell the user these in plain words."]
+      : []),
     ...(result.slides != null && result.slides < wanted
       ? [
           "",
           // emerald-editorial offers six slides; asked for seven, the bot
-          // built the seventh by hand and the .pptx kept six.
-          `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
+          // built the seventh by hand and the .pptx kept six. A slide the
+          // print left out is the reason when there is one: the bot once
+          // blamed the template's size for it.
+          (result.printNotes ?? []).some((note) => note.startsWith("Left out"))
+            ? `It printed ${result.slides} of the ${wanted} slides asked for because of the slide left out above, not the template's size. Tell the user, and offer to put that content on another slide; do not build slides by hand.`
+            : result.offered != null && result.offered >= wanted
+              ? `It printed ${result.slides} of the ${wanted} slides asked for: the template has ${result.offered}, and the brief filled ${result.slides}. Tell the user, and offer to add content for more slides; do not say the template is too small, and do not build slides by hand.`
+              : `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
         ]
       : []),
     "",

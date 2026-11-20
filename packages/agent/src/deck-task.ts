@@ -147,6 +147,10 @@ export interface DeckTaskResult {
   template?: string;
   /** A counted list no slide could hold, split over slides. */
   splitNote?: string;
+  /** What printed differently from what was sent: a slide left out, text still overlapping. */
+  printNotes?: string[];
+  /** How many different slides the template offered. */
+  offered?: number;
 }
 
 interface PiToolDefinitionLike {
@@ -267,8 +271,12 @@ export interface Draft {
   coverChecked?: boolean;
   /** Set once slides built around figures, with none, were sent back. */
   figurelessChecked?: boolean;
+  /** Those slides and what they said: named in the result if they never print. */
+  figurelessSent?: Map<number, string>;
   /** Set once text drawn over other text was sent back. */
   overlapChecked?: boolean;
+  /** What the print left out or could not fix, for the bot to tell the user. */
+  printNotes?: string[];
   printed: {
     pdfPath: string;
     htmlPath: string;
@@ -698,6 +706,9 @@ export const buildTools = (
       if (given.length === 0) return failed("No slides were given.");
 
       const notes: string[] = [];
+      // Slides left out of the print, each with why: the bot tells the user
+      // rather than guess (it once said the template held too few slides).
+      const leftOut: string[] = [];
       // Slide numbers the template does not offer, which would be skipped.
       const unknown: string[] = [];
       // Strings that do not line up with the slots: the filler skipped or
@@ -1015,8 +1026,23 @@ export const buildTools = (
       // A slide drawn around big figures with none left prints as empty boxes
       // with a line each (master's read, e2 slide 2): another slide is asked
       // for once, then the slide is left out.
+      const said = (values: Record<string, string>): string => {
+        const words = Object.values(values).filter(
+          (value) => value !== REMOVE && value.trim().length > 0
+        );
+        const heading = words.find((value) => value.length > 12) ?? words[0];
+        return heading != null ? ` ("${heading.slice(0, 70)}")` : "";
+      };
+      const figureNote = (index: number, heading: string): string =>
+        `slide ${index}${heading}: it is drawn around big figures and the brief gives none`;
       if (figureless.length > 0 && draft.figurelessChecked !== true) {
         draft.figurelessChecked = true;
+        draft.figurelessSent = new Map(
+          figureless.map((index) => [
+            index,
+            said(slides.find((slide) => slide.index === index)?.values ?? {}),
+          ])
+        );
         return failed(
           [
             `Not printed yet: ${figureless.map((i) => `slide ${i}`).join(", ")} ${figureless.length === 1 ? "is" : "are"} drawn around big figures, and none of ${figureless.length === 1 ? "its" : "their"} figures is in the brief, so ${figureless.length === 1 ? "it" : "they"} would print as empty boxes.`,
@@ -1027,8 +1053,20 @@ export const buildTools = (
       if (figureless.length > 0 && slides.length > 3)
         for (const index of figureless) {
           const at = slides.findIndex((slide) => slide.index === index);
-          if (at > 0) slides.splice(at, 1);
+          if (at <= 0) continue;
+          leftOut.push(
+            figureNote(index, said(slides.splice(at, 1)[0]!.values))
+          );
+          draft.figurelessSent?.delete(index);
         }
+      // Sent back and then left out by the filler, with nothing in its place:
+      // the bot was told the template held no more and said so.
+      for (const [index, heading] of draft.figurelessSent ?? [])
+        if (
+          slides.length < wantedSlides &&
+          !slides.some((slide) => slide.index === index)
+        )
+          leftOut.push(figureNote(index, heading));
 
       // Asked once already: keep the count asked for, the opening slides and
       // the last (usually the closing one), rather than print a longer deck.
@@ -1173,6 +1211,22 @@ export const buildTools = (
           );
         }
 
+        // Said in the result, not left for the bot to guess.
+        // An overlap sent back once and still there is said, not printed
+        // silently (1.1.17: a timeline line over the footer).
+        draft.printNotes = [
+          ...(leftOut.length > 0
+            ? [
+                `Left out ${leftOut.join("; ")}. What it said is not in the deck.`,
+              ]
+            : []),
+          ...((result.overlaps ?? []).length > 0
+            ? [
+                `Still drawn over other text: ${result.overlaps!.slice(0, 3).join("; ")}.`,
+              ]
+            : []),
+        ];
+
         draft.printed = {
           pdfPath: result.pdfPath,
           htmlPath: result.htmlPath ?? "",
@@ -1194,6 +1248,7 @@ export const buildTools = (
               ? [`HTML source: ${modelPath(result.htmlPath)}`]
               : []),
             ...notes,
+            ...draft.printNotes.map((note) => `${note} Tell the user.`),
             ...((result.dropped ?? []).length > 0
               ? [
                   `Left out because a number in it was not in the request: ${result.dropped!.join("; ")}. Tell the user what was left out.`,
@@ -1368,6 +1423,10 @@ export async function runDeckTask(
           slides: printed.slides,
           ...(draft.template != null ? { template: draft.template } : {}),
           ...(draft.splitNote != null ? { splitNote: draft.splitNote } : {}),
+          ...((draft.printNotes ?? []).length > 0
+            ? { printNotes: draft.printNotes }
+            : {}),
+          ...(draft.known.size > 0 ? { offered: draft.known.size } : {}),
         }
       : {}),
   };
