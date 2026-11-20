@@ -253,7 +253,7 @@
     },
     {
       "name": "bot_help",
-      "description": "Help with this bot's own setup, answered from its live state: its routines (when and where\nthey run, and whether they run with the computer off), its models and provider keys, its\nconnections (connectors and chat apps), its bots and its capabilities. For how do I…, can I…,\nwhere is…, is X connected, does X work when the app is closed, which models can I use, how do\nI connect a chat app or rename a bot. Call it before answering any of these; never answer them\nfrom memory, and never say something is not connected or not possible without it. It names\nthe place in the app for each, which the app shows as a button.\nIt is not for building or publishing apps, websites or pages: that is the user's task, not a\nquestion about this bot. Never call it to check whether you can do a task: when the user asks\nyou to make, build or publish something, use the tools you have for it. Plan prices and\ncredits are billing_plan's. Asked to make an image, video or speech, call paid_feature\nstraight away instead: the plan makes them in Abacus AI Agent on the web.",
+      "description": "Help with this bot's own setup, answered from its live state: its routines (when and where\nthey run, and whether they run with the computer off), its models and provider keys, its\nconnections (connectors and chat apps), its bots and its capabilities, and the app's own\ncontrols (topic app): the message box's buttons (dictating with the microphone, attaching,\nthe model menu, modes, / commands), starting a new chat, the chat list, side panel, areas and\npages. For how do I…, can I…, where is…, is X connected, does X work when the app is closed,\nwhich models can I use, how do I connect a chat app or rename a bot. Call it before answering\nany of these; never answer them from memory, and never say something is not connected or not\npossible without it. It names the place in the app for each, which the app shows as a button.\nIt is not for building or publishing apps, websites or pages: that is the user's task, not a\nquestion about this bot. Never call it to check whether you can do a task: when the user asks\nyou to make, build or publish something, use the tools you have for it. Plan prices and\ncredits are billing_plan's. Asked to make an image, video or speech, call paid_feature\nstraight away instead: the plan makes them in Abacus AI Agent on the web.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -266,13 +266,14 @@
               "routines",
               "bots",
               "capabilities",
-              "plan"
+              "plan",
+              "app"
             ],
             "description": "What the question is about; leave it out for an overview of everything."
           },
           "name": {
             "type": "string",
-            "description": "The one thing asked about, when there is one: a provider (\"gemini\"), a connector (\"gmail\"), a chat app (\"telegram\"), a bot's name, or a capability."
+            "description": "The one thing asked about, when there is one: a provider (\"gemini\"), a connector (\"gmail\"), a chat app (\"telegram\"), a bot's name, a capability, or a control (\"microphone\", \"new chat\")."
           }
         }
       }
@@ -574,7 +575,7 @@
     },
     {
       "name": "bot_help",
-      "description": "Help with this bot's own setup, answered from its live state: its routines (when and where\nthey run, and whether they run with the computer off), its models and provider keys, its\nconnections (connectors and chat apps), its bots and its capabilities. For how do I…, can I…,\nwhere is…, is X connected, does X work when the app is closed, which models can I use, how do\nI connect a chat app or rename a bot. Call it before answering any of these; never answer them\nfrom memory, and never say something is not connected or not possible without it. It names\nthe place in the app for each, which the app shows as a button.\nIt is not for building or publishing apps, websites or pages: that is the user's task, not a\nquestion about this bot. Never call it to check whether you can do a task: when the user asks\nyou to make, build or publish something, use the tools you have for it. Plan prices and\ncredits are billing_plan's. Asked to make an image, video or speech, call paid_feature\nstraight away instead: the plan makes them in Abacus AI Agent on the web.",
+      "description": "Help with this bot's own setup, answered from its live state: its routines (when and where\nthey run, and whether they run with the computer off), its models and provider keys, its\nconnections (connectors and chat apps), its bots and its capabilities, and the app's own\ncontrols (topic app): the message box's buttons (dictating with the microphone, attaching,\nthe model menu, modes, / commands), starting a new chat, the chat list, side panel, areas and\npages. For how do I…, can I…, where is…, is X connected, does X work when the app is closed,\nwhich models can I use, how do I connect a chat app or rename a bot. Call it before answering\nany of these; never answer them from memory, and never say something is not connected or not\npossible without it. It names the place in the app for each, which the app shows as a button.\nIt is not for building or publishing apps, websites or pages: that is the user's task, not a\nquestion about this bot. Never call it to check whether you can do a task: when the user asks\nyou to make, build or publish something, use the tools you have for it. Plan prices and\ncredits are billing_plan's. Asked to make an image, video or speech, call paid_feature\nstraight away instead: the plan makes them in Abacus AI Agent on the web.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -587,13 +588,14 @@
               "routines",
               "bots",
               "capabilities",
-              "plan"
+              "plan",
+              "app"
             ],
             "description": "What the question is about; leave it out for an overview of everything."
           },
           "name": {
             "type": "string",
-            "description": "The one thing asked about, when there is one: a provider (\"gemini\"), a connector (\"gmail\"), a chat app (\"telegram\"), a bot's name, or a capability."
+            "description": "The one thing asked about, when there is one: a provider (\"gemini\"), a connector (\"gmail\"), a chat app (\"telegram\"), a bot's name, a capability, or a control (\"microphone\", \"new chat\")."
           }
         }
       }

@@ -4,6 +4,7 @@ import { CONNECTORS } from "@abacus-ai/connectors/registry";
  * router over memory history with the app's own components.
  */
 import {
+  BOT_HELP_CONTROLS,
   BOT_HELP_ROUTES,
   BOT_HELP_TOPICS,
   botHelpPlace,
@@ -16,6 +17,13 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import enUS from "#locales/en-US.json";
+import { APP_HOTKEYS } from "#renderer/features/shell/hotkeys";
+import {
+  AREA_HOME,
+  LIBRARY_PAGES,
+  RAIL_AREAS,
+  SETTINGS_PAGES,
+} from "#renderer/lib/navigation/areas";
 import { PANE_BOUNDARIES } from "#renderer/lib/navigation/pane-key";
 import { routeMasks } from "#renderer/router";
 
@@ -136,11 +144,17 @@ describe("bot_help's places", () => {
     ...PROVIDER_KEY_FIELDS.flatMap((field) => [field.provider, field.label]),
     ...CONNECTORS.flatMap((connector) => [connector.id, connector.name]),
     ...TOOLSETS_FOR_DISPLAY.map((set) => set.id),
+    ...BOT_HELP_CONTROLS.flatMap((control) => [
+      control.id,
+      control.label.text,
+      ...(control.words ?? []),
+    ]),
     "Price Watch",
   ];
   const places: BotHelpPlace[] = BOT_HELP_TOPICS.flatMap((topic) =>
-    names.map((name) =>
-      botHelpPlace(topic, name, [{ id: "bot-1", name: "Price Watch" }])
+    names.flatMap(
+      (name) =>
+        botHelpPlace(topic, name, [{ id: "bot-1", name: "Price Watch" }]) ?? []
     )
   );
 
@@ -175,6 +189,63 @@ describe("bot_help's places", () => {
         if (!label.key.startsWith("capabilities.toolsets."))
           expect(text, label.key).toBe(label.text);
       }
+  });
+
+  it("says each control by the English app's own label", () => {
+    for (const control of BOT_HELP_CONTROLS)
+      for (const label of [control.label, ...(control.states ?? [])])
+        expect(lookup(label.key!), label.key).toBe(label.text);
+  });
+
+  /**
+   * The app's areas and pages come from the renderer's own registries: one
+   * shipped without a help entry fails here, so the model is never left to
+   * describe it from memory.
+   */
+  it("has an entry for every rail area, settings page and library page", () => {
+    const opened = new Set(
+      BOT_HELP_CONTROLS.flatMap((control) =>
+        control.place == null ? [] : [control.place.to as string]
+      )
+    );
+    const shipped = [
+      ...[...RAIL_AREAS, "settings" as const].map((area) => AREA_HOME[area]),
+      ...SETTINGS_PAGES.map((page) => `/settings/${page}`),
+      ...LIBRARY_PAGES.map((page) => `/library/${page}`),
+    ];
+    for (const to of shipped) expect(opened.has(to), to).toBe(true);
+  });
+
+  it("names every app-wide shortcut as the app binds it", () => {
+    // Moving between tabs and Escape are not things anyone asks how to find.
+    const tabs = new Set<keyof typeof APP_HOTKEYS>([
+      "escape",
+      "closeTab",
+      "nextTab",
+      "previousTab",
+      "nextPanelTab",
+      "previousPanelTab",
+    ]);
+    const named = new Set(BOT_HELP_CONTROLS.map((control) => control.hotkey));
+    for (const [id, hotkey] of Object.entries(APP_HOTKEYS))
+      if (!tabs.has(id as keyof typeof APP_HOTKEYS))
+        expect(named.has(hotkey), id).toBe(true);
+    for (const control of BOT_HELP_CONTROLS)
+      if (control.hotkey != null)
+        expect(Object.values(APP_HOTKEYS), control.id).toContain(
+          control.hotkey
+        );
+  });
+
+  it('takes "how do I start a new chat" to New session, and the microphone to no page', () => {
+    expect(botHelpPlace("app", "new chat")).toEqual({
+      path: [
+        { key: "shell.rail.sessions", text: "Sessions" },
+        { key: "sessions.sidebar.new", text: "New session" },
+      ],
+      to: "/sessions/new",
+    });
+    expect(botHelpPlace("app", "mic")).toBeNull();
   });
 
   it('takes "can I use Gemini" to the Gemini key row of the Models page', () => {

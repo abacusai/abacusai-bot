@@ -53,7 +53,7 @@ export const BotHelpCard = ({ place }: { place: BotHelpPlace }) => {
   );
 };
 
-/** The tool row: the place the call's topic and name lead to; nothing for an overview. */
+/** The tool row: the place the call's topic and name lead to; nothing for an overview or a control in this chat. */
 export const BotHelpToolCard = ({ part }: ToolProps<unknown>) => {
   const db = useOptionalDb();
   const input = toolInput(part, parsePartialJSON);
@@ -63,5 +63,6 @@ export const BotHelpToolCard = ({ part }: ToolProps<unknown>) => {
     id: bot.id,
     name: bot.name,
   }));
-  return <BotHelpCard place={botHelpPlace(topic, name, bots)} />;
+  const place = botHelpPlace(topic, name, bots);
+  return place == null ? null : <BotHelpCard place={place} />;
 };

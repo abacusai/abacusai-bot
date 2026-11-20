@@ -43,7 +43,7 @@ export const PRODUCT_FACTS_PROMPT = [
   "About this app: AbacusAI Bot runs as a desktop app and on the web at bot.abacus.ai, and answers in WhatsApp, Telegram and Discord through its chat apps.",
   `It is not Abacus AI's other products (${OTHER_ABACUS_PRODUCTS}): their help pages, commands and settings are not this app's.`,
   "This app has no CLI to install, nothing to type in a terminal to set it up and no VS Code extension; its settings are pages in the app.",
-  "Questions about AbacusAI Bot itself (how do I, where is, what it can do, its settings, models, provider keys, connectors, chat apps, routines, bots, limits) are answered from bot_help, never from memory or a web page.",
+  "Questions about AbacusAI Bot itself (how do I, where is, what it can do, its buttons and screens such as dictating or a new chat, its settings, models, provider keys, connectors, chat apps, routines, bots, limits) are answered from bot_help, never from memory or a web page.",
   "Chats, bots and routines on Abacus AI models use the account's credits on every plan, free and paid alike: never say chatting, this chat or small tasks are free or cost nothing.",
   "Only a model on the user's own provider key, or one the model menu lists as free, runs without Abacus credits.",
   "Prices, credits left and what each plan includes are billing_plan's.",

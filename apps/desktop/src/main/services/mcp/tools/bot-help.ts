@@ -11,6 +11,8 @@ import {
   BOT_HELP_TOOL,
   BOT_HELP_TOPICS,
   type BotHelpBot,
+  type BotHelpControl,
+  botHelpControls,
   botHelpPathText,
   botHelpPlace,
   type BotHelpTopic,
@@ -107,8 +109,10 @@ const fold = (text: string): string =>
 const matches = (text: string, name: string): boolean =>
   fold(name).length > 0 && fold(text).includes(fold(name));
 
-const where = (facts: BotHelpFacts, topic: BotHelpTopic): string =>
-  `Where: ${botHelpPathText(botHelpPlace(topic, facts.name, facts.bots))}`;
+const where = (facts: BotHelpFacts, topic: BotHelpTopic): string[] => {
+  const place = botHelpPlace(topic, facts.name, facts.bots);
+  return place == null ? [] : [`Where: ${botHelpPathText(place)}`];
+};
 
 /** The 24/7 word for this plan; an unknown plan reads as free, which sends the model to billing_plan. */
 const alwaysOn = (facts: BotHelpFacts): string => {
@@ -160,7 +164,7 @@ function routinesSection(facts: BotHelpFacts): string[] {
           : "") +
         "."
     );
-  lines.push(where(facts, "routines"));
+  lines.push(...where(facts, "routines"));
   return lines;
 }
 
@@ -205,7 +209,7 @@ function modelsSection(facts: BotHelpFacts): string[] {
             .join(", ")}.`
     );
   }
-  lines.push(where(facts, "models"));
+  lines.push(...where(facts, "models"));
   return lines;
 }
 
@@ -257,7 +261,7 @@ function connectorsSection(
               ]),
           "What the chat apps let the user do:",
           ...capabilityLines(facts, "chat_apps"),
-          where(facts, "chat_apps"),
+          ...where(facts, "chat_apps"),
         ]
       : [
           "Connectors (accounts and tool servers), right now:",
@@ -275,7 +279,7 @@ function connectorsSection(
                   .join(", ")}.`,
               ]),
           ...capabilityLines(facts, "connectors"),
-          where(facts, "connectors"),
+          ...where(facts, "connectors"),
         ];
   if (facts.connectors == null)
     return [
@@ -299,7 +303,7 @@ function botsSection(facts: BotHelpFacts): string[] {
       ? "They have no bots yet."
       : `Their bots: ${facts.bots.map((bot) => bot.name).join(", ")}.`,
     "A bot's name, look, instructions, model and chat apps are changed in its editor (Edit bot).",
-    where(facts, "bots"),
+    ...where(facts, "bots"),
   ];
 }
 
@@ -334,7 +338,7 @@ function capabilitiesSection(facts: BotHelpFacts): string[] {
           : "For any of these, the user asks in a main chat, which says which plan has it.")
     );
   if (phoneFreePlan(facts)) lines.push(FREE_PHONE_ROUTINES_NOTE);
-  lines.push(where(facts, "capabilities"));
+  lines.push(...where(facts, "capabilities"));
   return lines;
 }
 
@@ -346,7 +350,72 @@ function planSection(facts: BotHelpFacts): string[] {
     "For their credits, prices, what each plan includes and upgrading, call billing_plan (upgrade: true when they might upgrade) and answer from it, never from memory.",
     "This app's chats, bots and routines run on the plan's credits. Limits a plan lists for",
     "Abacus AI Agent are limits of Abacus AI Agent on the web, not of this app.",
-    where(facts, "plan"),
+    ...where(facts, "plan"),
+  ];
+}
+
+/** "Mod+Alt+B" as each computer shows it: "⌘⌥B on a Mac, Ctrl+Alt+B on Windows and Linux". */
+const shortcutText = (hotkey: string): string => {
+  const mac = hotkey
+    .replace("Mod+", "⌘")
+    .replace("Alt+", "⌥")
+    .replace("Shift+", "⇧");
+  return `${mac} on a Mac, ${hotkey.replace("Mod", "Ctrl")} on Windows and Linux`;
+};
+
+const controlLine = (control: BotHelpControl): string => {
+  const states = (control.states ?? []).map((state) => state.text);
+  return [
+    `- ${control.label.text}${states.length === 0 ? "" : ` (also shown as ${states.join(", ")})`}:`,
+    ...(control.how != null ? [control.how] : []),
+    ...(control.hotkey != null
+      ? [`Shortcut: ${shortcutText(control.hotkey)}.`]
+      : []),
+    ...(control.place != null
+      ? [`Where: ${botHelpPathText(control.place)}.`]
+      : []),
+  ].join(" ");
+};
+
+/**
+ * The app's own controls and pages. A named one gets its full line, and so
+ * does each control asked about with no name; the overview only names them,
+ * so its size stays put. A name nothing in the app goes by gets no guess:
+ * the model says it is not sure.
+ */
+function appSection(facts: BotHelpFacts): string[] {
+  const named = facts.topic === "app" ? facts.name : "";
+  const controls = botHelpControls(named);
+  const heading =
+    "The app's controls and pages (the rail is the column of areas at the app's left edge):";
+  if (controls.length === 0)
+    return [
+      heading,
+      `Nothing in the app is called "${named}". Say you are not sure the app has it; never describe a button, menu, page or shortcut this answer does not name.`,
+    ];
+  if (named.length > 0) return [heading, ...controls.map(controlLine)];
+  const pages = (under: string): string =>
+    controls
+      .filter((control) => (control.place?.path.length ?? 0) > 1)
+      .filter((control) => control.place!.path[0]!.text === under)
+      .map((control) => control.label.text)
+      .join(", ");
+  const used = controls.filter(
+    (control) => control.how != null && control.place?.path.length !== 1
+  );
+  const areas = controls.filter((control) => control.place?.path.length === 1);
+  if (facts.topic !== "app")
+    return [
+      heading,
+      `${[...used, ...areas].map((control) => control.label.text).join(", ")}.`,
+      "For how one is used, call bot_help with topic app and its name.",
+    ];
+  return [
+    heading,
+    ...used.map(controlLine),
+    ...areas.map(controlLine),
+    `- Settings pages: ${pages("Settings")}.`,
+    `- Library pages: ${pages("Library")}.`,
   ];
 }
 
@@ -365,6 +434,7 @@ export function botHelpResult(
   if (wants(facts, "bots")) sections.push(botsSection(facts));
   if (wants(facts, "capabilities")) sections.push(capabilitiesSection(facts));
   if (wants(facts, "plan")) sections.push(planSection(facts));
+  if (wants(facts, "app")) sections.push(appSection(facts));
   const app = facts.hosted
     ? "AbacusAI Bot on the web (bot.abacus.ai)"
     : "the AbacusAI Bot desktop app";
@@ -394,7 +464,8 @@ export function botHelpResult(
       `name each step as the app shows it in their language. ${how} Never add a setting, page,`,
       "limit or capability this answer does not give, and never say something is not connected",
       "or not possible when this answer says otherwise. If what they ask is not listed here, say",
-      "you will check; never a flat no.",
+      "you are not sure and will check, never a flat no, and never describe a button, menu or",
+      "page from memory.",
     ].join("\n")
   );
 }
@@ -402,11 +473,13 @@ export function botHelpResult(
 const DESCRIPTION = [
   "Help with this bot's own setup, answered from its live state: its routines (when and where",
   "they run, and whether they run with the computer off), its models and provider keys, its",
-  "connections (connectors and chat apps), its bots and its capabilities. For how do I…, can I…,",
-  "where is…, is X connected, does X work when the app is closed, which models can I use, how do",
-  "I connect a chat app or rename a bot. Call it before answering any of these; never answer them",
-  "from memory, and never say something is not connected or not possible without it. It names",
-  "the place in the app for each, which the app shows as a button.",
+  "connections (connectors and chat apps), its bots and its capabilities, and the app's own",
+  "controls (topic app): the message box's buttons (dictating with the microphone, attaching,",
+  "the model menu, modes, / commands), starting a new chat, the chat list, side panel, areas and",
+  "pages. For how do I…, can I…, where is…, is X connected, does X work when the app is closed,",
+  "which models can I use, how do I connect a chat app or rename a bot. Call it before answering",
+  "any of these; never answer them from memory, and never say something is not connected or not",
+  "possible without it. It names the place in the app for each, which the app shows as a button.",
   "It is not for building or publishing apps, websites or pages: that is the user's task, not a",
   "question about this bot. Never call it to check whether you can do a task: when the user asks",
   "you to make, build or publish something, use the tools you have for it. Plan prices and",
@@ -426,7 +499,7 @@ const INPUT_SCHEMA = {
     name: {
       type: "string",
       description:
-        'The one thing asked about, when there is one: a provider ("gemini"), a connector ("gmail"), a chat app ("telegram"), a bot\'s name, or a capability.',
+        'The one thing asked about, when there is one: a provider ("gemini"), a connector ("gmail"), a chat app ("telegram"), a bot\'s name, a capability, or a control ("microphone", "new chat").',
     },
   },
 };
