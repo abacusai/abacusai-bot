@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Set up a scheduled task called “{{name}}” that runs even with my computer off. What it does: {{prompt}}",
     "routinePromptNameOnly": "Set up a scheduled task that runs 24/7, like my AbacusAI Bot routine “{{name}}”. Ask me what it should do and when."
   },
+  "planAsk": {
+    "title": "Keep going with {{plan}}",
+    "line": "Fresh credits every month, plus everything below."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: our router built for code, picking the best coding model for each step",
     "codingAgent": "The coding agent and CLI",

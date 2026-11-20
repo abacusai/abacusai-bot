@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "设置一个名为“{{name}}”的定时任务，电脑关机时也能运行。它要做的事：{{prompt}}",
     "routinePromptNameOnly": "设置一个全天候运行的定时任务，类似我在 AbacusAI Bot 中的例行任务“{{name}}”。问我它该做什么、什么时候做。"
   },
+  "planAsk": {
+    "title": "用 {{plan}} 继续",
+    "line": "每月都有新积分，还有下方的全部功能。"
+  },
   "coderPitch": {
     "router": "RouteLLM Code：专为代码打造的路由器，每一步都选最合适的编程模型",
     "codingAgent": "编程智能体和 CLI",

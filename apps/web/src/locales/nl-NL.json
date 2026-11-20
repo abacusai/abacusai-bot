@@ -5641,6 +5641,10 @@
     "routinePromptOnce": "Stel een geplande taak in genaamd “{{name}}” die ook draait als mijn computer uit staat. Wat hij doet: {{prompt}}",
     "routinePromptNameOnly": "Stel een geplande taak in die 24/7 draait, zoals mijn AbacusAI Bot-routine “{{name}}”. Vraag me wat hij moet doen en wanneer."
   },
+  "planAsk": {
+    "title": "Ga verder met {{plan}}",
+    "line": "Elke maand nieuwe credits, plus alles hieronder."
+  },
   "coderPitch": {
     "router": "RouteLLM Code: onze router gemaakt voor code, die bij elke stap het beste codeermodel kiest",
     "codingAgent": "De codeeragent en de CLI",

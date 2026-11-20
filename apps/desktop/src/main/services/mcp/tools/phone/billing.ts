@@ -1,3 +1,4 @@
+import { CHEAPER_ASK } from "@abacus-ai/agent/plan-asks";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { PAID_FEATURE_TOOL } from "@abacus-ai/contract/toolsets";
 
@@ -8,6 +9,7 @@ import {
 import {
   alwaysOnAnswer,
   bullets,
+  cheaperAnswer,
   creditsLine,
   creditStanding,
   planFacts,
@@ -63,7 +65,7 @@ export function phoneBillingResult(
     "to account settings or a billing page instead of these links. Never say you changed their plan: they upgrade",
     "on the page."
   );
-  lines.push("", alwaysOnAnswer(billing, false));
+  lines.push("", alwaysOnAnswer(billing, false), cheaperAnswer(billing));
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."
@@ -80,7 +82,8 @@ export const PHONE_BILLING_TOOLS: PhoneToolDefinition[] = [
       "The user's plan and credits, every plan with its price and what it gives, and the links to upgrade or buy",
       "credits. Call it whenever they ask about their plan, credits or balance, prices or discounts, limits or",
       "resets, upgrading, or what a plan includes; whenever they ask whether something keeps working while their",
-      "app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders); and when they run",
+      "app or computer is off (WhatsApp, Telegram or Discord auto-replies, routines, reminders); whenever they ask",
+      `for ${CHEAPER_ASK}; and when they run`,
       `into a plan limit or run low on credits. Never answer these from memory. A video to watch, or something to`,
       `build or make, is ${PAID_FEATURE_TOOL}'s.`,
       "It answers at once; send them what it says, with every feature line as written and its links as given. Pass",
