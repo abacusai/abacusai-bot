@@ -1,10 +1,12 @@
-import type { AgentMode } from "../protocol.js";
 /**
  * Memory for one running chat, the same for the desktop chat and the forever
  * chats (bots, the phone lane): the block for the system prompt, built once;
  * the tool; the hidden line before a turn when memory changed elsewhere; and
  * the check that an asked-for save happened.
  */
+import { currentMode } from "../current-mode.js";
+import { customInstructionsPrompt } from "../custom-instructions.js";
+import { AgentMode } from "../protocol.js";
 import { appNoteTag } from "../user-text.js";
 import { askedToRemember } from "./asked.js";
 import { memoryBlock, memoryNews } from "./core.js";
@@ -37,14 +39,17 @@ const makeCurrent = (chat: ChatMemory): void => {
 };
 
 /**
- * The user's rules and preferences for a sub-agent (a delegated task, a
+ * The user's standing instructions for a sub-agent (a delegated task, a
  * document, a deck, a design, a browser run): "answer in British English"
- * must reach what they write too. Read-only, and empty for a chat that does
- * not read about the user.
+ * must reach what they write too, in a routine's run as in a chat. The same
+ * block as the parent's, plus who the user is where the chat reads that.
  */
 export const subAgentMemory = (): string[] => {
-  const notes = current?.standingNotes() ?? null;
-  return notes == null ? [] : [notes];
+  const instructions = customInstructionsPrompt(
+    currentMode() === AgentMode.Unattended
+  );
+  const profile = current?.profile() ?? null;
+  return [instructions, profile].filter((part): part is string => part != null);
 };
 
 export class ChatMemory {
@@ -102,21 +107,17 @@ export class ChatMemory {
     return this.block;
   }
 
-  /** The user's rules and preferences, as of this chat's start; null when it has none. */
-  standingNotes(): string | null {
+  /** Who the user is, as of this chat's start; null when this chat does not read it. */
+  profile(): string | null {
     if (this.block == null || !readsYou(this.context)) return null;
     const notes = listNotes({ kind: "you" }).filter(
-      (note) =>
-        note.type === "rule" ||
-        note.type === "preference" ||
-        note.type === "profile"
+      (note) => note.type === "profile"
     );
     if (notes.length === 0) return null;
-    const lines = notes.map((note) => `- ${oneLine(note.body)}`);
     return capText(
       [
-        "The user's standing rules and preferences (follow them in what you produce):",
-        ...lines,
+        "Who the user is:",
+        ...notes.map((note) => `- ${oneLine(note.body)}`),
       ].join("\n"),
       SUB_AGENT_CHARS
     );

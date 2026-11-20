@@ -1,19 +1,21 @@
 /**
  * Standing instructions: the rule notes About you (memory/you/), which every
- * chat follows, Memory on or off. The user adds and edits them on the Memory
- * page; a chat may save one when the user asks, but never changes one the user
- * wrote (memory/tool.ts), so a model cannot edit the user's instructions away.
- * Re-read per turn (refreshCustomInstructions in session.ts) so edits land on
- * the next message.
+ * chat follows, Memory on or off, and with Memory on the user's preferences.
+ * The user adds and edits them on the Memory page; a chat may save one when
+ * the user asks, but never changes one the user wrote (memory/tool.ts). One
+ * block for every loop that writes to the user, re-read per turn so edits land
+ * on the next message.
  */
 import fs from "fs";
 import path from "path";
 
 import { abacusBotDir } from "./config.js";
 import { MAX_NOTE_CHARS } from "./memory/gate.js";
+import { declaredLane, followsYourPreferences } from "./memory/lanes.js";
 import {
   commit,
   type FileWrite,
+  oneLine,
   listNotes,
   memoryDir,
   type Note,
@@ -22,6 +24,8 @@ import {
   slugify,
   today,
 } from "./memory/notes.js";
+import type { UserTextTags } from "./protocol.js";
+import { isRoutineFire } from "./user-text.js";
 
 /** Bounded because this lands in every request; a page of house style fits. */
 export const MAX_CUSTOM_INSTRUCTIONS = 8_000;
@@ -44,6 +48,11 @@ const legacyText = (): string => {
 
 const rules = (): Note[] =>
   listNotes({ kind: "you" }).filter((note) => note.type === "rule");
+
+const preferences = (): Note[] =>
+  followsYourPreferences(declaredLane())
+    ? listNotes({ kind: "you" }).filter((note) => note.type === "preference")
+    : [];
 
 /** Every instruction, one per paragraph, or "" for none. Never throws. */
 export function readCustomInstructions(): string {
@@ -139,22 +148,98 @@ export async function moveInstructionsIn(now = new Date()): Promise<void> {
 }
 
 /**
- * The block appended last to the system prompt, or null when nothing is set.
- * Framed rather than pasted raw so the model can tell instruction from context.
- * It cannot widen permissions (the gate decides), and saying so keeps the model
- * from reporting a refusal as the user's instruction failing.
+ * What this chat follows: the instructions, then the preferences (Memory on,
+ * and only in the user's own chats and runs, lanes.ts). "" for none; never throws.
  */
-export function customInstructionsPrompt(): string | null {
-  const text = readCustomInstructions();
+export function readStandingInstructions(): string {
+  try {
+    const liked = preferences().map((note) => `- ${oneLine(note.body)}`);
+    return [
+      readCustomInstructions(),
+      liked.length > 0
+        ? ["What they prefer by default:", ...liked].join("\n")
+        : "",
+    ]
+      .filter((part) => part.length > 0)
+      .join("\n\n");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * The block appended last to the system prompt of every loop that writes to
+ * the user (a chat, a routine's run, a bot's or the phone's chat, a sub-agent),
+ * or null when nothing is set or nobody is watching (`unattended`: a page the
+ * run reads could ask for it back). Framed so the model can tell instruction
+ * from context, and so it outranks older text in front of it, such as a
+ * routine's saved report template. It cannot widen permissions (the gate
+ * decides), and saying so keeps a refusal from reading as the rule failing.
+ */
+export function customInstructionsPrompt(unattended = false): string | null {
+  if (unattended) return null;
+  const text = readStandingInstructions();
 
   if (text.length === 0) return null;
 
   return [
     "The user's standing instructions, which they set for every conversation.",
-    "Follow them. Where they disagree with the general guidance above about",
-    "tone, format or how to approach work, these win. They do not grant access:",
+    "Follow them in everything you write to or for the user: replies, routine",
+    "reports, messages and emails you send for them, files you make, reactions.",
+    "Where they disagree with the general guidance above about tone, format or",
+    "how to approach work, these win. They also win over older text in front",
+    "of you that says otherwise, such as a routine's saved instruction or",
+    "report template, an example, or your own earlier replies: do that text's",
+    "task, written the way these say. Only what the user asks in this",
+    "conversation outranks them, for that request. They do not grant access:",
     "approvals and the permission mode still decide what may actually run.",
     "",
     text,
   ].join("\n");
+}
+
+/** The word for emoji in the languages the app speaks. */
+const EMOJI_WORD =
+  /[eé]moji|emoticon|smiley|smilies|絵文字|顔文字|表情|이모지|이모티콘|эмодзи|смайл/iu;
+/** Saying no to it, before the word or after it (Japanese, Korean and Turkish put it last). */
+const SAYS_NO =
+  /\b(?:no|not|never|don'?t|without|avoid|stop|none|zero|kein\w*|nicht|nie|ohne|sin|nunca|sem|n[ãa]o|pas|jamais|sans|aucun\w*|non|mai|senza|nessun\w*|geen|niet|nooit|zonder|bez|tidak|jangan|tanpa|yok|olmadan|kullanma\w*)\b|-free\b|żadn|使わ|ない|なし|禁止|不|别|勿|无|無|없이|않|지 ?마|금지|(?<!\p{L})(?:не|без)(?!\p{L})/iu;
+const NEAR = 30;
+
+/**
+ * Whether the user's standing instructions rule emojis out ("no emojis",
+ * "keine Emojis", "絵文字を使わない"). The one style rule with something to
+ * enforce outside the prompt: an emoji is a character a saved template
+ * carries and a reaction is made of, and a model copies both whatever it is told.
+ */
+export function standingInstructionsRuleOutEmoji(): boolean {
+  return readStandingInstructions()
+    .split(/[\n.!?。！？]+/u)
+    .some((sentence) => {
+      const at = sentence.search(EMOJI_WORD);
+      if (at === -1) return false;
+      return SAYS_NO.test(
+        sentence.slice(Math.max(0, at - NEAR), at + NEAR + 8)
+      );
+    });
+}
+
+/**
+ * An emoji with its joiners, modifiers and variation selector, and one space
+ * after it; not ©, ® or ™. A keycap ("1️⃣") keeps its digit.
+ */
+const EMOJI =
+  /(?![©®™])(?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:\uFE0F|\u200D|\p{Emoji_Modifier}|\p{Extended_Pictographic}|\p{Regional_Indicator})*[ \t]?|\uFE0F?\u20E3/gu;
+
+/**
+ * A routine's fire as its run is given it: a saved report template's emojis
+ * end up in the report whatever the standing instructions say, so they are
+ * taken out when those rule emojis out. Any other message is left alone.
+ */
+export function routineFireAsInstructed(
+  text: string,
+  tags?: UserTextTags
+): string {
+  if (tags?.routineFire !== true && !isRoutineFire(text)) return text;
+  return standingInstructionsRuleOutEmoji() ? text.replace(EMOJI, "") : text;
 }

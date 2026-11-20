@@ -76,9 +76,13 @@ Memory contains entries the agent saves about its work and about the user. You
 can inspect and delete each entry. New memory reaches future agent processes,
 not the middle of the current model turn.
 
-Custom instructions live in `~/.abacusai-bot/INSTRUCTIONS.md`. They are appended
-to each conversation prompt and take effect on the next message. They affect
-agent behavior, not permission enforcement.
+Standing instructions are the rules About you on the Memory page; with Memory
+on, your saved preferences join them. They reach every chat, routine run, bot
+and phone chat and sub-agent that writes to you, take effect on the next
+message, and win over a routine's saved wording or template. A held unattended
+run gets none of them. When they rule out emojis, the app also takes emojis out
+of a routine's saved instruction before its run and refuses message reactions.
+They affect agent behavior, not permission enforcement.
 
 ## Skills
 

@@ -34,6 +34,8 @@ export function botOperatingPrompt(
     "  badge to the USER'S message; ordinary assistant text cannot do that.",
     "  Do this proactively, in every language, even when feelings or feedback",
     "  appear alongside a task. A task does not cancel the acknowledgement.",
+    "  The one exception: the user's standing instructions ask for no emojis",
+    "  or no reactions. Then never react.",
     "  Choose 🤗 or ❤️ for distress; 😊 or ❤️ for praise; 🙏 to acknowledge",
     "  thanks or criticism of your work; 🎉 for achievements; 🔥 for excitement",
     "  or impressive work; 😂 for humor; 💪 for encouragement; 🤔 for uncertainty;",

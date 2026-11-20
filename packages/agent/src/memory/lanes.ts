@@ -13,7 +13,8 @@ import { chatProjectKey, findProject } from "./notes.js";
 /**
  * off:        the Memory switch is off: nothing loaded, nothing written, no tool.
  * owner:      the user's own chat (desktop, a bot's chat with them, the phone lane).
- * routine:    a routine run; its own project only, never `you/`.
+ * routine:    a routine run; its own project, and of `you/` only the rules and
+ *             preferences (custom-instructions.ts): the run writes to the user.
  * bot-sender: someone else talking to the user's bot: only their own contact notes.
  * sender:     someone else in a chat app with no bot: nothing at all.
  */
@@ -79,13 +80,24 @@ const projectOfCwd = (cwd: string): ProjectRef | null => {
   };
 };
 
+/** The lane the desktop declared at spawn; a process started without it is the owner. */
+export const declaredLane = (env: NodeJS.ProcessEnv = process.env): Lane =>
+  LANES.find((each) => each === env.ABACUSAI_BOT_MEMORY) ?? "owner";
+
+/**
+ * Whether the user's preferences reach this chat with their rules: their own
+ * chats and their runs, never someone else's chat, and never with Memory off.
+ */
+export const followsYourPreferences = (lane: Lane): boolean =>
+  lane === "owner" || lane === "routine";
+
 export const readMemoryContext = (
   cwd: string,
   mode: AgentMode | string,
   env: NodeJS.ProcessEnv = process.env
 ): MemoryContext => {
   const declared = env.ABACUSAI_BOT_MEMORY;
-  const lane = LANES.find((each) => each === declared) ?? "owner";
+  const lane = declaredLane(env);
   const declaredProject =
     declared == null
       ? projectOfCwd(cwd)

@@ -131,26 +131,29 @@ describe("memory in a real session", () => {
     await agent.start();
     await agent.send("one");
 
-    // Another process (the Memory page, another chat) saves a preference: its file
+    // Another process (the Memory page, another chat) saves a fact: its file
     // and its history line, which is how processes see each other's changes.
     const note = [
       "---",
-      "name: sign-as-sam",
-      "description: Sign every email as Sam.",
-      "type: preference",
+      "name: accountant-sam",
+      "description: Their accountant is Sam.",
+      "type: fact",
       "updated: 2026-11-09",
       "by: you",
       "---",
       "",
-      "Sign every email as Sam.",
+      "Their accountant is Sam.",
       "",
     ].join("\n");
-    fs.writeFileSync(path.join(home, "memory", "you", "sign-as-sam.md"), note);
+    fs.writeFileSync(
+      path.join(home, "memory", "you", "accountant-sam.md"),
+      note
+    );
     const history = path.join(home, "memory", ".history");
     const month = fs.readdirSync(history).sort().pop()!;
     fs.appendFileSync(
       path.join(history, month),
-      `${JSON.stringify({ at: new Date().toISOString(), by: "you", session: "memory-page", path: "you/sign-as-sam.md", before: null, after: note })}\n`
+      `${JSON.stringify({ at: new Date().toISOString(), by: "you", session: "memory-page", path: "you/accountant-sam.md", before: null, after: note })}\n`
     );
 
     await agent.send("two");
@@ -158,6 +161,6 @@ describe("memory in a real session", () => {
 
     const last = provider.calls.length - 1;
     expect(systemPrompt(last)).toBe(systemPrompt(0));
-    expect(allText(last)).toContain("Sign every email as Sam.");
+    expect(allText(last)).toContain("Their accountant is Sam.");
   }, 120_000);
 });

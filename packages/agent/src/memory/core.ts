@@ -223,9 +223,12 @@ export const memoryBlock = async (
   const sections: string[] = [];
 
   if (readsYou(context)) {
-    // The user's rules are the standing instructions block, sent separately.
+    // Their rules and preferences are the standing instructions block, sent
+    // separately and re-read every turn (custom-instructions.ts).
     const you = scopeBlock(
-      listNotes({ kind: "you" }).filter((note) => note.type !== "rule"),
+      listNotes({ kind: "you" }).filter(
+        (note) => note.type !== "rule" && note.type !== "preference"
+      ),
       now
     );
     if (you.length > 0)
@@ -340,8 +343,12 @@ export const memoryNews = (
     const name = noteNameOfPath(entry.path);
     if (scope == null || name == null || !mayRead(context, scope, slug))
       continue;
-    // The user's rules reach every chat live, as its standing instructions.
-    if (scope.kind === "you" && noteTypeOf(entry) === "rule") continue;
+    // Their rules and preferences reach every chat live, as its standing instructions.
+    if (
+      scope.kind === "you" &&
+      (noteTypeOf(entry) === "rule" || noteTypeOf(entry) === "preference")
+    )
+      continue;
     if (scope.kind === "you" && !readsYou(context)) continue;
     const where = scope.kind === "you" ? "about the user" : `in ${scope.slug}`;
     if (entry.after == null) {

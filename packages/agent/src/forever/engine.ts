@@ -49,6 +49,11 @@ import {
   setCurrentMode,
   setUnattendedPolicy,
 } from "../current-mode.js";
+import {
+  customInstructionsPrompt,
+  readStandingInstructions,
+  routineFireAsInstructed,
+} from "../custom-instructions.js";
 import { deckToolEnabled } from "../deck-tool.js";
 import { documentToolEnabled } from "../document-tool.js";
 import { EmptyReplies } from "../empty-reply.js";
@@ -476,6 +481,8 @@ export class ForeverEngine {
   private promptReplyLanguage: string | null = null;
   /** The plan line the prompt was built with. */
   private promptPlan = "";
+  /** The user's standing instructions the prompt was built with. */
+  private promptInstructions = "";
 
   constructor(
     private readonly options: ForeverEngineOptions,
@@ -623,6 +630,11 @@ export class ForeverEngine {
         this.promptReplyLanguage = language;
         const plan = planFactsPrompt();
         this.promptPlan = plan;
+        // The same block as the desktop chat; a sender's chat is held unattended.
+        const instructions = customInstructionsPrompt(
+          this.mode === AgentMode.Unattended
+        );
+        this.promptInstructions = readStandingInstructions();
 
         return [
           ...(persona == null ? [] : [persona]),
@@ -632,6 +644,7 @@ export class ForeverEngine {
           plan,
           ...(memory == null ? [] : [memory]),
           ...(recentMemory == null ? [] : [recentMemory]),
+          ...(instructions == null ? [] : [instructions]),
           // Last of all, so it outweighs a kickstart or routine written in English.
           ...(language == null ? [] : [language]),
         ];
@@ -1070,7 +1083,7 @@ export class ForeverEngine {
           turn?.settled?.();
           return;
         }
-        await session.prompt(text);
+        await session.prompt(routineFireAsInstructed(text, turn?.userText));
       }
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
@@ -1269,13 +1282,15 @@ export class ForeverEngine {
     const roster = mcpRosterFingerprint(this.mcp.statuses);
     const language = this.replyLanguagePrompt();
     const plan = planFactsPrompt();
+    const instructions = readStandingInstructions();
 
     if (
       persona === this.promptPersona &&
       fingerprint === this.promptMemoryFingerprint &&
       roster === this.promptMcpRoster &&
       language === this.promptReplyLanguage &&
-      plan === this.promptPlan
+      plan === this.promptPlan &&
+      instructions === this.promptInstructions
     )
       return;
 

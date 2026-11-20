@@ -50,7 +50,8 @@ import { creditWallActive, freeLaneChosen } from "./credit-wall.js";
 import { setCurrentMode, setUnattendedPolicy } from "./current-mode.js";
 import {
   customInstructionsPrompt,
-  readCustomInstructions,
+  readStandingInstructions,
+  routineFireAsInstructed,
 } from "./custom-instructions.js";
 import { deckToolEnabled } from "./deck-tool.js";
 import { designToolEnabled } from "./design-tool.js";
@@ -1044,7 +1045,7 @@ export class AbacusBotSession {
       appendSystemPromptOverride: (base: string[]): string[] => {
         // A bot's own persona, after the shared blocks so they stay a common prefix.
         const persona = personaPrompt();
-        const instructions = unattended ? null : customInstructionsPrompt();
+        const instructions = customInstructionsPrompt(unattended);
         // The check at agent_end catches language drift; this prevents it.
         const language = accountReplyLanguagePrompt();
         this.promptUserLanguage = language;
@@ -1205,7 +1206,7 @@ export class AbacusBotSession {
     await resourceLoader.reload();
     this.resourceLoader = resourceLoader;
     // What the prompt was built with, so the next turn can detect an edit.
-    this.promptInstructions = readCustomInstructions();
+    this.promptInstructions = readStandingInstructions();
     this.promptPersona = readPersona();
 
     // null when no provider is configured: naming a model would point the user
@@ -1598,7 +1599,7 @@ export class AbacusBotSession {
             { customType: MEMORY_CONTEXT_TYPE, content: news, display: false },
             { deliverAs: "nextTurn" }
           );
-        await session.prompt(text);
+        await session.prompt(routineFireAsInstructed(text, turn?.userText));
       }
       await this.settleRun();
       await this.verifyTurn(owned);
@@ -4406,7 +4407,7 @@ export class AbacusBotSession {
    * The reload re-reads the file and setActiveToolsByName forces pi's rebuild.
    */
   private async refreshCustomInstructions(): Promise<void> {
-    const current = readCustomInstructions();
+    const current = readStandingInstructions();
     // The bot persona, the MCP roster and the plan ride the same rebuild.
     const persona = readPersona();
     const roster = mcpRosterFingerprint(this.mcp.statuses);

@@ -16,7 +16,10 @@ import * as path from "node:path";
 import { FakeProvider } from "@abacus-ai/test-support/fake-provider";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { BotSession } from "./bot/bot-session.js";
 import { writeCustomInstructions } from "./custom-instructions.js";
+import { subAgentMemory } from "./memory/chat.js";
+import { commit, noteWrite } from "./memory/notes.js";
 import { AbacusBotSession } from "./session.js";
 import { writeUserLanguage } from "./user-language.js";
 
@@ -69,6 +72,10 @@ beforeEach(async () => {
 afterEach(async () => {
   delete process.env.ABACUSAI_BOT_HOME;
   delete process.env.ABACUSAI_BOT_LOCALE;
+  delete process.env.ABACUSAI_BOT_MEMORY;
+  delete process.env.ABACUSAI_BOT_MEMORY_PROJECT;
+  delete process.env.ABACUSAI_BOT_BOT_DIR;
+  delete process.env.ABACUSAI_BOT_AUDIENCE;
   await provider.close();
   fs.rmSync(home, { recursive: true, force: true });
   fs.rmSync(cwd, { recursive: true, force: true });
@@ -142,6 +149,114 @@ describe("standing instructions in a real turn", () => {
     agent.dispose();
 
     expect(systemPrompt(0)).not.toMatch(/standing instructions/i);
+  }, 120_000);
+});
+
+const NO_EMOJI = "Never use emojis.";
+const FORMAL = "A formal tone, no exclamation marks.";
+
+/** A rule the user wrote and a preference a chat saved for them, About you. */
+const seedStanding = async (): Promise<void> => {
+  await writeCustomInstructions(NO_EMOJI);
+  await commit({ by: "chat" }, () => ({
+    writes: [
+      noteWrite({
+        scope: { kind: "you" },
+        name: "formal-tone",
+        description: "Formal tone",
+        type: "preference",
+        body: FORMAL,
+        updated: "2026-11-20",
+        by: "chat",
+      }),
+    ],
+    value: null,
+  }));
+};
+
+const ROUTINE_FIRE =
+  '[routine] "Daily brief" fired on its schedule.\n\nSend my brief as:\n🌅 Good morning! ☀️\n📅 Today: ...\n✅ Done!';
+
+describe("standing instructions everywhere the bot writes to the user", () => {
+  it("reach a routine's run, rules and preferences, ahead of its saved template", async () => {
+    await seedStanding();
+    process.env.ABACUSAI_BOT_MEMORY = "routine";
+    process.env.ABACUSAI_BOT_MEMORY_PROJECT = JSON.stringify({
+      kind: "routine",
+      key: "job-1",
+      name: "Daily brief",
+    });
+
+    const agent = session();
+    await agent.start();
+    await agent.send(ROUTINE_FIRE);
+    agent.dispose();
+
+    const prompt = systemPrompt(0);
+    expect(prompt).toContain(NO_EMOJI);
+    expect(prompt).toContain(FORMAL);
+    expect(prompt).toMatch(/routine's saved instruction or\s+report template/);
+    // The template's emojis would be copied whatever the prompt says: they go.
+    expect(provider.calls[0]!.userText.at(-1)).toBe(
+      '[routine] "Daily brief" fired on its schedule.\n\nSend my brief as:\nGood morning! \nToday: ...\nDone!'
+    );
+    // A sub-agent the run starts writes under the same block.
+    expect(subAgentMemory().join("\n")).toContain(FORMAL);
+  }, 120_000);
+
+  it("reach a bot's chat with its owner, reactions included", async () => {
+    await seedStanding();
+    process.env.ABACUSAI_BOT_BOT_DIR = path.join(home, "bot");
+    fs.mkdirSync(process.env.ABACUSAI_BOT_BOT_DIR);
+    process.env.ABACUSAI_BOT_AUDIENCE = "owner";
+
+    const bot = new BotSession({
+      cwd,
+      mode: "yolo",
+      hostServices: false,
+      emit: () => {},
+    } as never);
+    await bot.start();
+    await bot.send("Thank you, that was great work!");
+
+    const prompt = systemPrompt(0);
+    expect(prompt).toContain(NO_EMOJI);
+    expect(prompt).toContain(FORMAL);
+    expect(prompt).toMatch(/routine's saved instruction/);
+    const reaction = JSON.stringify(
+      (provider.calls[0]!.body.tools as unknown[]).find((tool) =>
+        JSON.stringify(tool).includes('"react_to_message"')
+      )
+    );
+    expect(reaction).toMatch(/standing instructions come first/);
+  }, 120_000);
+
+  it("give someone else's chat the rules but never the user's preferences", async () => {
+    await seedStanding();
+    process.env.ABACUSAI_BOT_MEMORY = "sender";
+
+    const agent = session();
+    await agent.start();
+    await agent.send("hi");
+    agent.dispose();
+
+    const prompt = systemPrompt(0);
+    expect(prompt).toContain(NO_EMOJI);
+    expect(prompt).not.toContain(FORMAL);
+  }, 120_000);
+
+  it("pick up a preference changed mid-chat on the next turn, and say it once", async () => {
+    const agent = session();
+    await agent.start();
+    await agent.send("one");
+    await seedStanding();
+    await agent.send("two");
+    agent.dispose();
+
+    const second = provider.calls.at(-1)!;
+    expect(systemPrompt(provider.calls.length - 1)).toContain(FORMAL);
+    // Not announced again as a memory change: the block already carries it.
+    expect(JSON.stringify(second.messages.slice(1))).not.toContain(FORMAL);
   }, 120_000);
 });
 

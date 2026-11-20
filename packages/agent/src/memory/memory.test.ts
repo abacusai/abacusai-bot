@@ -392,8 +392,8 @@ describe("news between chats", () => {
     const cursor = historyCursor();
     await call({
       action: "save",
-      type: "preference",
-      text: "Prefers emails signed as Sam.",
+      type: "fact",
+      text: "Their accountant is Sam.",
     });
     // Same process, same session id: its own change is not news to it.
     expect(
@@ -404,7 +404,7 @@ describe("news between chats", () => {
       ).text
     ).toBe("");
     const other = memoryNews(context, cursor, "another-chat");
-    expect(other.text).toContain("Prefers emails signed as Sam.");
+    expect(other.text).toContain("Their accountant is Sam.");
   });
 });
 
