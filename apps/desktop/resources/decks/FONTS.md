@@ -1,6 +1,6 @@
 # Deck template fonts
 
-Downloaded from Google Fonts by `apps/desktop/scripts/vendor-deck-fonts.mjs`. All are under the SIL Open Font License 1.1 (https://openfontlicense.org). Latin and Latin Extended subsets, plus Noto Sans Devanagari for Devanagari text in every family. CJK text falls back to the system's CJK font.
+Downloaded from Google Fonts by `apps/desktop/scripts/vendor-deck-fonts.mjs`. All are under the SIL Open Font License 1.1 (https://openfontlicense.org). Latin and Latin Extended subsets, plus Noto Sans Devanagari, Arabic and Tamil for those scripts in every family. CJK text falls back to the system's CJK font.
 
 - classroom: Fraunces, Inter
 - daisy-days: Fredoka One, Quicksand
@@ -32,4 +32,4 @@ Downloaded from Google Fonts by `apps/desktop/scripts/vendor-deck-fonts.mjs`. Al
 - cartesian: Inter, Playfair Display
 - 8-bit-orbit: Chakra Petch, Space Mono, Tektur
 - retro-windows: Press Start 2P, VT323
-- Noto Sans Devanagari (Devanagari range, in every template)
+- Noto Sans Devanagari, Noto Sans Arabic, Noto Sans Tamil (their script ranges, in every template)

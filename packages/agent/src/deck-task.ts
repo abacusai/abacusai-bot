@@ -18,6 +18,7 @@ import { Type } from "typebox";
 
 import { confinedBashTool } from "./backends.js";
 import { subAgentBasePrompt } from "./base-prompt.js";
+import { mainScript } from "./brief-language.js";
 import { excludedTools } from "./excluded-tools.js";
 import { createGuardrails } from "./extensions/guardrails.js";
 import type { HostServiceClient } from "./host-services.js";
@@ -975,8 +976,13 @@ export const buildTools = (
           first == null || slide.index < first.index ? slide : first,
         undefined
       );
+      // The topic is read from English words: in another script it took the
+      // request's own words ("make a 14-slide deck in Arabic about") for the
+      // topic and sent a right cover back (hard asks).
+      const latinAsk = mainScript(draft.audienceWords ?? "") == null;
       if (
         cover != null &&
+        latinAsk &&
         draft.coverChecked !== true &&
         !coverNamesTopic(
           Object.values(cover.values)
@@ -1200,6 +1206,7 @@ export const buildTools = (
           // print is not sent back again after it (each round costs credits).
           draft.coverTitleChecked !== true &&
           draft.coverChecked !== true &&
+          mainScript(draft.audienceWords ?? "") == null &&
           !coverNamesTopic(result.coverTitle, words, titledAs != null)
         ) {
           draft.coverTitleChecked = true;

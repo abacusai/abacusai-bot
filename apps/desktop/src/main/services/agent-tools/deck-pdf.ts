@@ -362,6 +362,8 @@ export const NUMBER_SLIDES = `(() => {
     if (own.test(slide.textContent || '')) return;
     const number = document.createElement('div');
     number.textContent = (index + 1) + ' / ' + slides.length;
+    // Read left to right in a right-to-left deck too ("1 / 14", not "14 / 1").
+    number.dir = 'ltr';
     for (const key of ['fontSize', 'fontFamily', 'fontWeight', 'letterSpacing', 'color']) {
       number.style[key] = look[key];
     }

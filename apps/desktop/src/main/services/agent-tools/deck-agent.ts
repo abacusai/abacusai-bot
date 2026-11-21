@@ -652,7 +652,8 @@ export const numberSlides = (
       edits.push({
         start: start + leading,
         end: end - trailing,
-        text: `${pad(position + 1)}${between}${pad(slides.length)}`,
+        // Isolated, so a right-to-left deck shows "1 / 14", not "14 / 1".
+        text: `\u2066${pad(position + 1)}${between}${pad(slides.length)}\u2069`,
       });
     });
     let out = slide;
@@ -773,6 +774,29 @@ const checkNumbers = (
 };
 
 /**
+ * A deck written mostly in Arabic or Hebrew reads right to left: the Arabic
+ * deck printed left-aligned, its steps numbered left to right (hard asks).
+ * Set on <html> with its language, so the template's grids and flex rows turn
+ * with it and the browser shapes the text as that language.
+ */
+export const withDirection = (html: string, texts: string[]): string => {
+  const all = texts.join(" ");
+  const count = (re: RegExp): number => (all.match(re) ?? []).length;
+  const arabic = count(
+    /[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/g
+  );
+  const hebrew = count(/[\u0590-\u05ff]/g);
+  const latin = count(/[A-Za-z]/g);
+  const lang =
+    arabic > latin && arabic >= hebrew ? "ar" : hebrew > latin ? "he" : null;
+  if (lang == null) return html;
+  return html.replace(/<html\b([^>]*)>/i, (_tag, attrs: string) => {
+    const kept = attrs.replace(/\s(dir|lang)="[^"]*"/gi, "");
+    return `<html${kept} dir="rtl" lang="${lang}">`;
+  });
+};
+
+/**
  * Assembles the deck from filled slots and prints it. An unfilled slot keeps
  * the template's text, so a partial answer still produces a whole deck.
  */
@@ -871,7 +895,10 @@ export const renderDeck = async (
   const htmlPath = path.join(deckDir, "deck.html");
   await fs.writeFile(
     htmlPath,
-    retitle(withoutNotes(head + body + tail)),
+    withDirection(
+      retitle(withoutNotes(head + body + tail)),
+      numbers.slides.flatMap((slide) => Object.values(slide.values))
+    ),
     "utf8"
   );
 

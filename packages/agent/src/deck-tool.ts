@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 
 import { Type } from "typebox";
 
+import { briefLanguageProblem } from "./brief-language.js";
 import {
   namedTemplate,
   runDeckTask,
@@ -23,6 +24,9 @@ import { modelPath } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
 import { withSourceFile } from "./source-file.js";
 import { resolveInWorkspace } from "./workspace-path.js";
+
+/** Turns whose brief was sent back for its language (once a turn). */
+const languageSent = new Set<string>();
 
 export function deckToolEnabled(): boolean {
   const excluded = (process.env.ABACUSAI_BOT_EXCLUDED_TOOLS ?? "")
@@ -188,6 +192,23 @@ export function buildDeckTool(
         requestedPath.length > 0
           ? resolveInWorkspace(requestedPath, context.cwd)
           : "";
+
+      // The deck's language follows the user's own words, asked once a turn.
+      const languageTurn = turnOf(context);
+      const wrongLanguage = languageSent.has(languageTurn ?? "")
+        ? null
+        : briefLanguageProblem(
+            (context.requestSources?.().user ?? []).slice(-1).join("\n"),
+            given
+          );
+      if (wrongLanguage != null) {
+        languageSent.add(languageTurn ?? "");
+        return {
+          content: [{ type: "text" as const, text: wrongLanguage }],
+          details: {},
+          isError: true,
+        };
+      }
 
       if (given.length === 0) {
         return {

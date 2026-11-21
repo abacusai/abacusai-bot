@@ -44,16 +44,27 @@ const faces = (css) =>
 const field = (block, name) =>
   new RegExp(`${name}:\\s*([^;]+);`).exec(block)?.[1]?.trim() ?? "";
 
-const DEVANAGARI_URL =
-  "https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap";
+/** Scripts Latin faces lack, each drawn by its Noto face in every family. */
+const SCRIPTS = [
+  ["devanagari", "Noto+Sans+Devanagari:wght@400;700"],
+  ["arabic", "Noto+Sans+Arabic:wght@400"],
+  ["tamil", "Noto+Sans+Tamil:wght@400"],
+];
 
 const main = async () => {
   const index = JSON.parse(
     readFileSync(path.join(decks, "templates.json"), "utf8")
   );
-  const devanagari = faces(await get(DEVANAGARI_URL)).filter(
-    (face) => face.subset === "devanagari"
-  );
+  const scripts = [];
+  for (const [subset, family] of SCRIPTS)
+    scripts.push([
+      subset,
+      faces(
+        await get(
+          `https://fonts.googleapis.com/css2?family=${family}&display=swap`
+        )
+      ).filter((face) => face.subset === subset),
+    ]);
   const notes = [];
   // A template already vendored has no link left to read its families from:
   // its line in FONTS.md is kept as it was.
@@ -141,25 +152,26 @@ const main = async () => {
       if (!latinWeights.has(f)) latinWeights.set(f, new Set());
       latinWeights.get(f).add(field(b, "font-weight"));
     }
-    for (const family of families) {
-      for (const weight of latinWeights.get(family) ?? []) {
-        const face =
-          devanagari.find(
-            (d) =>
-              field(d.block, "font-weight") ===
-              (Number(weight.split(" ")[0]) >= 600 ? "700" : "400")
-          ) ?? devanagari[0];
-        if (!face) continue;
-        const src = /url\(([^)]+)\)/.exec(face.block)[1];
-        const local = await save(
-          src,
-          `noto-sans-devanagari-${field(face.block, "font-weight")}`
-        );
-        blocks.push(
-          `@font-face {\n  font-family: "${family}";\n  font-style: normal;\n  font-weight: ${weight};\n  font-display: swap;\n  src: url("${local}") format("woff2");\n  unicode-range: ${field(face.block, "unicode-range")};\n}`
-        );
+    for (const [subset, list] of scripts)
+      for (const family of families) {
+        for (const weight of latinWeights.get(family) ?? []) {
+          const face =
+            list.find(
+              (d) =>
+                field(d.block, "font-weight") ===
+                (Number(weight.split(" ")[0]) >= 600 ? "700" : "400")
+            ) ?? list[0];
+          if (!face) continue;
+          const src = /url\(([^)]+)\)/.exec(face.block)[1];
+          const local = await save(
+            src,
+            `noto-sans-${subset}-${field(face.block, "font-weight")}`
+          );
+          blocks.push(
+            `@font-face {\n  font-family: "${family}";\n  font-style: normal;\n  font-weight: ${weight};\n  font-display: swap;\n  src: url("${local}") format("woff2");\n  unicode-range: ${field(face.block, "unicode-range")};\n}`
+          );
+        }
       }
-    }
 
     writeFileSync(
       path.join(dir, "fonts.css"),

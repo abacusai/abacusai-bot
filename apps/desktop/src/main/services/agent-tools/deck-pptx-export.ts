@@ -187,7 +187,8 @@ export function faceFor(font: string, text = ""): string {
   // Devanagari and Bengali need a face that has them: Windows ships Nirmala
   // UI; a Latin face left the .pptx to the viewer's fallback (broken
   // conjuncts in LibreOffice, bug hunt rows 10 and 13b).
-  if (/[\u0900-\u09ff]/.test(text)) return "Nirmala UI";
+  // Tamil and the other Indic scripts too: Nirmala UI has them all.
+  if (/[\u0900-\u0dff]/.test(text)) return "Nirmala UI";
   const name = font.trim().toLowerCase();
   if (FACES[name] != null) return FACES[name];
   if (/\bmono\b/.test(name)) return "Courier New";
