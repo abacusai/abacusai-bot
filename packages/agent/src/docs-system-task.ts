@@ -40,6 +40,7 @@ import {
   type RequestSources,
 } from "./request-facts.js";
 import { createResourceLoader } from "./resource-loader.js";
+import { SOURCE_FILE_HEAD } from "./source-file.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
 import { makerVoice, runSubagent, type SubagentStop } from "./subagent-run.js";
 
@@ -68,6 +69,8 @@ export interface MadeFile {
   dropped: string[];
   /** Charts of two values, printed as the numbers or left out (their captions). */
   notCharts?: string[];
+  /** Weekdays the app corrected from their dates. */
+  weekdaysFixed?: string[];
   /** Text over text or a chart, out of its box, or loose on a slide. */
   layout?: string[];
   /** Images that did not load. */
@@ -241,7 +244,10 @@ export const namedSlidesUnchanged = (
   next: string
 ): number[] => {
   const named = new Set<number>();
-  for (const m of request.matchAll(
+  // The change asked, not the user's own file read into the brief after it,
+  // whose "Slide 1:", "Slide 2:" lines named every slide.
+  const own = request.indexOf(SOURCE_FILE_HEAD);
+  for (const m of (own >= 0 ? request.slice(0, own) : request).matchAll(
     /\bslides?\s+((?:\d{1,2}(?:\s*(?:,|and|&)\s*)?)+)/gi
   ))
     for (const n of m[1]!.match(/\d{1,2}/g) ?? []) named.add(Number(n));
@@ -717,6 +723,13 @@ export const docsSystemResultText = (
     ...(m.dropped.length > 0
       ? [
           `Left out because a number in it was not in the request: ${m.dropped.join("; ")}. Tell the user what was left out and why, in one line, and offer to add it back if they give the figure.`,
+        ]
+      : []),
+    // Weekdays are the app's to get right: corrected, and said, so the reply
+    // does not repeat the wrong ones (a rota printed 2025's calendar).
+    ...((m.weekdaysFixed ?? []).length > 0
+      ? [
+          `Weekdays corrected by the app from their dates: ${m.weekdaysFixed!.slice(0, 12).join("; ")}. Use these weekdays in your reply.`,
         ]
       : []),
     // A chart of two values is not drawn (it only repeats them): said, so a

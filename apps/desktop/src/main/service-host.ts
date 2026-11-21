@@ -4270,6 +4270,7 @@ export class ServiceHost {
           images: made.images,
           dropped: made.dropped,
           notCharts: made.notCharts ?? [],
+          weekdaysFixed: made.weekdaysFixed ?? [],
           foreignFonts: made.foreignFonts,
         };
       }

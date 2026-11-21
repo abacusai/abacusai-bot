@@ -41,12 +41,6 @@ export const readAsk = (brief: string): Ask => {
   }
   const totalMarks = totals.length > 0 ? Math.max(...totals) : null;
 
-  const onePage =
-    // Not a one-page part of a longer document ("7. One-page summary").
-    /\b(one|1)[- ]page\b(?![- ](summary|section|overview|recap|cheat ?sheet|appendix|table))/i.test(
-      brief
-    ) || /\b(flyer|poster|notice)\b/i.test(brief);
-
   const pageCount =
     /\b(one|two|three|four|five|[1-9])[- ]pages?\b(?![- ](summary|section|overview|recap|cheat ?sheet|appendix|table))/i.exec(
       brief
@@ -60,6 +54,15 @@ export const readAsk = (brief: string): Ask => {
             number
           >
         )[pageCount[1]!.toLowerCase()] ?? Number(pageCount[1]));
+  const onePage =
+    // Not a one-page part of a longer document ("7. One-page summary").
+    /\b(one|1)[- ]page\b(?![- ](summary|section|overview|recap|cheat ?sheet|appendix|table))/i.test(
+      brief
+    ) ||
+    // A flyer or notice is one page, unless more were asked: "a 3-page
+    // leave policy" mentions notice periods and was squeezed to one.
+    (/\b(flyer|poster|notice)\b/i.test(brief) &&
+      (pagesAsked == null || pagesAsked <= 1));
 
   // The ask, not the user's own file read into the brief after it: its
   // "Slide 1:" lines doubled an 8-slide redesign into 16 (hard asks).
@@ -86,7 +89,9 @@ export const readAsk = (brief: string): Ask => {
       brief
     )
       ? "teaching"
-      : /\b(or[çc]amento|quote|invoice|letter|minutes|resume|cv|notice|flyer|poster|certificate)\b/i.test(
+      : // A menu, recipe card, programme or timetable lists prices and times;
+        // it is not a report that wants a chart (a menu was sent back for one).
+        /\b(or[çc]amento|quote|invoice|letter|minutes|resume|cv|notice|flyer|poster|certificate|menu|recipe|programme|program|timetable|rota|itinerary|invitation)\b/i.test(
             brief
           )
         ? "form"

@@ -239,6 +239,24 @@ const FILLED_OVERLAPS = (filled: string[]): string => `(() => {
       for (const r of range.getClientRects())
         if (r.width > 0.5 && r.height > 0.5) items.push({ el, text, r });
     }
+    // Text past the edge of a box that clips it (a card, the page) does not
+    // print: a use-case slide's last row of cards was cut off (hard asks).
+    for (const { el, text, r } of items) {
+      for (let box = el.parentElement; box; box = box.parentElement) {
+        const o = getComputedStyle(box);
+        if (o.overflow === 'visible' && o.overflowY === 'visible' && o.overflowX === 'visible') {
+          if (box.hasAttribute('data-deck-page')) break;
+          continue;
+        }
+        const b = box.getBoundingClientRect();
+        if (r.bottom > b.bottom + 2 || r.right > b.right + 2 || r.top < b.top - 2 || r.left < b.left - 2) {
+          const line = 'slide ' + (i + 1) + ': "' + short(text) + '" is cut off at the edge of its box';
+          if (!out.includes(line)) out.push(line);
+          break;
+        }
+        if (box.hasAttribute('data-deck-page')) break;
+      }
+    }
     for (let a = 0; a < items.length; a++)
       for (let b = a + 1; b < items.length; b++) {
         const x = items[a], y = items[b];
@@ -485,6 +503,29 @@ const shadowOverride = (widthPx: number, heightPx: number): string => `(() => {
   return true;
 })()`;
 
+/** Runs `measure` with the page in print media, as it will be printed. */
+const inPrintMedia = async <T>(
+  win: BrowserWindow,
+  measure: () => Promise<T>
+): Promise<T> => {
+  const tools = win.webContents.debugger;
+  const attached = !tools.isAttached();
+  try {
+    if (attached) tools.attach("1.3");
+    await tools.sendCommand("Emulation.setEmulatedMedia", { media: "print" });
+  } catch {
+    return await measure();
+  }
+  try {
+    return await measure();
+  } finally {
+    await tools
+      .sendCommand("Emulation.setEmulatedMedia", { media: "" })
+      .catch(() => {});
+    if (attached) tools.detach();
+  }
+};
+
 export const exportDeckPdf = async (
   options: DeckPdfOptions
 ): Promise<DeckPdfResult> => {
@@ -551,12 +592,6 @@ export const exportDeckPdf = async (
     await win.webContents.executeJavaScript(GROW_SLIDES);
     await win.webContents.executeJavaScript(fitSlides(widthPx, heightPx));
     // Measured as it will print: after growing and fitting, before printing.
-    const overlaps =
-      options.filled != null && options.filled.length > 0
-        ? ((await win.webContents.executeJavaScript(
-            FILLED_OVERLAPS(options.filled)
-          )) as string[])
-        : [];
     // The cover's title as printed: its largest text (a cover check reads it).
     const coverTitle = (await win.webContents.executeJavaScript(`(() => {
       const first = document.querySelector('section.slide, section[data-slide], .slide');
@@ -574,6 +609,18 @@ export const exportDeckPdf = async (
       );
     }
 
+    // In print media, as the PDF lays it out: measured on screen, a card cut
+    // off in the print fitted and passed (hard asks).
+    const overlaps =
+      options.filled != null && options.filled.length > 0
+        ? await inPrintMedia(
+            win,
+            async () =>
+              (await win.webContents.executeJavaScript(
+                FILLED_OVERLAPS(options.filled!)
+              )) as string[]
+          )
+        : [];
     const data = await win.webContents.printToPDF({
       printBackground: true,
       preferCSSPageSize: true,

@@ -734,6 +734,9 @@ export type RenderDeckResult = {
  * number the facts do not give: the design system's number check, on a
  * template. With `drop`, those slots are dropped instead.
  */
+/** A template's sample that is a big figure: "94%", "3.2×", "48", "$1.4M". */
+const BIG_FIGURE = /^[#£$€¥+−-]?\s?\d[\d.,]*\s?(?:%|[a-z×x]{1,3})?$/i;
+
 const checkNumbers = (
   sections: string[],
   request: RenderDeckRequest
@@ -747,7 +750,10 @@ const checkNumbers = (
   if (request.facts == null)
     return { slides: request.slides, unsupported, dropped };
   const slides = request.slides.map((slide) => {
-    const section = sections[slide.index];
+    // slide.index counts from 1, as everywhere else (fill uses index - 1):
+    // read as 0-based, each slide was checked against the next one's slots,
+    // so the last slide went unchecked and a figure slide's numbers passed.
+    const section = sections[slide.index - 1];
     if (section == null) return slide;
     const values = { ...slide.values };
     for (const slot of slotsOf(section, sections.length)) {
@@ -758,6 +764,10 @@ const checkNumbers = (
         brief: request.facts,
         computed: [],
         today: request.today ?? "",
+        // A slot drawn as a big figure takes a figure from the request, small
+        // ones too: an Arabic deck's three figures all read "2" (hard asks).
+        // An item's own number ("01", "3") is a counter, not a figure.
+        figure: BIG_FIGURE.test(slot.text) && !/^0?\d$/.test(slot.text.trim()),
       });
       if (bad.length === 0) continue;
       if (request.dropUnsupported === true) {

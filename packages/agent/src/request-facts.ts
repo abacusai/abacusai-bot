@@ -10,6 +10,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { textOf } from "./compaction-anchor.js";
+import { SOURCE_FILE_HEAD } from "./source-file.js";
 import { userTurnText } from "./user-text.js";
 
 const contentText = (message: unknown): string =>
@@ -38,6 +39,28 @@ const TURNS = 6;
 /** Enough for long notes or a few search results; past this it is noise. */
 const MAX_CHARS = 400_000;
 
+/**
+ * Tools whose results are the bot's own making, not something it read: a
+ * deck's figures came back in ppt's result and then vouched for themselves.
+ */
+const OWN_MAKING = new Set([
+  "ppt",
+  "document",
+  "deck_export_pdf",
+  "present_deliverable",
+  "suggest_tasks",
+  "write",
+  "edit",
+]);
+
+/**
+ * Where the facts turn from the user's words to what the bot read. A number
+ * from what it read must appear there as written: near is not enough, since a
+ * long file holds a number near almost any other (hard asks: after one large
+ * read, six of seven invented figures passed). faithful.ts reads the mark.
+ */
+export const READ_MARK = "\n\n\u2063read\u2063\n\n";
+
 /** The last few user turns of a session, and the tool results among them. */
 export const requestSources = (
   messages: readonly unknown[]
@@ -48,6 +71,11 @@ export const requestSources = (
   for (let i = messages.length - 1; i >= 0 && user.length < TURNS; i--) {
     const role = (messages[i] as { role?: unknown } | null)?.role;
     if (role !== "user" && role !== "toolResult") continue;
+    if (
+      role === "toolResult" &&
+      OWN_MAKING.has(String((messages[i] as { toolName?: unknown }).toolName))
+    )
+      continue;
     const text =
       role === "user"
         ? userTurnText(contentText(messages[i]))
@@ -110,15 +138,22 @@ export const factsForChecks = (o: {
   // figures reach the page through the brief (final round: a chart picture's
   // bike counts in the user's own .pptx were left out).
   const opaque = attachedPaths(own).some((p) => !PLAIN.test(p));
-  return [
+  // The user's own .pptx or .docx, read by the app into the brief: its figures
+  // are the user's ("make it look better, keep my content" dropped them all).
+  const at = o.brief.indexOf(SOURCE_FILE_HEAD);
+  const given = [
     o.original ?? "",
     ...own,
     ...o.files,
-    ...(o.sources?.read ?? []),
+    at >= 0 ? o.brief.slice(at) : "",
     ...(opaque ? [o.brief] : []),
   ]
     .filter((t) => t.trim().length > 0)
     .join("\n\n");
+  const read = (o.sources?.read ?? [])
+    .filter((t) => t.trim().length > 0)
+    .join("\n\n");
+  return read.length > 0 ? `${given}${READ_MARK}${read}` : given;
 };
 
 const PICTURE = /[\w.~/@%+-]*?([\w.%+-]+\.(?:jpe?g|png|webp|gif))\b/gi;

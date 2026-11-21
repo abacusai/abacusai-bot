@@ -270,6 +270,10 @@ export interface Draft {
   coverTitleChecked?: boolean;
   /** Set once a cover without the deck's topic was sent back. */
   coverChecked?: boolean;
+  /** The catalogue as deck_templates gave it, for the colour check. */
+  catalogue?: Array<Record<string, unknown>>;
+  /** Set once a template not in the colour the user asked for was sent back. */
+  colourChecked?: boolean;
   /** Set once slides built around figures, with none, were sent back. */
   figurelessChecked?: boolean;
   /** Those slides and what they said: named in the result if they never print. */
@@ -548,6 +552,12 @@ export const coverNamesTopic = (
     : found >= Math.ceil(words.length / 3);
 };
 
+/** The colour the user's own words ask for ("make it green"), if any. */
+export const askedColour = (words: string): string | null =>
+  /\b(?:make|change|switch|turn|in|to)\b[^.\n]{0,30}\b(green|blue|red|orange|yellow|purple|pink|teal|navy|gold|black)\b/i
+    .exec(words)?.[1]
+    ?.toLowerCase() ?? null;
+
 export const buildTools = (
   draft: Draft,
   outputPath: string,
@@ -570,6 +580,7 @@ export const buildTools = (
         // same every time (five lessons in a row chose one, 17 Nov); a school
         // deck sees only templates made for its audience (catalogueFor).
         const list = result.templates ?? [];
+        draft.catalogue = list;
         const turned = catalogueFor(
           list,
           draft.audience ?? audienceOf(draft.audienceWords ?? ""),
@@ -603,6 +614,30 @@ export const buildTools = (
       const template = String(params.template ?? "").trim();
 
       if (template.length === 0) return failed("A template slug is required.");
+      // A colour the user asked for picks a template in that colour: told so
+      // in the prompt, a filler kept a cream deck for "change the colour to
+      // green", and the bot recoloured it by hand around every check.
+      const colour = askedColour(draft.audienceWords ?? "");
+      if (
+        colour != null &&
+        draft.required == null &&
+        draft.colourChecked !== true &&
+        draft.catalogue != null
+      ) {
+        const colours = (slug: string): string =>
+          String(
+            draft.catalogue!.find((t) => t.slug === slug)?.colours ?? ""
+          ).toLowerCase();
+        const inColour = draft
+          .catalogue!.map((t) => String(t.slug ?? ""))
+          .filter((slug) => slug.length > 0 && colours(slug).includes(colour));
+        if (!colours(template).includes(colour) && inColour.length > 0) {
+          draft.colourChecked = true;
+          return failed(
+            `The user asked for ${colour}, and ${template}'s colours are ${colours(template) || "not that"}. Templates in ${colour}: ${inColour.slice(0, 6).join(", ")}. Call deck_slots with one of them.`
+          );
+        }
+      }
       if (draft.required != null && template !== draft.required)
         return failed(
           `The user asked for the template "${draft.required}". Call deck_slots with template "${draft.required}".`
@@ -883,6 +918,16 @@ export const buildTools = (
                 `slide ${index} ("${heading.slice(0, 60)}") counts ${counted} but holds ${holds}; slide ${roomy.join(" or ")} holds ${counted} or more`
               );
           }
+        }
+
+        // The same words twice on one slide print twice: a Tamil cover read
+        // its title on both title lines and its tagline twice (hard asks).
+        const seen = new Set<string>();
+        for (const id of Object.keys(values)) {
+          const text = (values[id] ?? "").trim().toLowerCase();
+          if (text.length < 4 || text === REMOVE) continue;
+          if (seen.has(text)) values[id] = REMOVE;
+          else seen.add(text);
         }
 
         slides.push({ index, values });
@@ -1186,7 +1231,7 @@ export const buildTools = (
           draft.overlapChecked = true;
           return failed(
             [
-              "Printed, but text is drawn over other text:",
+              "Printed, but text is drawn over other text or cut off at the edge of its box:",
               ...result.overlaps!.slice(0, 12).map((line) => `  ${line}`),
               "",
               "Shorten those slots (or drop one) so each fits its place, then call render_deck again with every slide.",
@@ -1229,7 +1274,7 @@ export const buildTools = (
             : []),
           ...((result.overlaps ?? []).length > 0
             ? [
-                `Still drawn over other text: ${result.overlaps!.slice(0, 3).join("; ")}.`,
+                `Still drawn over other text or cut off: ${result.overlaps!.slice(0, 3).join("; ")}.`,
               ]
             : []),
         ];
