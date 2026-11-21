@@ -2328,6 +2328,12 @@
       "label": "Standard-Shell",
       "description": "Wie auch immer diese Maschine ihre Standard-Shell nennt."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} ist derzeit nicht verwendbar, daher werden in {{effective}} neue Terminals eröffnet.",
     "inUse": "Im Einsatz",
     "notInstalled": "Auf dieser Maschine nicht gefunden.",

@@ -21,12 +21,9 @@ const resolveShell = vi.fn((id: TerminalShellId) => ({
   env: id === "busybox" ? { BB_OVERRIDE_APPLETS: ";tar" } : undefined,
 }));
 
-vi.mock("../config/settings", () => ({
-  readTerminalShell: () => storedShell(),
-}));
-
 vi.mock("./terminal-shells", () => ({
   resolveTerminalShell: (id: TerminalShellId) => resolveShell(id),
+  preferredTerminalShell: () => storedShell(),
 }));
 
 vi.mock("@lydell/node-pty", () => ({

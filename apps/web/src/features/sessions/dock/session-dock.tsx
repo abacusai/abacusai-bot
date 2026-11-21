@@ -4,6 +4,7 @@ import {
   sessionConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import {
+  terminalShellListed,
   terminalShellsForPlatform,
   type TerminalShellId,
 } from "@abacus-ai/contract/terminal-shells";
@@ -444,27 +445,29 @@ export const SessionDock = ({
     }));
   const shellItems = terminalShellsForPlatform(
     (document.documentElement.dataset.platform ?? "darwin") as NodeJS.Platform
-  ).map((shell) => (
-    <DropdownMenuItem
-      key={shell.id}
-      disabled={
-        shells.data?.statuses.find((s) => s.id === shell.id)?.available ===
-        false
-      }
-      onClick={() =>
-        void transport.client.terminal.shell
-          .set({ shell: shell.id as TerminalShellId })
-          .then(() => add("terminal", shell.id))
-      }
-    >
-      <Terminal />
-      <span className="min-w-0 truncate">
-        {t("sessions.terminal.newShell", {
-          shell: t(`terminalShells.${shell.labelKey}.label`),
-        })}
-      </span>
-    </DropdownMenuItem>
-  ));
+  )
+    .filter((shell) => terminalShellListed(shell.id, shells.data?.statuses))
+    .map((shell) => (
+      <DropdownMenuItem
+        key={shell.id}
+        disabled={
+          shells.data?.statuses.find((s) => s.id === shell.id)?.available ===
+          false
+        }
+        onClick={() =>
+          void transport.client.terminal.shell
+            .set({ shell: shell.id as TerminalShellId })
+            .then(() => add("terminal", shell.id))
+        }
+      >
+        <Terminal />
+        <span className="min-w-0 truncate">
+          {t("sessions.terminal.newShell", {
+            shell: t(`terminalShells.${shell.labelKey}.label`),
+          })}
+        </span>
+      </DropdownMenuItem>
+    ));
   const [renameRequest, setRenameRequest] = useState<{
     id: string;
     at: number;

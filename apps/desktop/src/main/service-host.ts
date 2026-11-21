@@ -465,7 +465,6 @@ import { appLanguage } from "./services/config/native-language";
 import type { PrefsStore } from "./services/config/prefs-store";
 import {
   readExecBackend,
-  readTerminalShell,
   setTerminalShell,
   readToolsetPreferences,
   readDefaultAgentMode,
@@ -708,6 +707,7 @@ import { SkillsService } from "./services/workspace/skills-service";
 import { TerminalSessionService } from "./services/workspace/terminal-session-service";
 import {
   effectiveTerminalShell,
+  preferredTerminalShell,
   terminalShellStatuses,
 } from "./services/workspace/terminal-shells";
 import { WorkspaceRuntimeService } from "./services/workspace/workspace-runtime-service";
@@ -10146,7 +10146,7 @@ export class ServiceHost {
 
   /** The shell roster for the settings pane and the terminal panel's `+` menu. */
   getTerminalShellState(): TerminalShellState {
-    const selected = readTerminalShell();
+    const selected = preferredTerminalShell();
 
     return {
       selected,
@@ -10161,7 +10161,7 @@ export class ServiceHost {
    * should come back with.
    */
   setTerminalShell(shell: TerminalShellId): TerminalShellState {
-    const previous = readTerminalShell();
+    const previous = preferredTerminalShell();
     setTerminalShell(shell);
     const state = this.getTerminalShellState();
     if (state.selected !== previous) {

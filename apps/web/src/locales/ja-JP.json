@@ -2328,6 +2328,12 @@
       "label": "デフォルトのシェル",
       "description": "このマシンがデフォルトのシェルと呼ぶもの。"
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} は現在使用できないため、新しい端末は {{effective}} で開きます。",
     "inUse": "使用中",
     "notInstalled": "このマシンでは見つかりません。",

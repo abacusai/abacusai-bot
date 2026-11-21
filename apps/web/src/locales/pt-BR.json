@@ -2328,6 +2328,12 @@
       "label": "Concha padrão",
       "description": "O que quer que esta máquina chame de shell padrão."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} não pode ser usado no momento, então novos terminais são abertos em {{effective}}.",
     "inUse": "Em uso",
     "notInstalled": "Não encontrado nesta máquina.",

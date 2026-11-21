@@ -2328,6 +2328,12 @@
       "label": "Default shell",
       "description": "Whatever this machine calls its default shell."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
     "inUse": "In use",
     "notInstalled": "Not found on this machine.",

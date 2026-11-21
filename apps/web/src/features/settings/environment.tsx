@@ -1,4 +1,5 @@
 import { EXEC_BACKENDS } from "@abacus-ai/contract/exec-backends";
+import { terminalShellListed } from "@abacus-ai/contract/terminal-shells";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -133,12 +134,14 @@ export const EnvironmentPage = () => {
             <Choice
               id="terminalShell"
               value={shell.data.selected}
-              options={shell.data.statuses.map((x) => ({
-                value: x.id,
-                label:
-                  t(`terminalShells.${x.id}.label`) +
-                  (x.available ? "" : ` · ${t("phase5.notFoundMachine")}`),
-              }))}
+              options={shell.data.statuses
+                .filter((x) => terminalShellListed(x.id, shell.data?.statuses))
+                .map((x) => ({
+                  value: x.id,
+                  label:
+                    t(`terminalShells.${x.id}.label`) +
+                    (x.available ? "" : ` · ${t("phase5.notFoundMachine")}`),
+                }))}
               onChange={(selected) =>
                 setShell.mutate({
                   shell:

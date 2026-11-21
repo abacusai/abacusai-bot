@@ -2328,6 +2328,12 @@
       "label": "Cangkang bawaan",
       "description": "Apa pun nama mesin ini sebagai shell defaultnya."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} tidak dapat digunakan saat ini, jadi terminal baru dibuka di {{effective}}.",
     "inUse": "Sedang digunakan",
     "notInstalled": "Tidak ditemukan pada mesin ini.",

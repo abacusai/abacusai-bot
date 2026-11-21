@@ -2328,6 +2328,12 @@
       "label": "Shell predefinita",
       "description": "Qualunque cosa questa macchina chiami la sua shell predefinita."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} non è utilizzabile al momento, quindi nuovi terminali verranno aperti in {{effective}}.",
     "inUse": "In uso",
     "notInstalled": "Non trovato su questa macchina.",
