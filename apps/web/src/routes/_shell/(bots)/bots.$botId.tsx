@@ -42,6 +42,7 @@ import { BotSearch } from "#renderer/lib/navigation/search";
 import { Button } from "#renderer/ui/button";
 
 import { BotBrowser, BotBrowserRegistration } from "./-browser";
+import { BotTerminals } from "./-terminal";
 /**
  * The dev fixture build (`VITE_NEXT_DB_FIXTURES=1`, gallery and visual
  * screenshots only): a bot with no forever session yet shows a recorded
@@ -137,6 +138,10 @@ const ComposedChat = ({
           wallpaper: bot.wallpaper ?? null,
           header: <BotTranscriptIdentity bot={bot} />,
         }}
+      />
+      <BotTerminals
+        botSessionId={bot.sessionId ?? sessionId}
+        panelKey={panelKey}
       />
       <SidePanelContent kind="details">
         {(_, active) => (

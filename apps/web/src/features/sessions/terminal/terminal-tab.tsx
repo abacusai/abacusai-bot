@@ -37,6 +37,7 @@ import { retainTerminalStart } from "../dock/panel-tabs-store";
 import { pumpOutput, type OutputView } from "./output-pump";
 import {
   clearTerminal,
+  disposeTerminalView,
   getTerminalView,
   type TerminalView,
 } from "./terminal-registry";
@@ -60,6 +61,25 @@ const outputView = (
     if (view.offset !== undefined) view.term.reset();
   },
 });
+
+/** Ends a terminal's shell and drops its view (its tab was closed). */
+export const closeTerminal = (
+  transport: ReturnType<typeof useSessionsTransport>,
+  key: string,
+  terminalId: string
+): void =>
+  void getTerminalView(`${key}:${terminalId}`)
+    .then(async (view) => {
+      if (view.generation !== null)
+        await transport.client.terminal.hide({
+          conversationKey: key as never,
+          terminalId,
+          generation: view.generation,
+          close: true,
+        });
+      disposeTerminalView(`${key}:${terminalId}`);
+    })
+    .catch(() => {});
 
 export const TerminalTab = ({
   row,

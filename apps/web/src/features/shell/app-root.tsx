@@ -99,6 +99,8 @@ const useShellActions = (): ShellActions => {
     ...(area !== "sessions"
       ? {
           newTerminalElsewhere: () => {
+            // A page with terminals of its own (a bot's chat) answers it.
+            if (hasHotkeyAction("new-terminal-tab")) return;
             void navigate({
               to: "/sessions/new",
               search: { draft: openStartDraft() },

@@ -37,6 +37,7 @@ import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 
 import { BotBrowser, BotBrowserRegistration } from "./-browser";
+import { BotTerminals } from "./-terminal";
 const ReadySender = () => {
   const { botId, sessionId } = Route.useParams();
   const bot = useBot(botId);
@@ -93,6 +94,10 @@ const Sender = ({
           wallpaper: bot.wallpaper ?? null,
         }}
         composer={{ ...slots.composer, connectors: COMPOSER_CONNECTORS }}
+      />
+      <BotTerminals
+        botSessionId={bot.sessionId ?? sessionId}
+        panelKey={panelKey}
       />
       <SidePanelContent kind="details">
         {(_, active) => (

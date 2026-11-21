@@ -158,6 +158,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "data/unread-store",
     "dock/agent-browser",
     "dock/panel-tabs-store",
+    // A bot's chat renders the chat's terminal in its own panel.
+    "terminal/terminal-tab",
     "files/preview-target",
     "gallery/sections",
     "globals",

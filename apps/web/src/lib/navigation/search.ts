@@ -136,7 +136,7 @@ export const ConnectorsSearch = v.object({
 
 /** The side-panel tabs each area offers (title-bar tabs, ⌘⌥B). */
 export const AREA_PANEL_TABS = {
-  bots: ["details", "memory", "files", "browser"],
+  bots: ["details", "memory", "files", "browser", "terminal"],
   sessions: ["changes", "terminal", "files", "browser"],
   routines: [],
   artifacts: [],
