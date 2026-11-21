@@ -2025,7 +2025,6 @@
       "device": "Apparaat",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "{{name}} sluiten",
       "full": "Volledige weergave aan/uit",
       "move": "Tabblad verplaatsen",
       "movePane": "Verplaatsen naar paneel {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Proces beëindigd ({{code}})",
       "newShell": "Nieuwe terminal · {{shell}}",
       "planRequired": "De terminal is niet beschikbaar in het gratis abonnement voor je gehoste computer. Upgrade om hem te gebruiken.",
-      "planUnreadable": "Je abonnement kon niet worden gecontroleerd, dus de terminal staat voorlopig uit. Probeer het zo opnieuw."
+      "planUnreadable": "Je abonnement kon niet worden gecontroleerd, dus de terminal staat voorlopig uit. Probeer het zo opnieuw.",
+      "restart": "Herstarten",
+      "actions": "Terminalacties",
+      "clear": "Wissen",
+      "kill": "Terminal beëindigen",
+      "copy": "Kopiëren",
+      "paste": "Plakken"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

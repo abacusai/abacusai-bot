@@ -28,7 +28,7 @@ import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { resolveLook } from "#renderer/lib/bots/avatar";
-import { dispatchHotkeyAction } from "#renderer/lib/hotkeys";
+import { dispatchHotkeyAction, hasHotkeyAction } from "#renderer/lib/hotkeys";
 import { ActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import {
   AREA_HOME,
@@ -287,6 +287,11 @@ const CommandMenuBody = () => {
                 transition: "none",
               }),
           },
+        ]
+      : []),
+    // An open chat or a new one (its draft): whichever page handles it.
+    ...(hasHotkeyAction("new-terminal-tab")
+      ? [
           {
             id: "new-terminal",
             shortcut: shortcut("new-terminal-tab", "Mod+`"),

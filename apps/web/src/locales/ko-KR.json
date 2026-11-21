@@ -2025,7 +2025,6 @@
       "device": "기기",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "무료 요금제에서는 호스팅 컴퓨터에서 터미널을 사용할 수 없습니다. 사용하려면 업그레이드하세요.",
-      "planUnreadable": "요금제를 확인할 수 없어 지금은 터미널이 꺼져 있습니다. 잠시 후 다시 시도하세요."
+      "planUnreadable": "요금제를 확인할 수 없어 지금은 터미널이 꺼져 있습니다. 잠시 후 다시 시도하세요.",
+      "restart": "재시작",
+      "actions": "터미널 작업",
+      "clear": "지우기",
+      "kill": "터미널 종료",
+      "copy": "복사",
+      "paste": "붙여넣기"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

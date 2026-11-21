@@ -2025,7 +2025,6 @@
       "device": "Dispositivo",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "O terminal não está disponível no plano gratuito no seu computador hospedado. Faça upgrade para usá-lo.",
-      "planUnreadable": "Não foi possível verificar seu plano, então o terminal está desligado por enquanto. Tente novamente em instantes."
+      "planUnreadable": "Não foi possível verificar seu plano, então o terminal está desligado por enquanto. Tente novamente em instantes.",
+      "restart": "Reiniciar",
+      "actions": "Ações do terminal",
+      "clear": "Limpar",
+      "kill": "Encerrar terminal",
+      "copy": "Copiar",
+      "paste": "Colar"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

@@ -2025,7 +2025,6 @@
       "device": "デバイス",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "無料プランでは、ホスト型コンピューターでターミナルを使えません。使うにはアップグレードしてください。",
-      "planUnreadable": "プランを確認できなかったため、ターミナルは現在オフです。しばらくしてからもう一度お試しください。"
+      "planUnreadable": "プランを確認できなかったため、ターミナルは現在オフです。しばらくしてからもう一度お試しください。",
+      "restart": "再起動",
+      "actions": "ターミナルの操作",
+      "clear": "クリア",
+      "kill": "ターミナルを終了",
+      "copy": "コピー",
+      "paste": "貼り付け"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

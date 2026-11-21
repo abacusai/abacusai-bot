@@ -2025,7 +2025,6 @@
       "device": "设备",
       "terminal": "终端",
       "browser": "浏览器",
-      "closeTab": "关闭 {{name}}",
       "full": "切换完整视图",
       "move": "移动标签页",
       "movePane": "移到窗格 {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "进程已退出（{{code}}）",
       "newShell": "新建终端 · {{shell}}",
       "planRequired": "免费套餐下，你的托管电脑无法使用终端。升级后即可使用。",
-      "planUnreadable": "无法检查你的套餐，因此终端暂时关闭。请稍后再试。"
+      "planUnreadable": "无法检查你的套餐，因此终端暂时关闭。请稍后再试。",
+      "restart": "重启",
+      "actions": "终端操作",
+      "clear": "清屏",
+      "kill": "终止终端",
+      "copy": "复制",
+      "paste": "粘贴"
     },
     "tray": {
       "workspaceLabel": "工作区：{{name}}",

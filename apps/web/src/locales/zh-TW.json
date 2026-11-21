@@ -2025,7 +2025,6 @@
       "device": "裝置",
       "terminal": "終端機",
       "browser": "瀏覽器",
-      "closeTab": "關閉 {{name}}",
       "full": "切換完整檢視",
       "move": "移動分頁",
       "movePane": "移到窗格 {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "處理程序已結束（{{code}}）",
       "newShell": "新增終端機 · {{shell}}",
       "planRequired": "免費方案下，你的託管電腦無法使用終端機。升級後即可使用。",
-      "planUnreadable": "無法檢查你的方案，因此終端機暫時關閉。請稍後再試。"
+      "planUnreadable": "無法檢查你的方案，因此終端機暫時關閉。請稍後再試。",
+      "restart": "重新啟動",
+      "actions": "終端機動作",
+      "clear": "清除",
+      "kill": "終止終端機",
+      "copy": "複製",
+      "paste": "貼上"
     },
     "tray": {
       "workspaceLabel": "工作區：{{name}}",

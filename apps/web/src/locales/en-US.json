@@ -2025,7 +2025,6 @@
       "device": "Device",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "The terminal isn't available on the free plan for your hosted computer. Upgrade to use it.",
-      "planUnreadable": "Your plan couldn't be checked, so the terminal is off for now. Try again shortly."
+      "planUnreadable": "Your plan couldn't be checked, so the terminal is off for now. Try again shortly.",
+      "restart": "Restart",
+      "actions": "Terminal actions",
+      "clear": "Clear",
+      "kill": "Kill terminal",
+      "copy": "Copy",
+      "paste": "Paste"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

@@ -152,8 +152,25 @@ const snapshot = (
   exitedAt: null,
 });
 
+/**
+ * Whether the shell itself is in the foreground, at its prompt. Unix only:
+ * Windows reports the shell's own name whatever runs in it.
+ */
+const atPrompt = (pty: TerminalPty, file: string | undefined): boolean => {
+  if (process.platform === "win32" || file == null || pty.process == null)
+    return false;
+  const name = (value: string) => path.basename(value).replace(/^-/, "");
+  return name(pty.process) === name(file);
+};
+
+/** One POSIX shell word (bash, zsh, sh, fish). */
+const shellQuote = (value: string): string =>
+  `'${value.replaceAll("'", `'\\''`)}'`;
+
 export class TerminalSessionService {
   private readonly registry: ConversationTerminalRuntimeRegistry;
+  /** The file each PTY was spawned from, to tell its shell from a program. */
+  private readonly shellFiles = new WeakMap<TerminalPty, string>();
 
   constructor(private readonly options: TerminalSessionServiceOptions) {
     this.registry = new ConversationTerminalRuntimeRegistry({
@@ -167,7 +184,7 @@ export class TerminalSessionService {
         }
         const shell = resolveTerminalShell(requestedShell(requested));
         const spawn = await loadSpawn();
-        return spawn(shell.file, shell.args, {
+        const pty = spawn(shell.file, shell.args, {
           cwd: workspacePath,
           env: childProcessEnv(process.env, shell.env),
           cols,
@@ -180,6 +197,8 @@ export class TerminalSessionService {
           // the app.
           useConptyDll: process.platform === "win32",
         });
+        this.shellFiles.set(pty, shell.file);
+        return pty;
       },
       onOutput: (event) =>
         options.emitTerminalOutput({
@@ -370,9 +389,13 @@ export class TerminalSessionService {
     assertIdentity(request.draftConversationKey, request.draftConversation);
     assertIdentity(request.sessionConversationKey, request.sessionConversation);
     const promoted = await this.registry.promoteDraftToSession(
+      // Its draft id too: the renderer keys a new chat's terminals by it.
       {
         kind: "draft",
         workspaceId: request.draftConversation.workspaceId,
+        ...(request.draftConversation.draftId
+          ? { draftId: request.draftConversation.draftId }
+          : {}),
       },
       {
         kind: "session",
@@ -381,7 +404,7 @@ export class TerminalSessionService {
       }
     );
     if (promoted.attachment == null) return null;
-    let attachment = promoted.attachment;
+    const attachment = promoted.attachment;
     const workspacePath = this.options.resolveWorkspacePath(
       request.sessionConversation.workspaceId
     );
@@ -389,31 +412,20 @@ export class TerminalSessionService {
       request.sessionConversation.workspaceId,
       request.sessionConversation.sessionId
     );
+    // The chat moved to its own folder (a new worktree). The shells keep
+    // running; one sitting at its prompt follows the chat there, a busy one
+    // (a dev server, an editor) is left as it is.
     if (
+      promoted.status === "promoted" &&
       workspacePath != null &&
       sessionPath != null &&
       path.resolve(workspacePath) !== path.resolve(sessionPath)
     ) {
-      const promotedAttachments = this.registry.list(attachment.key);
-      this.registry.disposeScope(attachment.key);
-      const restarted = await Promise.all(
-        promotedAttachments.map(({ terminalId, cols, rows, shell }) =>
-          this.registry.start({
-            terminalId,
-            shell,
-            scope: {
-              kind: "session",
-              workspaceId: request.sessionConversation.workspaceId,
-              sessionId: request.sessionConversation.sessionId,
-            },
-            cols,
-            rows,
-          })
-        )
-      );
-      attachment =
-        restarted.find((item) => item.terminalId === attachment.terminalId) ??
-        restarted[0]!;
+      for (const { terminalId } of this.registry.list(attachment.key)) {
+        const pty = this.registry.ptyOf(attachment.key, terminalId);
+        if (pty != null && atPrompt(pty, this.shellFiles.get(pty)))
+          pty.write(`\x15 cd -- ${shellQuote(sessionPath)}\r`);
+      }
     }
     const state = snapshot(attachment);
     this.options.emitTerminalState(state);

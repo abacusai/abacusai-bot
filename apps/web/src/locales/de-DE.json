@@ -2025,7 +2025,6 @@
       "device": "Gerät",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "Das Terminal ist im kostenlosen Tarif auf deinem gehosteten Computer nicht verfügbar. Führe ein Upgrade durch, um es zu nutzen.",
-      "planUnreadable": "Dein Tarif konnte nicht geprüft werden, daher ist das Terminal vorerst aus. Versuche es gleich noch einmal."
+      "planUnreadable": "Dein Tarif konnte nicht geprüft werden, daher ist das Terminal vorerst aus. Versuche es gleich noch einmal.",
+      "restart": "Neu starten",
+      "actions": "Terminal-Aktionen",
+      "clear": "Leeren",
+      "kill": "Terminal beenden",
+      "copy": "Kopieren",
+      "paste": "Einfügen"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

@@ -2025,7 +2025,6 @@
       "device": "Perangkat",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "Terminal tidak tersedia di paket gratis untuk komputer hosting Anda. Tingkatkan paket untuk menggunakannya.",
-      "planUnreadable": "Paket Anda tidak dapat diperiksa, jadi terminal dimatikan untuk sementara. Coba lagi sebentar lagi."
+      "planUnreadable": "Paket Anda tidak dapat diperiksa, jadi terminal dimatikan untuk sementara. Coba lagi sebentar lagi.",
+      "restart": "Mulai ulang",
+      "actions": "Tindakan terminal",
+      "clear": "Bersihkan",
+      "kill": "Hentikan terminal",
+      "copy": "Salin",
+      "paste": "Tempel"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

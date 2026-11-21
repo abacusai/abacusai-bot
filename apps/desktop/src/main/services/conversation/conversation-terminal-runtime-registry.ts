@@ -17,6 +17,8 @@ export type TerminalPty = {
   write: (data: string) => void;
   resize: (cols: number, rows: number) => void;
   kill: (signal?: string) => void;
+  /** The foreground program's name (node-pty), where the platform tells it. */
+  readonly process?: string;
 };
 
 export type CreateConversationTerminalPty = (request: {
@@ -360,6 +362,11 @@ export class ConversationTerminalRuntimeRegistry {
     if (runtime == null) return false;
     runtime.pty.write(data);
     return true;
+  }
+
+  /** A running terminal's PTY, whatever its generation. */
+  ptyOf(key: ConversationKey, terminalId: string): TerminalPty | null {
+    return this.runtimes.get(runtimeKey(key, terminalId))?.pty ?? null;
   }
 
   resize(

@@ -2025,7 +2025,6 @@
       "device": "Dispositivo",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "El terminal no está disponible con el plan gratuito en tu ordenador alojado. Mejora tu plan para usarlo.",
-      "planUnreadable": "No se ha podido comprobar tu plan, así que el terminal está desactivado por ahora. Inténtalo de nuevo en breve."
+      "planUnreadable": "No se ha podido comprobar tu plan, así que el terminal está desactivado por ahora. Inténtalo de nuevo en breve.",
+      "restart": "Reiniciar",
+      "actions": "Acciones del terminal",
+      "clear": "Limpiar",
+      "kill": "Cerrar el terminal",
+      "copy": "Copiar",
+      "paste": "Pegar"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

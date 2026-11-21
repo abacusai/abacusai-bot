@@ -346,6 +346,7 @@ const RailSegment = ({
   onReopen,
   renderIcon,
   onRename,
+  renameRequest,
   controls = true,
   shortcuts = true,
   measureToolbar = true,
@@ -375,6 +376,8 @@ const RailSegment = ({
   renderIcon?(tab: PanelTab): ReactNode;
   onReopen?(): void;
   onRename?(id: string, title: string): void;
+  /** Opens the rename dialog for a tab from elsewhere (a menu); `at` repeats it. */
+  renameRequest?: { id: string; at: number } | null;
   workspaceApi?: React.RefObject<DockviewApi | null>;
   onMove?(id: string, position: "left" | "right" | "top" | "bottom"): void;
 }) => {
@@ -383,6 +386,13 @@ const RailSegment = ({
   const [rename, setRename] = useState<{ id: string; title: string } | null>(
     null
   );
+  // A request opens the dialog once, during render (no effect round trip).
+  const [renameSeen, setRenameSeen] = useState(renameRequest?.at ?? null);
+  if (renameRequest && renameRequest.at !== renameSeen) {
+    setRenameSeen(renameRequest.at);
+    const tab = tabs.find((tab) => tab.id === renameRequest.id);
+    if (tab && onRename) setRename({ id: tab.id, title: title(tab) });
+  }
   const motionPref = useMotionPreference();
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);

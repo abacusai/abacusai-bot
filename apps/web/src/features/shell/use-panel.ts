@@ -5,7 +5,11 @@
  * bots' `?preview=`) is a deep link: consumed into the store, then stripped
  * from the URL, so later navigations within the scope never reset the panel.
  */
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import {
+  conversationRefFromKey,
+  sessionConversationKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useStore } from "@tanstack/react-store";
 import { createContext, useContext, useEffect } from "react";
@@ -76,7 +80,20 @@ export const usePanel = (area: ShellArea | undefined) => {
     tab?: string;
     preview?: string;
     view?: "full" | "split";
+    draft?: string;
   };
+  // A new chat's panel lives under its draft's key (the dock in draft mode).
+  const draftOpen = useStore(panelTabsStore, (state) =>
+    Object.entries(state).some(([entryKey, entry]) => {
+      const ref = conversationRefFromKey(entryKey as ConversationKey);
+      return (
+        entry.open === true &&
+        ref?.kind === "draft" &&
+        ref.draftId != null &&
+        ref.draftId === search.draft
+      );
+    })
+  );
   const navigate = useNavigate();
   const deepTab = typeof search.tab === "string" ? search.tab : undefined;
   const deepPreview =
@@ -105,10 +122,12 @@ export const usePanel = (area: ShellArea | undefined) => {
     active: activeTabOf(scope),
     sessionOpen:
       sessions &&
-      (deepTab != null
-        ? deepTab !== "chat" ||
-          (search.view === "full" && sessionTabs.open === true)
-        : sessionTabs.open === true),
+      (sessionKey == null && search.draft != null
+        ? draftOpen
+        : deepTab != null
+          ? deepTab !== "chat" ||
+            (search.view === "full" && sessionTabs.open === true)
+          : sessionTabs.open === true),
     toggle: () => {
       if (sessions) {
         if (!sessionKey) return;

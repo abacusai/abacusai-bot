@@ -1,10 +1,13 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
-  sessionConversationKey,
+  conversationKey,
+  conversationRefFromKey,
   sessionConversationRef,
+  type ConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
 import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
+import { ClipboardPaste, Copy, Eraser, RotateCcw } from "lucide-react";
 import { useContext, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,11 +23,23 @@ import { followNotices } from "#renderer/data/queries/notices";
 import { isRpcError } from "#renderer/data/query-client";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import { uiPlatform } from "#renderer/lib/platform";
+import { Button } from "#renderer/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "#renderer/ui/context-menu";
 
 import { useSessionsTransport } from "../data/queries";
 import { retainTerminalStart } from "../dock/panel-tabs-store";
 import { pumpOutput, type OutputView } from "./output-pump";
-import { getTerminalView, type TerminalView } from "./terminal-registry";
+import {
+  clearTerminal,
+  getTerminalView,
+  type TerminalView,
+} from "./terminal-registry";
 /** Why a hosted computer refused the terminal on this plan, if it did. */
 const planRefusal = (error: unknown): string | null =>
   isRpcError(error) && error.code === "PRECONDITION_FAILED"
@@ -54,8 +69,11 @@ export const TerminalTab = ({
   dispatch,
   onUrl,
   shell,
+  conversation: scope,
 }: {
-  row: SessionRow;
+  row: Pick<SessionRow, "workspaceId" | "id">;
+  /** A new chat's draft; otherwise the chat's own. */
+  conversation?: ConversationRef;
   id: string;
   visible: boolean;
   onClose: () => void;
@@ -66,8 +84,13 @@ export const TerminalTab = ({
   const { t } = useTranslation();
   const transport = useSessionsTransport();
   const container = useRef<HTMLDivElement>(null);
-  const key = sessionConversationKey(row.workspaceId, row.id);
+  const key = conversationKey(
+    scope ?? sessionConversationRef(row.workspaceId, row.id)
+  );
   const [error, setError] = useState<string | null>(null);
+  // An exited shell keeps its tab and output; Restart starts a fresh one there.
+  const [exited, setExited] = useState(false);
+  const [run, setRun] = useState(0);
   const focused = useRef(false);
   const bindings = useContext(TerminalActionBindingsContext);
   const handleKey = useEffectEvent(
@@ -103,7 +126,7 @@ export const TerminalTab = ({
         const start = await transport.client.terminal.start({
           terminalId: id,
           conversationKey: key,
-          conversation: sessionConversationRef(row.workspaceId, row.id),
+          conversation: conversationRefFromKey(key)!,
           generation: view.generation,
           ...(shell ? { shell } : {}),
           cols: view.term.cols || 80,
@@ -182,6 +205,7 @@ export const TerminalTab = ({
               view.term.write(
                 `\r\n${t("sessions.terminal.exited", { code: chunk.exitCode ?? "" })}\r\n`
               );
+              setExited(true);
               exitTimer = setTimeout(() => {
                 if (!focused.current) close();
               }, 2000);
@@ -268,7 +292,26 @@ export const TerminalTab = ({
       cleanup();
       if (exitTimer) clearTimeout(exitTimer);
     };
-  }, [transport, key, id, row.workspaceId, row.id, t, shell]);
+  }, [transport, key, id, t, shell, run]);
+  const [selection, setSelection] = useState(false);
+  /** Runs on this tab's terminal, then gives it the keyboard back. */
+  const withTerm = (fn: (term: TerminalView["term"]) => unknown) =>
+    void getTerminalView(`${key}:${id}`)
+      .then(async (view) => {
+        await fn(view.term);
+        view.term.focus();
+      })
+      .catch(() => {});
+  const restart = () => {
+    void getTerminalView(`${key}:${id}`).then((view) => {
+      // A new generation, read from its start, under the old output.
+      view.generation = null;
+      view.offset = undefined;
+      view.term.write("\r\n");
+      setExited(false);
+      setRun((n) => n + 1);
+    });
+  };
   useEffect(() => {
     let live = true;
     void getTerminalView(`${key}:${id}`)
@@ -303,7 +346,54 @@ export const TerminalTab = ({
       }}
     >
       {error ? <p role="alert">{error}</p> : null}
-      <div ref={container} className="min-h-0 flex-1 p-2" />
+      {exited ? (
+        <div className="flex shrink-0 justify-end border-b px-2 py-1">
+          <Button size="sm" variant="secondary" onClick={restart}>
+            <RotateCcw />
+            {t("sessions.terminal.restart")}
+          </Button>
+        </div>
+      ) : null}
+      <ContextMenu
+        onOpenChange={(open) => {
+          if (open)
+            void getTerminalView(`${key}:${id}`).then((view) =>
+              setSelection(view.term.hasSelection())
+            );
+        }}
+      >
+        <ContextMenuTrigger
+          render={<div ref={container} className="min-h-0 flex-1 p-2" />}
+        />
+        <ContextMenuContent className="w-44">
+          <ContextMenuItem
+            disabled={!selection}
+            onClick={() =>
+              withTerm((term) =>
+                navigator.clipboard.writeText(term.getSelection())
+              )
+            }
+          >
+            <Copy />
+            {t("sessions.terminal.copy")}
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() =>
+              withTerm(async (term) =>
+                term.paste(await navigator.clipboard.readText())
+              )
+            }
+          >
+            <ClipboardPaste />
+            {t("sessions.terminal.paste")}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => withTerm(clearTerminal)}>
+            <Eraser />
+            {t("sessions.terminal.clear")}
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   );
 };

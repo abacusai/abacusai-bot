@@ -2025,7 +2025,6 @@
       "device": "Dispositivo",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "Il terminale non è disponibile con il piano gratuito sul tuo computer ospitato. Passa a un piano superiore per usarlo.",
-      "planUnreadable": "Non è stato possibile verificare il tuo piano, quindi il terminale è disattivato per ora. Riprova tra poco."
+      "planUnreadable": "Non è stato possibile verificare il tuo piano, quindi il terminale è disattivato per ora. Riprova tra poco.",
+      "restart": "Riavvia",
+      "actions": "Azioni del terminale",
+      "clear": "Cancella",
+      "kill": "Termina il terminale",
+      "copy": "Copia",
+      "paste": "Incolla"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

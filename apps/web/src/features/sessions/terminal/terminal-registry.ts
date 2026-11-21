@@ -13,6 +13,11 @@ export interface TerminalView {
   /** The colours the terminal paints with now. */
   theme(): Record<string, string>;
 }
+/** Clear: screen and scrollback go, and the shell redraws its prompt (Ctrl+L). */
+export const clearTerminal = (term: Terminal): void => {
+  term.clear();
+  term.input("\x0c", true);
+};
 const views = new Map<string, Promise<TerminalView>>();
 export const getTerminalView = (key: string): Promise<TerminalView> => {
   let view = views.get(key);

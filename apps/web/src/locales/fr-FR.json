@@ -2025,7 +2025,6 @@
       "device": "Appareil",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2133,7 +2132,13 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "Le terminal n'est pas disponible avec l'offre gratuite sur votre ordinateur hébergé. Passez à une offre supérieure pour l'utiliser.",
-      "planUnreadable": "Votre offre n'a pas pu être vérifiée, le terminal est donc désactivé pour le moment. Réessayez dans un instant."
+      "planUnreadable": "Votre offre n'a pas pu être vérifiée, le terminal est donc désactivé pour le moment. Réessayez dans un instant.",
+      "restart": "Redémarrer",
+      "actions": "Actions du terminal",
+      "clear": "Effacer",
+      "kill": "Tuer le terminal",
+      "copy": "Copier",
+      "paste": "Coller"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",

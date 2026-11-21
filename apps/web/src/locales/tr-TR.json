@@ -2025,7 +2025,6 @@
       "device": "Cihaz",
       "terminal": "Terminal",
       "browser": "Tarayıcı",
-      "closeTab": "{{name}} sekmesini kapat",
       "full": "Tam görünümü aç/kapat",
       "move": "Sekmeyi taşı",
       "movePane": "{{name}} bölmesine taşı",
@@ -2133,7 +2132,13 @@
       "exited": "İşlem sonlandı ({{code}})",
       "newShell": "Yeni terminal · {{shell}}",
       "planRequired": "Terminal, barındırılan bilgisayarınızda ücretsiz planda kullanılamaz. Kullanmak için planınızı yükseltin.",
-      "planUnreadable": "Planınız kontrol edilemedi, bu yüzden terminal şimdilik kapalı. Birazdan tekrar deneyin."
+      "planUnreadable": "Planınız kontrol edilemedi, bu yüzden terminal şimdilik kapalı. Birazdan tekrar deneyin.",
+      "restart": "Yeniden başlat",
+      "actions": "Terminal işlemleri",
+      "clear": "Temizle",
+      "kill": "Terminali sonlandır",
+      "copy": "Kopyala",
+      "paste": "Yapıştır"
     },
     "tray": {
       "workspaceLabel": "Çalışma alanı: {{name}}",
