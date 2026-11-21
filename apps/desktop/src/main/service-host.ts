@@ -3481,6 +3481,7 @@ export class ServiceHost {
     return path.join(abacusBotHome(), "worktrees", workspaceId);
   }
   private readonly terminalSessionService = new TerminalSessionService({
+    scrollbackFile: path.join(abacusBotHome(), "terminal-scrollback.json"),
     resolveWorkspacePath: (workspaceId, sessionId) =>
       this.resolveWorkspaceContextPath({
         workspaceId,

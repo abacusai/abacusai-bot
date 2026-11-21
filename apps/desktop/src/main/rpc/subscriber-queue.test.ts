@@ -453,7 +453,7 @@ describe("terminal output by offset (A-T9)", () => {
         (h: ReturnType<typeof terminalHarness>) => h.registry.disposeAll(),
       ],
     ] as const) {
-      it(`ends a live reader with retired: closed on ${name}`, async () => {
+      it(`ends a live reader with retired: ${name === "every terminal being disposed" ? "quit" : "closed"} on ${name}`, async () => {
         const harness = terminalHarness();
         const { output, generation, baseline } = await openLive(harness);
         const listening = harness.bus.listenerCount();
@@ -466,7 +466,12 @@ describe("terminal output by offset (A-T9)", () => {
 
         expect(await drain(output)).toEqual([
           { type: "data", data: "x", offset: 1 },
-          { type: "retired", reason: "closed" },
+          {
+            type: "retired",
+            // Quitting is not closing: the window keeps the tab.
+            reason:
+              name === "every terminal being disposed" ? "quit" : "closed",
+          },
         ]);
         await vi.waitFor(() =>
           expect(harness.bus.listenerCount()).toBe(baseline)

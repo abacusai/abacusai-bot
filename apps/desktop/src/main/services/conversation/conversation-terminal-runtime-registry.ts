@@ -50,10 +50,10 @@ export type ConversationTerminalExitEvent = ConversationTerminalEvent & {
 
 /**
  * Why a generation ended without its own exit: closed (explicitly, or with
- * its scope or workspace), or superseded by a scope promotion that moved the
- * shell to a new key and generation.
+ * its scope or workspace), superseded by a scope promotion that moved the
+ * shell to a new key and generation, or quit with the app (its tab stays).
  */
-export type TerminalRetireReason = "closed" | "superseded";
+export type TerminalRetireReason = "closed" | "superseded" | "quit";
 
 export type ConversationTerminalRetireEvent = ConversationTerminalEvent & {
   reason: TerminalRetireReason;
@@ -91,6 +91,11 @@ export type ConversationTerminalRuntimeRegistryOptions = {
    * promotion re-keys it. Readers of that generation end on this.
    */
   onRetire?: (event: ConversationTerminalRetireEvent) => void;
+  /** Output to show above a new shell's own (a terminal reopened after a restart). */
+  restoreScrollback?: (
+    key: ConversationKey,
+    terminalId: string
+  ) => string | undefined;
 };
 
 type Runtime = {
@@ -313,6 +318,15 @@ export class ConversationTerminalRuntimeRegistry {
       .map((runtime) => this.attachment(runtime));
   }
 
+  /** Every running terminal's output so far, for keeping across a restart. */
+  scrollbacks(): { key: ConversationKey; terminalId: string; data: string }[] {
+    return [...this.runtimes.values()].map((runtime) => ({
+      key: runtime.key,
+      terminalId: runtime.terminalId,
+      data: runtime.scrollback.read(),
+    }));
+  }
+
   /** Every running terminal, in every conversation. */
   listAll(): ConversationTerminalAttachment[] {
     return [...this.runtimes.values()].map((runtime) =>
@@ -398,7 +412,8 @@ export class ConversationTerminalRuntimeRegistry {
   close(
     key: ConversationKey,
     expectedGeneration?: number,
-    terminalId = DEFAULT_TERMINAL_ID
+    terminalId = DEFAULT_TERMINAL_ID,
+    reason: TerminalRetireReason = "closed"
   ): boolean {
     const id = runtimeKey(key, terminalId);
     const runtime = this.currentRuntime(key, terminalId, expectedGeneration);
@@ -417,7 +432,7 @@ export class ConversationTerminalRuntimeRegistry {
       this.runtimes.delete(id);
       // Its exit is suppressed from here on (it is no longer current), so
       // readers of this generation are told now.
-      this.retire(runtime, "closed");
+      this.retire(runtime, reason);
       runtime.pty.kill();
     }
     return true;
@@ -546,8 +561,11 @@ export class ConversationTerminalRuntimeRegistry {
         terminalId: pending.terminalId,
       });
     }
+    // The app is quitting: the shells end, but nobody closed a tab, so
+    // readers are told "quit", not "closed" (on "closed" the window drops
+    // the tab, and these come back on the next start).
     for (const { key, terminalId } of entries.values()) {
-      this.close(key, undefined, terminalId);
+      this.close(key, undefined, terminalId, "quit");
     }
     this.promotedSessionKeys.clear();
     return entries.size;
@@ -593,6 +611,8 @@ export class ConversationTerminalRuntimeRegistry {
       scrollback: new BoundedScrollback(this.maximumScrollbackBytes),
     };
     this.runtimes.set(id, runtime);
+    const restored = this.options.restoreScrollback?.(key, terminalId);
+    if (restored) runtime.scrollback.append(restored);
 
     pty.onData((rawData) => {
       if (!this.isCurrent(runtime)) return;

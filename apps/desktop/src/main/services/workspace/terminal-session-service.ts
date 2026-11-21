@@ -13,6 +13,7 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import {
   conversationKey,
+  conversationRefFromKey,
   draftConversationRef,
   sessionConversationRef,
   type ConversationKey,
@@ -29,6 +30,13 @@ import {
   type TerminalRetireReason,
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
+import {
+  loadScrollback,
+  restoredOutput,
+  saveScrollback,
+  scrollbackKey,
+  type SavedScrollback,
+} from "./terminal-scrollback";
 import { resolveTerminalShell } from "./terminal-shells";
 
 type PtySpawn = (
@@ -97,6 +105,8 @@ const requestedShell = (shell: TerminalShellId | undefined): TerminalShellId =>
   shell ?? readTerminalShell();
 
 type TerminalSessionServiceOptions = {
+  /** Where chat terminals' output is kept across a restart; none, not kept. */
+  scrollbackFile?: string;
   resolveWorkspacePath: (
     workspaceId: string,
     sessionId?: string
@@ -206,9 +216,22 @@ export class TerminalSessionService {
   private readonly registry: ConversationTerminalRuntimeRegistry;
   /** The file each PTY was spawned from, to tell its shell from a program. */
   private readonly shellFiles = new WeakMap<TerminalPty, string>();
+  /** Saved at the last quit and not yet shown: each is shown once. */
+  private readonly restored: Map<string, SavedScrollback>;
 
   constructor(private readonly options: TerminalSessionServiceOptions) {
+    this.restored =
+      options.scrollbackFile == null
+        ? new Map()
+        : loadScrollback(options.scrollbackFile);
     this.registry = new ConversationTerminalRuntimeRegistry({
+      restoreScrollback: (key, terminalId) => {
+        const id = scrollbackKey(key, terminalId);
+        const saved = this.restored.get(id);
+        if (saved == null) return undefined;
+        this.restored.delete(id);
+        return restoredOutput(saved.data);
+      },
       createPty: async ({ scope, cols, rows, shell: requested }) => {
         const workspacePath = options.resolveWorkspacePath(
           scope.workspaceId,
@@ -284,6 +307,15 @@ export class TerminalSessionService {
   }
 
   dispose(): void {
+    // A chat's terminals come back after a restart (a new chat's don't):
+    // keep their output, and what was saved for ones not reopened this time.
+    if (this.options.scrollbackFile != null)
+      saveScrollback(this.options.scrollbackFile, [
+        ...this.registry
+          .scrollbacks()
+          .filter(({ key }) => conversationRefFromKey(key)?.kind === "session"),
+        ...this.restored.values(),
+      ]);
     this.registry.disposeAll();
   }
 

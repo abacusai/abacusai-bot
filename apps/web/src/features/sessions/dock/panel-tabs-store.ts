@@ -1,4 +1,8 @@
 import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
+import {
+  conversationRefFromKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 
 import { persistedStore } from "#renderer/lib/continuity/registry";
 
@@ -23,6 +27,56 @@ export const panelTabsStore = persistedStore<Record<string, PanelTabs>>(
   () => ({})
 );
 export const EMPTY_TABS: PanelTabs = { tabs: [], last: null };
+/**
+ * Each chat's terminal tabs, kept across app restarts (the tabs above live
+ * only as long as the window). The shells die with the app; their tabs come
+ * back with fresh ones in the chat's folder (`reconcileTerminals`).
+ */
+type SavedTerminals = Record<
+  string,
+  { tabs: Pick<PanelTab, "ref" | "title" | "shell">[]; shown: string | null }
+>;
+const savedTerminals = persistedStore<SavedTerminals>(
+  "abacusai-bot:abacus.sessions.terminals",
+  () => ({}),
+  { durable: true, bind: false }
+);
+const isTerminal = (ref: string | null | undefined) =>
+  !!ref?.startsWith("terminal:");
+/** Chats whose terminals this window has already reconciled with main. */
+const reconciled = new Set<string>();
+// Mirrored from the chats this window has reconciled (so what was saved is
+// revived before anything here can overwrite it); a chat it never opened
+// keeps what was saved for it. A new chat's draft is not kept.
+panelTabsStore.subscribe((state) =>
+  savedTerminals.setState((saved) => {
+    let next = saved;
+    for (const [key, entry] of Object.entries(state)) {
+      if (
+        !reconciled.has(key) ||
+        conversationRefFromKey(key as ConversationKey)?.kind !== "session"
+      )
+        continue;
+      const tabs = entry.tabs
+        .filter((tab) => isTerminal(tab.ref))
+        .map(({ ref, title, shell }) => ({
+          ref,
+          title,
+          ...(shell ? { shell } : {}),
+        }));
+      const shown = entry.open && isTerminal(entry.last) ? entry.last : null;
+      if (
+        JSON.stringify(saved[key] ?? null) ===
+        JSON.stringify(tabs.length ? { tabs, shown } : null)
+      )
+        continue;
+      next = { ...next };
+      if (tabs.length) next[key] = { tabs, shown };
+      else delete next[key];
+    }
+    return next;
+  })
+);
 // Kept out of sessionStorage: restored references have no pending start.
 const pendingTerminalStarts = new Map<
   string,
@@ -165,6 +219,22 @@ export const reconcileTerminals = (
   states: TerminalSessionSnapshot[],
   title = "Terminal"
 ): void => {
+  // First word from main in this window: saved terminal tabs it has no
+  // shell for (the app restarted) come back, each starting a fresh shell in
+  // the chat's folder when it mounts.
+  if (!reconciled.has(key)) {
+    reconciled.add(key);
+    const saved = savedTerminals.state[key];
+    const current = panelTabsStore.state[key]?.tabs ?? [];
+    const revived = (saved?.tabs ?? []).filter(
+      (tab) =>
+        !current.some((open) => open.ref === tab.ref) &&
+        !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
+    );
+    for (const tab of revived) openTerminalTab(key, tab);
+    if (revived.length && saved?.shown)
+      updateTabs(key, (s) => ({ ...s, open: true, last: saved.shown }));
+  }
   updateTabs(key, (s) =>
     removeRefs(
       s,
