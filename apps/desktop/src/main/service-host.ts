@@ -4269,6 +4269,7 @@ export class ServiceHost {
           layout: made.layout,
           images: made.images,
           dropped: made.dropped,
+          notCharts: made.notCharts ?? [],
           foreignFonts: made.foreignFonts,
         };
       }

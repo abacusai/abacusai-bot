@@ -66,6 +66,8 @@ export type MakeResult = {
   foreignFonts: string[];
   /** Blocks left out on the last attempt for holding numbers nobody gave. */
   dropped: string[];
+  /** Charts of two values, printed as the numbers or left out (their captions). */
+  notCharts?: string[];
   /** What to send back to the model, once: wrong marks, broken charts, pages that would not fit, text that did not print. */
   sendBack: string[];
   /** Text over text or a chart, out of its box, or loose on a slide. */
@@ -918,6 +920,7 @@ export const makeDocument = async (opts: {
     sums: prepared.sums,
     foreignFonts: otherFonts,
     dropped: prepared.dropped,
+    notCharts: prepared.charts.notCharts,
     sendBack,
     layout: prepared.layout,
     images: prepared.images,

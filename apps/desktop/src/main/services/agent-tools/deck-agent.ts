@@ -273,7 +273,15 @@ const REMOVED_MARK = "\u2063";
  * nothing else in it has text. Decoration with no text is never touched, and
  * table cells stay so a row keeps its columns.
  */
-export const dropRemoved = (slide: string): string => {
+export const dropRemoved = (slide0: string): string => {
+  if (!slide0.includes(REMOVED_MARK)) return slide0;
+  // A cell a template marks data-deck-keep holds a grid's place: emptied, not
+  // removed. A timeline's dropped years shifted every later cell of its
+  // date | spine | content grid and the slide collapsed (hard asks).
+  const slide = slide0.replace(
+    /<([a-z][\w-]*)\b[^>]*\bdata-deck-keep\b[^>]*>[\s\S]*?<\/\1>/gi,
+    (cell) => cell.split(REMOVED_MARK).join("")
+  );
   if (!slide.includes(REMOVED_MARK)) return slide;
   const textOf = (html: string): string => {
     // Strip tags until none is left, so a tag split by another is gone too.

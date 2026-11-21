@@ -61,9 +61,13 @@ export const readAsk = (brief: string): Ask => {
           >
         )[pageCount[1]!.toLowerCase()] ?? Number(pageCount[1]));
 
+  // The ask, not the user's own file read into the brief after it: its
+  // "Slide 1:" lines doubled an 8-slide redesign into 16 (hard asks).
+  const own = brief.indexOf("The user's own file, read by the app");
+  const asked = own >= 0 ? brief.slice(0, own) : brief;
   // On one line, so "Group 4" ending a line before "Slide 2:" is not a count.
-  const written = brief.match(/\b(\d{1,2})[ \t]+slides?\b(?![ \t]*\d)/i);
-  const listed = brief.match(/^\s*slide\s+\d+\s*:/gim)?.length ?? 0;
+  const written = asked.match(/\b(\d{1,2})[ \t]+slides?\b(?![ \t]*\d)/i);
+  const listed = asked.match(/^\s*slide\s+\d+\s*:/gim)?.length ?? 0;
 
   const formats: Ask["formats"] = [];
   // A real ask for Word, not "word bank" or "in a word".
