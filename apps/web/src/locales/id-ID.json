@@ -2138,7 +2138,13 @@
       "clear": "Bersihkan",
       "kill": "Hentikan terminal",
       "copy": "Salin",
-      "paste": "Tempel"
+      "paste": "Tempel",
+      "busyTitle": "Hentikan {{program}}?",
+      "busyBody": "{{program}} masih berjalan di terminal ini. Menutup terminal akan menghentikannya.",
+      "busyConfirm": "Tutup terminal",
+      "folderMissing": "Folder obrolan ini sudah tidak ada: {{path}}. Kembalikan, lalu tekan Mulai ulang.",
+      "folderDenied": "Anda tidak punya izin membuka folder obrolan ini: {{path}}. Perbaiki izinnya, lalu tekan Mulai ulang.",
+      "signalled": "Proses dihentikan (sinyal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Ke kotak obrolan",
+      "focusTerminal": "Ke terminal",
+      "renameTerminal": "Ganti nama terminal",
+      "clearTerminal": "Bersihkan terminal",
+      "killTerminal": "Hentikan terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

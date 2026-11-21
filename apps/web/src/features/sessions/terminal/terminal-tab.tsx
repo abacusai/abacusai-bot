@@ -177,6 +177,21 @@ export const TerminalTab = ({
         }
         const removeMouse = installMouseReporting(view.term, view.element);
         disposers.push(removeMouse);
+        // Text the platform inserts without a key or a composition (the
+        // Windows emoji panel, macOS press-and-hold accents) arrives as
+        // beforeinput, which the renderer cancels and drops: send it on.
+        const inserted = (event: InputEvent) => {
+          if (
+            event.inputType === "insertText" &&
+            !event.isComposing &&
+            event.data
+          )
+            view.term.input(event.data, true);
+        };
+        view.element.addEventListener("beforeinput", inserted, true);
+        disposers.push(() =>
+          view.element.removeEventListener("beforeinput", inserted, true)
+        );
         let outputAbort: AbortController | undefined;
         const connectOutput = () => {
           outputAbort?.abort();
@@ -203,7 +218,14 @@ export const TerminalTab = ({
                 return;
               }
               view.term.write(
-                `\r\n${t("sessions.terminal.exited", { code: chunk.exitCode ?? "" })}\r\n`
+                `\r\n${
+                  // Stopped from outside (kill -9): a signal, not an exit code.
+                  chunk.signal
+                    ? t("sessions.terminal.signalled", { signal: chunk.signal })
+                    : t("sessions.terminal.exited", {
+                        code: chunk.exitCode ?? "",
+                      })
+                }\r\n`
               );
               setExited(true);
               exitTimer = setTimeout(() => {
@@ -277,12 +299,26 @@ export const TerminalTab = ({
         cleanup();
         if (abort.signal.aborted) return;
         const reason = planRefusal(e);
+        const message = e instanceof Error ? e.message : String(e);
+        // The chat's folder is gone: say which, and offer Restart for when
+        // it is back.
+        const missing = message.startsWith("folder-missing:")
+          ? message.slice("folder-missing:".length)
+          : null;
+        const denied = message.startsWith("folder-denied:")
+          ? message.slice("folder-denied:".length)
+          : null;
+        if (missing != null || denied != null) setExited(true);
         setError(
           reason === "plan-required"
             ? t("sessions.terminal.planRequired")
             : reason === "plan-unreadable"
               ? t("sessions.terminal.planUnreadable")
-              : String(e)
+              : missing != null
+                ? t("sessions.terminal.folderMissing", { path: missing })
+                : denied != null
+                  ? t("sessions.terminal.folderDenied", { path: denied })
+                  : String(e)
         );
       })
       .finally(finishStart);
@@ -303,6 +339,7 @@ export const TerminalTab = ({
       })
       .catch(() => {});
   const restart = () => {
+    setError(null);
     void getTerminalView(`${key}:${id}`).then((view) => {
       // A new generation, read from its start, under the old output.
       view.generation = null;
@@ -317,8 +354,20 @@ export const TerminalTab = ({
     void getTerminalView(`${key}:${id}`)
       .then((view) => {
         if (!live) return;
-        if (visible) view.refit?.();
-        else if (view.generation != null)
+        if (visible) {
+          view.refit?.();
+          // Shown by the keyboard (next tab, a closed neighbour): the
+          // terminal that was typing goes hidden with the focus, so this one
+          // takes it. Focus anywhere else (the chat box, a button) stays.
+          const focused = document.activeElement;
+          if (
+            focused == null ||
+            focused === document.body ||
+            (focused.closest('[data-hotkeys="terminal"]') != null &&
+              !container.current?.contains(focused))
+          )
+            view.term.focus();
+        } else if (view.generation != null)
           void transport.client.terminal.hide({
             conversationKey: key,
             terminalId: id,
@@ -345,7 +394,11 @@ export const TerminalTab = ({
         focused.current = false;
       }}
     >
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-muted-foreground px-3 pt-3 text-sm">
+          {error}
+        </p>
+      ) : null}
       {exited ? (
         <div className="flex shrink-0 justify-end border-b px-2 py-1">
           <Button size="sm" variant="secondary" onClick={restart}>

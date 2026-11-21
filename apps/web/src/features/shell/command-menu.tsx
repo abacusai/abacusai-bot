@@ -17,6 +17,9 @@ import {
   Plus,
   Settings,
   Terminal,
+  Pencil,
+  Eraser,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { useContext, useState, type ReactNode } from "react";
@@ -289,8 +292,28 @@ const CommandMenuBody = () => {
           },
         ]
       : []),
+    // The chat's terminal by keyboard: what its … menu does, and moving
+    // between it and the chat box (Esc stays with the shell).
+    ...(
+      [
+        ["focus-composer", "focusComposer", MessageSquare],
+        ["focus-terminal", "focusTerminal", Terminal],
+        ["rename-terminal", "renameTerminal", Pencil],
+        ["clear-terminal", "clearTerminal", Eraser],
+        ["kill-terminal", "killTerminal", Trash2],
+      ] as const
+    )
+      .filter(([id]) => hasHotkeyAction(id))
+      .map(([id, label, Icon]): Entry => ({
+        id,
+        title: t(`shell.command.${label}`),
+        group: "panels",
+        icon: Icon,
+        run: () => dispatchHotkeyAction(id),
+      })),
     // An open chat or a new one (its draft): whichever page handles it.
-    ...(hasHotkeyAction("new-terminal-tab")
+    ...(hasHotkeyAction("new-terminal-tab") ||
+    hasHotkeyAction("new-terminal-elsewhere")
       ? [
           {
             id: "new-terminal",
@@ -298,7 +321,12 @@ const CommandMenuBody = () => {
             title: t("shell.command.newTerminal"),
             group: "panels" as const,
             icon: Terminal,
-            run: () => dispatchHotkeyAction("new-terminal-tab"),
+            run: () =>
+              dispatchHotkeyAction(
+                hasHotkeyAction("new-terminal-tab")
+                  ? "new-terminal-tab"
+                  : "new-terminal-elsewhere"
+              ),
           },
         ]
       : []),

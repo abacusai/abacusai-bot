@@ -2138,7 +2138,13 @@
       "clear": "지우기",
       "kill": "터미널 종료",
       "copy": "복사",
-      "paste": "붙여넣기"
+      "paste": "붙여넣기",
+      "busyTitle": "{{program}}을(를) 중지할까요?",
+      "busyBody": "이 터미널에서 {{program}}이(가) 아직 실행 중입니다. 터미널을 닫으면 중지됩니다.",
+      "busyConfirm": "터미널 닫기",
+      "folderMissing": "이 채팅의 폴더가 더 이상 없습니다: {{path}}. 폴더를 되돌린 뒤 재시작을 누르세요.",
+      "folderDenied": "이 채팅의 폴더를 열 권한이 없습니다: {{path}}. 권한을 고친 뒤 재시작을 누르세요.",
+      "signalled": "프로세스가 중지됨 (시그널 {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "채팅 입력란으로 이동",
+      "focusTerminal": "터미널로 이동",
+      "renameTerminal": "터미널 이름 바꾸기",
+      "clearTerminal": "터미널 지우기",
+      "killTerminal": "터미널 종료"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

@@ -107,6 +107,14 @@ export const terminal = {
     .input(ResizeTerminalSessionRequestSchema)
     .output(type<boolean>()),
   hide: mutation.input(TerminalRuntimeRequestSchema).output(type<boolean>()),
+  /**
+   * The program running in place of the shell's prompt (a dev server, an
+   * editor), or null at the prompt or where the platform can't tell. Closing
+   * such a terminal asks first.
+   */
+  busy: query
+    .input(TerminalRuntimeRequestSchema)
+    .output(type<{ program: string | null }>()),
   promoteScope: mutation
     .input(PromoteTerminalSessionScopeRequestSchema)
     .output(type<TerminalSessionSnapshot | null>()),

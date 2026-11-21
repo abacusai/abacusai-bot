@@ -214,6 +214,8 @@ describe("conversation terminal session service", () => {
     });
     const first = sessionConversationRef("workspace-1", "chat-a");
     const second = sessionConversationRef("workspace-1", "chat-b");
+    for (const chat of ["chat-a", "chat-b"])
+      fs.mkdirSync(path.join(workspace, chat));
 
     for (const conversation of [first, second]) {
       await terminals.startSession({
@@ -295,4 +297,26 @@ describe("conversation terminal session service", () => {
       );
     expect(busy.write).not.toHaveBeenCalled();
   });
+
+  it.skipIf(process.platform === "win32")(
+    "names the terminals running a program, not those at their prompt",
+    async () => {
+      const terminals = service();
+      const draft = draftRequest();
+      ptySpawn
+        .mockReturnValueOnce(fakePty("-system"))
+        .mockReturnValueOnce(fakePty("python3"));
+      await terminals.startSession({ ...draft, terminalId: "idle" });
+      await terminals.startSession({ ...draft, terminalId: "server" });
+
+      expect(terminals.busyTerminals()).toEqual([
+        {
+          key: draft.conversationKey,
+          terminalId: "server",
+          program: "python3",
+        },
+      ]);
+      expect(terminals.busyProgram(draft.conversationKey, "idle")).toBeNull();
+    }
+  );
 });

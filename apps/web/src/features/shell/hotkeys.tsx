@@ -75,6 +75,8 @@ export interface ShellActions {
   openSettings(): void;
   closeFloating(): void;
   floatingOpen: boolean;
+  /** Mod+` where no chat handles it: a new chat with a terminal. */
+  newTerminalElsewhere?(): void;
 }
 
 export const AppHotkeys = ({
@@ -118,6 +120,14 @@ export const AppHotkeys = ({
     binding("open-settings", APP_HOTKEYS.settings),
     actions.openSettings,
     { actionId: "open-settings" }
+  );
+  useAppHotkey(
+    binding("new-terminal-tab", "Mod+`"),
+    () => actions.newTerminalElsewhere?.(),
+    {
+      enabled: !!actions.newTerminalElsewhere,
+      actionId: "new-terminal-elsewhere",
+    }
   );
   useAppHotkey(APP_HOTKEYS.escape, actions.closeFloating, {
     enabled: actions.floatingOpen,

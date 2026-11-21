@@ -2138,7 +2138,13 @@
       "clear": "Clear",
       "kill": "Kill terminal",
       "copy": "Copy",
-      "paste": "Paste"
+      "paste": "Paste",
+      "busyTitle": "Stop {{program}}?",
+      "busyBody": "{{program}} is still running in this terminal. Closing the terminal stops it.",
+      "busyConfirm": "Close terminal",
+      "folderMissing": "This chat's folder isn't there any more: {{path}}. Put it back, then press Restart.",
+      "folderDenied": "You don't have permission to open this chat's folder: {{path}}. Fix its permissions, then press Restart.",
+      "signalled": "Process stopped (signal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Go to the chat box",
+      "focusTerminal": "Go to the terminal",
+      "renameTerminal": "Rename terminal",
+      "clearTerminal": "Clear terminal",
+      "killTerminal": "Kill terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

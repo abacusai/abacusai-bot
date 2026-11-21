@@ -2138,7 +2138,13 @@
       "clear": "Effacer",
       "kill": "Tuer le terminal",
       "copy": "Copier",
-      "paste": "Coller"
+      "paste": "Coller",
+      "busyTitle": "Arrêter {{program}} ?",
+      "busyBody": "{{program}} tourne encore dans ce terminal. Fermer le terminal l’arrête.",
+      "busyConfirm": "Fermer le terminal",
+      "folderMissing": "Le dossier de cette discussion n’existe plus : {{path}}. Remettez-le en place, puis appuyez sur Redémarrer.",
+      "folderDenied": "Vous n’avez pas la permission d’ouvrir le dossier de cette discussion : {{path}}. Corrigez ses droits, puis appuyez sur Redémarrer.",
+      "signalled": "Processus arrêté (signal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Aller à la zone de discussion",
+      "focusTerminal": "Aller au terminal",
+      "renameTerminal": "Renommer le terminal",
+      "clearTerminal": "Effacer le terminal",
+      "killTerminal": "Tuer le terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

@@ -405,7 +405,10 @@ function quitGuardWorkLines(work: { label: string }[]): string {
 
 // Every quit the user starts meets running work here; see quit-guard.ts.
 const quitGuard = createQuitGuard({
-  work: () => workspaceServiceHost.activeAgentWork(),
+  work: () => [
+    ...workspaceServiceHost.activeAgentWork(),
+    ...workspaceServiceHost.busyTerminalWork(),
+  ],
   publish: (state) => emitBusChannel("system", { type: "quit-guard", state }),
   reveal: () => {
     revealMainWindow();

@@ -58,14 +58,14 @@ describe("chat layout widths", () => {
 describe("the floating composer dock", () => {
   it("floats over the transcript's end and pads the scroller by its measured height", async () => {
     type Callback = (entries: ResizeObserverEntry[]) => void;
-    let callback: Callback | null = null;
     const observed: Element[] = [];
+    // Each element's own observer: others (the composer's) observe too.
+    const owners = new Map<Element, Callback>();
     class FakeResizeObserver {
-      constructor(fn: Callback) {
-        callback = fn;
-      }
+      constructor(private readonly fn: Callback) {}
       observe(el: Element) {
         observed.push(el);
+        owners.set(el, this.fn);
       }
       disconnect() {}
     }
@@ -100,7 +100,7 @@ describe("the floating composer dock", () => {
       // measured height, written as a custom property on the layout.
       expect(observed).toContain(dock);
       act(() => {
-        callback!([
+        owners.get(dock)!([
           {
             target: dock,
             borderBoxSize: [{ blockSize: 123, inlineSize: 700 }],
@@ -121,7 +121,7 @@ describe("the floating composer dock", () => {
         "123px"
       );
       act(() =>
-        callback!([
+        owners.get(dock)!([
           {
             target: dock,
             borderBoxSize: [{ blockSize: 267, inlineSize: 700 }],

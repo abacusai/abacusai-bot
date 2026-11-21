@@ -1,3 +1,4 @@
+import { accessSync, constants, statSync } from "node:fs";
 import path from "node:path";
 
 import { childProcessEnv } from "@abacus-ai/agent/child-env";
@@ -44,6 +45,29 @@ type PtySpawn = (
     useConptyDll?: boolean;
   }
 ) => TerminalPty;
+
+/** A start's error for a chat folder that is gone, then its path. */
+const FOLDER_MISSING = "folder-missing:";
+
+/** Then its path: a folder this user may not open. */
+const FOLDER_DENIED = "folder-denied:";
+
+const canEnter = (folder: string): boolean => {
+  try {
+    accessSync(folder, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isDirectory = (folder: string): boolean => {
+  try {
+    return statSync(folder).isDirectory();
+  } catch {
+    return false;
+  }
+};
 
 let cachedSpawn: PtySpawn | null = null;
 let cachedSpawnError: Error | null = null;
@@ -156,11 +180,22 @@ const snapshot = (
  * Whether the shell itself is in the foreground, at its prompt. Unix only:
  * Windows reports the shell's own name whatever runs in it.
  */
+const programName = (value: string) => path.basename(value).replace(/^-/, "");
 const atPrompt = (pty: TerminalPty, file: string | undefined): boolean => {
   if (process.platform === "win32" || file == null || pty.process == null)
     return false;
-  const name = (value: string) => path.basename(value).replace(/^-/, "");
-  return name(pty.process) === name(file);
+  return programName(pty.process) === programName(file);
+};
+
+/** What runs in the foreground instead of the shell; null at its prompt or unknown (Windows). */
+const foregroundProgram = (
+  pty: TerminalPty,
+  file: string | undefined
+): string | null => {
+  if (process.platform === "win32" || file == null || pty.process == null)
+    return null;
+  const running = programName(pty.process);
+  return running === programName(file) ? null : running;
 };
 
 /** One POSIX shell word (bash, zsh, sh, fish). */
@@ -182,6 +217,12 @@ export class TerminalSessionService {
         if (workspacePath == null) {
           throw new Error("Workspace path is unavailable.");
         }
+        // A folder moved or deleted under the chat: say so, rather than a
+        // shell that dies at once with chdir(2) failed.
+        if (!isDirectory(workspacePath))
+          throw new Error(`${FOLDER_MISSING}${workspacePath}`);
+        if (!canEnter(workspacePath))
+          throw new Error(`${FOLDER_DENIED}${workspacePath}`);
         const shell = resolveTerminalShell(requestedShell(requested));
         const spawn = await loadSpawn();
         const pty = spawn(shell.file, shell.args, {
@@ -246,6 +287,26 @@ export class TerminalSessionService {
     this.registry.disposeAll();
   }
 
+  /** The program a terminal is running in place of its shell's prompt. */
+  busyProgram(key: ConversationKey, terminalId: string): string | null {
+    const pty = this.registry.ptyOf(key, terminalId);
+    return pty == null
+      ? null
+      : foregroundProgram(pty, this.shellFiles.get(pty));
+  }
+
+  /** Every terminal running a program, for the quit question. */
+  busyTerminals(): {
+    key: ConversationKey;
+    terminalId: string;
+    program: string;
+  }[] {
+    return this.registry.listAll().flatMap(({ key, terminalId }) => {
+      const program = this.busyProgram(key, terminalId);
+      return program == null ? [] : [{ key, terminalId, program }];
+    });
+  }
+
   /** True while any terminal PTY is alive. A restart would kill it. */
   hasLiveSessions(): boolean {
     return this.registry.hasLiveRuntimes();
@@ -306,9 +367,14 @@ export class TerminalSessionService {
         state,
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
-        error: `Terminal backend unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        error:
+          message.startsWith(FOLDER_MISSING) ||
+          message.startsWith(FOLDER_DENIED)
+            ? message
+            : `Terminal backend unavailable: ${message}`,
         created: false,
         initialOutput: "",
         state: {

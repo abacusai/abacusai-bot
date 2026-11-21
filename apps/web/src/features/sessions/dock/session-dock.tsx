@@ -53,6 +53,7 @@ import {
   useTopBarEndActions,
   type TopBarAction,
 } from "#renderer/features/shell/top-bar-slots";
+import { useAppHotkey } from "#renderer/lib/hotkeys";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
@@ -60,6 +61,16 @@ import {
   useShellWidthSelect,
 } from "#renderer/lib/shell-breakpoints";
 import type { PanelTabKind } from "#renderer/lib/side-panel/store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
@@ -246,7 +257,32 @@ export const SessionDock = ({
     });
   };
   const normalizeSelection = useEffectEvent(select);
+  // Closing a terminal that runs a program (a dev server, an editor) stops
+  // it: ask first. At its prompt, or where the platform can't tell, it
+  // closes at once.
+  const [confirmClose, setConfirmClose] = useState<{
+    ref: string;
+    program: string;
+  } | null>(null);
   const close = (ref: string) => {
+    if (!ref.startsWith("terminal:")) return closeNow(ref);
+    const id = ref.slice(9);
+    void getTerminalView(`${key}:${id}`)
+      .then((view) =>
+        view.generation == null
+          ? { program: null }
+          : transport.client.terminal.busy({
+              conversationKey: key,
+              terminalId: id,
+              generation: view.generation,
+            })
+      )
+      .catch(() => ({ program: null }))
+      .then(({ program }) =>
+        program ? setConfirmClose({ ref, program }) : closeNow(ref)
+      );
+  };
+  const closeNow = (ref: string) => {
     if (ref === "chat") return;
     if (ref.startsWith("terminal:")) {
       const id = ref.slice(9);
@@ -441,6 +477,63 @@ export const SessionDock = ({
         view.term.focus();
       })
       .catch(() => {});
+  // Keyboard paths for what the … menu does, through the command menu, and
+  // between the chat box and the terminal (Esc belongs to the shell).
+  // After any open dialog (the command menu) has closed and handed the
+  // focus back to where it was opened.
+  const afterDialogs = (fn: () => void) => {
+    let frames = 0;
+    const tick = () => {
+      if (document.querySelector('[role="dialog"]') && frames++ < 60)
+        requestAnimationFrame(tick);
+      else setTimeout(fn, 0);
+    };
+    requestAnimationFrame(tick);
+  };
+  const focusTerminal = (ref: string) =>
+    void getTerminalView(`${key}:${ref.slice(9)}`)
+      .then((view) => afterDialogs(() => view.term.focus()))
+      .catch(() => {});
+  const latestTerminal = entries.tabs.findLast((tab) =>
+    tab.ref.startsWith("terminal:")
+  )?.ref;
+  useAppHotkey(
+    null,
+    () => {
+      if (!latestTerminal) return;
+      const ref = activeTerminal ?? latestTerminal;
+      if (ref !== active) void select(ref);
+      focusTerminal(ref);
+    },
+    { actionId: "focus-terminal", enabled: latestTerminal != null }
+  );
+  useAppHotkey(
+    null,
+    () =>
+      afterDialogs(() =>
+        document
+          .querySelector<HTMLTextAreaElement>(
+            '[data-slot="session-dock"] [data-slot="composer"] textarea'
+          )
+          ?.focus()
+      ),
+    { actionId: "focus-composer" }
+  );
+  useAppHotkey(
+    null,
+    () =>
+      activeTerminal &&
+      setRenameRequest({ id: activeTerminal, at: Date.now() }),
+    { actionId: "rename-terminal", enabled: activeTerminal != null }
+  );
+  useAppHotkey(null, () => activeTerminal && clearTab(activeTerminal), {
+    actionId: "clear-terminal",
+    enabled: activeTerminal != null,
+  });
+  useAppHotkey(null, () => activeTerminal && close(activeTerminal), {
+    actionId: "kill-terminal",
+    enabled: activeTerminal != null,
+  });
   const controls = (
     <TopBar.Group className="titlebar-nodrag shrink-0 self-start px-1">
       {activeTerminal ? (
@@ -674,6 +767,40 @@ export const SessionDock = ({
           () => active && active !== "chat" && close(active),
           () => add("terminal")
         )}
+        <AlertDialog
+          open={confirmClose != null}
+          onOpenChange={(open) => {
+            if (!open) setConfirmClose(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("sessions.terminal.busyTitle", {
+                  program: confirmClose?.program ?? "",
+                })}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("sessions.terminal.busyBody", {
+                  program: confirmClose?.program ?? "",
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t("sessions.common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmClose) closeNow(confirmClose.ref);
+                  setConfirmClose(null);
+                }}
+              >
+                {t("sessions.terminal.busyConfirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <PanelWorkspace
           scope={key}
           apiRef={dockApi}

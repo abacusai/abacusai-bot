@@ -2138,7 +2138,13 @@
       "clear": "Limpiar",
       "kill": "Cerrar el terminal",
       "copy": "Copiar",
-      "paste": "Pegar"
+      "paste": "Pegar",
+      "busyTitle": "¿Detener {{program}}?",
+      "busyBody": "{{program}} sigue en ejecución en este terminal. Si cierras el terminal, se detendrá.",
+      "busyConfirm": "Cerrar el terminal",
+      "folderMissing": "La carpeta de este chat ya no está: {{path}}. Vuelve a ponerla y luego pulsa Reiniciar.",
+      "folderDenied": "No tienes permiso para abrir la carpeta de este chat: {{path}}. Corrige sus permisos y luego pulsa Reiniciar.",
+      "signalled": "Proceso detenido (señal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Ir al cuadro del chat",
+      "focusTerminal": "Ir al terminal",
+      "renameTerminal": "Cambiar el nombre del terminal",
+      "clearTerminal": "Limpiar el terminal",
+      "killTerminal": "Cerrar el terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

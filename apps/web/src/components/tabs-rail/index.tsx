@@ -2,6 +2,7 @@ import type { DockviewApi } from "dockview-react";
 import {
   ArrowDownToLine,
   Check,
+  ChevronDown,
   Ellipsis,
   LayoutPanelLeft,
   LayoutPanelTop,
@@ -410,6 +411,7 @@ const RailSegment = ({
     return () => observer.disconnect();
   }, []);
   const [allOpen, setAllOpen] = useState(false);
+  const activeTab = tabs.find((tab) => tab.id === active);
   // Native (dock) drag: the source stays in flow as a dimmed placeholder, and
   // the insertion point is an inset edge, so nothing reflows mid-drag.
   const [dragging, setDragging] = useState<string | null>(null);
@@ -658,8 +660,11 @@ const RailSegment = ({
                   className={cn(
                     "min-w-0 rounded-lg",
                     "data-dragging:opacity-40 data-[drop=after]:shadow-[inset_-2px_0_0_var(--primary)] data-[drop=before]:shadow-[inset_2px_0_0_var(--primary)]",
+                    // Scrolling anyway: each tab as wide as its title needs
+                    // (up to the single-row cap), so "Terminal 10" is read
+                    // whole rather than cut to "Termi…".
                     layout.mode === "scroll"
-                      ? "w-28 shrink-0"
+                      ? "max-w-44 min-w-28 shrink-0"
                       : layout.mode === "single"
                         ? "max-w-44 flex-1 basis-28"
                         : "flex-1 basis-28"
@@ -789,10 +794,36 @@ const RailSegment = ({
       </Tabs>
       {(overflow || compact) && (
         <Popover open={allOpen} onOpenChange={setAllOpen}>
+          {/* Folded (too narrow for tabs): the trigger names the tab on
+              screen, so the strip still says where you are. */}
           <PopoverTrigger
-            render={<BarButton label={t("shell.topBar.panelTabs")} />}
+            render={
+              compact ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={t("shell.topBar.panelTabs")}
+                  title={t("shell.topBar.panelTabs")}
+                  className="titlebar-nodrag text-sidebar-foreground min-w-0 shrink justify-start gap-1 px-2 text-[13px] font-medium"
+                />
+              ) : (
+                <BarButton label={t("shell.topBar.panelTabs")} />
+              )
+            }
           >
-            <ArrowDownToLine />
+            {compact && activeTab ? (
+              <>
+                {(() => {
+                  const Icon =
+                    activeTab.id === "chat" ? Bot : tabIcon(activeTab.kind);
+                  return <Icon className="size-3.5 shrink-0" aria-hidden />;
+                })()}
+                <span className="min-w-0 truncate">{title(activeTab)}</span>
+                <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+              </>
+            ) : (
+              <ArrowDownToLine />
+            )}
           </PopoverTrigger>
           <PopoverContent
             align="end"

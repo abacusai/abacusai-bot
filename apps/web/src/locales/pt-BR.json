@@ -2138,7 +2138,13 @@
       "clear": "Limpar",
       "kill": "Encerrar terminal",
       "copy": "Copiar",
-      "paste": "Colar"
+      "paste": "Colar",
+      "busyTitle": "Parar {{program}}?",
+      "busyBody": "{{program}} ainda está em execução neste terminal. Fechar o terminal o interrompe.",
+      "busyConfirm": "Fechar terminal",
+      "folderMissing": "A pasta deste chat não existe mais: {{path}}. Coloque-a de volta e toque em Reiniciar.",
+      "folderDenied": "Você não tem permissão para abrir a pasta deste chat: {{path}}. Corrija as permissões e toque em Reiniciar.",
+      "signalled": "Processo interrompido (sinal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Ir para a caixa do chat",
+      "focusTerminal": "Ir para o terminal",
+      "renameTerminal": "Renomear terminal",
+      "clearTerminal": "Limpar terminal",
+      "killTerminal": "Encerrar terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

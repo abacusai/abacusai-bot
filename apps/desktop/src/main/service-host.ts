@@ -4834,6 +4834,34 @@ export class ServiceHost {
     return this.terminalSessionService.hideSession(request);
   }
 
+  terminalBusyProgram(request: TerminalRuntimeRequest): string | null {
+    return this.terminalSessionService.busyProgram(
+      request.conversationKey,
+      request.terminalId ?? "terminal-1"
+    );
+  }
+
+  /**
+   * Terminals running a program, as quit-question lines: the program and
+   * the chat it belongs to. A quit would stop them.
+   */
+  busyTerminalWork(): { sessionId: string; label: string }[] {
+    const busy = this.terminalSessionService.busyTerminals();
+    if (busy.length === 0) return [];
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return busy.map(({ key, terminalId, program }) => {
+      const ref = conversationRefFromKey(key);
+      const chat =
+        ref?.kind === "session" ? labels.get(ref.sessionId)?.trim() : "";
+      return {
+        sessionId: `terminal:${terminalId}`,
+        label: chat ? `${program} · ${chat}` : program,
+      };
+    });
+  }
+
   /** Running terminals' states, for `terminal.events`' opening snapshot. */
   listTerminalStates(key?: ConversationKey): TerminalSessionSnapshot[] {
     return this.terminalSessionService.listStates(key);

@@ -2138,7 +2138,13 @@
       "clear": "Leeren",
       "kill": "Terminal beenden",
       "copy": "Kopieren",
-      "paste": "Einfügen"
+      "paste": "Einfügen",
+      "busyTitle": "{{program}} beenden?",
+      "busyBody": "{{program}} läuft noch in diesem Terminal. Wenn du das Terminal schließt, wird es beendet.",
+      "busyConfirm": "Terminal schließen",
+      "folderMissing": "Der Ordner dieses Chats ist nicht mehr da: {{path}}. Stell ihn wieder her und drück dann auf „Neu starten“.",
+      "folderDenied": "Du hast keine Berechtigung, den Ordner dieses Chats zu öffnen: {{path}}. Korrigiere die Berechtigungen und drück dann auf „Neu starten“.",
+      "signalled": "Prozess gestoppt (Signal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Zum Chatfeld wechseln",
+      "focusTerminal": "Zum Terminal wechseln",
+      "renameTerminal": "Terminal umbenennen",
+      "clearTerminal": "Terminal leeren",
+      "killTerminal": "Terminal beenden"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

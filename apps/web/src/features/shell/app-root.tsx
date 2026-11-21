@@ -14,6 +14,7 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { ChromeEffect, useChromeState } from "#renderer/lib/chrome-state";
+import { dispatchHotkeyAction, hasHotkeyAction } from "#renderer/lib/hotkeys";
 import { inertWhileHidden } from "#renderer/lib/inert-hidden";
 import { resolveKeymap } from "#renderer/lib/keyboard/actions";
 import { LanguageEffect } from "#renderer/lib/language-effect";
@@ -93,6 +94,26 @@ const useShellActions = (): ShellActions => {
         transition: area === "routines" ? "none" : "nav-lateral",
       });
     },
+    // Terminals live in chats: from anywhere else, a new chat opens with
+    // one, once its page handles the shortcut itself.
+    ...(area !== "sessions"
+      ? {
+          newTerminalElsewhere: () => {
+            void navigate({
+              to: "/sessions/new",
+              search: { draft: openStartDraft() },
+              transition: "nav-lateral",
+            });
+            let frames = 0;
+            const open = () => {
+              if (hasHotkeyAction("new-terminal-tab"))
+                dispatchHotkeyAction("new-terminal-tab");
+              else if (frames++ < 300) requestAnimationFrame(open);
+            };
+            requestAnimationFrame(open);
+          },
+        }
+      : {}),
     togglePinned: sidebar.toggle,
     // Reopens the tab last shown in this area (§7.9).
     togglePanel: panel.toggle,

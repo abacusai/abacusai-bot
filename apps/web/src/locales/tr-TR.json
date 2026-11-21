@@ -2138,7 +2138,13 @@
       "clear": "Temizle",
       "kill": "Terminali sonlandır",
       "copy": "Kopyala",
-      "paste": "Yapıştır"
+      "paste": "Yapıştır",
+      "busyTitle": "{{program}} durdurulsun mu?",
+      "busyBody": "{{program}} bu terminalde hâlâ çalışıyor. Terminali kapatmak onu durdurur.",
+      "busyConfirm": "Terminali kapat",
+      "folderMissing": "Bu sohbetin klasörü artık yok: {{path}}. Geri koyun, ardından Yeniden başlat’a basın.",
+      "folderDenied": "Bu sohbetin klasörünü açma izniniz yok: {{path}}. İzinlerini düzeltin, ardından Yeniden başlat’a basın.",
+      "signalled": "İşlem durduruldu (sinyal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Çalışma alanı: {{name}}",
@@ -2963,7 +2969,12 @@
       "loading": "Oturumlar, botlar ve çalışma alanları yükleniyor…",
       "navigate": "gezin",
       "select": "seç",
-      "close": "kapat"
+      "close": "kapat",
+      "focusComposer": "Sohbet kutusuna git",
+      "focusTerminal": "Terminale git",
+      "renameTerminal": "Terminali yeniden adlandır",
+      "clearTerminal": "Terminali temizle",
+      "killTerminal": "Terminali sonlandır"
     },
     "connectionLost": "Uygulamayla bağlantı kesildi. Yeniden yükleniyor…",
     "boot": {
