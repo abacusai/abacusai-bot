@@ -4717,7 +4717,8 @@
     "refusedInvalid": "That link does not name a file.",
     "refusedMissing": "That file is no longer there.",
     "refusedOutside": "That file is outside your workspaces, so it was not opened.",
-    "revealed": "Opening that file would run it, so it was shown in your file manager instead."
+    "revealed": "Opening that file would run it, so it was shown in your file manager instead.",
+    "revealedOutside": "That file is outside your workspaces, so it was shown in your file manager. Open it from there."
   },
   "permissions": {
     "credentialAlways": "“Always” also keeps these readable for the rest of this session.",

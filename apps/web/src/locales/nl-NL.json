@@ -4717,7 +4717,8 @@
     "refusedInvalid": "Die link verwijst niet naar een bestand.",
     "refusedMissing": "Dat bestand bestaat niet meer.",
     "refusedOutside": "Dat bestand staat buiten je werkruimtes en is daarom niet geopend.",
-    "revealed": "Als je dat bestand opent, wordt het uitgevoerd. Daarom wordt het in plaats daarvan in je bestandsbeheerder getoond."
+    "revealed": "Als je dat bestand opent, wordt het uitgevoerd. Daarom wordt het in plaats daarvan in je bestandsbeheerder getoond.",
+    "revealedOutside": "Dat bestand staat buiten je werkruimtes, dus het is in je bestandsbeheerder getoond. Open het daar."
   },
   "permissions": {
     "credentialAlways": "Met “Altijd” blijven deze ook de rest van deze sessie leesbaar.",

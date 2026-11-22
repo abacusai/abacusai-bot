@@ -20,6 +20,7 @@ import type {
 } from "@abacus-ai/contract/contract";
 import type {
   AbacusAccountInfo,
+  OpenFilePathResult,
   UsageSnapshot,
 } from "@abacus-ai/contract/contracts";
 import {
@@ -59,7 +60,11 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
-import { isSafeExternalUrl, withUpgradeReturn } from "./external-links";
+import {
+  isSafeExternalUrl,
+  localPathOfFileUrl,
+  withUpgradeReturn,
+} from "./external-links";
 import type { HostOperations } from "./handler";
 import { electronHostPlatform } from "./host-operations/electron";
 import { followMainAgentBusy, followRoutineDue } from "./keep-awake";
@@ -1040,8 +1045,17 @@ async function createWindow(restored?: RecreatedWindowState) {
     });
 
     contents.setWindowOpenHandler((details) => {
+      const localPath = localPathOfFileUrl(details.url);
+      // The app's own page (a modified click on an in-app link) is no file.
+      if (
+        localPath != null &&
+        localPath === localPathOfFileUrl(contents.getURL())
+      )
+        return { action: "deny" };
+      // A file: link opening a window: the same checks as a click on it.
+      if (localPath != null) void openLocalPath(localPath);
       // Same scheme check as an explicit "open externally" click.
-      if (isSafeExternalUrl(details.url))
+      else if (isSafeExternalUrl(details.url))
         void shell.openExternal(
           withUpgradeReturn(details.url, abacusAppHost())
         );
@@ -1360,6 +1374,46 @@ async function applyNativeLanguage(): Promise<void> {
 }
 
 /**
+ * Every way a local file is opened goes through here: a file link in a chat,
+ * a file: URL handed to "open externally", a file: link opening a window.
+ * The paths come from model-written markdown and agent-written pages, so
+ * only the app's working folders and the files the agent itself wrote open
+ * directly; anything else that exists is shown in the file manager.
+ */
+const openLocalPath = async (filePath: string): Promise<OpenFilePathResult> => {
+  const roots = [
+    ...workspaceServiceHost
+      .getMetadata()
+      .workspaces.filter((w) => w.isRemote !== true && w.path != null)
+      .map((w) => w.path as string),
+    abacusBotHome(),
+    // Shared on Linux; the guard admits only files this user owns.
+    userTempDir(),
+  ];
+  const agentFiles = workspaceServiceHost
+    .listSessionArtifacts()
+    .filter((artifact) => artifact.kind !== "link")
+    .map((artifact) => artifact.location);
+  const decision = decideLocalOpen(filePath, roots, process.platform, {
+    agentFiles,
+    outside: "reveal",
+  });
+  if (decision.action === "refuse") {
+    console.warn("[Shell] Refused to open path", filePath, decision.reason);
+    return { outcome: "refused", reason: decision.reason };
+  }
+  // The resolved path, which the checks ran against; a symlink can be
+  // re-pointed between check and open.
+  if (decision.action === "reveal") {
+    console.info("[Shell] Revealed", decision.reason, "path", filePath);
+    shell.showItemInFolder(decision.path);
+    return { outcome: "revealed", reason: decision.reason };
+  }
+  await shell.openPath(decision.path);
+  return { outcome: "opened" };
+};
+
+/**
  * The bodies of the top-level `window.api` handlers, as named operations: the
  * `ipcMain` handlers registered in `whenReady` and the oRPC procedures
  * (main/rpc) both call these, so neither carries its own copy.
@@ -1469,6 +1523,12 @@ const appOperations: AppOperations = {
   },
 
   async openExternal(url) {
+    // A file the agent made, shown in the preview pane, and then sent out.
+    const localPath = localPathOfFileUrl(url);
+    if (localPath != null) {
+      await openLocalPath(localPath);
+      return;
+    }
     if (!isSafeExternalUrl(url)) {
       // Refused rather than thrown: the callers are click handlers that do
       // not await.
@@ -1478,32 +1538,7 @@ const appOperations: AppOperations = {
     await shell.openExternal(withUpgradeReturn(url, abacusAppHost()));
   },
 
-  // Restricted to directories the app works in: the paths include file
-  // links out of model-generated markdown.
-  async openFilePath(filePath) {
-    const roots = [
-      ...workspaceServiceHost
-        .getMetadata()
-        .workspaces.filter((w) => w.isRemote !== true && w.path != null)
-        .map((w) => w.path as string),
-      abacusBotHome(),
-      // Shared on Linux; the guard admits only files this user owns.
-      userTempDir(),
-    ];
-    const decision = decideLocalOpen(filePath, roots);
-    if (decision.action === "refuse") {
-      console.warn("[Shell] Refused to open path", filePath);
-      return { outcome: "refused", reason: decision.reason };
-    }
-    // The resolved path, which the checks ran against; a symlink can be
-    // re-pointed between check and open.
-    if (decision.action === "reveal") {
-      shell.showItemInFolder(decision.path);
-      return { outcome: "revealed" };
-    }
-    await shell.openPath(decision.path);
-    return { outcome: "opened" };
-  },
+  openFilePath: openLocalPath,
 
   showItemInFolder(filePath) {
     shell.showItemInFolder(filePath);

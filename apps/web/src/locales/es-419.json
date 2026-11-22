@@ -4717,7 +4717,8 @@
     "refusedInvalid": "Ese enlace no indica un archivo.",
     "refusedMissing": "Ese archivo ya no existe.",
     "refusedOutside": "Ese archivo está fuera de tus espacios de trabajo, así que no se abrió.",
-    "revealed": "Abrir ese archivo lo ejecutaría, así que se mostró en tu administrador de archivos."
+    "revealed": "Abrir ese archivo lo ejecutaría, así que se mostró en tu administrador de archivos.",
+    "revealedOutside": "Ese archivo está fuera de tus espacios de trabajo, así que se mostró en tu administrador de archivos. Ábrelo desde ahí."
   },
   "permissions": {
     "credentialAlways": "“Siempre” también los mantiene legibles durante el resto de esta sesión.",

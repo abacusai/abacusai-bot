@@ -114,7 +114,10 @@ export const system = {
       )
       .output(type<PickedFile[] | null>()),
   },
-  /** http, https and mailto only; anything else is refused, not thrown. */
+  /**
+   * http, https and mailto go to the OS; a local file: URL takes openPath's
+   * checks; anything else is refused, not thrown.
+   */
   openExternal: mutation
     .input(v.object({ url: v.pipe(v.string(), v.url()) }))
     .output(type<void>()),

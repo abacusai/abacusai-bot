@@ -4861,7 +4861,8 @@
     "refusedInvalid": "Ten link nie wskazuje pliku.",
     "refusedMissing": "Tego pliku już nie ma.",
     "refusedOutside": "Ten plik znajduje się poza twoimi obszarami roboczymi, więc nie został otwarty.",
-    "revealed": "Otwarcie tego pliku spowodowałoby jego uruchomienie, więc zamiast tego pokazano go w menedżerze plików."
+    "revealed": "Otwarcie tego pliku spowodowałoby jego uruchomienie, więc zamiast tego pokazano go w menedżerze plików.",
+    "revealedOutside": "Ten plik znajduje się poza twoimi obszarami roboczymi, więc pokazano go w menedżerze plików. Otwórz go stamtąd."
   },
   "permissions": {
     "credentialAlways": "„Zawsze” pozostawia je też dostępne do odczytu do końca tej sesji.",

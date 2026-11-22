@@ -287,6 +287,137 @@ describe("decideLocalOpen", () => {
   });
 });
 
+/**
+ * Chat links to files outside every root: what the user asked the agent to
+ * save on the Desktop or in Downloads, or the user's own file the agent
+ * pointed at. Refusing them left the link dead, however often it was clicked.
+ */
+describe("files outside every root", () => {
+  const saved = (): string => path.join(outside, "budget.xlsx");
+
+  beforeAll(() => {
+    fs.writeFileSync(path.join(outside, "budget.xlsx"), "sheet");
+    fs.writeFileSync(path.join(outside, "setup.bat"), "@echo");
+  });
+
+  it("opens a file the agent wrote, wherever it was saved", () => {
+    for (const platform of ["darwin", "linux", "win32"] as const) {
+      expect(
+        decideLocalOpen(saved(), [root], platform, { agentFiles: [saved()] })
+      ).toEqual({ action: "open", path: saved() });
+    }
+  });
+
+  it("vouches for that exact file, not its folder or its neighbours", () => {
+    const options = { agentFiles: [saved()] };
+    expect(
+      decideLocalOpen(
+        path.join(outside, "secret.txt"),
+        [root],
+        "linux",
+        options
+      )
+    ).toEqual({ action: "refuse", reason: "outside" });
+    expect(decideLocalOpen(outside, [root], "linux", options)).toEqual({
+      action: "refuse",
+      reason: "outside",
+    });
+  });
+
+  it("matches the agent's file through a linked folder, as the resolved path", () => {
+    // Recorded through a linked folder (macOS: /tmp → /private/tmp), clicked
+    // by its real path: one file.
+    const linkedFolder = path.join(root, "outside-link");
+    fs.symlinkSync(outside, linkedFolder);
+    try {
+      expect(
+        decideLocalOpen(saved(), [], "linux", {
+          agentFiles: [path.join(linkedFolder, "budget.xlsx")],
+        })
+      ).toEqual({ action: "open", path: saved() });
+    } finally {
+      fs.rmSync(linkedFolder, { force: true });
+    }
+  });
+
+  it("still reveals, never runs, an executable the agent wrote", () => {
+    const script = path.join(outside, "setup.bat");
+    expect(
+      decideLocalOpen(script, [root], "win32", { agentFiles: [script] })
+    ).toEqual({ action: "reveal", reason: "executable", path: script });
+  });
+
+  it("shows any other file that exists in the file manager", () => {
+    const options = { outside: "reveal" } as const;
+    expect(
+      decideLocalOpen(
+        path.join(outside, "secret.txt"),
+        [root],
+        "win32",
+        options
+      )
+    ).toEqual({
+      action: "reveal",
+      reason: "outside",
+      path: path.join(outside, "secret.txt"),
+    });
+    // Through a link, the folder shown is the real one.
+    expect(
+      decideLocalOpen(path.join(root, "escape"), [root], "linux", options)
+    ).toEqual({
+      action: "reveal",
+      reason: "outside",
+      path: path.join(outside, "secret.txt"),
+    });
+    expect(
+      decideLocalOpen(path.join(outside, "gone.xlsx"), [root], "linux", options)
+    ).toEqual({ action: "refuse", reason: "missing" });
+  });
+
+  it("does not reveal a network path: touching one can leak the account", () => {
+    // `//x` resolves locally on POSIX, so the guard must look at the form.
+    const unc = `/${path.join(outside, "secret.txt")}`;
+    expect(
+      decideLocalOpen(unc, [root], "win32", { outside: "reveal" })
+    ).toEqual({ action: "refuse", reason: "outside" });
+  });
+
+  it("keeps refusing outside paths for a caller that asks it to", () => {
+    // The skills manager opens inside skill folders only, as before.
+    expect(decideLocalOpen(path.join(outside, "secret.txt"), [root])).toEqual({
+      action: "refuse",
+      reason: "outside",
+    });
+  });
+
+  it.skipIf(process.getuid == null)(
+    "neither opens nor reveals another account's temp file",
+    () => {
+      const dir = fs.realpathSync(
+        fs.mkdtempSync(path.join(os.tmpdir(), "open-guard-foreign-"))
+      );
+      const file = path.join(dir, "report.pdf");
+      fs.writeFileSync(file, "pdf");
+      const real = fs.statSync.bind(fs);
+      vi.spyOn(fs, "statSync").mockImplementation(((target: string) => {
+        const info = real(target) as fs.Stats;
+        return target === file ? { ...info, uid: info.uid + 1 } : info;
+      }) as typeof fs.statSync);
+      try {
+        expect(
+          decideLocalOpen(file, [root], "linux", {
+            agentFiles: [file],
+            outside: "reveal",
+          })
+        ).toEqual({ action: "refuse", reason: "outside" });
+      } finally {
+        vi.restoreAllMocks();
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  );
+});
+
 describe("hasWindowsExecutableExtension", () => {
   it("catches the extensions Windows executes", () => {
     for (const ext of [

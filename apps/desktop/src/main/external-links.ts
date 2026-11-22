@@ -1,3 +1,5 @@
+import { fileURLToPath } from "url";
+
 /**
  * Schemes the app will hand to `shell.openExternal`. The OS picks the handler
  * from the scheme, so the reachable set is every protocol handler on the
@@ -23,6 +25,27 @@ export const isSafeExternalUrl = (url: unknown): url is string => {
   }
 
   return ALLOWED_SCHEMES.has(parsed.protocol);
+};
+
+/**
+ * The local path a `file:` URL names, or null when `url` is not one. Its
+ * query and #fragment are dropped: the path is what gets checked and opened.
+ * A URL naming another host is null too, since on Windows it becomes a
+ * network share, and touching one can hand the account's hash to that host.
+ */
+export const localPathOfFileUrl = (url: unknown): string | null => {
+  if (typeof url !== "string" || !URL.canParse(url)) return null;
+  const parsed = new URL(url);
+  if (parsed.protocol !== "file:") return null;
+  if (parsed.hostname !== "" && parsed.hostname !== "localhost") return null;
+  parsed.hostname = "";
+  parsed.search = "";
+  parsed.hash = "";
+  try {
+    return fileURLToPath(parsed);
+  } catch {
+    return null;
+  }
 };
 
 /** The schemes `isSafeExternalUrl` accepts, for messages and tests. */

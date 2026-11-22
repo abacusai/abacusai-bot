@@ -1,9 +1,10 @@
 /**
  * What the app is willing to hand to `shell.openPath`. The paths come from
  * model-generated markdown and an agent-written workspace, so a path opens
- * only inside a directory the app treats as the user's working area, and
- * never when the OS would run it instead of showing it. An executable inside
- * an allowed root is revealed in the file manager rather than dropped.
+ * only inside a directory the app treats as the user's working area, or when
+ * it is a file the agent itself wrote, and never when the OS would run it
+ * instead of showing it. Anything else that exists can be revealed in the
+ * file manager, which runs nothing, rather than dropped.
  */
 import fs from "fs";
 import os from "os";
@@ -183,9 +184,45 @@ export type LocalOpenDecision =
    * be re-pointed between check and open.
    */
   | { action: "open"; path: string }
-  /** Safe to show in the file manager, not to hand to the OS to run. */
-  | { action: "reveal"; reason: "executable"; path: string }
+  /**
+   * Safe to show in the file manager, not to hand to the OS: it would run
+   * ("executable"), or nothing vouches for its contents ("outside").
+   */
+  | { action: "reveal"; reason: "executable" | "outside"; path: string }
   | { action: "refuse"; reason: "invalid" | "missing" | "outside" };
+
+export interface LocalOpenOptions {
+  /**
+   * Files the agent wrote in this app (the Artifacts ledger). Each opens as a
+   * file inside a root would, wherever the user asked for it to be saved:
+   * its contents came from the agent, as a workspace file's do. Exact files,
+   * never their folders.
+   */
+  agentFiles?: readonly string[];
+  /**
+   * What an existing path outside every root gets. "reveal" shows it in the
+   * file manager, which runs nothing; the user decides from there.
+   */
+  outside?: "refuse" | "reveal";
+}
+
+/** A Windows network path: touching it can hand the account's hash to a host. */
+const isNetworkPath = (filePath: string): boolean => /^[\\/]{2}/.test(filePath);
+
+/** Whether `realTarget` is one of `files`, compared as resolved paths. */
+const isOneOf = (realTarget: string, files: readonly string[]): boolean => {
+  const name = path.basename(realTarget).toLowerCase();
+  return files.some((file) => {
+    // The name first: a click must not realpath the whole ledger.
+    if (typeof file !== "string" || file.length === 0) return false;
+    if (path.basename(file).toLowerCase() !== name) return false;
+    try {
+      return path.relative(fs.realpathSync(file), realTarget) === "";
+    } catch {
+      return false;
+    }
+  });
+};
 
 /**
  * Target and roots are realpath'd before the boundary check, so a symlink
@@ -194,7 +231,8 @@ export type LocalOpenDecision =
 export const decideLocalOpen = (
   filePath: unknown,
   allowedRoots: readonly string[],
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  options: LocalOpenOptions = {}
 ): LocalOpenDecision => {
   if (typeof filePath !== "string" || filePath.length === 0) {
     return { action: "refuse", reason: "invalid" };
@@ -217,10 +255,18 @@ export const decideLocalOpen = (
     }
     return isWithin(realRoot, realTarget);
   });
-  if (!inside) return { action: "refuse", reason: "outside" };
-  // Inside the temp root by position, but somebody else's file.
+  // Somebody else's file, whichever list it is on.
   if (isForeignTempFile(realTarget, platform))
     return { action: "refuse", reason: "outside" };
+  if (!inside && !isOneOf(realTarget, options.agentFiles ?? [])) {
+    if (
+      options.outside !== "reveal" ||
+      isNetworkPath(filePath) ||
+      isNetworkPath(realTarget)
+    )
+      return { action: "refuse", reason: "outside" };
+    return { action: "reveal", reason: "outside", path: realTarget };
+  }
 
   if (isExecutableForm(filePath, realTarget, platform)) {
     return { action: "reveal", reason: "executable", path: realTarget };
