@@ -138,14 +138,18 @@ const judgePrompt = (ask: string, reply: string): string =>
     "Answer A if the user says it did not work, nothing changed, it got worse, or something broke or disappeared. Answer B for anything else (a new request, a question, more changes, thanks, continue). One letter only.",
   ].join("\n");
 
-/** One-letter call: does this message say the last change did not work? Fails to "no". */
+/**
+ * One-letter call: does this message say the last change did not work? Null
+ * when there is no answer (no key, an error, a timeout, neither letter); the
+ * guard reads that as "no", the retry offer as not judged.
+ */
 export async function judgeComplaint(
   ask: string,
   reply: string,
   apiKey: string = (process.env.ABACUS_API_KEY ?? "").trim(),
   fetchImpl: typeof fetch = fetch
-): Promise<boolean> {
-  if (apiKey.length === 0 || ask.trim().length === 0) return false;
+): Promise<boolean | null> {
+  if (apiKey.length === 0 || ask.trim().length === 0) return null;
   try {
     const response = await fetchImpl(`${abacusV1BaseUrl()}/chat/completions`, {
       method: "POST",
@@ -161,14 +165,17 @@ export async function judgeComplaint(
       }),
       signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
     });
-    if (!response.ok) return false;
+    if (!response.ok) return null;
     const body = (await response.json()) as {
       choices?: Array<{ message?: { content?: unknown } }>;
     };
     const answer = body.choices?.[0]?.message?.content;
-    return typeof answer === "string" && /^\W*A\W*$/i.test(answer);
+    if (typeof answer !== "string") return null;
+    if (/^\W*A\W*$/i.test(answer)) return true;
+    if (/^\W*B\W*$/i.test(answer)) return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -182,8 +189,14 @@ const lastAssistantText = (messages: unknown[]): string => {
   return "";
 };
 
+/**
+ * `onVerdict` hears the judge's answer on a turn's opening message (true: it
+ * says the last change did not work), before the run settles. The retry offer
+ * reads it off the turn's outcome. Not called when nothing was judged.
+ */
 export function createStuckGuard(
-  judge: typeof judgeComplaint = judgeComplaint
+  judge: typeof judgeComplaint = judgeComplaint,
+  onVerdict: (complained: boolean) => void = () => {}
 ) {
   return function stuckGuard(pi: ExtensionAPI) {
     // Across turns.
@@ -226,7 +239,8 @@ export function createStuckGuard(
       }
 
       const judged = judge(ask, lastReply).then((complaint) => {
-        enter(complaint ? Math.max(attempts, 1) + 1 : 1);
+        if (complaint != null) onVerdict(complaint);
+        enter(complaint === true ? Math.max(attempts, 1) + 1 : 1);
       });
       // Early in an episode the note can land a moment later as a steer; from
       // the 2nd attempt on, the edit gates need the stage before the first call.
@@ -377,5 +391,3 @@ export function createStuckGuard(
     });
   };
 }
-
-export default createStuckGuard();

@@ -113,6 +113,25 @@ const COMPLAINT: StreamChunk[] = [
   b.runFinished("r2", "success"),
 ];
 
+/** The fix, then `ask`, its run ending on the agent's verdict on it. */
+const judgedComplaint = (ask: string, complained: boolean): StreamChunk[] => [
+  ...COMPLAINT.slice(
+    0,
+    COMPLAINT.findIndex((e) => e.type === "RUN_FINISHED") + 1
+  ),
+  b.runStarted("r2"),
+  ...b.text("r2-u", "user", ask),
+  b.textStart("r2-a"),
+  ...b.toolCall("c2", "edit", "r2-a", { file_path: "/repo/login.js" }),
+  b.toolResult("c2", { text: "Edited login.js" }),
+  b.textDelta("r2-a", "I changed how the session is read."),
+  b.textEnd("r2-a"),
+  b.runFinished("r2", "success", { metadata: { abacus: { complained } } }),
+];
+
+/** Over the word list's length cap, and none of its words. */
+const LONG_REBRIEF = `Stop checking the login by calling its functions in code. ${"When I sign in as a real user, typing my password, the page reloads and I land on the same form again. ".repeat(4)}Sign in the way I do and fix that.`;
+
 /**
  * A game built through a connector's own tools (no file tool at all): it
  * runs Luau in Studio and playtests, says it is fixed, and the user writes
@@ -386,6 +405,26 @@ describe("RetryOfferRow after a connector's work", () => {
 
   it("stays down on the same complaint after a turn that only looked things up", async () => {
     const h = await mount("free", { events: RESEARCH_COMPLAINT });
+    await settled();
+    await settled();
+    expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
+    expect(h.steps).toEqual([]);
+  });
+});
+
+describe("RetryOfferRow on the agent's verdict", () => {
+  it("offers the retry on a long re-brief the agent judged a complaint", async () => {
+    await mount("free", { events: judgedComplaint(LONG_REBRIEF, true) });
+    const line = await findLine();
+    expect(
+      line.closest('[data-slot="retry-offer"]')?.getAttribute("data-reason")
+    ).toBe("complaint");
+  });
+
+  it("stays down on listed words the agent judged no complaint", async () => {
+    const h = await mount("free", {
+      events: judgedComplaint("It still doesn't work, same error", false),
+    });
     await settled();
     await settled();
     expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();

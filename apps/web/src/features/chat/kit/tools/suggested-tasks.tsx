@@ -103,6 +103,10 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
   const sendAsUser = useSendAsUser();
   const messages = useHost(session, (state) => state.messages);
   const running = useThreadStore(session, (state) => state.runs.active != null);
+  const complained = useThreadStore(
+    session,
+    (state) => state.runs.outcomes.at(-1)?.complained
+  );
   const [copied, setCopied] = useState<string | null>(null);
   // A tap answers the offer at once: a second tap must not send again.
   const [sent, setSent] = useState(false);
@@ -129,7 +133,7 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
     composer.readOnly == null &&
     isLatestOffer(messages, part.id) &&
     // The retry line wins a turn it has a reason for (complaint, repeat).
-    (!nextStep || retryOfferTarget(messages) == null) &&
+    (!nextStep || retryOfferTarget(messages, complained) == null) &&
     (!nextStep ||
       card?.shownOffer === part.id ||
       nextStepAllowed(card, {

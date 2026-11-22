@@ -1,4 +1,5 @@
 import {
+  complainedOf,
   contextTokensOf,
   creditsOf,
   networkWaitOf,
@@ -523,6 +524,7 @@ export const recordTerminal = (
   const credits = creditsOf(typed.metadata);
   const contextTokens = contextTokensOf(typed.metadata);
   const waits = networkWaitOf(typed.metadata);
+  const complained = complainedOf(typed.metadata);
   const kind: RunOutcomeRecord["kind"] =
     event.type === "RUN_ERROR"
       ? "error"
@@ -544,6 +546,7 @@ export const recordTerminal = (
     ...(kind === "success" && credits != null ? { credits } : {}),
     ...(contextTokens != null ? { contextTokens } : {}),
     ...waits,
+    ...(kind === "success" && complained != null ? { complained } : {}),
     ...(kind === "error"
       ? {
           error: {

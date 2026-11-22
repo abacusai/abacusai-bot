@@ -103,7 +103,7 @@ export const TopModelHint = ({
     outcome?.kind === "success" &&
     composer.readOnly == null;
   const othersHere =
-    retryOfferTarget(messages) != null ||
+    retryOfferTarget(messages, outcome?.complained) != null ||
     deliverableOfferTarget(messages) != null ||
     endedOnTasks(messages) ||
     successPitchOnThread(prefs, threadId);

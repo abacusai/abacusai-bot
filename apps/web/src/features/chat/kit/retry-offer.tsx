@@ -75,10 +75,13 @@ export interface RetryOfferTarget {
 /**
  * The latest turn's reply, when the task went badly: the user's own words
  * opened the turn, it shows no buttons or plan card of its own, and
- * retryOfferReason finds why.
+ * retryOfferReason finds why. `complained` is the agent's verdict on the
+ * turn's opening message, off the latest run's outcome (RunOutcomeRecord);
+ * undefined when it did not judge one.
  */
 export const retryOfferTarget = (
-  messages: readonly UIMessage[]
+  messages: readonly UIMessage[],
+  complained?: boolean
 ): RetryOfferTarget | null => {
   const turns = turnsOf(messages);
   const turn = turns.at(-1);
@@ -119,6 +122,7 @@ export const retryOfferTarget = (
     ranWork: ranWork(turn.assistantIndices),
     earlierRanWork: ranWork(earlier[0]?.assistantIndices ?? []),
     handedOff: tools.some((tool) => isPlanHandoffTool(tool.name)),
+    ...(complained != null && { complained }),
   });
   return reason == null ? null : { id: carrier.id, turn: turns.length, reason };
 };
@@ -166,7 +170,7 @@ export const RetryOfferRow = ({
   // Every free and paying account gets it. A paying plan runs the top models
   // already, so it needs no upgrade.
   const paying = tier === "basic" || tier === "paid";
-  const target = retryOfferTarget(messages);
+  const target = retryOfferTarget(messages, outcome?.complained);
   const card = prefs.dismissals.retryOffer ?? null;
   // The success pitch owns the space under a reply it is offered on.
   const pitchHere = successPitchOnThread(prefs, session.threadId);

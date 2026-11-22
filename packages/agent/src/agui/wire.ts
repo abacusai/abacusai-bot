@@ -138,6 +138,8 @@ export interface RunFinishedMeta {
     turnUsage?: TurnUsage;
     stopReason?: PiStopReason;
     serverInitiated?: true;
+    /** The user's opening message says the last change did not work (TurnOutcome.complained). */
+    complained?: boolean;
   };
 }
 
