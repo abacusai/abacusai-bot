@@ -71,6 +71,9 @@ export const FUNNEL_STEPS = [
   // The next step (next-step.ts): a result handed over, by what it was; then
   // the offer under it, and a tap, as work or routine.
   "result_delivered",
+  // Any result handed over in the user's own chat, clean or not (`_rough`: a
+  // tool failed or the turn was troubled); result_delivered counts clean ones.
+  "result_made",
   "next_step_shown",
   "next_step_tapped",
   // "Your work is waiting" (work-waiting.ts): a notice for a result the user

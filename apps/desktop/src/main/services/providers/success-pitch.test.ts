@@ -715,6 +715,41 @@ describe("SuccessPitchWatch: keep it running", () => {
   });
 });
 
+describe("SuccessPitchWatch: results made", () => {
+  it("counts every result in the user's own chat, marking the rough ones", async () => {
+    const t = setup();
+    await t.run("Build my bakery site", [presentSite, text(LONG_REPLY)]);
+    expect(t.funnel).toHaveBeenCalledWith("result_delivered", "site");
+    expect(t.funnel).toHaveBeenCalledWith("result_made", "site");
+    // A long build has a refused or failed call along the way: still a result.
+    const rough = setup();
+    await rough.run("Write the report", [
+      tool("bash", { command: "rm -rf build" }, "", true),
+      presentFile,
+      text(LONG_REPLY),
+    ]);
+    expect(rough.funnel).not.toHaveBeenCalledWith("result_delivered", "file");
+    expect(rough.funnel).toHaveBeenCalledWith("result_made", "file_rough");
+  });
+
+  it("never for a turn with no result, a bot's own chat, or a contact's", async () => {
+    const chat = setup();
+    await chat.run("hi", [text("Hello!")]);
+    expect(chat.funnel).not.toHaveBeenCalledWith(
+      "result_made",
+      expect.anything()
+    );
+    const bots = setup({ pitchable: false });
+    await bots.run("Build it", [presentSite, text(LONG_REPLY)]);
+    expect(bots.funnel).not.toHaveBeenCalled();
+    const contact = setup();
+    await contact.run("Build it", [presentSite, text(LONG_REPLY)], {
+      channel: { ...CHAT.channel, owner: false },
+    });
+    expect(contact.funnel).not.toHaveBeenCalled();
+  });
+});
+
 describe("SuccessPitchWatch: chat apps", () => {
   const praised = async (t: ReturnType<typeof setup>) => {
     await t.run(
