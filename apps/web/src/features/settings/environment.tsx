@@ -127,7 +127,9 @@ export const EnvironmentPage = () => {
             title={t("phase5.terminalShell")}
             detail={
               shell.data.effective !== shell.data.selected
-                ? t("phase5.shellFallback", { shell: shell.data.effective })
+                ? t("phase5.shellFallback", {
+                    shell: t(`terminalShells.${shell.data.effective}.label`),
+                  })
                 : undefined
             }
           >
