@@ -136,6 +136,17 @@ export const openFirstTask = (
     text: prompt,
   }));
 };
+/**
+ * Onboarding's Start building with no project picked: an empty box for the
+ * person's own idea, with the projects under it. A waiting sample was replaced by most senders.
+ */
+export const openBuildIdea = (sponsored: boolean): void => {
+  startDraftStore.setState(() => ({
+    ...newStartDraft(),
+    starters: "build",
+    ...(sponsored ? { sponsored: true as const } : {}),
+  }));
+};
 /** The first-run sample was sent, edited or its hint closed: never point at Send again for it. */
 export const endFirstTaskHint = (draftId: string): void => {
   if (startDraftStore.state.id !== draftId || !startDraftStore.state.firstTask)

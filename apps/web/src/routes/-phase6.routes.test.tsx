@@ -186,7 +186,7 @@ it.each([null, "telegram"] as const)(
   },
   15000
 );
-it("Start building opens a new session with the sample waiting in the box and Send pointed at, making no bot", async () => {
+it("Start building opens an empty box for the person's own idea, the build projects under it, and makes no bot", async () => {
   const seed = defaultSeed();
   seed.bots = [];
   seed.routines = [];
@@ -216,58 +216,75 @@ it("Start building opens a new session with the sample waiting in the box and Se
     )
   );
   expect(harness.collections.bots.toArray).toHaveLength(0);
-  // An auto-sent sample left more people with a result they never asked for:
-  // it waits in the box, on the house, and Send is pointed at.
+  // Most senders replaced a waiting sample with their own idea: the box is theirs, on the house.
   expect(startDraftStore.state).toMatchObject({
     stage: "draft",
     starters: "build",
     sponsored: true,
-    firstTask: true,
   });
-  expect(draftStore.state[`draft:${startDraftStore.state.id}`]?.text).toContain(
-    "Build me a one-page portfolio website"
-  );
-  const card = await waitFor(() => {
-    const found = document.querySelector("[data-send-hint-card]");
-    expect(found).not.toBeNull();
-    return found as HTMLElement;
-  });
-  expect(card.getAttribute("data-send-hint-card")).toBe("build");
-  expect(within(card).getByText("Press Send to see it work")).toBeTruthy();
+  expect(startDraftStore.state.firstTask).toBeUndefined();
   expect(
-    document
-      .querySelector('[data-slot="composer-send"]')
-      ?.hasAttribute("data-send-hint")
-  ).toBe(true);
+    draftStore.state[`draft:${startDraftStore.state.id}`]?.text ?? ""
+  ).toBe("");
+  const box = await waitFor(() => {
+    const found = document.querySelector<HTMLTextAreaElement>(
+      "[data-slot=composer] textarea"
+    );
+    expect(found).not.toBeNull();
+    return found!;
+  });
+  expect(box.getAttribute("placeholder")).toBe(
+    "Describe what you want to build…"
+  );
+  // No sample, so nothing to point Send at.
+  expect(document.querySelector("[data-send-hint-card]")).toBeNull();
   const funnel = () =>
     harness!.calls
       .filter(([name]) => name === "system.funnelStep")
       .map(([, input]) => input);
-  expect(funnel()).toContainEqual({
-    step: "start_page_shown",
-    detail: "build_example",
-  });
   await waitFor(() =>
     expect(funnel()).toContainEqual({
-      step: "send_hint_shown",
-      detail: "build",
+      step: "start_page_shown",
+      detail: "build_blank",
     })
   );
-  // Sent as it is: the hint is over, and the send counts as the example.
+  // A project under the box fills it; sent as it is, it counts as the starter.
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Website for my business/ })
+  );
+  await waitFor(() =>
+    expect(box.value).toContain("Build a website for my business")
+  );
+  expect(funnel()).toContainEqual({
+    step: "start_starter_tapped",
+    detail: "business-site",
+  });
   fireEvent.click(
     document.querySelector<HTMLElement>('[data-slot="composer-send"]')!
   );
   await waitFor(() => expect(startDraftStore.state.stage).not.toBe("draft"));
   expect(JSON.stringify(startDraftStore.state.envelope?.parts)).toContain(
-    "Build me a one-page portfolio website"
+    "Build a website for my business"
   );
-  expect(startDraftStore.state.firstTask).toBeUndefined();
-  expect(document.querySelector("[data-send-hint-card]")).toBeNull();
-  expect(funnel()).toContainEqual({ step: "start_sent", detail: "example" });
+  expect(funnel()).toContainEqual({ step: "start_sent", detail: "starter" });
   expect(
     harness.calls.filter(([name]) => name === "account.skipOnboarding")
   ).toHaveLength(1);
 });
+
+it.each([
+  ["no chat yet", "Orders and bookings app", "Restyle Excalidraw", true],
+  ["chats", "Restyle Excalidraw", "Orders and bookings app", false],
+] as const)(
+  "a new chat's start page with %s offers %s",
+  async (_, shown, hidden, empty) => {
+    const seed = defaultSeed();
+    if (empty) seed.sessions = [];
+    harness = await renderApp("/sessions/new", { seed });
+    expect(await screen.findByText(shown)).toBeTruthy();
+    expect(screen.queryByText(hidden)).toBeNull();
+  }
+);
 
 it("Take the tour on the pick screen tours the start page with the Build sample waiting in the box, unsent", async () => {
   const seed = defaultSeed();

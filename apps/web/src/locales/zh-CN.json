@@ -1903,6 +1903,7 @@
     "start": {
       "heading": "我们要构建什么？",
       "placeholder": "告诉智能体要做什么…",
+      "buildPlaceholder": "描述你想做的东西…",
       "try": "试试这些",
       "starters": {
         "build-a-store": {

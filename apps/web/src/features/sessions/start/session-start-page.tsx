@@ -327,8 +327,11 @@ export const SessionStartPage = ({
   const coding =
     draft.starters === "code" ||
     connectors.data?.[GITHUB_CONNECTOR_ID]?.state === "connected";
+  // Someone with no chat yet gets the first-run projects, not the general starters.
+  const firstChat =
+    recent !== undefined && !recent.some((s) => isListedSession(s));
   const starters =
-    draft.starters === "build"
+    draft.starters === "build" || (firstChat && !coding)
       ? buildStarters
       : coding
         ? [

@@ -50,7 +50,10 @@ import {
   startSignIn,
   cancelSignIn,
 } from "#renderer/features/onboarding/store";
-import { openFirstTask } from "#renderer/features/sessions/start/start-session";
+import {
+  openBuildIdea,
+  openFirstTask,
+} from "#renderer/features/sessions/start/start-session";
 import { startTour } from "#renderer/features/tour/store";
 import {
   PaidWelcomeHost,
@@ -230,12 +233,9 @@ const OnboardingRoute = () => {
     };
     switch (choice.kind) {
       case "build":
-        // The example tapped, or the card's own sample, waiting in the box for Send.
-        openFirstTask(
-          "build",
-          sponsored,
-          choice.prompt ?? t(`sessions.start.build.${BUILD_SAMPLE_ID}.prompt`)
-        );
+        // The project tapped waits in the box for Send; Start building alone asks for their own idea.
+        if (choice.prompt == null) openBuildIdea(sponsored);
+        else openFirstTask("build", sponsored, choice.prompt);
         await finish({ to: "new-session" });
         return;
       case "chat-app": {

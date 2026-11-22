@@ -1903,6 +1903,7 @@
     "start": {
       "heading": "Wat gaan we bouwen?",
       "placeholder": "Vertel de agent wat hij moet doen…",
+      "buildPlaceholder": "Beschrijf wat je wilt bouwen…",
       "try": "Probeer een van deze",
       "starters": {
         "build-a-store": {
