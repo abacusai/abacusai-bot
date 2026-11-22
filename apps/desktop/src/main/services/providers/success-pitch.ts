@@ -422,6 +422,11 @@ export class SuccessPitchWatch {
     const where =
       record.channel == null ? "app" : record.channel.owner ? "chat" : null;
     if (where == null) return Promise.resolve();
+    if (facts.delivered != null)
+      this.deps.funnel(
+        "result_made",
+        clean ? facts.delivered : `${facts.delivered}_rough`
+      );
     if (settled)
       this.markKeep(record.sessionId, record.turnId, this.keepOf(facts));
     const nextStep = this.deps.nextStep();
