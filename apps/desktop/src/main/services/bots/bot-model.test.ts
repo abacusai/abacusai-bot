@@ -656,3 +656,78 @@ describe("the effective bot model in main (spec 03 §24.10)", () => {
     });
   });
 });
+
+describe("a message that moved off its bot's failed model by itself", () => {
+  /** What main does with the agent's `model_changed { moved }`. */
+  const moved = (
+    main: ReturnType<typeof makeMain>,
+    sessionId: string,
+    model: string
+  ) => {
+    main.sessions.get(sessionId)!.model = model;
+    main.bots.followMove(sessionId, model);
+  };
+
+  it("takes the bot along: the next message starts on the router, not the failed model", async () => {
+    const main = makeMain();
+    const bot = main.bots.create({
+      name: "Scout",
+      description: "Watch.",
+      model: "deepseek/deepseek-v4-flash",
+    });
+    const handle = await main.bots.openChat(bot.id);
+
+    moved(main, handle.sessionId, "openllm/auto");
+    await main.bots.settled();
+    expect(main.bots.list().find((b) => b.id === bot.id)?.model).toBe(
+      "openllm/auto"
+    );
+
+    // Before: the admission pinned the failed model back before every run.
+    main.written.length = 0;
+    await main.send(handle.sessionId, "run-1");
+    expect(main.written.map((entry) => entry.command.type)).toEqual(["run"]);
+    expect(main.sessions.get(handle.sessionId)!.model).toBe("openllm/auto");
+  });
+
+  it("moves the bot's other chats too, as a switch in the chat does", async () => {
+    const main = makeMain();
+    const bot = main.bots.create({
+      name: "Scout",
+      description: "Watch.",
+      model: "deepseek/deepseek-v4-flash",
+    });
+    const forever = await main.bots.openChat(bot.id);
+    const sender = await main.bots.openSenderChat(
+      bot.id,
+      "telegram",
+      "c1",
+      "Ann"
+    );
+    main.stop(sender.sessionId);
+
+    moved(main, sender.sessionId, "abacus/route-llm");
+    await main.bots.settled();
+    expect(main.bots.list().find((b) => b.id === bot.id)?.model).toBe(
+      "abacus/route-llm"
+    );
+    expect(main.sessions.get(forever.sessionId)!.model).toBe(
+      "abacus/route-llm"
+    );
+  });
+
+  it("leaves a chat no bot owns, and a bot already there, as they are", async () => {
+    const main = makeMain();
+    const bot = main.bots.create({
+      name: "Scout",
+      description: "Watch.",
+      model: "openllm/auto",
+    });
+    const handle = await main.bots.openChat(bot.id);
+    const update = vi.spyOn(main.bots, "update");
+
+    moved(main, handle.sessionId, "openllm/auto");
+    main.bots.followMove("not-a-bot-session", "openllm/auto");
+    expect(update).not.toHaveBeenCalled();
+  });
+});

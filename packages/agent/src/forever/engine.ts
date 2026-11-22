@@ -300,8 +300,12 @@ export class ForeverEngine {
    * Set at `agent_end` when the turn died on its provider and another pool
    * model takes it over; carried out by continuePastRecoverableFailures.
    */
-  private pendingOpenLlmRotation: { failure: string; nextId: string } | null =
-    null;
+  private pendingOpenLlmRotation: {
+    failure: string;
+    nextId: string;
+    /** Set by moveToOpenLlm: the model_changed it ends on says so. */
+    moved?: true;
+  } | null = null;
   /** Set at `agent_end` when the call failed in a way that may be the network's. */
   private pendingNetworkFailure: NetworkSuspect | null = null;
   /** Set at `agent_end` when every pool model is busy and a wait is left this turn. */
@@ -1819,6 +1823,7 @@ export class ForeverEngine {
     this.emitAgentEvent({
       type: "model_changed",
       model: this.currentModelReference(),
+      ...(rotation.moved && { moved: true }),
     });
     await session.sendCustomMessage(
       {
@@ -2042,7 +2047,11 @@ export class ForeverEngine {
     this.poolChosen = !paying;
     // The run on the router ends on its own calls, not the failed model's.
     this.router.chain.begin();
-    this.pendingOpenLlmRotation = { failure: failure.raw, nextId: next.id };
+    this.pendingOpenLlmRotation = {
+      failure: failure.raw,
+      nextId: next.id,
+      moved: true,
+    };
     this.turnRunning = true;
     this.stallRecoveriesThisTurn = 0;
     this.stallFailureReported = false;

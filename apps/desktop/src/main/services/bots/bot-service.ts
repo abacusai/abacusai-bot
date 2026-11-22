@@ -629,6 +629,19 @@ export class BotService {
     return bot;
   }
 
+  /**
+   * A message in a bot's chat moved off its failed model to a router by
+   * itself (`moved-to-abacus`): the bot moves with it, as a switch made in the
+   * chat does, so the next message does not start on the failed model again.
+   */
+  followMove(sessionId: string, model: string): void {
+    const owner = this.callbacks.sessionInfo?.(sessionId)?.owner;
+    const bot =
+      owner?.kind === "bot" ? getBot(owner.botId) : botForSession(sessionId);
+    if (bot == null || bot.model === model) return;
+    this.update(bot.id, { model });
+  }
+
   /** Re-pins in flight (`update`), for callers that must see them land. */
   readonly #repins = new Set<Promise<void>>();
 
