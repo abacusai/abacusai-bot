@@ -1903,6 +1903,7 @@
     "start": {
       "heading": "我們要打造什麼？",
       "placeholder": "告訴 AI 代理要做什麼…",
+      "buildPlaceholder": "描述你想做的東西…",
       "try": "試試這些",
       "starters": {
         "build-a-store": {

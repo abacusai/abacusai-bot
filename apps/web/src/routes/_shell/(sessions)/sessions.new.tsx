@@ -151,7 +151,10 @@ const SessionsNewRoute = () => {
                 config={{
                   mode: "full",
                   pending: binding.pending,
-                  placeholder: t("sessions.start.placeholder"),
+                  placeholder:
+                    draft.starters === "build"
+                      ? t("sessions.start.buildPlaceholder")
+                      : t("sessions.start.placeholder"),
                   attachmentsBase: binding.root,
                   attachmentContext: binding.attachmentContext,
                   showModeChip: true,
