@@ -31,6 +31,7 @@ import {
   runPageScript,
 } from "./connector";
 import type { LaneFailure } from "./lane-supervisor";
+import { loginPageRead, presentLogin } from "./login-cover";
 import {
   BOOT_MAX_RELOADS,
   FIRST_LOAD_WAIT_MS,
@@ -416,6 +417,7 @@ export class TelegramWebConnector implements MessagingConnector {
     if (!this.running || this.parked) return;
     const state = await this.run<LoginState>(LOGIN_STATE_SCRIPT, {});
     if (this.parked) return;
+    loginPageRead(this.window, state);
     if (state == null) {
       // A page that never answers is not "still loading" forever: a failed
       // initial load leaves a dead page whose QR can never complete.
@@ -493,8 +495,9 @@ export class TelegramWebConnector implements MessagingConnector {
     this.resume();
     const win = this.ensureWindow();
     if (win == null) return;
-    // The whole reveal lives there, including leaving macOS full screen first.
-    presentAsDialog(win);
+    // The whole reveal lives there, including leaving macOS full screen
+    // first; covered until the page shows its login (login-cover).
+    presentLogin(win);
   }
 
   /**

@@ -24,6 +24,7 @@ import {
   setFileInput,
 } from "./connector";
 import type { LaneFailure } from "./lane-supervisor";
+import { loginPageRead, presentLogin } from "./login-cover";
 import {
   readPlatformSignedIn,
   savePlatformSignedIn,
@@ -923,6 +924,7 @@ export class DiscordWebConnector implements MessagingConnector {
     if (this.driving > 0) return;
     const state = await this.run<LoginState>(LOGIN_STATE_SCRIPT, {});
     if (state == null || this.parked) return;
+    loginPageRead(this.window, state);
 
     if (state.loggedIn) this.signedOutTicks = 0;
     if (state.loggedIn || state.loginVisible === true) this.boot.reset();
@@ -1007,7 +1009,8 @@ export class DiscordWebConnector implements MessagingConnector {
     this.resume();
     const win = this.ensureWindow();
     if (win == null) return;
-    presentAsDialog(win);
+    // Covered until the page shows its login (login-cover).
+    presentLogin(win);
   }
 
   /** Out of sight, still running: a scan already made can still land. */

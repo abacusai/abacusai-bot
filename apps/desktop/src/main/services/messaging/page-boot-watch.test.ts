@@ -93,6 +93,10 @@ vi.mock("../../bring-to-front", () => ({
   dismissOnEscape: () => {},
   presentAsDialog: (win: FakeWindow) => win.show(),
 }));
+vi.mock("./login-cover", () => ({
+  presentLogin: (win: FakeWindow) => win.show(),
+  loginPageRead: () => {},
+}));
 vi.mock("../../paths", () => ({ abacusBotHome: () => "/nonexistent" }));
 vi.mock("./messaging-config-service", () => ({
   readPlatformLinkLost: () => false,

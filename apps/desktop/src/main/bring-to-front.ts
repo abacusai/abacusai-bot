@@ -5,7 +5,7 @@
  * as `parent`: on macOS a full-screen app is a Space of its own, and a
  * top-level login window would strand the user in a second, empty Space.
  */
-import type { BaseWindow, BrowserWindow } from "electron";
+import type { BaseWindow, BrowserWindow, WebContents } from "electron";
 
 let reveal: (() => void) | null = null;
 let main: BaseWindow | null = null;
@@ -108,6 +108,11 @@ const HINT_JS = `(() => {
   document.body.appendChild(pill);
 })();`;
 
+/** Put the Cancel pill on `contents`; a page that cannot take it is left alone. */
+export const injectCancelPill = (contents: WebContents): void => {
+  void contents.executeJavaScript(HINT_JS, true).catch(() => {});
+};
+
 /** The hidden window is the driver's, not the user's. */
 const REMOVE_HINT_JS = `(() => {
   const pill = document.getElementById('abacus-dismiss-hint');
@@ -122,13 +127,34 @@ const REMOVE_HINT_JS = `(() => {
  * to fetch a password.
  */
 export const dismissOnEscape = (win: BrowserWindow): void => {
+  exitsOn(win.webContents, win);
+
+  // Pill in on reveal and on navigation while shown, out on dismiss.
+  const inject = (): void => {
+    if (!win.isVisible()) return;
+    injectCancelPill(win.webContents);
+  };
+  win.on("show", inject);
+  win.webContents.on("did-finish-load", inject);
+  win.on("hide", () => {
+    void win.webContents
+      .executeJavaScript(REMOVE_HINT_JS, true)
+      .catch(() => {});
+  });
+};
+
+/**
+ * Esc, Cmd/Ctrl+W and the Cancel pill in `contents` put `win` away: the page
+ * itself, or anything laid over it (the login cover).
+ */
+export const exitsOn = (contents: WebContents, win: BrowserWindow): void => {
   const dismiss = (): void => {
     if (!win.isVisible()) return;
     win.hide();
     bringToFront();
   };
 
-  win.webContents.on("before-input-event", (event, input) => {
+  contents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     const closeChord =
       input.key.toLowerCase() === "w" && (input.meta || input.control);
@@ -138,20 +164,7 @@ export const dismissOnEscape = (win: BrowserWindow): void => {
     dismiss();
   });
 
-  // Pill in on reveal and on navigation while shown, out on dismiss.
-  const inject = (): void => {
-    if (!win.isVisible()) return;
-    void win.webContents.executeJavaScript(HINT_JS, true).catch(() => {});
-  };
-  win.on("show", inject);
-  win.webContents.on("did-finish-load", inject);
-  win.on("hide", () => {
-    void win.webContents
-      .executeJavaScript(REMOVE_HINT_JS, true)
-      .catch(() => {});
-  });
-
-  win.webContents.on("console-message", (event) => {
+  contents.on("console-message", (event) => {
     if (event.message === CANCEL_MESSAGE) dismiss();
   });
 };

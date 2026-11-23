@@ -9,7 +9,6 @@ import {
   bringToFront,
   dismissOnEscape,
   parentWindow,
-  presentAsDialog,
 } from "../../bring-to-front";
 import { nativeT } from "../config/native-language";
 import {
@@ -39,6 +38,7 @@ import {
   UndeliverableChatError,
 } from "./connector";
 import type { LaneFailure } from "./lane-supervisor";
+import { loginPageRead, presentLogin } from "./login-cover";
 import {
   readPlatformLinkLost,
   readPlatformSignedIn,
@@ -1505,6 +1505,7 @@ export class WhatsAppWebConnector implements MessagingConnector {
     }
     const state = await this.run<LoginState>(LOGIN_STATE_SCRIPT, {});
     if (this.parkedNote != null) return;
+    loginPageRead(this.window, state);
     // Before a link nothing else watches the page. Blank can be WhatsApp
     // syncing a fresh link, which is left alone; a load that never settles
     // is reloaded a few times, then parks.
@@ -1673,8 +1674,9 @@ export class WhatsAppWebConnector implements MessagingConnector {
     this.resume();
     const win = this.ensureWindow();
     if (win == null) return;
-    // Adopt, fit, show, focus, leaving macOS full screen first.
-    presentAsDialog(win);
+    // Adopt, fit, show, focus, leaving macOS full screen first; covered
+    // until the page shows its QR or the app (login-cover).
+    presentLogin(win);
   }
 
   /** Out of sight, still running: a scan already made can still land. */
