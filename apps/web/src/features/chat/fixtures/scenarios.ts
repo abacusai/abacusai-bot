@@ -51,6 +51,8 @@ export interface Scenario {
     freeModelDown?: { first?: boolean };
     /** The composer's top-model hint on a paying plan, without its caps. */
     topModels?: boolean;
+    /** The sessions route's context tray under the composer (folder, rules). */
+    contextTray?: boolean;
     /** The turns' files on the deliverables card, as the sessions route shows them. */
     deliverables?: boolean;
     /** The shell's upgrade dialog, for a line or card in the chat that opens it. */
@@ -253,6 +255,19 @@ const botUnread = (): RelayEvent[] =>
   ]);
 
 // ─── sessions ──────────────────────────────────────────────────────────
+
+/** A finished turn in a chat whose agent reads `files` as project rules. */
+const sessionRules =
+  (files: string[], ask: string, answer: string) => (): RelayEvent[] =>
+    seqd([
+      ...b.sessionReady("inc-1", "DEFAULT"),
+      b.custom("project_rules.loaded", { files }),
+      ...userTurn("r1", "u1", ask, at(2)),
+      b.textStart("a1"),
+      b.textDelta("a1", answer),
+      b.textEnd("a1"),
+      b.runFinished("r1", "success", { timestamp: at(1) }),
+    ]);
 
 const sessionRunning = (): RelayEvent[] =>
   seqd([
@@ -1998,6 +2013,39 @@ export const SCENARIOS: Scenario[] = [
     canvas: [],
     skin: "bot",
     events: fromGolden("bot-housekeeping"),
+  },
+  {
+    id: "session-project-rules",
+    canvas: ["ProjectRules", "session"],
+    skin: "session",
+    events: sessionRules(
+      ["/Users/me/code/abacusai-bot/AGENTS.md"],
+      "Add a dark mode toggle to the settings page.",
+      "Done. The toggle sits under Appearance and follows the system theme until you pick one. As AGENTS.md asks, I ran the tests and the formatter first: both pass."
+    ),
+    view: { model: "RouteLLM", contextTray: true },
+  },
+  {
+    id: "session-project-rules-several",
+    canvas: ["ProjectRules", "session"],
+    skin: "session",
+    events: sessionRules(
+      ["/Users/me/CLAUDE.md", "/Users/me/code/abacusai-bot/AGENTS.md"],
+      "Add a dark mode toggle to the settings page.",
+      "Done. The toggle sits under Appearance and follows the system theme until you pick one."
+    ),
+    view: { model: "RouteLLM", contextTray: true },
+  },
+  {
+    id: "session-no-project-rules",
+    canvas: ["ProjectRules", "session"],
+    skin: "session",
+    events: sessionRules(
+      [],
+      "Plan a three-day trip to Lisbon in May, with one day by the sea.",
+      "Here is a plan: day one in Alfama and Baixa, day two in Belém, and day three by the sea in Cascais, an easy train ride along the coast."
+    ),
+    view: { model: "RouteLLM", contextTray: true },
   },
   {
     id: "session-running",

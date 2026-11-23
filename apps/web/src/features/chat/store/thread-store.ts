@@ -115,6 +115,8 @@ export interface ThreadStoreState {
   };
   notices: Notice[];
   skills: SkillMetadata[];
+  /** The project rules files (AGENTS.md / CLAUDE.md) the agent reads. */
+  projectRules: string[];
   /** What still runs past its turn: background jobs and served pages. */
   backgroundTasks: BackgroundTask[];
   /** Messages whose first chunk arrived live (not hydrated, not replayed). */
@@ -134,6 +136,7 @@ export const emptyThreadState = (cursor = 0): ThreadStoreState => ({
   activity: { status: null, runningTools: 0, retry: null },
   notices: [],
   skills: [],
+  projectRules: [],
   backgroundTasks: [],
   fresh: {},
 });
@@ -184,6 +187,8 @@ export const stateFromSnapshot = (
     },
     notices: [...notices.values()],
     skills: snapshot.skills,
+    // Optional, as `backgroundTasks` below.
+    projectRules: snapshot.projectRules ?? [],
     // Optional: a renderer bundle can update ahead of the main that serves it.
     backgroundTasks: snapshot.backgroundTasks ?? [],
   };

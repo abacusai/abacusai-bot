@@ -307,8 +307,11 @@ const shellRouter = (
         workspaceExists: true,
       })),
       watch: os.git.watch.handler(quiet as never),
-      currentBranch: os.git.currentBranch.handler(
-        () => ({ currentBranch: "main" }) as never
+      // A git work tree unless told otherwise (`notGit`).
+      currentBranch: os.git.currentBranch.handler(() =>
+        options.notGit === true
+          ? { success: false, currentBranch: null }
+          : { success: true, currentBranch: "main" }
       ),
       branches: os.git.branches.handler(() => ({ branches: [] }) as never),
       prInfo: os.git.prInfo.handler(() => null),
@@ -434,6 +437,8 @@ export interface HarnessOptions {
   /** Main's stored `present_deliverable` target for a conversation. */
   pendingPreview?: (conversationKey: string) => PendingPreview | null;
   terminalEvents?: () => AsyncGenerator<TerminalEvent>;
+  /** Every checkout is a plain folder, not a git work tree. */
+  notGit?: boolean;
   fileTree?: FileTreeNode[];
   renameFile?: (
     input: Parameters<AppClient["files"]["rename"]>[0]

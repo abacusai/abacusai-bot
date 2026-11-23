@@ -65,6 +65,7 @@ export const SessionWorkspace = ({
   dispatch,
   presenter,
   blocked,
+  codeProject = true,
 }: {
   row: SessionRow;
   chat: ReactNode;
@@ -77,6 +78,8 @@ export const SessionWorkspace = ({
   dispatch: (id: TerminalAction) => void;
   presenter: ComponentProps<typeof BrowserSurface>["presenter"];
   blocked: (rect: DOMRect) => boolean;
+  /** `useCodeProject`: the dock's developer tools come forward only then. */
+  codeProject?: boolean;
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();
@@ -232,6 +235,7 @@ export const SessionWorkspace = ({
           <SessionDock
             row={row}
             chat={chat}
+            codeProject={codeProject}
             registerHotkeys={registerHotkeys}
             renderTab={(tab, visible, onClose) => {
               if (tab.ref.startsWith("terminal:"))

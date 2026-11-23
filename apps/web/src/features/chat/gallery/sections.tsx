@@ -22,11 +22,14 @@ import {
   sessionDeliverablesCard,
   type SessionDeliverablesOptions,
 } from "../../sessions/chat/deliverables";
+import { SessionContextTray } from "../../sessions/context/context-tray";
 import { UpgradeDialogHost } from "../../upgrade-dialog";
 import { fixtureRuntime } from "../fixtures/player";
 import { SCENARIOS, type Scenario } from "../fixtures/scenarios";
 import type { ChatViewSlots, ComposerConfig } from "../kit/context";
 import { ChatView } from "../kit/view";
+import type { ChatRuntime } from "../runtime/runtime";
+import { useThreadStore } from "../store/selectors";
 
 const GALLERY_GROUPS: Array<{
   id: string;
@@ -297,7 +300,7 @@ const View = ({
                   : null
               }
               composer={composerFor(scenario, { value: model, set: setModel })}
-              slots={gallerySlots(scenario, runtime.threadId)}
+              slots={gallerySlots(scenario, runtime.threadId, runtime.runtime)}
               onOpenSubagent={() => {}}
               notchEnabled={scenario.skin === "bot"}
             />
@@ -344,7 +347,32 @@ const GALLERY_DELIVERABLES: SessionDeliverablesOptions = {
  * The scenario's previews under its latest reply (the success pitch, the
  * deliverable offer), and its files on the sessions route's card.
  */
-const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
+/** The sessions route's tray, with the rules the scenario's agent reported. */
+const GalleryTray = ({
+  runtime,
+  threadId,
+}: {
+  runtime: ChatRuntime;
+  threadId: string;
+}) => (
+  <SessionContextTray
+    workspaceId="default"
+    projectRules={useThreadStore(
+      runtime.session(threadId),
+      (state) => state.projectRules
+    )}
+    onOpenRules={() => {}}
+  />
+);
+
+const gallerySlots = (
+  scenario: Scenario,
+  threadId: string,
+  runtime: ChatRuntime
+): ChatViewSlots => ({
+  ...(scenario.view?.contextTray === true && {
+    composerContext: <GalleryTray runtime={runtime} threadId={threadId} />,
+  }),
   ...(scenario.view?.successPitch != null && {
     successPitchOffer: {
       ...scenario.view.successPitch,

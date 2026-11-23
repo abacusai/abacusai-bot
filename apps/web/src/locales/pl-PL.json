@@ -2182,7 +2182,10 @@
       "createBranch": "Utwórz gałąź {{name}}",
       "tasks": "Zadania {{done}} z {{total}}",
       "noBranch": "Ten checkout nie ma gałęzi.",
-      "newBranch": "Nowa gałąź"
+      "newBranch": "Nowa gałąź",
+      "rules": "Używa reguł projektu",
+      "rulesLabel": "Używa reguł projektu: {{files}}",
+      "rulesChip": "Używa {{files}}"
     },
     "routine": {
       "talk": "Porozmawiaj z rutyną"

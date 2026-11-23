@@ -75,6 +75,7 @@ const CUSTOM = new Set([
   "queue.dequeued",
   "queue.command_rejected",
   "skills.loaded",
+  "project_rules.loaded",
   "mcp.servers",
   "mcp.server_logs",
   "abacus.duplicate_echo",

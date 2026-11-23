@@ -183,8 +183,16 @@ describe("a thread's relay", () => {
     expect(snapshot.agent?.plan).toBeDefined();
     expect(snapshot.activity.status).toBe("idle");
     expect(snapshot.skills).toEqual([]);
+    expect(snapshot.projectRules).toEqual([]);
     expect(snapshot.activeRun).toBeNull();
     expect(snapshot.epoch).toBe("epoch-1");
+
+    // The latest list wins: a reload that finds none clears the chat's chip.
+    const files = ["/Users/me/code/app/AGENTS.md"];
+    feed(relay, [custom("project_rules.loaded", { files })]);
+    expect(relay.checkpoint().snapshot.projectRules).toEqual(files);
+    feed(relay, [custom("project_rules.loaded", { files: [] })]);
+    expect(relay.checkpoint().snapshot.projectRules).toEqual([]);
   });
 
   it("serves the pending permission of the live incarnation only", () => {

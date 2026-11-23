@@ -179,6 +179,11 @@ export interface AiThreadSnapshot {
   queue: QueueEntry[];
   agent: AgentState | null;
   skills: SkillMetadata[];
+  /**
+   * Latest `project_rules.loaded`: the AGENTS.md / CLAUDE.md files the agent
+   * reads for this chat's folder. Absent from a main older than its renderer.
+   */
+  projectRules?: string[];
   /** Latest `background.tasks`: what still runs past its turn. */
   backgroundTasks: BackgroundTask[];
   activity: { status: AgentStatus; runningTools: number };

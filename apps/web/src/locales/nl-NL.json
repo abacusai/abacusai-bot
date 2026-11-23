@@ -2160,7 +2160,10 @@
       "createBranch": "Branch {{name}} maken",
       "tasks": "Taken {{done}} van {{total}}",
       "noBranch": "Deze checkout heeft geen branch.",
-      "newBranch": "Nieuwe branch"
+      "newBranch": "Nieuwe branch",
+      "rules": "Gebruikt projectregels",
+      "rulesLabel": "Gebruikt projectregels: {{files}}",
+      "rulesChip": "Gebruikt {{files}}"
     },
     "routine": {
       "talk": "Praat met de routine"

@@ -56,6 +56,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "#renderer/ui/dropdown-menu";
 import { Skeleton } from "#renderer/ui/skeleton";
 
@@ -80,6 +81,11 @@ import {
 export interface SessionDockProps {
   row: SessionRow;
   chat: ReactNode;
+  /**
+   * `useCodeProject`: false steps the developer tools back. The launcher
+   * leaves them out and `+` lists them last; an open tab stays as it is.
+   */
+  codeProject?: boolean;
   renderTab: (
     tab: PanelTab,
     visible: boolean,
@@ -110,6 +116,13 @@ const TabPending = () => {
     </div>
   );
 };
+/** The tabs only code needs; put forward in a code project alone. */
+const DEVELOPER_KINDS: ReadonlySet<string> = new Set([
+  "terminal",
+  "files",
+  "changes",
+  "pr",
+]);
 const terminalId = () => `terminal:terminal-${crypto.randomUUID()}`;
 /** A fresh panel's tab: the kinds it can open, until one is picked. */
 const LAUNCHER = "new";
@@ -158,6 +171,7 @@ const TabLauncher = ({
 export const SessionDock = ({
   row,
   chat,
+  codeProject = true,
   renderTab,
   registerHotkeys,
 }: SessionDockProps) => {
@@ -346,6 +360,12 @@ export const SessionDock = ({
     // Off, the tab is not offered; one already open says why it is empty.
     ...(github ? ["pr"] : []),
   ];
+  const forward = codeProject
+    ? kinds
+    : kinds.filter((kind) => !DEVELOPER_KINDS.has(kind));
+  const aside = codeProject
+    ? []
+    : kinds.filter((kind) => DEVELOPER_KINDS.has(kind));
   // The launcher hands its place to the kind picked on it.
   const launch = (kind: string) => {
     add(kind);
@@ -370,6 +390,38 @@ export const SessionDock = ({
         tab.ref === ref ? { ...tab, title } : tab
       ),
     }));
+  const shellItems = terminalShellsForPlatform(
+    (document.documentElement.dataset.platform ?? "darwin") as NodeJS.Platform
+  ).map((shell) => (
+    <DropdownMenuItem
+      key={shell.id}
+      disabled={
+        shells.data?.statuses.find((s) => s.id === shell.id)?.available ===
+        false
+      }
+      onClick={() =>
+        void transport.client.terminal.shell
+          .set({ shell: shell.id as TerminalShellId })
+          .then(() => add("terminal", shell.id))
+      }
+    >
+      <Terminal />
+      <span className="min-w-0 truncate">
+        {t("sessions.terminal.newShell", {
+          shell: t(`terminalShells.${shell.labelKey}.label`),
+        })}
+      </span>
+    </DropdownMenuItem>
+  ));
+  const kindItem = (kind: string) => {
+    const Icon = KIND_ICONS[kind] ?? Terminal;
+    return (
+      <DropdownMenuItem key={kind} onClick={() => add(kind)}>
+        <Icon />
+        <span className="min-w-0 truncate">{t(`sessions.dock.${kind}`)}</span>
+      </DropdownMenuItem>
+    );
+  };
   const controls = (
     <TopBar.Group className="titlebar-nodrag shrink-0 self-start px-1">
       {
@@ -380,43 +432,21 @@ export const SessionDock = ({
             <Plus />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="titlebar-nodrag w-56">
-            <DropdownMenuGroup>
-              {terminalShellsForPlatform(
-                (document.documentElement.dataset.platform ??
-                  "darwin") as NodeJS.Platform
-              ).map((shell) => (
-                <DropdownMenuItem
-                  key={shell.id}
-                  disabled={
-                    shells.data?.statuses.find((s) => s.id === shell.id)
-                      ?.available === false
-                  }
-                  onClick={() =>
-                    void transport.client.terminal.shell
-                      .set({ shell: shell.id as TerminalShellId })
-                      .then(() => add("terminal", shell.id))
-                  }
-                >
-                  <Terminal />
-                  <span className="min-w-0 truncate">
-                    {t("sessions.terminal.newShell", {
-                      shell: t(`terminalShells.${shell.labelKey}.label`),
-                    })}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-              {kinds.map((kind) => {
-                const Icon = KIND_ICONS[kind] ?? Terminal;
-                return (
-                  <DropdownMenuItem key={kind} onClick={() => add(kind)}>
-                    <Icon />
-                    <span className="min-w-0 truncate">
-                      {t(`sessions.dock.${kind}`)}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuGroup>
+            {codeProject ? (
+              <DropdownMenuGroup>
+                {shellItems}
+                {kinds.map(kindItem)}
+              </DropdownMenuGroup>
+            ) : (
+              <>
+                <DropdownMenuGroup>{forward.map(kindItem)}</DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  {shellItems}
+                  {aside.map(kindItem)}
+                </DropdownMenuGroup>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       }
@@ -567,7 +597,7 @@ export const SessionDock = ({
                 <PaneBoundary resetKey={tab.ref}>
                   <Suspense fallback={<TabPending />}>
                     {tab.ref === LAUNCHER ? (
-                      <TabLauncher kinds={kinds} onOpen={launch} />
+                      <TabLauncher kinds={forward} onOpen={launch} />
                     ) : (
                       renderTab(tab, visible, () => close(tab.ref))
                     )}

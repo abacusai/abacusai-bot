@@ -50,6 +50,7 @@ const SESSION_CUSTOM: ReadonlySet<string> = new Set([
   "queue.command_rejected",
   "abacus.notice",
   "skills.loaded",
+  "project_rules.loaded",
   "background.tasks",
   "mcp.servers",
   "mcp.server_logs",
@@ -277,6 +278,13 @@ const applySessionCustom = (
         ...state,
         skills: Array.isArray(value.skills)
           ? (value.skills as ThreadStoreState["skills"])
+          : [],
+      };
+    case "project_rules.loaded":
+      return {
+        ...state,
+        projectRules: Array.isArray(value.files)
+          ? (value.files as string[])
           : [],
       };
     case "background.tasks":

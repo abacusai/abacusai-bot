@@ -138,6 +138,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   ],
   sessions: [
     "data/session-actions",
+    // The code-project signal the session route reads (dock, tray, /diff).
+    "data/code-project",
     "browser/browser-tab",
     "browser/ask-host",
     "device/device-tab",

@@ -43,7 +43,7 @@ import {
  * - the active run's log (from `RUN_STARTED` to its terminal) for `joinRun`,
  *   and, for a short while, the logs of the last few finished runs;
  * - the session-scoped state `hydrate` returns (permissions, queue, agent
- *   state, skills, activity, notices, incarnation).
+ *   state, skills, project rules, activity, notices, incarnation).
  *
  * Because it is all one synchronous turn per event, a checkpoint (`hydrate`)
  * and a replay (`joinRun`, `subscribe`) taken together can neither lose nor
@@ -382,6 +382,7 @@ export class ThreadRelay {
   #queue: QueueEntry[] = [];
   #agent: AgentState | null = null;
   #skills: SkillMetadata[] = [];
+  #projectRules: string[] = [];
   /** Latest `background.tasks`: what the live process still runs past a turn. */
   #backgroundTasks: BackgroundTask[] = [];
   #activity: { status: AgentStatus; runningTools: number } = {
@@ -677,6 +678,7 @@ export class ThreadRelay {
         queue: this.#queue.filter((entry) => entry.hidden !== true),
         agent: this.#agent == null ? null : structuredClone(this.#agent),
         skills: [...this.#skills],
+        projectRules: [...this.#projectRules],
         backgroundTasks: [...this.#backgroundTasks],
         activity: { ...this.#activity },
         notices: [...this.#notices],
@@ -1463,6 +1465,11 @@ export class ThreadRelay {
       case "skills.loaded":
         this.#skills = Array.isArray(value.skills)
           ? (value.skills as SkillMetadata[])
+          : [];
+        return;
+      case "project_rules.loaded":
+        this.#projectRules = Array.isArray(value.files)
+          ? (value.files as string[])
           : [];
         return;
       case "background.tasks":

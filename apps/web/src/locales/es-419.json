@@ -2160,7 +2160,10 @@
       "createBranch": "Create branch {{name}}",
       "tasks": "Tasks {{done}} of {{total}}",
       "noBranch": "This checkout has no branch.",
-      "newBranch": "New branch"
+      "newBranch": "New branch",
+      "rules": "Usando las reglas del proyecto",
+      "rulesLabel": "Usando las reglas del proyecto: {{files}}",
+      "rulesChip": "Usando {{files}}"
     },
     "routine": {
       "talk": "Talk to the routine"
