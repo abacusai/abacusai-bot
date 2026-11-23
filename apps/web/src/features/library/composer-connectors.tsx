@@ -22,8 +22,8 @@ import { Input } from "#renderer/ui/input";
 import { useConnectFlow } from "./connect-flow";
 import {
   connectorAdded,
+  connectorFix,
   offeredConnectors,
-  pausedOffline,
   useConnectorStatuses,
 } from "./connector-status";
 
@@ -72,9 +72,8 @@ const ConnectorsPanel = () => {
                   {t(group ? "phase5.connected" : "phase5.add")}
                 </h3>
                 {rows.map((e) => {
-                  // Installed, but its sign-in never finished: offer the sign-in.
-                  const signIn =
-                    statuses.data?.[e.id]?.reason === "sign-in-required";
+                  // Added but not working: offer its fix, never the check mark.
+                  const fix = connectorFix(statuses.data?.[e.id]);
                   const inFlight =
                     flow.state.connectorId === e.id &&
                     flow.state.phase !== "idle" &&
@@ -90,13 +89,11 @@ const ConnectorsPanel = () => {
                         <span className="min-w-0 flex-1 truncate">
                           {e.name}
                         </span>
-                        {inFlight ? null : pausedOffline(
-                            statuses.data?.[e.id]
-                          ) ? (
+                        {inFlight ? null : fix === "offline" ? (
                           <span className="text-muted-foreground shrink-0 text-xs">
                             {t("connectivity.lanePaused")}
                           </span>
-                        ) : group && !signIn ? (
+                        ) : group && fix == null ? (
                           <Check
                             role="img"
                             aria-label={t("phase5.connected")}
@@ -106,9 +103,25 @@ const ConnectorsPanel = () => {
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() => void flow.start(e.id)}
+                            onClick={() =>
+                              // Its app is the fix: the dialog says what to do there.
+                              fix === "app-missing" || fix === "app-not-ready"
+                                ? void navigate({
+                                    to: "/library/connectors",
+                                    search: { connector: e.id },
+                                  })
+                                : void flow.start(e.id)
+                            }
                           >
-                            {t(signIn ? "phase5.signIn" : "phase5.add")}
+                            {t(
+                              fix === "app-missing" || fix === "app-not-ready"
+                                ? "phase5.details"
+                                : fix === "sign-in"
+                                  ? "phase5.signIn"
+                                  : fix === null
+                                    ? "phase5.add"
+                                    : "phase5.connect"
+                            )}
                           </Button>
                         )}
                       </div>

@@ -9,7 +9,11 @@ import { useEffect } from "react";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 import type { useConnectFlow } from "./connect-flow";
-import { localAppHidden } from "./local-app";
+import {
+  localAppHidden,
+  localAppReason,
+  type LocalAppReason,
+} from "./local-app";
 
 /** Abacus could not be read and nothing was known before: neither connected nor not. */
 export const uncheckable = (status: ConnectorStatus | undefined): boolean =>
@@ -68,3 +72,18 @@ export const pausedOffline = (status: ConnectorStatus | undefined): boolean =>
 
 export const connectorAdded = (status: ConnectorStatus | undefined): boolean =>
   ["connected", "pending"].includes(status?.state ?? "");
+
+/** What an added connector needs before it works. */
+export type ConnectorFix = "offline" | "sign-in" | LocalAppReason | "reconnect";
+/**
+ * Null only when it works. Added but not working always names a fix; one with
+ * no fix of its own (a chat app whose link broke) is connected again.
+ */
+export const connectorFix = (
+  status: ConnectorStatus | undefined
+): ConnectorFix | null => {
+  if (status?.state !== "pending") return null;
+  if (pausedOffline(status)) return "offline";
+  if (["sign-in-required"].includes(status.reason ?? "")) return "sign-in";
+  return localAppReason(status) ?? "reconnect";
+};
