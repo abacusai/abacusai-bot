@@ -40,7 +40,13 @@ vi.mock("electron-store", () => ({
   },
 }));
 vi.mock("electron", () => ({
-  app: { getVersion: () => "1.0.81", isPackaged: false },
+  // quit/exit: the install's watchdog, once a restart was handed off.
+  app: {
+    getVersion: () => "1.0.81",
+    isPackaged: false,
+    quit: vi.fn(),
+    exit: vi.fn(),
+  },
   BaseWindow: {
     getAllWindows: () =>
       windows.visible
@@ -242,5 +248,36 @@ describe("a restart the user asks for while a task runs", () => {
     // The queued wait is gone: no second hand-off.
     await vi.advanceTimersByTimeAsync(5_000);
     expect(autoUpdater.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the restart offer waits for a pause in the work", () => {
+  it("is held while a turn runs and offered within a poll of its end", async () => {
+    vi.spyOn(process, "platform", "get").mockReturnValue("linux");
+    windows.visible = true;
+    // The user is chatting: the silent idle restart never comes.
+    windows.idleSeconds = 0;
+    const turn = { running: true };
+    const service = new UpdateService({
+      isSafeToRestart: () => !turn.running,
+    });
+    autoUpdater.emit("update-downloaded", { version: "1.0.82" });
+    expect(service.getStatus()).toMatchObject({
+      downloaded: true,
+      workRunning: true,
+    });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(service.getStatus().workRunning).toBe(true);
+
+    turn.running = false;
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(service.getStatus().workRunning).toBe(false);
+
+    // The next turn holds it again; the offer never installs by itself.
+    turn.running = true;
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(service.getStatus().workRunning).toBe(true);
+    expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
   });
 });

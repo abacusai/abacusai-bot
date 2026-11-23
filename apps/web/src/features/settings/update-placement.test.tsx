@@ -53,3 +53,44 @@ it("offers an update on a new bot page without a rail icon and disables actions 
     await app.cleanup();
   }
 });
+
+it("holds the restart offer while a turn runs and offers it when the work ends", async () => {
+  const os = implement(contract);
+  const busy: UpdateStatus = { ...ready, workRunning: true };
+  let endWork!: () => void;
+  const workEnded = new Promise<void>((resolve) => {
+    endWork = resolve;
+  });
+  const app = await renderApp("/bots/new", {
+    procedures: {
+      update: {
+        status: os.update.status.handler(() => busy),
+        events: os.update.events.handler(async function* ({ signal }) {
+          yield busy;
+          await workEnded;
+          yield ready;
+          await new Promise<void>((resolve) =>
+            signal?.addEventListener("abort", () => resolve(), { once: true })
+          );
+        }),
+      },
+    },
+  });
+  try {
+    // The title-bar pill stays the way to restart after the task.
+    await screen.findByText("Relaunch to update");
+    expect(document.querySelector('[data-slot="page-update"]')).toBeNull();
+    endWork();
+    await screen.findByText("A new version is ready");
+    const page = document.querySelector('[data-slot="page-update"]')!;
+    expect(page.textContent).toContain(
+      "Relaunch to get the latest improvements and fixes."
+    );
+    expect(page.querySelector("button")!.textContent).toBe(
+      "Relaunch to update"
+    );
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
