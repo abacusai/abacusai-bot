@@ -1642,6 +1642,12 @@
         "description": "Was diese Woche aus dem Commit-Verlauf verschickt wurde, gruppiert nach Thema, endet mit dem, was feststeckt.",
         "name": "Wochenrückblick"
       },
+      "repo-watch": {
+        "name": "Neue PRs prüfen und fehlgeschlagene CI beheben",
+        "description": "Prüft jeden neuen Pull Request und behebt fehlgeschlagene CI auf deinen Branches, sobald GitHub davon weiß.",
+        "when": "Wenn ein Pull Request geöffnet wird oder die CI fehlschlägt",
+        "promise": "Öffnet jemand einen Pull Request, prüft er ihn und sagt dir, ob er sicher gemergt werden kann. Schlägt die CI auf deinem Branch oder dem Standard-Branch fehl, findet er die Ursache und pusht eine Korrektur auf einen Branch, nie in deine Arbeitskopie. Das Beobachten kostet keine Credits: Er läuft nur, wenn es etwas Neues gibt."
+      },
       "nightly-tests": {
         "name": "Tests ausführen und Fehler beheben",
         "description": "Jede Nacht laufen die Tests, und was fehlschlägt, wird auf einem eigenen Branch behoben – morgens wartet ein Pull-Request-Entwurf.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Gib eine Webadresse ein, z. B. example.com.",
       "projectLabel": "Projekt",
       "projectPick": "Projekt auswählen",
+      "notOnGithub": "Der Ordner dieses Projekts ist kein GitHub-Repo. Wähle eines, das es ist.",
       "whenLabel": "Wann",
       "dailyAt": "Jeden Tag um",
       "weekdaysAt": "Werktags um",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Handy verbinden",
       "where": "Läuft auf diesem Computer, solange er an ist und AbacusAI Bot geöffnet ist. Einen verpassten Lauf holt es nach, wenn du zurück bist.",
       "whereSite": "Prüft nur, solange dieser Computer an ist und AbacusAI Bot geöffnet ist.",
+      "whereGithub": "Prüft GitHub jede Minute, solange dieser Computer an ist und AbacusAI Bot geöffnet ist. Was passiert ist, während du weg warst, wird nachgeholt, wenn du zurück bist.",
       "alwaysOnFree": "Mit dem Basic-Plan laufen Routinen rund um die Uhr weiter, auch wenn dieser Computer aus ist.",
       "firstRun": "Der erste Lauf startet jetzt, damit du einen Bericht siehst.",
       "start": "Starten"

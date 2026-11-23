@@ -12,6 +12,10 @@ import {
   writeFileAtomicSync,
 } from "@abacus-ai/agent/atomic-file";
 import { ConflictError } from "@abacus-ai/contract/conflict";
+import {
+  GITHUB_WATCH_EVENT_KINDS,
+  type GithubWatchEventKind,
+} from "@abacus-ai/contract/contract/github";
 import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 import type {
   RoutineMissed,
@@ -142,8 +146,8 @@ export interface CronJob {
   uptime?: RoutineUptime | null;
   /** Its runs mostly find nothing: never paused for that. */
   quietIsNormal?: boolean;
-  /** Fired by the GitHub watcher's new reviews (see `Routine.githubReviews`). */
-  githubReviews?: boolean;
+  /** What the GitHub watcher's news fires it on (see `Routine.githubOn`). */
+  githubOn?: GithubWatchEventKind[];
 }
 
 /** Why a fire waits: the network, a missed fire, or a run the app closed under. */
@@ -396,7 +400,7 @@ export const createJob = (
     originSessionId?: string | null;
     uptimeUrl?: string | null;
     quietIsNormal?: boolean;
-    githubReviews?: boolean;
+    githubOn?: readonly string[];
   },
   id?: string
 ): CronJob => {
@@ -414,6 +418,10 @@ export const createJob = (
   const uptimeUrl = input.uptimeUrl?.trim() || null;
   if (uptimeUrl != null && !isWebUrl(uptimeUrl))
     throw new Error("A site to watch must be an http or https address.");
+
+  const githubOn = GITHUB_WATCH_EVENT_KINDS.filter((kind) =>
+    input.githubOn?.includes(kind)
+  );
 
   const existing = readForWrite();
   if (id != null && existing.some((job) => job.id === id))
@@ -452,7 +460,7 @@ export const createJob = (
       : {}),
     ...(uptimeUrl != null ? { uptimeUrl } : {}),
     ...(input.quietIsNormal === true ? { quietIsNormal: true } : {}),
-    ...(input.githubReviews === true ? { githubReviews: true } : {}),
+    ...(githubOn.length > 0 ? { githubOn } : {}),
   };
 
   write([...existing, job]);

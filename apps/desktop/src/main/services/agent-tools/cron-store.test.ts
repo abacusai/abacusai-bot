@@ -99,9 +99,20 @@ describe("creating a routine", () => {
     const plain = createJob({ schedule: "0 9 * * *", prompt: "do it" });
     expect(getJob(plain.id)).not.toHaveProperty("uptimeUrl");
     expect(getJob(plain.id)).not.toHaveProperty("quietIsNormal");
+    expect(getJob(plain.id)).not.toHaveProperty("githubOn");
     expect(() =>
       createJob({ prompt: "watch", uptimeUrl: "ftp://example.com" })
     ).toThrow(/http or https/);
+  });
+
+  it("keeps the GitHub news a routine runs on, each kind once, and drops what the watcher never finds", () => {
+    const job = createJob({
+      prompt: "review new PRs, fix failed CI",
+      githubOn: ["ci", "pr", "ci", "push"],
+    });
+    expect(getJob(job.id)?.githubOn).toEqual(["pr", "ci"]);
+    const none = createJob({ prompt: "x", githubOn: ["push"] });
+    expect(getJob(none.id)).not.toHaveProperty("githubOn");
   });
 
   it("writes a site's state only when it changed", () => {

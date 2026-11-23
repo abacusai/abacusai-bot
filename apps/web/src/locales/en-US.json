@@ -1642,6 +1642,12 @@
         "description": "What shipped this week from the commit history, grouped by theme, ending with what looks stuck.",
         "name": "Week in review"
       },
+      "repo-watch": {
+        "name": "Review new PRs, fix CI",
+        "description": "Reviews each new pull request and fixes failed CI on your branches, as soon as GitHub has it.",
+        "when": "When a pull request opens or CI fails",
+        "promise": "When someone opens a pull request, it reviews it and tells you whether it's safe to merge. When CI fails on your branch or the default branch, it finds the cause and pushes a fix to a branch, never your working copy. Watching costs no credits: it runs only when there's something new."
+      },
       "nightly-tests": {
         "name": "Run my tests and fix failures",
         "description": "Every night it runs the suite and fixes what fails on its own branch, with a draft pull request waiting in the morning.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Enter a web address, like example.com.",
       "projectLabel": "Project",
       "projectPick": "Choose a project",
+      "notOnGithub": "This project's folder isn't a GitHub repo. Pick one that is.",
       "whenLabel": "When",
       "dailyAt": "Every day at",
       "weekdaysAt": "Weekdays at",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Connect your phone",
       "where": "Runs on this computer while it's on and AbacusAI Bot is open. A run it misses is made up when you're back.",
       "whereSite": "Checks only while this computer is on and AbacusAI Bot is open.",
+      "whereGithub": "Checks GitHub every minute while this computer is on and AbacusAI Bot is open. What happened while you were away is picked up when you're back.",
       "alwaysOnFree": "On the Basic plan, routines keep running 24/7 with this computer off.",
       "firstRun": "The first run starts now, so you see a report.",
       "start": "Start"

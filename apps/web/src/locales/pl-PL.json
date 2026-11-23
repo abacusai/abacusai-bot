@@ -1658,6 +1658,12 @@
         "description": "Co wydano w tym tygodniu według historii commitów, pogrupowane tematycznie, a na koniec to, co wygląda na zablokowane.",
         "name": "Podsumowanie tygodnia"
       },
+      "repo-watch": {
+        "name": "Przeglądaj nowe PR-y i naprawiaj nieudane CI",
+        "description": "Przegląda każdy nowy pull request i naprawia nieudane CI na Twoich gałęziach, gdy tylko GitHub je ma.",
+        "when": "Gdy otwiera się pull request albo CI zawodzi",
+        "promise": "Gdy ktoś otworzy pull request, przegląda go i mówi, czy można go bezpiecznie scalić. Gdy CI zawiedzie na Twojej gałęzi lub gałęzi domyślnej, znajduje przyczynę i wypycha poprawkę na gałąź, nigdy do Twojej kopii roboczej. Obserwowanie nie kosztuje kredytów: uruchamia się tylko, gdy jest coś nowego."
+      },
       "nightly-tests": {
         "name": "Uruchom moje testy i napraw błędy",
         "description": "Co noc uruchamia testy i naprawia to, co nie przechodzi, na osobnej gałęzi — rano czeka szkic pull requesta.",
@@ -1863,6 +1869,7 @@
       "siteInvalid": "Wpisz adres strony, np. example.com.",
       "projectLabel": "Projekt",
       "projectPick": "Wybierz projekt",
+      "notOnGithub": "Folder tego projektu nie jest repozytorium GitHub. Wybierz taki, który jest.",
       "whenLabel": "Kiedy",
       "dailyAt": "Codziennie o",
       "weekdaysAt": "W dni robocze o",
@@ -1871,6 +1878,7 @@
       "connectPhone": "Połącz telefon",
       "where": "Działa na tym komputerze, gdy jest włączony, a AbacusAI Bot otwarty. Pominięte uruchomienie zostanie nadrobione po Twoim powrocie.",
       "whereSite": "Sprawdza tylko wtedy, gdy ten komputer jest włączony, a AbacusAI Bot otwarty.",
+      "whereGithub": "Sprawdza GitHub co minutę, gdy ten komputer jest włączony, a AbacusAI Bot otwarty. To, co działo się pod Twoją nieobecność, zostanie nadrobione po powrocie.",
       "alwaysOnFree": "W planie Basic rutyny działają 24/7, nawet gdy ten komputer jest wyłączony.",
       "firstRun": "Pierwsze uruchomienie startuje teraz, żebyś zobaczył raport.",
       "start": "Uruchom"

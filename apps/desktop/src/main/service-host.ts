@@ -701,6 +701,7 @@ import {
   githubFixDoneText,
   githubPingNote,
   githubPingText,
+  githubRoutineLine,
   localDay,
 } from "./services/workspace/github-watch";
 import { resolveSessionWorkspacePath } from "./services/workspace/session-workspace-context";
@@ -3076,11 +3077,11 @@ export class ServiceHost {
     return this.githubRepoOfPath.get(project.path) ?? null;
   }
 
-  /** The routines that fix review comments (#842's), on now, run here. */
-  private githubReviewRoutines(): CronJob[] {
+  /** The routines GitHub news fires (`githubOn`), on now, run here. */
+  private githubRoutines(): CronJob[] {
     return listJobs().filter(
       (job) =>
-        job.githubReviews === true &&
+        (job.githubOn?.length ?? 0) > 0 &&
         job.enabled &&
         (job.runner ?? "local") === "local"
     );
@@ -3088,13 +3089,13 @@ export class ServiceHost {
 
   /**
    * What the watcher reads: the repos the user watches, and every repo a
-   * review routine works on, so that routine runs on a new review instead of
-   * every hour, whether or not the user turned the watcher on.
+   * GitHub routine works on, so that routine runs on the news it waits for
+   * instead of on a clock, whether or not the user turned the watcher on.
    */
   private async githubReadRepos(): Promise<string[]> {
     const config = this.githubWatchStore.config();
     const repos = new Set(config.on ? config.repos : []);
-    for (const job of this.githubReviewRoutines()) {
+    for (const job of this.githubRoutines()) {
       const repo = await this.githubRepoOfWorkspace(job.workspaceId);
       if (repo != null) repos.add(repo);
     }
@@ -3176,9 +3177,9 @@ export class ServiceHost {
   private async tellGithubEvents(found: GithubWatchEvent[]): Promise<void> {
     for (const event of found)
       reportFunnelStep("github_watch_event", event.kind);
-    // A new review on a repo a review routine works on runs that routine now;
-    // its report is the user's news about it, so no ping of its own.
-    const handled = await this.fireGithubReviewRoutines(found);
+    // News a GitHub routine waits for runs that routine now; its report is
+    // the user's news about it, so no ping of its own.
+    const handled = await this.fireGithubRoutines(found);
     const config = this.githubWatchStore.config();
     const events = found.filter(
       (event) =>
@@ -3240,29 +3241,28 @@ export class ServiceHost {
     }
   }
 
-  /** Run each review routine whose repo has new reviews; the ids of the events they took. */
-  private async fireGithubReviewRoutines(
+  /**
+   * Run each GitHub routine on the news of its kinds on its repo; the ids of
+   * the events a run started on. One that did not start (one already
+   * running, out of credits) leaves its events to the ping.
+   */
+  private async fireGithubRoutines(
     events: GithubWatchEvent[]
   ): Promise<Set<string>> {
     const taken = new Set<string>();
-    const reviews = events.filter((event) => event.kind === "review");
-    if (reviews.length === 0) return taken;
-    for (const job of this.githubReviewRoutines()) {
+    if (events.length === 0) return taken;
+    for (const job of this.githubRoutines()) {
       const repo = await this.githubRepoOfWorkspace(job.workspaceId);
-      const mine = reviews.filter((event) => event.repo === repo);
+      const mine = events.filter(
+        (event) =>
+          event.repo === repo && job.githubOn?.includes(event.kind) === true
+      );
       if (mine.length === 0) continue;
-      const payload = mine
-        .map(
-          (event) =>
-            `#${event.number} ${event.title} (branch ${event.branch ?? "?"}): ${event.who.join(", ")}` +
-            `${event.verdict === "changes" ? " asked for changes" : event.verdict === "approved" ? " approved" : " commented"}` +
-            `${event.detail.length > 0 ? `: "${event.detail}"` : ""} ${event.url}`
-        )
-        .join("\n");
+      const payload = mine.map(githubRoutineLine).join("\n");
       const started = await this.runRoutine(job.id, "github", payload).catch(
         () => "failed" as const
       );
-      if (started === "failed") continue;
+      if (started !== "started") continue;
       for (const event of mine) taken.add(event.id);
     }
     return taken;
@@ -9543,20 +9543,22 @@ export class ServiceHost {
       if (scheduled && checked?.change == null) return "skipped";
       siteCheck = checked ?? undefined;
     }
-    // A review routine whose repo the GitHub watcher reads: a scheduled fire
-    // runs only when the watcher found a new review since the routine last
-    // ran (a new one already ran it at once), and records nothing otherwise.
+    // A GitHub routine whose repo the watcher reads: a scheduled fire runs
+    // only when the watcher found news of its kinds since the routine last
+    // ran (that news already ran it at once), and records nothing otherwise.
     // When the watcher cannot read GitHub, the schedule runs as it always did.
+    const githubOn = job.githubOn ?? [];
     if (
-      job.githubReviews === true &&
+      githubOn.length > 0 &&
       (trigger === "schedule" || trigger === "catch-up")
     ) {
       const repo = await this.githubRepoOfWorkspace(job.workspaceId);
       if (
         repo != null &&
         this.githubWatchReads(repo) &&
-        !this.githubWatchStore.reviewFoundSince(
+        !this.githubWatchStore.foundSince(
           repo,
+          githubOn,
           job.lastRunAt ?? job.createdAt
         )
       )

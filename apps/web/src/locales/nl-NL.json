@@ -1642,6 +1642,12 @@
         "description": "Wat er deze week is opgeleverd volgens de commitgeschiedenis, gegroepeerd per thema, afgesloten met wat vast lijkt te zitten.",
         "name": "Weekoverzicht"
       },
+      "repo-watch": {
+        "name": "Nieuwe PR's reviewen en mislukte CI fixen",
+        "description": "Reviewt elke nieuwe pull request en fixt mislukte CI op je branches, zodra GitHub het heeft.",
+        "when": "Als er een pull request opent of de CI faalt",
+        "promise": "Opent iemand een pull request, dan reviewt hij die en zegt hij of mergen veilig is. Faalt de CI op je branch of de standaardbranch, dan zoekt hij de oorzaak en pusht hij een fix naar een branch, nooit naar je werkkopie. Meekijken kost geen credits: hij draait alleen als er iets nieuws is."
+      },
       "nightly-tests": {
         "name": "Mijn tests draaien en fouten oplossen",
         "description": "Elke nacht draait het de tests en lost het op wat faalt op een eigen branch, met 's ochtends een concept-pull-request klaar.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Voer een webadres in, zoals example.com.",
       "projectLabel": "Project",
       "projectPick": "Kies een project",
+      "notOnGithub": "De map van dit project is geen GitHub-repo. Kies er een die dat wel is.",
       "whenLabel": "Wanneer",
       "dailyAt": "Elke dag om",
       "weekdaysAt": "Op werkdagen om",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Je telefoon verbinden",
       "where": "Draait op deze computer zolang hij aan staat en AbacusAI Bot open is. Een gemiste run wordt ingehaald als je terug bent.",
       "whereSite": "Controleert alleen zolang deze computer aan staat en AbacusAI Bot open is.",
+      "whereGithub": "Controleert GitHub elke minuut zolang deze computer aan staat en AbacusAI Bot open is. Wat er gebeurde terwijl je weg was, wordt opgepakt als je terug bent.",
       "alwaysOnFree": "Met het Basic-abonnement blijven routines 24/7 draaien, ook als deze computer uit staat.",
       "firstRun": "De eerste run start nu, zodat je een rapport ziet.",
       "start": "Starten"

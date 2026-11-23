@@ -86,7 +86,7 @@ describe("migrating a legacy home", () => {
 
     const first = await migrate();
     expect(first).toMatchObject({
-      applied: [1, 2, 5, 6, 7, 8, 9, 10],
+      applied: [1, 2, 5, 6, 7, 8, 9, 10, 11],
       failed: [],
     });
     expect(first.recovered).toEqual([
@@ -191,6 +191,11 @@ describe("migrating a legacy home", () => {
         name: "skill-description-yaml",
         stats: expect.objectContaining({ folded: 0 }),
       }),
+      expect.objectContaining({
+        id: 11,
+        name: "routine-github-on",
+        stats: expect.objectContaining({ moved: 0 }),
+      }),
     ]);
 
     const settled = hashes(home);
@@ -275,11 +280,11 @@ describe("migrating a legacy home", () => {
 
     const first = await migrate();
     expect(first).toMatchObject({
-      applied: [1, 5, 6, 7, 8, 9, 10],
+      applied: [1, 5, 6, 7, 8, 9, 10, 11],
       failed: [{ id: 2 }],
     });
     expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([
-      1, 5, 6, 7, 8, 9, 10,
+      1, 5, 6, 7, 8, 9, 10, 11,
     ]);
 
     fs.rmdirSync(state);

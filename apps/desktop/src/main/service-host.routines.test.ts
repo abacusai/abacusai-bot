@@ -467,18 +467,19 @@ describe("a routine that watches a site", () => {
   });
 });
 
-describe("a review routine the GitHub watcher reads for", () => {
+describe("a routine GitHub news fires (githubOn)", () => {
   const proto = ServiceHost.prototype as unknown as {
     startRoutineRun: (id: string, trigger: string) => Promise<string>;
-    fireGithubReviewRoutines: (events: unknown[]) => Promise<Set<string>>;
-    githubReviewRoutines: () => unknown[];
+    fireGithubRoutines: (events: unknown[]) => Promise<Set<string>>;
+    githubRoutines: () => unknown[];
     githubWatchReads: (repo: string) => boolean;
     routineLinkDown: (job: unknown) => boolean;
     routineActsElsewhere: (job: unknown) => boolean;
   };
   const REVIEW_REPO = "acme/web";
   const state = {
-    reviewFoundAt: 0,
+    foundAt: {} as Record<string, number>,
+    start: "started" as string,
     problem: null as string | null,
     checkedAt: Date.now(),
     repo: REVIEW_REPO as string | null,
@@ -487,19 +488,19 @@ describe("a review routine the GitHub watcher reads for", () => {
   const host = () => ({
     githubRepoOfWorkspace: async () => state.repo,
     githubWatchReads: proto.githubWatchReads,
-    githubReviewRoutines: proto.githubReviewRoutines,
+    githubRoutines: proto.githubRoutines,
     githubWatch: {
       problem: () => state.problem,
       lastCheckedAt: () => state.checkedAt,
     },
     githubWatchStore: {
       memoryOf: () => ({}),
-      reviewFoundSince: (_repo: string, since: number) =>
-        state.reviewFoundAt > since,
+      foundSince: (_repo: string, kinds: string[], since: number) =>
+        kinds.some((kind) => (state.foundAt[kind] ?? 0) > since),
     },
     runRoutine: async (id: string, trigger: string, payload: string) => {
       ran.push({ id, trigger, payload });
-      return "started";
+      return state.start;
     },
     messagingGatewayService: { unlinkedPlatforms: () => [] },
     deliversRoutineReports: () => true,
@@ -532,7 +533,8 @@ describe("a review routine the GitHub watcher reads for", () => {
 
   beforeEach(() => {
     Object.assign(state, {
-      reviewFoundAt: 0,
+      foundAt: {},
+      start: "started",
       problem: null,
       checkedAt: Date.now(),
       repo: REVIEW_REPO,
@@ -549,12 +551,15 @@ describe("a review routine the GitHub watcher reads for", () => {
     const job = createJob({
       schedule: "0 9-18 * * 1-5",
       prompt: "fix review comments",
-      githubReviews: true,
+      githubOn: ["review"],
     });
     expect(await fire(job.id)).toBe("skipped");
     expect(await fire(job.id, "catch-up")).toBe("skipped");
     expect(getJob(job.id)?.runs).toEqual([]);
-    state.reviewFoundAt = Date.now() + 1;
+    // News of another kind is not this routine's.
+    state.foundAt = { ci: Date.now() + 1 };
+    expect(await fire(job.id)).toBe("skipped");
+    state.foundAt = { review: Date.now() + 1 };
     expect(await fire(job.id)).toBe("ran");
   });
 
@@ -562,7 +567,7 @@ describe("a review routine the GitHub watcher reads for", () => {
     const job = createJob({
       schedule: "0 9-18 * * 1-5",
       prompt: "fix review comments",
-      githubReviews: true,
+      githubOn: ["review"],
     });
     state.problem = "no-token";
     expect(await fire(job.id)).toBe("ran");
@@ -577,7 +582,7 @@ describe("a review routine the GitHub watcher reads for", () => {
   it("always runs when asked or fired by a review", async () => {
     const job = createJob({
       prompt: "fix review comments",
-      githubReviews: true,
+      githubOn: ["review"],
     });
     for (const trigger of ["create", "manual", "github", "interrupted"])
       expect(await fire(job.id, trigger)).toBe("ran");
@@ -587,10 +592,10 @@ describe("a review routine the GitHub watcher reads for", () => {
     const job = createJob({
       schedule: "0 9-18 * * 1-5",
       prompt: "fix review comments",
-      githubReviews: true,
+      githubOn: ["review"],
     });
     createJob({ schedule: "0 9 * * *", prompt: "something else" });
-    const taken = await proto.fireGithubReviewRoutines.call(host(), [
+    const taken = await proto.fireGithubRoutines.call(host(), [
       review(),
       review({ id: "ci:acme/web@x", kind: "ci" }),
       review({ id: "review:other/repo#1@t", repo: "other/repo" }),
@@ -600,6 +605,54 @@ describe("a review routine the GitHub watcher reads for", () => {
     expect(ran[0]!.payload).toContain("#42 Add login (branch feature/login)");
     expect(ran[0]!.payload).toContain("asked for changes");
     expect([...taken]).toEqual(["review:acme/web#42@t"]);
+  });
+
+  it("runs a repo watch on new PRs and failed CI in one run, and leaves a run that did not start to the ping", async () => {
+    const watch = createJob({
+      prompt: "review new PRs, fix failed CI",
+      githubOn: ["pr", "ci"],
+    });
+    const events = [
+      review({
+        id: "pr:acme/web#7",
+        kind: "pr",
+        number: 7,
+        title: "Bump deps",
+        who: ["dependabot[bot]"],
+        detail: "",
+        verdict: null,
+      }),
+      review({
+        id: "ci:acme/web@abc",
+        kind: "ci",
+        detail: "Tests, Lint",
+        verdict: null,
+      }),
+      review(),
+    ];
+    const taken = await proto.fireGithubRoutines.call(host(), events);
+    expect(ran).toHaveLength(1);
+    expect(ran[0]).toMatchObject({ id: watch.id, trigger: "github" });
+    expect(ran[0]!.payload).toContain("New pull request #7 Bump deps");
+    expect(ran[0]!.payload).toContain(
+      "CI failed on #42 Add login (branch feature/login): Tests, Lint"
+    );
+    expect(ran[0]!.payload).not.toContain("asked for changes");
+    expect([...taken]).toEqual(["pr:acme/web#7", "ci:acme/web@abc"]);
+    // One already running (or out of credits): the user still hears of it.
+    state.start = "skipped";
+    expect([...(await proto.fireGithubRoutines.call(host(), events))]).toEqual(
+      []
+    );
+  });
+
+  it("with no schedule, never fires on a clock", async () => {
+    const { dueJobs } = await import("./services/agent-tools/cron-store");
+    const watch = createJob({
+      prompt: "review new PRs, fix failed CI",
+      githubOn: ["pr", "ci"],
+    });
+    expect(dueJobs(new Date()).map((job) => job.id)).not.toContain(watch.id);
   });
 });
 

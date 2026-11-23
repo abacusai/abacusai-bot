@@ -256,5 +256,14 @@ describe("a routine's schedule in words", () => {
     expect(scheduleLabel({ ...row, prompt: "ping it" }, t, "en-US")).toBe(
       "phase5.customCron */5 * * * *"
     );
+    // One that runs on GitHub news alone has no clock: it says when it runs.
+    const watch = CODING_ROUTINE_TEMPLATES.find((x) => x.id === "repo-watch")!;
+    const news = { schedule: null, runAt: null, prompt: watch.prompt };
+    expect(scheduleLabel(news, t, "en-US")).toBe(
+      "routines.templates.repo-watch.when"
+    );
+    expect(scheduleLabel({ ...news, prompt: "mine" }, t, "en-US")).toBe(
+      "routines.onDemand"
+    );
   });
 });

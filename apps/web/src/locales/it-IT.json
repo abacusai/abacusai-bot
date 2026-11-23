@@ -1642,6 +1642,12 @@
         "description": "Ciò che è stato spedito questa settimana dalla cronologia dei commit, raggruppato per tema, per finire con ciò che sembra bloccato.",
         "name": "Settimana in rassegna"
       },
+      "repo-watch": {
+        "name": "Rivedi le nuove PR e correggi la CI fallita",
+        "description": "Rivede ogni nuova pull request e corregge la CI fallita sui tuoi branch, appena GitHub ce l'ha.",
+        "when": "Quando si apre una pull request o la CI fallisce",
+        "promise": "Quando qualcuno apre una pull request, la rivede e ti dice se è sicuro fare il merge. Quando la CI fallisce sul tuo branch o sul branch predefinito, trova la causa e fa il push di una correzione su un branch, mai nella tua copia di lavoro. Controllare non costa crediti: viene eseguito solo quando c'è qualcosa di nuovo."
+      },
       "nightly-tests": {
         "name": "Esegui i miei test e correggi gli errori",
         "description": "Ogni notte esegue i test e corregge ciò che fallisce su un branch dedicato, con una pull request in bozza pronta al mattino.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Inserisci un indirizzo web, ad esempio example.com.",
       "projectLabel": "Progetto",
       "projectPick": "Scegli un progetto",
+      "notOnGithub": "La cartella di questo progetto non è un repo GitHub. Scegline uno che lo sia.",
       "whenLabel": "Quando",
       "dailyAt": "Ogni giorno alle",
       "weekdaysAt": "Nei giorni feriali alle",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Collega il telefono",
       "where": "Viene eseguita su questo computer finché è acceso e AbacusAI Bot è aperto. Un'esecuzione persa viene recuperata al tuo ritorno.",
       "whereSite": "Controlla solo finché questo computer è acceso e AbacusAI Bot è aperto.",
+      "whereGithub": "Controlla GitHub ogni minuto mentre questo computer è acceso e AbacusAI Bot è aperto. Quello che è successo mentre eri via viene ripreso al tuo ritorno.",
       "alwaysOnFree": "Con il piano Basic le routine continuano 24/7 anche a computer spento.",
       "firstRun": "La prima esecuzione parte ora, così vedi un report.",
       "start": "Avvia"

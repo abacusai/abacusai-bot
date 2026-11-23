@@ -18,6 +18,7 @@ import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type {
   GithubWatchConfig,
   GithubWatchEvent,
+  GithubWatchEventKind,
 } from "@abacus-ai/contract/contract/github";
 import {
   githubEventLine,
@@ -343,6 +344,43 @@ export const githubFixPrompt = (event: FoundEvent): string => {
         `\`gh pr diff ${event.number}\`. Tell me what it changes, whether it is safe to merge, and any bugs or risks`,
         "with the file and line. Do not approve, comment or push anything on GitHub.",
       ].join(" ");
+  }
+};
+
+/**
+ * One event as a GitHub routine's run reads it (the run's payload): in
+ * English like every prompt, with the link to open.
+ */
+export const githubRoutineLine = (
+  event: Pick<
+    GithubWatchEvent,
+    | "kind"
+    | "number"
+    | "title"
+    | "branch"
+    | "who"
+    | "detail"
+    | "verdict"
+    | "waitsOnYou"
+    | "url"
+  >
+): string => {
+  const on =
+    event.number == null
+      ? `branch ${event.branch ?? "?"}`
+      : `#${event.number} ${event.title} (branch ${event.branch ?? "?"})`;
+  const said = event.detail.length > 0 ? `: "${event.detail}"` : "";
+  switch (event.kind) {
+    case "pr":
+      return `New pull request ${on} by ${event.who.join(", ")}${event.waitsOnYou ? ", waiting on the user's review" : ""} ${event.url}`;
+    case "ci":
+      return `CI failed on ${on}: ${event.detail} ${event.url}`;
+    case "review":
+      return (
+        `Review on ${on}: ${event.who.join(", ")}` +
+        `${event.verdict === "changes" ? " asked for changes" : event.verdict === "approved" ? " approved" : " commented"}` +
+        `${said} ${event.url}`
+      );
   }
 };
 
@@ -707,8 +745,8 @@ interface Stored {
   pings: Record<string, number>;
   /** Notes owed to a chat's next user message, by session. */
   notes: Record<string, Array<{ text: string; at: number }>>;
-  /** When a check last found a new review, by repo (this computer's clock). */
-  reviewsFoundAt: Record<string, number>;
+  /** When a check last found news of each kind, by repo (this computer's clock). */
+  foundAt: Record<string, Partial<Record<GithubWatchEventKind, number>>>;
 }
 
 const OFF: GithubWatchConfig = { on: false, repos: [], phoneFix: false };
@@ -727,7 +765,7 @@ export class GithubWatchStore {
       lastCheckAt: null,
       pings: {},
       notes: {},
-      reviewsFoundAt: {},
+      foundAt: {},
     };
     const file = this.file();
     if (file == null) return this.stored;
@@ -743,8 +781,7 @@ export class GithubWatchStore {
         this.stored.lastCheckAt = parsed.lastCheckAt;
       if (parsed.pings != null) this.stored.pings = parsed.pings;
       if (parsed.notes != null) this.stored.notes = parsed.notes;
-      if (parsed.reviewsFoundAt != null)
-        this.stored.reviewsFoundAt = parsed.reviewsFoundAt;
+      if (parsed.foundAt != null) this.stored.foundAt = parsed.foundAt;
     } catch {
       // Never turned on.
     }
@@ -771,21 +808,32 @@ export class GithubWatchStore {
     this.save();
   }
 
-  /** Forget what was read of repos no longer read (a watched one, or a review routine's). */
+  /** Forget what was read of repos no longer read (a watched one, or a routine's). */
   keepOnly(repos: readonly string[]): void {
     for (const repo of Object.keys(this.state.repos))
       if (!repos.includes(repo)) delete this.state.repos[repo];
+    for (const repo of Object.keys(this.state.foundAt))
+      if (!repos.includes(repo)) delete this.state.foundAt[repo];
   }
 
-  /** A check found a new review on `repo` at `at`. */
-  noteReviewFound(repo: string, at: number): void {
-    this.state.reviewsFoundAt[repo] = at;
-    this.save();
+  /** A check found news of these kinds on `repo` at `at`. */
+  noteFound(
+    repo: string,
+    kinds: readonly GithubWatchEventKind[],
+    at: number
+  ): void {
+    const found = (this.state.foundAt[repo] ??= {});
+    for (const kind of kinds) found[kind] = at;
   }
 
-  /** Whether a check found a new review on `repo` after `since`. */
-  reviewFoundSince(repo: string, since: number): boolean {
-    return (this.state.reviewsFoundAt[repo] ?? 0) > since;
+  /** Whether a check found news of one of `kinds` on `repo` after `since`. */
+  foundSince(
+    repo: string,
+    kinds: readonly GithubWatchEventKind[],
+    since: number
+  ): boolean {
+    const found = this.state.foundAt[repo] ?? {};
+    return kinds.some((kind) => (found[kind] ?? 0) > since);
   }
 
   /** The repo's memory, and whether this is its first read. */
@@ -1026,8 +1074,7 @@ export class GithubWatch {
           fix: { state: "none", sessionId: null },
         });
       for (const event of events)
-        if (event.kind === "review")
-          this.deps.store.noteReviewFound(event.repo, now);
+        this.deps.store.noteFound(event.repo, [event.kind], now);
       if (events.length > 0) this.deps.store.addEvents(events);
       else this.deps.store.save();
       if (events.length > 0) this.deps.found(events);

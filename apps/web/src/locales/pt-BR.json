@@ -1642,6 +1642,12 @@
         "description": "O que foi enviado esta semana do histórico de commits, agrupado por tema, terminando com o que parece travado.",
         "name": "Semana em revisão"
       },
+      "repo-watch": {
+        "name": "Revisar PRs novos e corrigir CI com falha",
+        "description": "Revisa cada pull request novo e corrige a CI com falha nas suas branches, assim que o GitHub tiver.",
+        "when": "Quando um pull request é aberto ou a CI falha",
+        "promise": "Quando alguém abre um pull request, ele revisa e diz se é seguro fazer o merge. Quando a CI falha na sua branch ou na branch padrão, ele encontra a causa e envia uma correção para uma branch, nunca para a sua cópia de trabalho. Observar não gasta créditos: ele só roda quando há algo novo."
+      },
       "nightly-tests": {
         "name": "Rodar meus testes e corrigir falhas",
         "description": "Toda noite roda os testes e corrige o que falha em um branch próprio, com um rascunho de pull request esperando de manhã.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Digite um endereço da web, como example.com.",
       "projectLabel": "Projeto",
       "projectPick": "Escolha um projeto",
+      "notOnGithub": "A pasta deste projeto não é um repositório do GitHub. Escolha uma que seja.",
       "whenLabel": "Quando",
       "dailyAt": "Todo dia às",
       "weekdaysAt": "Dias úteis às",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Conectar seu celular",
       "where": "Roda neste computador enquanto ele estiver ligado e o AbacusAI Bot aberto. Uma execução perdida é feita quando você voltar.",
       "whereSite": "Só verifica enquanto este computador estiver ligado e o AbacusAI Bot aberto.",
+      "whereGithub": "Verifica o GitHub a cada minuto enquanto este computador está ligado e o AbacusAI Bot está aberto. O que aconteceu enquanto você estava fora é retomado quando você volta.",
       "alwaysOnFree": "No plano Basic, as rotinas continuam rodando 24/7 com este computador desligado.",
       "firstRun": "A primeira execução começa agora, para você ver um relatório.",
       "start": "Começar"

@@ -109,7 +109,8 @@ export type PrResult =
   | { kind: "unavailable"; status: GithubStatus };
 
 /** What the GitHub watcher tells the user about (see github-watch.ts). */
-export type GithubWatchEventKind = "pr" | "review" | "ci";
+export const GITHUB_WATCH_EVENT_KINDS = ["pr", "review", "ci"] as const;
+export type GithubWatchEventKind = (typeof GITHUB_WATCH_EVENT_KINDS)[number];
 
 export interface GithubWatchEvent {
   /** Stable across checks: the same thing on GitHub is one event. */

@@ -17,6 +17,7 @@ import {
 } from "../success-pitch";
 import { base, mutation, query, subscription } from "./base";
 import { AvatarAccessorySchema, BotWallpaperSchema } from "./bots";
+import { GITHUB_WATCH_EVENT_KINDS } from "./github";
 import {
   AgentModeSchema,
   BotId,
@@ -110,7 +111,7 @@ export const RoutineCreateInputSchema = v.object({
   reminderText: v.optional(v.nullable(v.string())),
   uptimeUrl: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
   quietIsNormal: v.optional(v.boolean()),
-  githubReviews: v.optional(v.boolean()),
+  githubOn: v.optional(v.array(v.picklist(GITHUB_WATCH_EVENT_KINDS))),
 });
 
 export const RoutineUpdateInputSchema = v.object({

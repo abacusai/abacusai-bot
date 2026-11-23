@@ -13,6 +13,7 @@
  * - 8 `zapier-connect-url`: Zapier servers and tokens to `/api/v1/connect`.
  * - 9 `routine-models`: each routine keeps the model it runs on now.
  * - 10 `skill-description-yaml`: seeded skills the agent could not parse.
+ * - 11 `routine-github-on`: a review routine's `githubReviews` to `githubOn`.
  */
 import type { MigrationStep } from "../types";
 import { transcriptsV2 } from "./001-transcripts-v2";
@@ -23,6 +24,7 @@ import { retireLocalModels } from "./007-retire-local-models";
 import { zapierConnectUrl } from "./008-zapier-connect-url";
 import { routineModels } from "./009-routine-models";
 import { skillDescriptionYaml } from "./010-skill-description-yaml";
+import { routineGithubOn } from "./011-routine-github-on";
 
 export const MIGRATION_STEPS: readonly MigrationStep[] = [
   transcriptsV2(),
@@ -33,4 +35,5 @@ export const MIGRATION_STEPS: readonly MigrationStep[] = [
   zapierConnectUrl(),
   routineModels(),
   skillDescriptionYaml(),
+  routineGithubOn(),
 ];

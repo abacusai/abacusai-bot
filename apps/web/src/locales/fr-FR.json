@@ -1642,6 +1642,12 @@
         "description": "Ce qui a été expédié cette semaine à partir de l'historique des commits, regroupé par thème, se terminant par ce qui semble bloqué.",
         "name": "Bilan de la semaine"
       },
+      "repo-watch": {
+        "name": "Relire les nouvelles PR et corriger la CI en échec",
+        "description": "Relit chaque nouvelle pull request et corrige la CI en échec sur vos branches, dès que GitHub l'a.",
+        "when": "Quand une pull request s'ouvre ou que la CI échoue",
+        "promise": "Quand quelqu'un ouvre une pull request, il la relit et vous dit si elle peut être fusionnée sans risque. Quand la CI échoue sur votre branche ou la branche par défaut, il trouve la cause et pousse un correctif sur une branche, jamais dans votre copie de travail. La surveillance ne coûte aucun crédit : il ne s'exécute que s'il y a du nouveau."
+      },
       "nightly-tests": {
         "name": "Lancer mes tests et corriger les échecs",
         "description": "Chaque nuit, il lance les tests et corrige ce qui échoue sur sa propre branche, avec une pull request en brouillon qui t'attend le matin.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Saisis une adresse web, comme example.com.",
       "projectLabel": "Projet",
       "projectPick": "Choisis un projet",
+      "notOnGithub": "Le dossier de ce projet n'est pas un dépôt GitHub. Choisissez-en un qui l'est.",
       "whenLabel": "Quand",
       "dailyAt": "Tous les jours à",
       "weekdaysAt": "En semaine à",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Connecter ton téléphone",
       "where": "S'exécute sur cet ordinateur tant qu'il est allumé et qu'AbacusAI Bot est ouvert. Une exécution manquée est rattrapée à ton retour.",
       "whereSite": "Ne vérifie que lorsque cet ordinateur est allumé et qu'AbacusAI Bot est ouvert.",
+      "whereGithub": "Vérifie GitHub chaque minute tant que cet ordinateur est allumé et qu'AbacusAI Bot est ouvert. Ce qui s'est passé pendant votre absence est repris à votre retour.",
       "alwaysOnFree": "Avec le forfait Basic, les routines continuent 24 h/24 et 7 j/7, même ordinateur éteint.",
       "firstRun": "La première exécution démarre maintenant, pour que tu voies un rapport.",
       "start": "Démarrer"

@@ -1642,6 +1642,12 @@
         "description": "Apa yang dikirimkan minggu ini dari riwayat penerapan, dikelompokkan berdasarkan tema, diakhiri dengan apa yang tampak macet.",
         "name": "Ulasan minggu"
       },
+      "repo-watch": {
+        "name": "Tinjau PR baru dan perbaiki CI yang gagal",
+        "description": "Meninjau setiap pull request baru dan memperbaiki CI yang gagal di branch Anda, begitu GitHub memilikinya.",
+        "when": "Saat pull request dibuka atau CI gagal",
+        "promise": "Saat seseorang membuka pull request, ia meninjaunya dan memberi tahu Anda apakah aman untuk di-merge. Saat CI gagal di branch Anda atau branch default, ia mencari penyebabnya dan mendorong perbaikan ke sebuah branch, tidak pernah ke salinan kerja Anda. Memantau tidak memakai kredit: ia hanya berjalan saat ada hal baru."
+      },
       "nightly-tests": {
         "name": "Jalankan tes saya dan perbaiki yang gagal",
         "description": "Setiap malam menjalankan tes dan memperbaiki yang gagal di branch sendiri, dengan draf pull request yang menunggu di pagi hari.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Masukkan alamat web, seperti example.com.",
       "projectLabel": "Proyek",
       "projectPick": "Pilih proyek",
+      "notOnGithub": "Folder proyek ini bukan repo GitHub. Pilih yang merupakan repo GitHub.",
       "whenLabel": "Kapan",
       "dailyAt": "Setiap hari pukul",
       "weekdaysAt": "Hari kerja pukul",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Hubungkan ponsel Anda",
       "where": "Berjalan di komputer ini selama menyala dan AbacusAI Bot terbuka. Jalannya yang terlewat dijalankan saat Anda kembali.",
       "whereSite": "Hanya memeriksa selama komputer ini menyala dan AbacusAI Bot terbuka.",
+      "whereGithub": "Memeriksa GitHub setiap menit selama komputer ini menyala dan AbacusAI Bot terbuka. Yang terjadi saat Anda pergi akan diproses saat Anda kembali.",
       "alwaysOnFree": "Dengan paket Basic, rutinitas tetap berjalan 24/7 meskipun komputer ini mati.",
       "firstRun": "Jalannya pertama dimulai sekarang, agar Anda melihat laporannya.",
       "start": "Mulai"

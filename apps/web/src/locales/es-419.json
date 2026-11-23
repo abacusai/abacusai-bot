@@ -1642,6 +1642,12 @@
         "description": "Lo que se envió esta semana desde el historial de confirmaciones, agrupado por tema, termina con lo que parece estancado.",
         "name": "Semana en revisión"
       },
+      "repo-watch": {
+        "name": "Revisar PRs nuevos y arreglar CI fallida",
+        "description": "Revisa cada pull request nuevo y arregla la CI fallida en tus ramas, en cuanto GitHub lo tiene.",
+        "when": "Cuando se abre un pull request o falla la CI",
+        "promise": "Cuando alguien abre un pull request, lo revisa y te dice si es seguro hacer merge. Cuando la CI falla en tu rama o en la rama principal, encuentra la causa y sube un arreglo a una rama, nunca a tu copia de trabajo. Vigilar no usa créditos: solo se ejecuta cuando hay algo nuevo."
+      },
       "nightly-tests": {
         "name": "Ejecutar mis pruebas y corregir fallos",
         "description": "Cada noche ejecuta las pruebas y corrige lo que falla en su propia rama, con un borrador de pull request listo por la mañana.",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "Escribe una dirección web, como example.com.",
       "projectLabel": "Proyecto",
       "projectPick": "Elige un proyecto",
+      "notOnGithub": "La carpeta de este proyecto no es un repo de GitHub. Elige una que lo sea.",
       "whenLabel": "Cuándo",
       "dailyAt": "Todos los días a las",
       "weekdaysAt": "Días hábiles a las",
@@ -1849,6 +1856,7 @@
       "connectPhone": "Conectar tu teléfono",
       "where": "Se ejecuta en esta computadora mientras esté encendida y AbacusAI Bot esté abierto. Si se pierde una ejecución, la recupera cuando vuelvas.",
       "whereSite": "Solo revisa mientras esta computadora esté encendida y AbacusAI Bot esté abierto.",
+      "whereGithub": "Revisa GitHub cada minuto mientras esta computadora está encendida y AbacusAI Bot está abierto. Lo que pasó mientras no estabas se retoma cuando vuelves.",
       "alwaysOnFree": "Con el plan Basic, las rutinas siguen funcionando 24/7 con esta computadora apagada.",
       "firstRun": "La primera ejecución empieza ahora, para que veas un informe.",
       "start": "Empezar"
