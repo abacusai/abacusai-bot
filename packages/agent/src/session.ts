@@ -913,6 +913,8 @@ export class AbacusBotSession {
   private unsubscribe: (() => void) | undefined;
   /** Kept so `skill_add` can re-scan skills mid-session. */
   private resourceLoader: DefaultResourceLoader | undefined;
+  /** Whether the last `project_rules_loaded` named any file. */
+  private projectRulesReported = false;
   /** The instructions the current prompt was built with; compared per turn. */
   private promptInstructions = "";
   /** The reply-language block the prompt was built with. */
@@ -4465,7 +4467,8 @@ export class AbacusBotSession {
   /**
    * The AGENTS.md / CLAUDE.md files pi put in the prompt for this folder and
    * its parents, so the chat can say which ones it follows. The app's own
-   * agent-dir file is not the user's project, so it is left out.
+   * agent-dir file is not the user's project, so it is left out. An empty
+   * list is sent only to clear one sent before: most folders have none.
    */
   private emitProjectRules(resourceLoader: DefaultResourceLoader): void {
     const own = modelPath(agentDir());
@@ -4473,6 +4476,8 @@ export class AbacusBotSession {
       .getAgentsFiles()
       .agentsFiles.map((file) => file.path)
       .filter((file) => modelPath(path.dirname(file)) !== own);
+    if (files.length === 0 && !this.projectRulesReported) return;
+    this.projectRulesReported = files.length > 0;
 
     this.options.emit({ type: "project_rules_loaded", files });
   }
