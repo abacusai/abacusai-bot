@@ -231,7 +231,9 @@ export const routinesCollectionOptions = (
         : {}),
       ...(row.uptimeUrl != null ? { uptimeUrl: row.uptimeUrl } : {}),
       ...(row.quietIsNormal === true ? { quietIsNormal: true } : {}),
-      ...(row.githubReviews === true ? { githubReviews: true } : {}),
+      ...(row.githubOn != null && row.githubOn.length > 0
+        ? { githubOn: row.githubOn }
+        : {}),
     }),
     toUpdateInput: (id, changes) => ({
       id,

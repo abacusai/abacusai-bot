@@ -46,7 +46,9 @@ import {
 } from "#renderer/features/onboarding/gallery";
 import {
   AlwaysOnGallery,
+  CodingRowGallery,
   Phase5GalleryNav,
+  RepoWatchSheetGallery,
   phase5FixtureIds,
   RoutineSidebarGallery,
 } from "#renderer/features/routines/gallery";
@@ -307,6 +309,12 @@ function Phase5View({ fixture }: { fixture: string }) {
     "sound-synthesis": <SoundSynthesisProbe />,
     "routines-always-on-paid": <AlwaysOnGallery plan="paid" />,
     "routines-always-on-free": <AlwaysOnGallery plan="free" />,
+    "routines-coding-github": <CodingRowGallery onGithub />,
+    "routines-coding-local": <CodingRowGallery onGithub={false} />,
+    "routines-repo-watch-sheet": <RepoWatchSheetGallery onGithub />,
+    "routines-repo-watch-off-github": (
+      <RepoWatchSheetGallery onGithub={false} />
+    ),
     "library-connectors": <ConnectorsPage />,
     "settings-general": <GeneralPage />,
     "settings-models": <ModelsPage />,

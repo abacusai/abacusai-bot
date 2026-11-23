@@ -5,6 +5,8 @@ import { expect, it } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
 
+import { codingTemplatesFor } from "./coding-routines";
+
 it("R5-T8 routine form does not accept whitespace-only instructions", async () => {
   const app = await renderApp("/routines/new");
   try {
@@ -157,13 +159,31 @@ it("the full form offers no coding routine: its settings come only with its own 
     for (const name of [
       "Tell me when my site is down",
       "Run my tests and fix failures",
-      "Fix review comments on my PRs",
+      "Fix PR review comments",
+      "Review new PRs, fix CI",
     ])
       expect(screen.queryByRole("button", { name })).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();
   }
+});
+
+it("a routine that runs on GitHub news is offered only where there is a GitHub repo to read", () => {
+  const ids = (onGithub: boolean | null) =>
+    codingTemplatesFor(onGithub).map((template) => template.id);
+  // The start page's four, for a project on GitHub: the repo watch leads.
+  expect(ids(true).slice(0, 4)).toEqual([
+    "repo-watch",
+    "nightly-tests",
+    "pr-review-fixes",
+    "site-down",
+  ]);
+  expect(ids(false)).not.toContain("repo-watch");
+  expect(ids(false)).not.toContain("pr-review-fixes");
+  expect(ids(false)).toContain("nightly-tests");
+  // No project picked yet: the setup asks for one, so all are offered.
+  expect(ids(null)).toContain("repo-watch");
 });
 
 it("a coding routine's setup offers the user's folders and Choose a folder, never the app's own workspace", async () => {

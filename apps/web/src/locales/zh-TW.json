@@ -1642,6 +1642,12 @@
         "description": "根據提交記錄整理本週發布的內容，依主題分組，最後列出看起來卡住的部分。",
         "name": "本週回顧"
       },
+      "repo-watch": {
+        "name": "審查新 PR，修復 CI",
+        "description": "GitHub 一有新的拉取請求就審查，你的分支上 CI 一失敗就修復。",
+        "when": "有新 PR 或 CI 失敗時",
+        "promise": "有人開啟拉取請求時，它會審查並告訴你能否安全合併。你的分支或預設分支上 CI 失敗時，它會找出原因並把修復推送到一個分支，絕不動你的工作副本。監看不消耗點數：只有出現新狀況時才執行。"
+      },
       "nightly-tests": {
         "name": "執行測試並修正失敗",
         "description": "每晚執行測試，在獨立分支上修正失敗項目，早上為你準備好草稿提取要求。",
@@ -1841,6 +1847,7 @@
       "siteInvalid": "請輸入網址，例如 example.com。",
       "projectLabel": "專案",
       "projectPick": "選擇專案",
+      "notOnGithub": "這個專案的資料夾不是 GitHub 存放庫。請選擇一個 GitHub 存放庫。",
       "whenLabel": "時間",
       "dailyAt": "每天",
       "weekdaysAt": "平日",
@@ -1849,6 +1856,7 @@
       "connectPhone": "連接手機",
       "where": "在這台電腦開機且 AbacusAI Bot 開啟時執行。錯過的執行會在你回來後補上。",
       "whereSite": "僅在這台電腦開機且 AbacusAI Bot 開啟時檢查。",
+      "whereGithub": "在這台電腦開機且 AbacusAI Bot 開啟期間，每分鐘檢查一次 GitHub。最近一天內發生的事，回來後會補上。",
       "alwaysOnFree": "使用 Basic 方案，即使這台電腦關機，例行工作也會全天候執行。",
       "firstRun": "第一次執行現在開始，方便你看到報告。",
       "start": "開始"

@@ -553,23 +553,29 @@ describe("the daily ping allowance and notes", () => {
   });
 });
 
-describe("the review mark a review routine reads", () => {
-  it("says whether a review was found after a time, per repo", () => {
+describe("the news marks a GitHub routine reads", () => {
+  it("says whether news of the routine's kinds was found after a time, per repo", () => {
     const kept = new GithubWatchStore(() => null);
-    expect(kept.reviewFoundSince(REPO, 0)).toBe(false);
-    kept.noteReviewFound(REPO, NOW);
-    expect(kept.reviewFoundSince(REPO, NOW - 1)).toBe(true);
-    expect(kept.reviewFoundSince(REPO, NOW)).toBe(false);
-    expect(kept.reviewFoundSince("other/repo", 0)).toBe(false);
+    expect(kept.foundSince(REPO, ["review"], 0)).toBe(false);
+    kept.noteFound(REPO, ["review"], NOW);
+    expect(kept.foundSince(REPO, ["review"], NOW - 1)).toBe(true);
+    expect(kept.foundSince(REPO, ["review"], NOW)).toBe(false);
+    expect(kept.foundSince("other/repo", ["review"], 0)).toBe(false);
+    // A routine on new PRs and failed CI does not run on a review.
+    expect(kept.foundSince(REPO, ["pr", "ci"], NOW - 1)).toBe(false);
+    kept.noteFound(REPO, ["ci"], NOW + 5);
+    expect(kept.foundSince(REPO, ["pr", "ci"], NOW)).toBe(true);
   });
 
   it("forgets what it read of a repo no longer read", () => {
     const kept = new GithubWatchStore(() => null);
     kept.memory(REPO);
     kept.memory("other/repo");
+    kept.noteFound("other/repo", ["ci"], NOW);
     kept.keepOnly([REPO]);
     expect(kept.memoryOf(REPO)).not.toBeNull();
     expect(kept.memoryOf("other/repo")).toBeNull();
+    expect(kept.foundSince("other/repo", ["ci"], 0)).toBe(false);
   });
 });
 

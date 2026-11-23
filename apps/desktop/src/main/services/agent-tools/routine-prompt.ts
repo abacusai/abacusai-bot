@@ -95,7 +95,7 @@ const TRIGGER_LINE: Record<CronTrigger, string> = {
   create: "for the first time, right after it was set up",
   agent: "from a conversation, at the agent's request",
   github:
-    "because the app's GitHub watcher found a new review on this project's repository",
+    "because the app's GitHub watcher found something new on this project's repository that this routine waits for",
 };
 
 const fencedRecord = (text: string): string[] => [

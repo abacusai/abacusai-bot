@@ -1,9 +1,11 @@
+import type { GithubWatchEventKind } from "@abacus-ai/contract/contract/github";
 import {
   Bug,
   CalendarClock,
   FlaskConical,
   Gamepad2,
   GitPullRequest,
+  GitPullRequestArrow,
   Globe,
   Inbox,
   MessageSquareCode,
@@ -23,7 +25,8 @@ export interface RoutineTemplate {
   id: string;
   icon: LucideIcon;
   prompt: string;
-  preset: "daily" | "weekdays" | "weekly" | "custom";
+  /** `manual`: no clock; only what `coding.githubOn` names fires it. */
+  preset: "daily" | "weekdays" | "weekly" | "custom" | "manual";
   /** 24-hour HH:MM, the dialog's own format. */
   time: string;
   /** The cron for a `custom` preset. */
@@ -45,8 +48,11 @@ export interface RoutineTemplate {
     watchesSite?: boolean;
     /** A watcher: most runs find nothing (`quietIsNormal`). */
     quietIsNormal?: boolean;
-    /** Runs when the GitHub watcher finds a new review (`githubReviews`). */
-    githubReviews?: boolean;
+    /**
+     * Runs when the GitHub watcher finds news of these kinds on the project's
+     * repo (`githubOn`); offered only for a project on GitHub.
+     */
+    githubOn?: GithubWatchEventKind[];
   };
 }
 
@@ -132,6 +138,31 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
     ].join(" "),
   },
   {
+    id: "repo-watch",
+    needsWorkspace: true,
+    coding: { quietIsNormal: true, githubOn: ["pr", "ci"] },
+    icon: GitPullRequestArrow,
+    preset: "manual",
+    time: "09:00",
+    prompt: [
+      "You run when the app's GitHub watcher sees a new pull request or a",
+      "failed CI run on this project's GitHub repository; what it saw is listed",
+      "below. A new pull request: read it with gh pr view and gh pr diff, and",
+      "tell me what it changes, whether it is safe to merge, and any bug or",
+      "risk with the file and line. Do not approve, comment or push on GitHub.",
+      "Failed CI: read the failed jobs' logs (gh run view --log-failed), find",
+      "the cause and fix it in a separate git worktree, never my working copy.",
+      "On one of my pull requests' branches, push the fix to that branch; on",
+      "the default branch, push a new branch and open a draft pull request.",
+      "Never force-push or push the default branch, and remove the worktree",
+      "when you are done. A failure that is not in the code (a flaky test, an",
+      "expired secret, an outage): change nothing and say so. With nothing",
+      "listed (the first run), look at the open pull requests and the latest",
+      "CI on the default branch once. Report: the verdict on the first line,",
+      "then one line per pull request or failure with a link.",
+    ].join(" "),
+  },
+  {
     id: "nightly-tests",
     needsWorkspace: true,
     coding: {},
@@ -156,7 +187,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   {
     id: "pr-review-fixes",
     needsWorkspace: true,
-    coding: { quietIsNormal: true, githubReviews: true },
+    coding: { quietIsNormal: true, githubOn: ["review"] },
     icon: MessageSquareCode,
     preset: "custom",
     time: "09:00",

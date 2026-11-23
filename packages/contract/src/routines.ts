@@ -3,12 +3,14 @@
  * (cron-store.ts, whose CronJob is structurally this Routine); list items carry
  * what a row shows, resolved in main because the renderer can know none of it.
  */
+import type { GithubWatchEventKind } from "./contract/github";
 
 /**
  * `catch-up`: a scheduled fire made up after the computer was off or asleep;
  * `interrupted`: a scheduled run made up once after the app closed under it;
  * `agent`: the agent ran it from a conversation, not the user's Run now;
- * `github`: the GitHub watcher found a new review on its project's repo.
+ * `github`: the GitHub watcher found news of a kind it waits for (`githubOn`)
+ * on its project's repo.
  */
 export type RoutineTrigger =
   | "schedule"
@@ -239,12 +241,14 @@ export interface Routine {
   /** Local only: a watcher whose runs mostly find nothing; never paused for it. */
   quietIsNormal?: boolean;
   /**
-   * Local only: it acts on review comments on its project's GitHub repo. While
-   * the GitHub watcher watches that repo, a scheduled fire runs only when the
-   * watcher found a new review since its last run, and a new review fires it
-   * at once.
+   * Local only: what on its project's GitHub repo fires it, read by the app's
+   * GitHub watcher with no model call: a new pull request, a new review on one
+   * of the user's, failed CI. News of one of these kinds fires it at once.
+   * With a schedule too, a scheduled fire runs only when the watcher found
+   * such news since its last run, or when the watcher cannot read GitHub;
+   * with none, the watcher's news is all that fires it.
    */
-  githubReviews?: boolean;
+  githubOn?: GithubWatchEventKind[];
 }
 
 /** A watched site's state between fires. */
@@ -307,8 +311,8 @@ export interface RoutineCreateInput {
   uptimeUrl?: string | null;
   /** Local only: see `Routine.quietIsNormal`. */
   quietIsNormal?: boolean;
-  /** Local only: see `Routine.githubReviews`. */
-  githubReviews?: boolean;
+  /** Local only: see `Routine.githubOn`. */
+  githubOn?: GithubWatchEventKind[];
 }
 
 export type RoutineUpdateInput = Partial<

@@ -157,9 +157,13 @@ export const scheduleLabel = (
   locale: string
 ): string => {
   const d = decomposeSchedule(r.schedule, r.runAt);
-  // A coding routine on its own schedule says it in words, not as a cron.
+  // A coding routine on its own schedule (a cron, or GitHub news alone) says
+  // it in words, not as a cron or "on demand".
   const coding = CODING_ROUTINE_TEMPLATES.find(
-    (x) => x.custom != null && x.custom === r.schedule && x.prompt === r.prompt
+    (x) =>
+      x.prompt === r.prompt &&
+      ((x.preset === "custom" && x.custom === r.schedule) ||
+        (x.preset === "manual" && r.schedule == null && r.runAt == null))
   );
   if (coding != null) return t(`routines.templates.${coding.id}.when`);
   if (d.preset === "once")

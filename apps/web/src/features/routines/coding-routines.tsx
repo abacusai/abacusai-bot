@@ -46,12 +46,14 @@ import { Input } from "#renderer/ui/input";
 
 import { AlwaysOnButton, useAlwaysOnPlan } from "./always-on";
 import { RoutineFolderSelect, useRoutineFolders } from "./folder-select";
+import { useGithubWatch } from "./github-watch";
 
 /** Where a starter was offered, as the funnel names it. */
 export type CodingRoutineSurface = "start" | "library";
 
 /** One hue per coding routine, the landing's tint scheme. */
 const CODING_HUES: Record<string, number> = {
+  "repo-watch": 200,
   "nightly-tests": 30,
   "pr-review-fixes": 250,
   "site-down": 0,
@@ -110,6 +112,38 @@ export const existingCodingRoutine = (
           row.prompt === template.prompt &&
           (template.needsWorkspace !== true || row.workspaceId === workspaceId)
       )?.id ?? null);
+
+/** A routine that runs on GitHub news: it needs its project on GitHub. */
+const runsOnGithub = (template: Pick<RoutineTemplate, "coding">): boolean =>
+  (template.coding?.githubOn?.length ?? 0) > 0;
+
+/**
+ * The coding routines offered for a project: one that runs on GitHub news
+ * only for a project on GitHub (`onGithub` null: none picked yet, so any).
+ */
+export const codingTemplatesFor = (
+  onGithub: boolean | null
+): RoutineTemplate[] =>
+  CODING_ROUTINE_TEMPLATES.filter(
+    (template) => !runsOnGithub(template) || onGithub !== false
+  );
+
+/**
+ * Whether a project is on GitHub, as the GitHub watcher's list of this
+ * computer's GitHub projects says: null with no project, false until known.
+ */
+const useOnGithub = (workspaceId: string | null) => {
+  const watch = useGithubWatch();
+  return {
+    onGithub:
+      workspaceId == null
+        ? null
+        : (watch.data?.candidates.some(
+            (candidate) => candidate.workspaceId === workspaceId
+          ) ?? false),
+    problem: watch.data?.problem ?? null,
+  };
+};
 
 /**
  * Starters are offered on the desktop only (routines run on this computer),
@@ -178,6 +212,7 @@ export const CodingRoutinesRow = ({
 }) => {
   const { t } = useTranslation();
   const { routines, open, setOpen, pick } = useCodingStarters("start");
+  const { onGithub } = useOnGithub(workspaceId);
   return (
     <section
       aria-label={t("routines.coding.rowTitle", { project: projectName })}
@@ -189,34 +224,36 @@ export const CodingRoutinesRow = ({
         {t("routines.coding.rowTitle", { project: projectName })}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {CODING_ROUTINE_TEMPLATES.slice(0, 4).map((template) => {
-          const existing = existingCodingRoutine(
-            routines,
-            template,
-            workspaceId
-          );
-          return (
-            <button
-              key={template.id}
-              type="button"
-              data-testid={`coding-routine-${template.id}`}
-              onClick={() => pick(template, existing)}
-              className="bg-background hover:bg-accent/40 focus-visible:ring-ring/50 flex items-center gap-2.5 rounded-xl border p-2.5 text-start outline-none focus-visible:ring-2"
-            >
-              <Tile template={template} />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-[13px] font-medium">
-                  {t(`routines.templates.${template.id}.name`)}
+        {codingTemplatesFor(onGithub)
+          .slice(0, 4)
+          .map((template) => {
+            const existing = existingCodingRoutine(
+              routines,
+              template,
+              workspaceId
+            );
+            return (
+              <button
+                key={template.id}
+                type="button"
+                data-testid={`coding-routine-${template.id}`}
+                onClick={() => pick(template, existing)}
+                className="bg-background hover:bg-accent/40 focus-visible:ring-ring/50 flex items-center gap-2.5 rounded-xl border p-2.5 text-start outline-none focus-visible:ring-2"
+              >
+                <Tile template={template} />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-[13px] font-medium">
+                    {t(`routines.templates.${template.id}.name`)}
+                  </span>
+                  <span className="text-muted-foreground truncate text-[11px]">
+                    {existing != null
+                      ? t("routines.coding.alreadyOn")
+                      : t(`routines.templates.${template.id}.when`)}
+                  </span>
                 </span>
-                <span className="text-muted-foreground truncate text-[11px]">
-                  {existing != null
-                    ? t("routines.coding.alreadyOn")
-                    : t(`routines.templates.${template.id}.when`)}
-                </span>
-              </span>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
       </div>
       {open != null && (
         <CodingRoutineSheet
@@ -240,6 +277,7 @@ export const CodingRoutinesSection = ({
 }) => {
   const { t } = useTranslation();
   const { routines, open, setOpen, pick } = useCodingStarters("library");
+  const { onGithub } = useOnGithub(workspaceId);
   return (
     <section
       data-testid="coding-routines-section"
@@ -251,7 +289,7 @@ export const CodingRoutinesSection = ({
           : t("routines.coding.sectionTitleNoProject")}
       </h2>
       <div className="grid gap-3 @lg:grid-cols-2">
-        {CODING_ROUTINE_TEMPLATES.map((template) => {
+        {codingTemplatesFor(onGithub).map((template) => {
           const existing = existingCodingRoutine(
             routines,
             template,
@@ -333,8 +371,14 @@ export const CodingRoutineSheet = ({
   const [siteError, setSiteError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const fixedTime = template.preset === "custom";
+  // A routine on its own cron, or on GitHub news alone, has no time to pick.
+  const fixedTime =
+    template.preset === "custom" || template.preset === "manual";
   const watchesSite = template.coding?.watchesSite === true;
+  const github = useOnGithub(workspaceId);
+  const needsGithub = runsOnGithub(template);
+  // Its project's repo is the one the watcher reads: none, nothing to run on.
+  const offGithub = needsGithub && github.onGithub === false;
 
   const start = async () => {
     const url = site.trim();
@@ -343,6 +387,7 @@ export const CodingRoutineSheet = ({
       return;
     }
     if (needsProject && workspaceId == null) return;
+    if (offGithub) return;
     setSaving(true);
     setError(null);
     const { schedule } = composeSchedule({
@@ -376,9 +421,7 @@ export const CodingRoutineSheet = ({
         ...(template.coding?.quietIsNormal === true
           ? { quietIsNormal: true }
           : {}),
-        ...(template.coding?.githubReviews === true
-          ? { githubReviews: true }
-          : {}),
+        ...(needsGithub ? { githubOn: template.coding?.githubOn } : {}),
       }).isPersisted.promise;
     try {
       const id = await insertFresh(insert);
@@ -465,6 +508,21 @@ export const CodingRoutineSheet = ({
                     : null
               }
             />
+            {offGithub && (
+              <FieldError>{t("routines.coding.notOnGithub")}</FieldError>
+            )}
+            {needsGithub &&
+              !offGithub &&
+              (github.problem === "no-token" ||
+                github.problem === "disabled") && (
+                <FieldError>
+                  {t(
+                    github.problem === "disabled"
+                      ? "githubWatch.problem.disabled"
+                      : "githubWatch.problem.noToken"
+                  )}
+                </FieldError>
+              )}
           </Field>
           <Field>
             <FieldLabel htmlFor="coding-routine-time">
@@ -527,10 +585,13 @@ export const CodingRoutineSheet = ({
               {t(
                 watchesSite
                   ? "routines.coding.whereSite"
-                  : "routines.coding.where"
+                  : needsGithub
+                    ? "routines.coding.whereGithub"
+                    : "routines.coding.where"
               )}
             </span>
-            {plan === "free" && (
+            {/* Only a routine the server can run keeps going with this computer off. */}
+            {plan === "free" && !needsGithub && (
               <>
                 <span>{t("routines.coding.alwaysOnFree")}</span>
                 <AlwaysOnButton plan={plan} variant="outline" />
@@ -544,7 +605,9 @@ export const CodingRoutineSheet = ({
           </span>
           <Button
             data-testid="coding-routine-start"
-            disabled={saving || (needsProject && workspaceId == null)}
+            disabled={
+              saving || (needsProject && workspaceId == null) || offGithub
+            }
             onClick={() => void start()}
           >
             {t("routines.coding.start")}
