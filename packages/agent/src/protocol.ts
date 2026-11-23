@@ -286,7 +286,15 @@ export type AgentEvent =
        */
       source: "startup" | "user" | "approval" | "bot";
     }
-  | { type: "model_changed"; model: string }
+  | {
+      type: "model_changed";
+      model: string;
+      /**
+       * A failed model's message went on here by itself (moved-to-abacus):
+       * this is the chat's model from now on, not a switch anyone asked for.
+       */
+      moved?: true;
+    }
   // Whether this session's shell commands run under a kernel sandbox, sent
   // once at startup; `reason` says why not.
   | {

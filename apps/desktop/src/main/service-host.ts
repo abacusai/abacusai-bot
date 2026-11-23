@@ -3907,6 +3907,14 @@ export class ServiceHost {
           communicationUpdate.statePatch
         );
         this.agentSessionManagerService.updateFromCliState(mergedState);
+        // A message that moved off a failed model by itself: a bot's chat
+        // takes its bot along, now that the session is on the new model.
+        if (
+          payload.type === "event" &&
+          payload.event.type === "model_changed" &&
+          payload.event.moved === true
+        )
+          this.botService.followMove(sessionId, payload.event.model);
         this.emitEvent({
           type: "local-cli-state-updated",
           workspaceId,

@@ -515,8 +515,12 @@ describe("a model the user picked off Abacus that fails", () => {
         label: KIMI,
         free: true,
       });
-      // The chat's model is RouteLLM - Open now (main persists it).
-      expect(chat.agent("model_changed").at(-1)?.model).toBe("openllm/auto");
+      // The chat's model is RouteLLM - Open now (main persists it), and says
+      // it moved by itself, so a bot's chat takes its bot along.
+      expect(chat.agent("model_changed").at(-1)).toMatchObject({
+        model: "openllm/auto",
+        moved: true,
+      });
       expect(moves(chat)[0]?.actions?.[0]).toMatchObject({
         target: "RouteLLM - Open",
       });
@@ -537,6 +541,12 @@ describe("a model the user picked off Abacus that fails", () => {
     expect(turn.models.slice(0, 2)).toEqual([KIMI, ABACUS_MODEL]);
     // One move; after it the pool's own rotation decides, as for any turn on it.
     expect(moves(chat)).toHaveLength(1);
+    // Only the move's own model change says it moved; a model chosen in the
+    // picker (setModel above) never does.
+    expect(
+      chat.agent("model_changed").filter((event) => event.moved === true)
+    ).toHaveLength(1);
+    expect(chat.agent("model_changed")[0]).not.toHaveProperty("moved");
     expect(turn.error).toBeDefined();
     // The router's ending, never the picked model's card again.
     expect(
@@ -616,9 +626,10 @@ describe("a model the user picked off Abacus that fails", () => {
         "route-llm-code-low",
       ]);
       expect(turn.error).toBeUndefined();
-      expect(chat.agent("model_changed").at(-1)?.model).toBe(
-        "abacus/route-llm-code-low"
-      );
+      expect(chat.agent("model_changed").at(-1)).toMatchObject({
+        model: "abacus/route-llm-code-low",
+        moved: true,
+      });
       expect(moves(chat)[0]?.actions?.[0]).toMatchObject({
         target: "RouteLLM",
       });
@@ -715,6 +726,12 @@ describe("a model the user picked off Abacus that fails", () => {
             )
         )
       ).toBe(true);
+      // The bot's own engine marks the move too: main moves the bot with it.
+      expect(
+        agent()
+          .filter((event) => event.type === "model_changed")
+          .at(-1)
+      ).toMatchObject({ model: "openllm/auto", moved: true });
     } finally {
       await bot.stop?.();
       delete process.env.ABACUSAI_BOT_BOT_DIR;

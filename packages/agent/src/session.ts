@@ -891,8 +891,12 @@ export class AbacusBotSession {
    * route around: the error text, and the free model to move to. Like the
    * malformed-call flag, its presence is what suppresses the idle event.
    */
-  private pendingOpenLlmRotation: { failure: string; nextId: string } | null =
-    null;
+  private pendingOpenLlmRotation: {
+    failure: string;
+    nextId: string;
+    /** Set by moveToOpenLlm: the model_changed it ends on says so. */
+    moved?: true;
+  } | null = null;
   /**
    * A routing episode is open from the first attempt until a model answers
    * or the pool runs out. While open, provider failures are the router's to
@@ -1820,7 +1824,11 @@ export class AbacusBotSession {
     this.poolChosen = !paying;
     // The run on the router ends on its own calls, not the failed model's.
     this.router.chain.begin();
-    this.pendingOpenLlmRotation = { failure: failure.raw, nextId: next.id };
+    this.pendingOpenLlmRotation = {
+      failure: failure.raw,
+      nextId: next.id,
+      moved: true,
+    };
     this.turnRunning = true;
     this.stallRecoveriesThisTurn = 0;
     this.stallFailureReported = false;
@@ -2473,6 +2481,7 @@ export class AbacusBotSession {
     this.emitAgentEvent({
       type: "model_changed",
       model: this.currentModelReference(),
+      ...(rotation.moved && { moved: true }),
     });
 
     await session.sendCustomMessage(
