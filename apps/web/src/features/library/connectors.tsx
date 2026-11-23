@@ -44,8 +44,8 @@ import { Input } from "#renderer/ui/input";
 import { useConnectFlow } from "./connect-flow";
 import {
   connectorAdded,
+  connectorFix,
   offeredConnectors,
-  pausedOffline,
   uncheckable,
   useConnectorStatuses,
 } from "./connector-status";
@@ -140,15 +140,18 @@ export const ConnectorsPage = () => {
             </h2>
             <GroupCard>
               {rows.map((e) => {
+                // Added but not working: the row names the fix, never "Connected".
+                const fix = connectorFix(statuses.data?.[e.id]);
                 // Installed, but its sign-in never finished: offer the sign-in.
-                const signIn =
-                  statuses.data?.[e.id]?.reason === "sign-in-required";
+                const signIn = fix === "sign-in";
                 // Its app (Roblox Studio) is not installed or not answering:
                 // the card says so, and opens the dialog that says the fix.
                 const appReason = localAppReason(statuses.data?.[e.id]);
-                const warn = signIn || appReason != null;
+                // Its link broke (a chat app logged out): connect it again.
+                const reconnect = fix === "reconnect";
+                const warn = signIn || appReason != null || reconnect;
                 const cantCheck = uncheckable(statuses.data?.[e.id]);
-                const offline = pausedOffline(statuses.data?.[e.id]);
+                const offline = fix === "offline";
                 const inFlight =
                   flow.state.connectorId === e.id &&
                   flow.state.phase !== "idle" &&
@@ -182,11 +185,13 @@ export const ConnectorsPage = () => {
                                 ? LOCAL_APP_PILL[appReason]
                                 : signIn
                                   ? "phase5.signInNeeded"
-                                  : group
-                                    ? "phase5.connected"
-                                    : cantCheck
-                                      ? "phase5.cantCheck"
-                                      : "phase5.available"
+                                  : reconnect
+                                    ? "phase5.notConnected"
+                                    : group
+                                      ? "phase5.connected"
+                                      : cantCheck
+                                        ? "phase5.cantCheck"
+                                        : "phase5.available"
                           )}
                         </StatePill>
                       </span>
@@ -205,13 +210,17 @@ export const ConnectorsPage = () => {
                                 search: (p) => ({ ...p, connector: e.id }),
                                 transition: "none",
                               });
-                            else if (group && !signIn && e.kind === "messaging")
+                            else if (
+                              group &&
+                              fix == null &&
+                              e.kind === "messaging"
+                            )
                               void navigate({
                                 to: "/library/messaging",
                                 search: { platform: e.platform },
                                 transition: "none",
                               });
-                            else if (group && !signIn)
+                            else if (group && fix == null)
                               void navigate({
                                 to: "/library/connectors",
                                 search: (p) => ({ ...p, connector: e.id }),
@@ -225,9 +234,11 @@ export const ConnectorsPage = () => {
                               ? "phase5.details"
                               : signIn
                                 ? "phase5.signIn"
-                                : group
-                                  ? "phase5.manage"
-                                  : "phase5.add"
+                                : reconnect
+                                  ? "phase5.connect"
+                                  : group
+                                    ? "phase5.manage"
+                                    : "phase5.add"
                           )}
                         </Button>
                       )}
