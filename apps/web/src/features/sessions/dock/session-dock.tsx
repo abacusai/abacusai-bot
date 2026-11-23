@@ -187,6 +187,18 @@ const TabLauncher = ({
     </div>
   );
 };
+
+// After any open dialog (the command menu) has closed and handed the focus
+// back to where it was opened. Outside the component: the React Compiler
+// skips a component whose closures update a captured counter.
+const afterDialogs = (fn: () => void, frames = 0) => {
+  requestAnimationFrame(() => {
+    if (document.querySelector('[role="dialog"]') && frames < 60)
+      afterDialogs(fn, frames + 1);
+    else setTimeout(fn, 0);
+  });
+};
+
 export const SessionDock = ({
   row,
   draft = false,
@@ -482,17 +494,6 @@ export const SessionDock = ({
       .catch(() => {});
   // Keyboard paths for what the … menu does, through the command menu, and
   // between the chat box and the terminal (Esc belongs to the shell).
-  // After any open dialog (the command menu) has closed and handed the
-  // focus back to where it was opened.
-  const afterDialogs = (fn: () => void) => {
-    let frames = 0;
-    const tick = () => {
-      if (document.querySelector('[role="dialog"]') && frames++ < 60)
-        requestAnimationFrame(tick);
-      else setTimeout(fn, 0);
-    };
-    requestAnimationFrame(tick);
-  };
   const focusTerminal = (ref: string) =>
     void getTerminalView(`${key}:${ref.slice(9)}`)
       .then((view) => afterDialogs(() => view.term.focus()))

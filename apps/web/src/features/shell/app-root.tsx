@@ -106,13 +106,7 @@ const useShellActions = (): ShellActions => {
               search: { draft: openStartDraft() },
               transition: "nav-lateral",
             });
-            let frames = 0;
-            const open = () => {
-              if (hasHotkeyAction("new-terminal-tab"))
-                dispatchHotkeyAction("new-terminal-tab");
-              else if (frames++ < 300) requestAnimationFrame(open);
-            };
-            requestAnimationFrame(open);
+            openTerminalWhenReady();
           },
         }
       : {}),
@@ -138,6 +132,17 @@ const ShortcutHandler = () => {
       bindings={resolveKeymap(prefs.keymap, uiPlatform(system.platform)).window}
     />
   );
+};
+
+// The new chat's dock registers its "new terminal" action a few frames after
+// navigating; wait for it (up to ~5 s). Outside the component: the React
+// Compiler skips a component whose closures update a captured counter.
+const openTerminalWhenReady = (frames = 0) => {
+  requestAnimationFrame(() => {
+    if (hasHotkeyAction("new-terminal-tab"))
+      dispatchHotkeyAction("new-terminal-tab");
+    else if (frames < 300) openTerminalWhenReady(frames + 1);
+  });
 };
 
 export const AppRoot = ({
