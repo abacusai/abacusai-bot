@@ -90,6 +90,8 @@ const LOADING_OVERLAY_JS = `(() => {
   el.textContent = 'Opening Discord…';
   el.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;background:${LOADING_BACKGROUND};color:#dbdee1;font:500 15px system-ui,sans-serif;z-index:2147483646;pointer-events:none';
   document.documentElement.appendChild(el);
+  // Never hides a working page for long, whatever the checks miss.
+  setTimeout(() => el.remove(), 45000);
 })();`;
 const REMOVE_LOADING_OVERLAY_JS = `document.getElementById('abacus-opening')?.remove();`;
 
@@ -291,11 +293,10 @@ export class DiscordWebConnector implements MessagingConnector {
     this.boot.reset();
     this.signedInRecord = readPlatformSignedIn(this.id);
 
-    // Not signed in last time, or never recorded (a fresh install): a hidden
-    // page has nothing to find, and checking would load Discord's whole app
-    // before any login, the login window blank until it gave up. None is
-    // loaded until the user opens Discord.
-    if (this.signedInRecord !== true) {
+    // Signed out last time: a hidden page has nothing to find, so none is
+    // loaded until the user opens Discord. Never recorded (an install from
+    // before the record) loads as it always did.
+    if (this.signedInRecord === false) {
       this.callbacks.onLog("discord-web: not signed in, waiting for the user");
       this.park("needs_login", NOT_SIGNED_IN);
       return;
@@ -307,10 +308,7 @@ export class DiscordWebConnector implements MessagingConnector {
     try {
       // Bounded: a load that never settles must not keep the checks from
       // starting; the boot watch takes it from there.
-      await boundedWait(
-        this.window.loadURL(DISCORD_WEB_URL, { userAgent: userAgent() }),
-        FIRST_LOAD_WAIT_MS
-      );
+      await boundedWait(this.loadDiscord(this.window), FIRST_LOAD_WAIT_MS);
     } catch (error) {
       this.callbacks.onLog(
         `discord-web: initial load failed: ${String((error as Error)?.message ?? error)}`
@@ -1488,18 +1486,13 @@ export class DiscordWebConnector implements MessagingConnector {
         .executeJavaScript(LOADING_OVERLAY_JS)
         .catch(() => undefined);
     });
-    // Cancelled before Discord showed anything: stop the load. Opened again,
-    // it starts clean; a form already showing is kept for a quick return.
-    win.on("hide", () => {
-      if (this.window !== win || this.loggedIn || this.pageShown) return;
-      if (!this.running || this.parked) return;
-      this.callbacks.onLog("discord-web: closed while loading, stopping it");
-      this.park("needs_login", NOT_SIGNED_IN);
-    });
     win.webContents.on(
       "did-fail-load",
       (_event, code, description, _url, isMainFrame) => {
         if (!isMainFrame || code === NET_ERR_ABORTED) return;
+        void win.webContents
+          .executeJavaScript(REMOVE_LOADING_OVERLAY_JS)
+          .catch(() => undefined);
         if (this.window === win) this.onLoadFailed(code, description);
       }
     );
@@ -1519,21 +1512,25 @@ export class DiscordWebConnector implements MessagingConnector {
     return win;
   }
 
+  /**
+   * "Opening Discord…" first, then Discord: Chromium keeps the first page on
+   * screen until Discord's commits, so the window is never blank while the
+   * client downloads (a first visit can take many seconds).
+   */
+  private async loadDiscord(win: BrowserWindow): Promise<void> {
+    await win
+      .loadURL(LOADING_PAGE, { userAgent: userAgent() })
+      .catch(() => undefined);
+    if (win.isDestroyed()) return;
+    await win.loadURL(DISCORD_WEB_URL, { userAgent: userAgent() });
+  }
+
   private ensureWindow(): BrowserWindow | null {
     if (this.window != null && !this.window.isDestroyed()) return this.window;
     if (!this.running || this.parked) return null;
     // Hidden even when logged out; showLoginWindow reveals it explicitly.
     const win = this.buildWindow(false);
-    // "Opening Discord…" until Discord's page replaces it.
-    void win
-      .loadURL(LOADING_PAGE, { userAgent: userAgent() })
-      .catch(() => undefined)
-      .then(() => {
-        if (!win.isDestroyed())
-          void win
-            .loadURL(DISCORD_WEB_URL, { userAgent: userAgent() })
-            .catch(() => undefined);
-      });
+    void this.loadDiscord(win).catch(() => undefined);
     this.window = win;
     return win;
   }
