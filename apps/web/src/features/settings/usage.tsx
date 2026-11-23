@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PageNote, AreaPage } from "#renderer/components/form-kit/page";
+import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { cn } from "#renderer/lib/cn";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
 import { openTopUp, openUpgrade } from "#renderer/lib/upgrade";
@@ -556,20 +557,26 @@ export const UsagePage = () => {
     transport.orpc.models.list.queryOptions({ input: {} })
   );
   const account = useAccount();
+  // Reported here, not in the view: the gallery and tests render the view without the app.
+  const offersUpgrade =
+    account.data != null && sidebarAccount(account.data).billing === "upgrade";
   return (
-    <UsageView
-      snapshot={query.data}
-      failed={query.isError}
-      account={account.data ?? null}
-      catalog={models.data ?? []}
-      now={new Date()}
-      refreshing={query.isFetching || account.isFetching}
-      onRefresh={() => {
-        void query.refetch();
-        void account.refetch();
-      }}
-      onUpgrade={() => void openUpgrade(transport.client, "settings")}
-      onTopUp={() => void openTopUp(transport.client)}
-    />
+    <>
+      {offersUpgrade && <UpgradeSeen src="settings" />}
+      <UsageView
+        snapshot={query.data}
+        failed={query.isError}
+        account={account.data ?? null}
+        catalog={models.data ?? []}
+        now={new Date()}
+        refreshing={query.isFetching || account.isFetching}
+        onRefresh={() => {
+          void query.refetch();
+          void account.refetch();
+        }}
+        onUpgrade={() => void openUpgrade(transport.client, "settings")}
+        onTopUp={() => void openTopUp(transport.client)}
+      />
+    </>
   );
 };
