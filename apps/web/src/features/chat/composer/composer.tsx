@@ -1103,8 +1103,21 @@ export const ThreadComposer = () => {
     ).catch(() => setError(t("web.files.uploadFailed")));
   };
 
-  // The 800 px band and phones (chat-kit W800): the model chip is an icon button.
-  const narrow = useMediaQuery("(max-width: 899px)");
+  // The 800 px band and phones (chat-kit W800): the model chip is an icon
+  // button. So too in any composer squeezed under 560 px (a side panel beside
+  // the chat in a wide window), or Dictate and Send fall off its edge.
+  const [box, setBox] = useState<HTMLDivElement | null>(null);
+  const [cramped, setCramped] = useState(false);
+  useEffect(() => {
+    if (!box) return;
+    const observer = new ResizeObserver(() => {
+      const width = box.clientWidth;
+      if (width > 0) setCramped(width < 560);
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [box]);
+  const narrow = useMediaQuery("(max-width: 899px)") || cramped;
   // Cross-route morph (shared-element.ts): the surface is `composer` on the
   // pages whose composers pair up. Unconditional: it sits above the early
   // returns, and a read-only page carries no name (nothing to morph into).
@@ -1194,6 +1207,7 @@ export const ThreadComposer = () => {
   return (
     <ComposerContext value={value}>
       <div
+        ref={setBox}
         className="flex flex-col"
         data-slot="composer"
 
