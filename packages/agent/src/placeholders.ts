@@ -18,8 +18,12 @@ export const placeholdersIn = (text: string): string[] => {
     const inner = match[1]!;
     if (inner.trim().toLowerCase() === "remove") continue;
     // "[place]", "[company name]": a short lowercase stand-in counts too.
+    // So does one in a script without capitals ("[आपका नाम]" printed on a
+    // Hindi cover) and a mark with no words at all ("[•]", "[…]", "[ ]").
     if (
       /[A-Z@#]/.test(inner) ||
+      /[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u.test(inner) ||
+      !/[\p{L}\p{N}]/u.test(inner) ||
       (/^[a-z][a-z ]{1,24}$/.test(inner.trim()) &&
         inner.trim().split(/\s+/).length <= 2 &&
         !/^(sic|sic\.|note|aside)$/.test(inner.trim()))

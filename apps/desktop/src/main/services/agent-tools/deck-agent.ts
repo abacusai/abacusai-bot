@@ -273,7 +273,15 @@ const REMOVED_MARK = "\u2063";
  * nothing else in it has text. Decoration with no text is never touched, and
  * table cells stay so a row keeps its columns.
  */
-export const dropRemoved = (slide: string): string => {
+export const dropRemoved = (slide0: string): string => {
+  if (!slide0.includes(REMOVED_MARK)) return slide0;
+  // A cell a template marks data-deck-keep holds a grid's place: emptied, not
+  // removed. A timeline's dropped years shifted every later cell of its
+  // date | spine | content grid and the slide collapsed (hard asks).
+  const slide = slide0.replace(
+    /<([a-z][\w-]*)\b[^>]*\bdata-deck-keep\b[^>]*>[\s\S]*?<\/\1>/gi,
+    (cell) => cell.split(REMOVED_MARK).join("")
+  );
   if (!slide.includes(REMOVED_MARK)) return slide;
   const textOf = (html: string): string => {
     // Strip tags until none is left, so a tag split by another is gone too.
@@ -644,7 +652,8 @@ export const numberSlides = (
       edits.push({
         start: start + leading,
         end: end - trailing,
-        text: `${pad(position + 1)}${between}${pad(slides.length)}`,
+        // Isolated, so a right-to-left deck shows "1 / 14", not "14 / 1".
+        text: `\u2066${pad(position + 1)}${between}${pad(slides.length)}\u2069`,
       });
     });
     let out = slide;
@@ -725,6 +734,9 @@ export type RenderDeckResult = {
  * number the facts do not give: the design system's number check, on a
  * template. With `drop`, those slots are dropped instead.
  */
+/** A template's sample that is a big figure: "94%", "3.2×", "48", "$1.4M". */
+const BIG_FIGURE = /^[#£$€¥+−-]?\s?\d[\d.,]*\s?(?:%|[a-z×x]{1,3})?$/i;
+
 const checkNumbers = (
   sections: string[],
   request: RenderDeckRequest
@@ -738,7 +750,10 @@ const checkNumbers = (
   if (request.facts == null)
     return { slides: request.slides, unsupported, dropped };
   const slides = request.slides.map((slide) => {
-    const section = sections[slide.index];
+    // slide.index counts from 1, as everywhere else (fill uses index - 1):
+    // read as 0-based, each slide was checked against the next one's slots,
+    // so the last slide went unchecked and a figure slide's numbers passed.
+    const section = sections[slide.index - 1];
     if (section == null) return slide;
     const values = { ...slide.values };
     for (const slot of slotsOf(section, sections.length)) {
@@ -749,6 +764,10 @@ const checkNumbers = (
         brief: request.facts,
         computed: [],
         today: request.today ?? "",
+        // A slot drawn as a big figure takes a figure from the request, small
+        // ones too: an Arabic deck's three figures all read "2" (hard asks).
+        // An item's own number ("01", "3") is a counter, not a figure.
+        figure: BIG_FIGURE.test(slot.text) && !/^0?\d$/.test(slot.text.trim()),
       });
       if (bad.length === 0) continue;
       if (request.dropUnsupported === true) {
@@ -762,6 +781,29 @@ const checkNumbers = (
     return { ...slide, values };
   });
   return { slides, unsupported, dropped };
+};
+
+/**
+ * A deck written mostly in Arabic or Hebrew reads right to left: the Arabic
+ * deck printed left-aligned, its steps numbered left to right (hard asks).
+ * Set on <html> with its language, so the template's grids and flex rows turn
+ * with it and the browser shapes the text as that language.
+ */
+export const withDirection = (html: string, texts: string[]): string => {
+  const all = texts.join(" ");
+  const count = (re: RegExp): number => (all.match(re) ?? []).length;
+  const arabic = count(
+    /[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/g
+  );
+  const hebrew = count(/[\u0590-\u05ff]/g);
+  const latin = count(/[A-Za-z]/g);
+  const lang =
+    arabic > latin && arabic >= hebrew ? "ar" : hebrew > latin ? "he" : null;
+  if (lang == null) return html;
+  return html.replace(/<html\b([^>]*)>/i, (_tag, attrs: string) => {
+    const kept = attrs.replace(/\s(dir|lang)="[^"]*"/gi, "");
+    return `<html${kept} dir="rtl" lang="${lang}">`;
+  });
 };
 
 /**
@@ -863,7 +905,10 @@ export const renderDeck = async (
   const htmlPath = path.join(deckDir, "deck.html");
   await fs.writeFile(
     htmlPath,
-    retitle(withoutNotes(head + body + tail)),
+    withDirection(
+      retitle(withoutNotes(head + body + tail)),
+      numbers.slides.flatMap((slide) => Object.values(slide.values))
+    ),
     "utf8"
   );
 

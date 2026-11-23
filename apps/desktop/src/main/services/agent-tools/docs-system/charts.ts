@@ -33,6 +33,7 @@ export function drawCharts(doc: Document): {
   failed: string[];
   computed: number[];
   asNumbers: number;
+  notCharts: string[];
   shares: number[];
 } {
   const computed: number[] = [];
@@ -41,6 +42,8 @@ export function drawCharts(doc: Document): {
   const failed: string[] = [];
   let drawn = 0;
   let numbered = 0;
+  /** Charts printed as numbers or left out for repeating them: by caption. */
+  const notCharts: string[] = [];
   const win = doc.defaultView!;
   const accent =
     win
@@ -97,6 +100,9 @@ export function drawCharts(doc: Document): {
   // print as figures.
   const asNumbers = (fig: Element, items: Array<[string, string]>): void => {
     numbered++;
+    notCharts.push(
+      (fig.querySelector("figcaption")?.textContent ?? "").trim() || "a chart"
+    );
     const scope = fig.closest("section.slide") ?? fig.parentElement ?? doc.body;
     let around = "";
     const walk = doc.createTreeWalker(scope, 4 /* SHOW_TEXT */);
@@ -853,5 +859,5 @@ export function drawCharts(doc: Document): {
       failed.push(`${kind ?? "chart"}: ${(e as Error).message}`);
     }
   }
-  return { drawn, failed, computed, asNumbers: numbered, shares };
+  return { drawn, failed, computed, asNumbers: numbered, notCharts, shares };
 }

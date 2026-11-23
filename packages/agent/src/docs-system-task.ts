@@ -40,6 +40,7 @@ import {
   type RequestSources,
 } from "./request-facts.js";
 import { createResourceLoader } from "./resource-loader.js";
+import { SOURCE_FILE_HEAD } from "./source-file.js";
 import { forwardChildToolEvents } from "./subagent-events.js";
 import { makerVoice, runSubagent, type SubagentStop } from "./subagent-run.js";
 
@@ -66,6 +67,10 @@ export interface MadeFile {
   sums: { total: number | null; marks: number | null };
   sendBack: string[];
   dropped: string[];
+  /** Charts of two values, printed as the numbers or left out (their captions). */
+  notCharts?: string[];
+  /** Weekdays the app corrected from their dates. */
+  weekdaysFixed?: string[];
   /** Text over text or a chart, out of its box, or loose on a slide. */
   layout?: string[];
   /** Images that did not load. */
@@ -229,6 +234,37 @@ export const pageAsk = (
 const factsFileFor = (sourcePath: string): string =>
   sourcePath.replace(/\.html$/, ".facts.txt");
 
+/**
+ * The slides a change request names ("slide 4", "slides 2 and 5") whose markup
+ * is the same in the new HTML as in the previous one.
+ */
+export const namedSlidesUnchanged = (
+  request: string,
+  previous: string,
+  next: string
+): number[] => {
+  const named = new Set<number>();
+  // The change asked, not the user's own file read into the brief after it,
+  // whose "Slide 1:", "Slide 2:" lines named every slide.
+  const own = request.indexOf(SOURCE_FILE_HEAD);
+  for (const m of (own >= 0 ? request.slice(0, own) : request).matchAll(
+    /\bslides?\s+((?:\d{1,2}(?:\s*(?:,|and|&)\s*)?)+)/gi
+  ))
+    for (const n of m[1]!.match(/\d{1,2}/g) ?? []) named.add(Number(n));
+  if (named.size === 0) return [];
+  const slides = (html: string): string[] =>
+    [
+      ...html.matchAll(
+        /<section\b[^>]*\bclass="[^"]*\bslide\b[\s\S]*?<\/section>/gi
+      ),
+    ].map((m) => m[0].replace(/\s+/g, " "));
+  const before = slides(previous);
+  const after = slides(next);
+  return [...named].filter(
+    (n) => before[n - 1] != null && before[n - 1] === after[n - 1]
+  );
+};
+
 const htmlOf = (text: string): string => {
   const fenced = text.match(/```html\s*\n([\s\S]*?)```/);
   return fenced ? fenced[1]! : text;
@@ -246,7 +282,17 @@ export async function runDocsSystemTask(
 ): Promise<DocsSystemResult> {
   const sourcePath = sourceFor(outputPath);
   const outBase = outputPath.replace(/\.(pdf|pptx|docx)$/i, "");
-  const previous = await fs.readFile(sourcePath, "utf8").catch(() => null);
+  // A change starts from the source as it was last printed: after a refused
+  // call the bot patched a report's source by hand, and the next change would
+  // have printed that unchecked edit (hard asks).
+  const onDisk = await fs.readFile(sourcePath, "utf8").catch(() => null);
+  const printedCopy = await fs
+    .readFile(`${sourcePath}.printed`, "utf8")
+    .catch(() => null);
+  const previous =
+    onDisk != null && printedCopy != null && onDisk !== printedCopy
+      ? printedCopy
+      : onDisk;
   const original =
     previous != null
       ? await fs.readFile(briefFileFor(sourcePath), "utf8").catch(() => null)
@@ -353,6 +399,7 @@ export async function runDocsSystemTask(
       .map((f) => modelPath(f))
       .join(", ");
 
+  let unchangedChecked = false;
   const printTool = {
     name: "print",
     label: "print",
@@ -374,6 +421,24 @@ export async function runDocsSystemTask(
           details: {},
           isError: true,
         };
+      // A change that names a slide must change that slide: "make slide 4 a
+      // chart" charted slide 3, and the deck was handed over as changed.
+      if (previous != null && attempts.length === 0 && !unchangedChecked) {
+        const same = namedSlidesUnchanged(brief, previous, html);
+        if (same.length > 0) {
+          unchangedChecked = true;
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Not printed: ${same.map((n) => `slide ${n}`).join(", ")} ${same.length === 1 ? "is" : "are"} exactly as before, but the change asked is for ${same.length === 1 ? "it" : "them"} (counting the cover as slide 1). Make the change there, then call print again with the complete HTML.`,
+              },
+            ],
+            details: {},
+            isError: true,
+          };
+        }
+      }
       const last = attempts.length >= 1;
       let made = await make(html, last);
       attempts.push({ html, made });
@@ -393,6 +458,7 @@ export async function runDocsSystemTask(
         made = await make(first.html, true);
       }
       final = made;
+      await fs.copyFile(sourcePath, `${sourcePath}.printed`).catch(() => {});
       const failure = printFailure(made);
       if (failure != null)
         return {
@@ -657,6 +723,20 @@ export const docsSystemResultText = (
     ...(m.dropped.length > 0
       ? [
           `Left out because a number in it was not in the request: ${m.dropped.join("; ")}. Tell the user what was left out and why, in one line, and offer to add it back if they give the figure.`,
+        ]
+      : []),
+    // Weekdays are the app's to get right: corrected, and said, so the reply
+    // does not repeat the wrong ones (a rota printed 2025's calendar).
+    ...((m.weekdaysFixed ?? []).length > 0
+      ? [
+          `Weekdays corrected by the app from their dates: ${m.weekdaysFixed!.slice(0, 12).join("; ")}. Use these weekdays in your reply.`,
+        ]
+      : []),
+    // A chart of two values is not drawn (it only repeats them): said, so a
+    // "make slide 4 a chart" is not reported as a chart (hard asks).
+    ...((m.notCharts ?? []).length > 0
+      ? [
+          `Not drawn as a chart, because two values make no chart and the numbers show instead: ${m.notCharts!.join("; ")}. If the user asked for a chart there, tell them so in one line and offer one with more values.`,
         ]
       : []),
     ...(m.sendBack.length > 0

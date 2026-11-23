@@ -668,6 +668,22 @@ html[data-look="midnight"] table.data th { color: #0f1b2d; border-bottom: 2pt so
 html[data-look="midnight"] .doc-head { border-bottom: 2pt solid #0f1b2d; }
 html[data-look="midnight"] .qa > .q { background: #0f1b2d; color: #fff; border-left-color: #5fd0f3; }
 html[data-look="midnight"] .qa > .q .n { color: #5fd0f3; }
+/* Midnight on a deck is dark slides: navy, light text, a cyan accent. It is
+   the look a "darker look" asks for (hard asks: the deck had none, so the ask
+   printed light and was reported as done). */
+html[data-look="midnight"] body.deck { --ink: #e8edf4; --muted: #a3b3c6; --line: #2c3e55; --soft: #182840; --accent: #5fd0f3; --accent-soft: #182840; background: #0f1b2d; }
+html[data-look="midnight"] body.deck section.slide { background: #0f1b2d; color: var(--ink); }
+html[data-look="midnight"] body.deck section.slide.cover,
+html[data-look="midnight"] body.deck section.slide.closing,
+html[data-look="midnight"] body.deck section.slide.cover.split > .title { background: #0a1322; color: #fff; }
+html[data-look="midnight"] body.deck section.slide.cover.light,
+html[data-look="midnight"] body.deck section.slide.closing.light,
+html[data-look="midnight"] body.deck section.slide.cover.split > .meta { background: #0f1b2d; color: var(--ink); }
+html[data-look="midnight"] body.deck .tile { background: var(--soft); color: var(--ink); }
+/* A design's light table stripes would carry light text on white: on the
+   dark deck every row keeps the slide's colours, a faint line between rows. */
+html[data-look="midnight"] body.deck table.data td { background: transparent !important; color: var(--ink); }
+html[data-look="midnight"] body.deck table.data tr:nth-child(even) td { background: rgba(255, 255, 255, 0.04) !important; }
 html[data-look="midnight"] .cv-head { border-bottom: 3pt solid #0f1b2d; }
 html[data-look="midnight"] .cv-body > aside { background: #0f1b2d; color: #fff; }
 html[data-look="midnight"] .cv-body > aside h2 { color: #5fd0f3 !important; }

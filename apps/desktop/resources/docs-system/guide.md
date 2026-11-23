@@ -16,7 +16,7 @@ Never write your own `<style>` for fonts or sizes. Add a few lines of layout CSS
 <body class="doc"> … </body>             <!-- doc = A4 pages; deck = slides; doc bleed = one poster page -->
 </html>
 ```
-Pick the accent to suit the subject. Use one accent. A document also takes a look on `<html>`: `data-look="editorial"` (serif, for essays, notes and reports to read), `bold` (strong bars, for plans and pitches), `minimal` (quiet and technical), `warm` (serif headings, terracotta, for community, food and personal documents), `midnight` (navy, for tech and finance); leave it out for the classic look. For reports and notes, prefer indigo or plum, the palettes users liked best; a quiz or worksheet prints in black ink whatever you pick.
+Pick the accent to suit the subject. Use one accent. A document also takes a look on `<html>`: `data-look="editorial"` (serif, for essays, notes and reports to read), `bold` (strong bars, for plans and pitches), `minimal` (quiet and technical), `warm` (serif headings, terracotta, for community, food and personal documents), `midnight` (navy, for tech and finance; on a deck it is dark slides, the look for "make it darker"); leave it out for the classic look. For reports and notes, prefer indigo or plum, the palettes users liked best; a quiz or worksheet prints in black ink whatever you pick.
 
 ## Documents (`<body class="doc">`)
 A4 with margins and page numbers added by the printer. Content flows across pages.

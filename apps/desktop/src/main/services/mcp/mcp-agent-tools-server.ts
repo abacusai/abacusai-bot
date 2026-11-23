@@ -787,6 +787,35 @@ const offlineChatApp = (platform: string): string =>
   `Tell the user that in one short line: the internet dropped, not ${platform} or the app. ` +
   "Do not put up a Connect card or ask them to scan anything now.";
 
+/**
+ * The PDF a file is the source of, when it is the source of a deck or document
+ * the app printed: ppt's <name>-deck/deck.html, or the design system's
+ * <name>-source/<name>.html (or .print.html), beside <name>.pdf.
+ */
+const printedSourceOf = async (file: string): Promise<string | null> => {
+  const dir = path.dirname(file);
+  const base = path.basename(file);
+  const folder = path.basename(dir);
+  const pdf =
+    base === "deck.html" && folder.endsWith("-deck")
+      ? `${dir.slice(0, -"-deck".length)}.pdf`
+      : folder.endsWith("-source") &&
+          (base === `${folder.slice(0, -"-source".length)}.html` ||
+            base === `${folder.slice(0, -"-source".length)}.print.html`)
+        ? path.join(
+            path.dirname(dir),
+            `${folder.slice(0, -"-source".length)}.pdf`
+          )
+        : null;
+  if (pdf == null) return null;
+  return (await fs.promises
+    .stat(pdf)
+    .then((stat) => stat.isFile())
+    .catch(() => false))
+    ? pdf
+    : null;
+};
+
 export class McpAgentToolsServer extends McpHttpServer {
   constructor(private readonly options: McpAgentToolsServerOptions) {
     // listChanged: a platform's tools appear the moment it connects, and
@@ -2190,6 +2219,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     const missing: string[] = [];
     const unanswered: string[] = [];
     const checked: string[] = [];
+    const sources: string[] = [];
     const translatedFrom = new Map<string, string>();
 
     for (const entry of rawItems) {
@@ -2222,6 +2252,14 @@ export class McpAgentToolsServer extends McpHttpServer {
         missing.push(this.resolveOutputPath(raw, callerSession));
         continue;
       }
+      // The source of a printed deck or document is not the deliverable: the
+      // bot handed over a hand-edited 18-slide deck.html in place of the
+      // checked PDF and .pptx (hard asks, 20 Nov).
+      const printed = isUrl ? null : await printedSourceOf(target);
+      if (printed != null) {
+        sources.push(`${modelPath(target)}: hand over ${modelPath(printed)}`);
+        continue;
+      }
       const from = String(item.translatedFrom ?? "").trim();
       if (!isUrl && from.length > 0)
         translatedFrom.set(target, this.resolveOutputPath(from, callerSession));
@@ -2234,6 +2272,15 @@ export class McpAgentToolsServer extends McpHttpServer {
         isUrl,
       });
     }
+
+    if (sources.length > 0)
+      return this.err(
+        [
+          "Not handed over: these are the source of a printed deck or document, not the file the app checked and printed:",
+          ...sources.map((line) => `  ${line}`),
+          "Hand over the printed PDF (and .pptx). To change it, call ppt or document again with the change; an edited source skips every check.",
+        ].join("\n")
+      );
 
     if (valid.length === 0) {
       const detail = [...missing, ...unanswered];
@@ -2593,19 +2640,11 @@ export class McpAgentToolsServer extends McpHttpServer {
         ? value
         : undefined;
 
-    // A deck ppt printed (<name>-deck/deck.html beside <name>.pdf) is changed
-    // by ppt only: re-exported by hand it skipped every check, and the bot
-    // added two slides of web-searched figures to a board deck (1.1.17).
+    // A deck ppt printed is changed by ppt only: re-exported by hand it
+    // skipped every check, and the bot added two slides of web-searched
+    // figures to a board deck (1.1.17).
     const resolved = this.resolveOutputPath(htmlPath, callerSession);
-    const deckDir = path.dirname(resolved);
-    if (
-      path.basename(resolved) === "deck.html" &&
-      deckDir.endsWith("-deck") &&
-      (await fs.promises
-        .stat(`${deckDir.slice(0, -"-deck".length)}.pdf`)
-        .then((stat) => stat.isFile())
-        .catch(() => false))
-    )
+    if ((await printedSourceOf(resolved)) != null)
       return this.err(
         "This deck was printed by ppt, which checks every slide (figures from the request, sample text, text drawn over text); an export of an edited copy skips those checks. Change it only with ppt: the same template and the change written into the brief. If ppt says the deck is done for this turn, hand it over as it is and offer the change."
       );

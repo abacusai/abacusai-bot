@@ -25,6 +25,7 @@ import { dropNumbers } from "./drop";
 import {
   briefFigures,
   briefValues,
+  rowDerivations,
   sharesNotGiven,
   unsupportedNumbers,
   wrongWeekdays,
@@ -55,6 +56,7 @@ import {
 import { pageFor } from "./page";
 import { readBack } from "./readback";
 import { applySums, type SumsReport } from "./sums";
+import { correctWeekdays } from "./weekdays";
 
 export type MakeResult = {
   pdfPath: string | null;
@@ -66,6 +68,10 @@ export type MakeResult = {
   foreignFonts: string[];
   /** Blocks left out on the last attempt for holding numbers nobody gave. */
   dropped: string[];
+  /** Charts of two values, printed as the numbers or left out (their captions). */
+  notCharts?: string[];
+  /** Weekdays the app corrected from their dates. */
+  weekdaysFixed?: string[];
   /** What to send back to the model, once: wrong marks, broken charts, pages that would not fit, text that did not print. */
   sendBack: string[];
   /** Text over text or a chart, out of its box, or loose on a slide. */
@@ -142,6 +148,12 @@ type Prepared = {
   charts: ChartsReport;
   fitted: ReturnType<typeof fitInWindow>;
   text: string;
+  /** Numbers each table row works out from its own cells (faithful.ts). */
+  rowDerived: number[];
+  /** Blanks to fill in: marked ones and bracketed marks like "[•]". */
+  blanks: number;
+  /** Weekdays corrected from their dates (weekdays.ts). */
+  weekdaysFixed: string[];
   blocks: Block[] | null;
   bleed: boolean;
   landscape: boolean;
@@ -251,6 +263,8 @@ const prepare = async (
     sampleCv?: boolean;
     /** Blanks print as highlighted [placeholders] in the text, not ruled lines. */
     inlineBlanks?: boolean;
+    /** Today, for the weekdays of dates without a year. */
+    today?: string;
   }
 ): Promise<Prepared> => {
   const { fit, wantBlocks } = o;
@@ -486,6 +500,10 @@ const prepare = async (
       briefNumbers: o.briefNumbers,
     });
     const charts = await run<ChartsReport>(drawCharts as never);
+    const weekdaysFixed =
+      o.today != null
+        ? await run<string[]>(correctWeekdays as never, o.today)
+        : [];
     const dropped =
       o.drop.length > 0
         ? await run<string[]>(dropNumbers as never, o.drop)
@@ -515,6 +533,26 @@ const prepare = async (
     const text = (await win.webContents.executeJavaScript(
       "document.body.innerText"
     )) as string;
+    const blanks = (await win.webContents.executeJavaScript(
+      "document.querySelectorAll('.blank').length + (document.body.innerText.match(/\\[[^\\[\\]\\n]{1,40}\\]/g) || []).length"
+    )) as number;
+    // Slide and page numbers are counters: a 25-slide deck lost the footers
+    // of slides 21 to 24 as numbers nobody gave.
+    const counted = (await win.webContents.executeJavaScript(
+      "document.querySelectorAll('section.slide, section.page, .page').length"
+    )) as number;
+    // Only past 20: a bare number up to 20 is a counter already, and
+    // vouching for those let a 16-slide deck print a "7%" nobody gave.
+    const rowDerived = [
+      ...Array.from({ length: Math.max(counted, 0) }, (_, i) => i + 1).filter(
+        (n) => n > 20
+      ),
+      ...rowDerivations(
+        (await win.webContents.executeJavaScript(
+          "[...document.querySelectorAll('table tr')].map((r) => [...r.cells].map((c) => c.innerText))"
+        )) as string[][]
+      ),
+    ];
     // The opening text after each break the author forced (a new section on a
     // new page), so the page before it is not judged half empty.
     // Under relief, the model's own breaks between ordinary sections go (round 5).
@@ -578,6 +616,9 @@ const prepare = async (
       charts,
       fitted,
       text,
+      rowDerived,
+      blanks,
+      weekdaysFixed,
       blocks,
       bleed,
       landscape,
@@ -689,13 +730,18 @@ export const makeDocument = async (opts: {
       inlineBlanks: ["letter", "flyer", "proposal", "report"].includes(
         pageType
       ),
+      today: opts.today,
     });
   let prepared = await again();
   // The last attempt leaves out what still holds a number nobody gave.
   if (opts.dropUnsupported === true && checkFacts) {
     drop = unsupportedNumbers(prepared.text, {
       brief: opts.facts ?? opts.brief,
-      computed: [...prepared.sums.computed, ...prepared.charts.computed],
+      computed: [
+        ...prepared.sums.computed,
+        ...prepared.charts.computed,
+        ...prepared.rowDerived,
+      ],
       today: opts.today,
     });
     if (drop.length > 0) prepared = await again();
@@ -805,7 +851,11 @@ export const makeDocument = async (opts: {
   const unsupported = checkFacts
     ? unsupportedNumbers(prepared.text, {
         brief: opts.facts ?? opts.brief,
-        computed: [...prepared.sums.computed, ...prepared.charts.computed],
+        computed: [
+          ...prepared.sums.computed,
+          ...prepared.charts.computed,
+          ...prepared.rowDerived,
+        ],
         today: opts.today,
       })
     : [];
@@ -851,6 +901,13 @@ export const makeDocument = async (opts: {
           ]
         : [];
     })(),
+    // A deck of blanks is a form, not a deck: a board deck asked with no
+    // figures printed "[•]" in every tile and table cell (hard asks).
+    ...(opts.kind === "deck" && prepared.blanks > Math.max(6, pages.length)
+      ? [
+          `The deck has ${prepared.blanks} blanks to fill in. A deck is not a form: write each slide in words from the brief, leave out a figure the brief does not give rather than showing a blank, and keep at most one blank on a slide.`,
+        ]
+      : []),
     ...(unsupported.length > 0
       ? [
           `These numbers are not in the request and were not computed by the app: ${unsupported.slice(0, 10).join(", ")}. A number you work out (a share, a change, a total, a per-month figure) must be written as <span data-calc="…"> so the app computes it; anything else you made up (reference numbers, dates, figures) must go.`,
@@ -918,6 +975,8 @@ export const makeDocument = async (opts: {
     sums: prepared.sums,
     foreignFonts: otherFonts,
     dropped: prepared.dropped,
+    notCharts: prepared.charts.notCharts,
+    weekdaysFixed: prepared.weekdaysFixed,
     sendBack,
     layout: prepared.layout,
     images: prepared.images,

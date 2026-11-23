@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 
 import { Type } from "typebox";
 
+import { briefLanguageProblem } from "./brief-language.js";
 import {
   namedTemplate,
   runDeckTask,
@@ -23,6 +24,9 @@ import { modelPath } from "./model-path.js";
 import type { AgentEvent } from "./protocol.js";
 import { withSourceFile } from "./source-file.js";
 import { resolveInWorkspace } from "./workspace-path.js";
+
+/** Turns whose brief was sent back for its language (once a turn). */
+const languageSent = new Set<string>();
 
 export function deckToolEnabled(): boolean {
   const excluded = (process.env.ABACUSAI_BOT_EXCLUDED_TOOLS ?? "")
@@ -60,18 +64,31 @@ const chosenTemplate = async (
   context: DeckTaskContext,
   brief: string,
   asked: unknown
-): Promise<string | undefined> => {
-  const slugs = await context.hostServices
+): Promise<{ template: string | undefined; most: number }> => {
+  const list = await context.hostServices
     .request("deck_templates", {})
-    .then((result) =>
-      ((result as { templates?: Array<{ slug?: unknown }> }).templates ?? [])
-        .map((entry) => String(entry.slug ?? ""))
-        .filter((slug) => slug.length > 0)
+    .then(
+      (result) =>
+        (
+          result as {
+            templates?: Array<{ slug?: unknown; slide_count?: unknown }>;
+          }
+        ).templates ?? []
     )
-    .catch(() => [] as string[]);
+    .catch(() => []);
+  const slugs = list
+    .map((entry) => String(entry.slug ?? ""))
+    .filter((slug) => slug.length > 0);
+  // The most slides any template prints: a longer ask cannot be met by one.
+  const most = Math.max(
+    0,
+    ...list.map((entry) =>
+      typeof entry.slide_count === "number" ? entry.slide_count : 0
+    )
+  );
   const slug = typeof asked === "string" ? asked.trim().toLowerCase() : "";
-  if (slugs.includes(slug)) return slug;
-  return namedTemplate(brief, slugs) ?? undefined;
+  if (slugs.includes(slug)) return { template: slug, most };
+  return { template: namedTemplate(brief, slugs) ?? undefined, most };
 };
 
 export function buildDeckTool(
@@ -176,6 +193,23 @@ export function buildDeckTool(
           ? resolveInWorkspace(requestedPath, context.cwd)
           : "";
 
+      // The deck's language follows the user's own words, asked once a turn.
+      const languageTurn = turnOf(context);
+      const wrongLanguage = languageSent.has(languageTurn ?? "")
+        ? null
+        : briefLanguageProblem(
+            (context.requestSources?.().user ?? []).slice(-1).join("\n"),
+            given
+          );
+      if (wrongLanguage != null) {
+        languageSent.add(languageTurn ?? "");
+        return {
+          content: [{ type: "text" as const, text: wrongLanguage }],
+          details: {},
+          isError: true,
+        };
+      }
+
       if (given.length === 0) {
         return {
           content: [{ type: "text" as const, text: "A brief is required." }],
@@ -260,11 +294,14 @@ export function buildDeckTool(
       // (review of 17 Nov: the plain decks all looked alike). The design
       // system makes the user's own deck anew (source_file), keeps changing a
       // deck it made, and is the fallback when a template deck fails.
-      const template = docsSystemEnabled()
+      const chosen = docsSystemEnabled()
         ? await chosenTemplate(context, brief, params.template)
-        : typeof params.template === "string"
-          ? params.template
-          : undefined;
+        : {
+            template:
+              typeof params.template === "string" ? params.template : undefined,
+            most: 0,
+          };
+      const template = chosen.template;
       const plain = (): ReturnType<typeof runDocsSystemTool> =>
         runDocsSystemTool(
           context,
@@ -279,6 +316,10 @@ export function buildDeckTool(
           // The user's pictures are placed by the design system; template
           // slides hold no photos.
           /\.(png|jpe?g|webp|gif)\b/i.test(brief) ||
+          // More slides than any template prints: the design system has no
+          // fixed count. On a template the 18-slide ask printed 14, and the
+          // bot rebuilt the deck by hand around every check (hard asks).
+          (asked != null && chosen.most > 0 && asked > chosen.most) ||
           (await madeByDesignSystem(outputPath)))
       )
         return await plain();
@@ -367,6 +408,37 @@ export function buildDeckTool(
   };
 }
 
+/**
+ * Why a deck printed fewer slides than asked, every reason that applies: the
+ * template offers fewer, a slide was left out, the brief filled fewer. One
+ * reason alone told a user that a left-out slide cost eight (12 of 20 on a
+ * 14-slide template, hard asks).
+ */
+const shortBy = (
+  result: { slides?: number; offered?: number; printNotes?: string[] },
+  wanted: number
+): string => {
+  const printed = result.slides ?? 0;
+  const leftOut = (result.printNotes ?? [])
+    .filter((note) => note.startsWith("Left out"))
+    .flatMap((note) => note.match(/\bslide \d+/g) ?? []).length;
+  const room = Math.min(result.offered ?? wanted, wanted);
+  const reasons = [
+    ...(result.offered != null && result.offered < wanted
+      ? [`the template has ${result.offered} slides`]
+      : []),
+    ...(leftOut > 0
+      ? [
+          `${leftOut} ${leftOut === 1 ? "slide was" : "slides were"} left out (above)`,
+        ]
+      : []),
+    ...(printed < room - leftOut
+      ? [`the brief filled ${room - leftOut - printed} fewer`]
+      : []),
+  ];
+  return `It printed ${printed} of the ${wanted} slides asked for: ${reasons.join("; ") || "the brief filled no more"}. Tell the user exactly this, and offer ${result.offered != null && result.offered < wanted ? "a longer deck in the app's own design or fewer slides" : "to put the missing content on more slides"}; do not build slides by hand.`;
+};
+
 /** What the bot is told once its deck is printed. */
 export const deckResultText = (
   result: {
@@ -410,11 +482,7 @@ export const deckResultText = (
           // built the seventh by hand and the .pptx kept six. A slide the
           // print left out is the reason when there is one: the bot once
           // blamed the template's size for it.
-          (result.printNotes ?? []).some((note) => note.startsWith("Left out"))
-            ? `It printed ${result.slides} of the ${wanted} slides asked for because of the slide left out above, not the template's size. Tell the user, and offer to put that content on another slide; do not build slides by hand.`
-            : result.offered != null && result.offered >= wanted
-              ? `It printed ${result.slides} of the ${wanted} slides asked for: the template has ${result.offered}, and the brief filled ${result.slides}. Tell the user, and offer to add content for more slides; do not say the template is too small, and do not build slides by hand.`
-              : `It printed ${result.slides} of the ${wanted} slides asked for: that is all this template could fill from the brief. Tell the user, and offer another template or fewer slides; do not build slides by hand.`,
+          shortBy(result, wanted),
         ]
       : []),
     "",

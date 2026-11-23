@@ -128,6 +128,10 @@ export const readSourceFile = async (
   return { text: lines.join("\n"), pictures };
 };
 
+/** Heads the user's own file's text in a brief; request-facts.ts finds it there. */
+export const SOURCE_FILE_HEAD =
+  "The user's own file, read by the app (keep all of its content, and use its pictures by these paths):";
+
 /**
  * The user's own .pptx or .docx, read in code and added to the brief: the
  * bot no longer spends minutes of turns unzipping it (deck-speed.md).
@@ -149,5 +153,5 @@ export const withSourceFile = async (
     file,
     path.join(path.dirname(outputPath), `${base}-from-file`)
   );
-  return `${brief}\n\nThe user's own file, read by the app (keep all of its content, and use its pictures by these paths):\n${read.text}`;
+  return `${brief}\n\n${SOURCE_FILE_HEAD}\n${read.text}`;
 };
