@@ -84,6 +84,6 @@ export const connectorFix = (
 ): ConnectorFix | null => {
   if (status?.state !== "pending") return null;
   if (pausedOffline(status)) return "offline";
-  if (status.reason === "sign-in-required") return "sign-in";
+  if (["sign-in-required"].includes(status.reason ?? "")) return "sign-in";
   return localAppReason(status) ?? "reconnect";
 };
