@@ -15,6 +15,7 @@ import type {
 } from "@abacus-ai/contract/contract";
 import { withoutNoReply } from "@abacus-ai/contract/contract/ai";
 import {
+  complainedOf,
   contextTokensOf,
   creditsOf,
   networkWaitOf,
@@ -1395,12 +1396,14 @@ export class ThreadRelay {
     const usage = Array.isArray(event.usage) ? event.usage[0] : undefined;
     const freeLane = freeLaneOf(event.metadata);
     const credits = creditsOf(event.metadata);
+    const complained = complainedOf(event.metadata);
     return {
       ...base,
       kind: outcome.type === "cancelled" ? "cancelled" : "success",
       ...(usage != null && typeof usage === "object" && { usage }),
       ...(freeLane != null && { freeLane }),
       ...(credits != null && { credits }),
+      ...(complained != null && { complained }),
     };
   }
 

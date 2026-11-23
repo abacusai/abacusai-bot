@@ -37,6 +37,8 @@ interface OpenRun {
   failure?: AgentErrorPayload;
   usage?: TurnUsage;
   stopReason?: string;
+  /** The agent's verdict on the opening message (TurnOutcome.complained). */
+  complained?: boolean;
 }
 
 export interface RunControllerDeps {
@@ -209,6 +211,10 @@ export class RunController {
     this.run.usage = credits !== undefined ? { ...usage, credits } : usage;
   }
 
+  recordComplaint(complained: boolean): void {
+    if (this.run != null) this.run.complained = complained;
+  }
+
   recordStopReason(stopReason: string | undefined): void {
     if (this.run != null && stopReason != null)
       this.run.stopReason = stopReason;
@@ -316,6 +322,7 @@ export class RunController {
           ...(run.usage != null ? { turnUsage: run.usage } : {}),
           ...(stopReason != null ? { stopReason } : {}),
           ...(run.serverInitiated ? { serverInitiated: true as const } : {}),
+          ...(run.complained != null ? { complained: run.complained } : {}),
         },
       };
 

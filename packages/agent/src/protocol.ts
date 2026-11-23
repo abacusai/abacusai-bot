@@ -247,6 +247,11 @@ export interface TurnOutcome {
   kind: "reply" | "failed" | "stopped";
   /** For `failed`: the reported error's cause (turn-outcome.ts) or code. */
   cause?: string;
+  /**
+   * The agent judged the user's opening message: true when it says the last
+   * change did not work. Absent when not judged (older agents too).
+   */
+  complained?: boolean;
 }
 
 export type AgentEvent =

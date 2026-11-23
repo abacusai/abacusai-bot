@@ -567,6 +567,9 @@ export class AguiEmitter {
         ]);
 
       case "turn_complete":
+        // Only a send's closing turn_complete has an outcome: the user's turn.
+        if (event.outcome?.complained != null)
+          this.ctx.runs.recordComplaint(event.outcome.complained);
         if (event.usage == null) return [];
         if (this.hiddenDepth > 0) {
           this.ctx.log(

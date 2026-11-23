@@ -16,7 +16,11 @@ import { PAID_FEATURE_TOOL } from "./toolsets";
 export const RETRY_OFFER_REASONS = ["failed", "complaint", "repeat"] as const;
 export type RetryOfferReason = (typeof RETRY_OFFER_REASONS)[number];
 
-/** What the user says when the last attempt did not work. */
+/**
+ * What the user says when the last attempt did not work. Only the fallback for
+ * a turn the agent did not judge (RetryOfferTurn.complained): the agent's own
+ * check reads any language, and past the length cap. Kept as it is, not grown.
+ */
 const STUCK_WORDS = [
   // English
   "still not",
@@ -292,7 +296,7 @@ const STUCK_UNSPACED = [
 /** Longer than this is a new brief, whatever words it uses. */
 const STUCK_MAX_LENGTH = 300;
 
-/** The message says the last attempt did not work. */
+/** The message says the last attempt did not work, by the word list alone. */
 export const isStuckMessage = (text: string): boolean => {
   const message = normalizedText(text);
   return (
@@ -339,7 +343,20 @@ export interface RetryOfferTurn {
   earlierRanWork: boolean;
   /** The turn called a plan hand-off (isPlanHandoffTool). */
   handedOff: boolean;
+  /**
+   * The agent's verdict on the ask: it says the last change did not work.
+   * Undefined when the agent did not judge it (no key, the check failed or
+   * timed out, an agent or a chat that has no such check, an older transcript).
+   */
+  complained?: boolean;
 }
+
+/**
+ * The ask says the last attempt did not work: the agent's verdict when it
+ * judged the ask, else the word list. A "no" from the agent stands.
+ */
+const complainedAbout = (turn: RetryOfferTurn): boolean =>
+  turn.complained ?? isStuckMessage(turn.ask);
 
 /**
  * Why this turn went badly, or null. A failure counts only after work: a reply
@@ -350,7 +367,7 @@ export const retryOfferReason = (
 ): RetryOfferReason | null => {
   if (turn.handedOff) return null;
   if (turn.ranWork && !isCleanReply(turn.reply)) return "failed";
-  if (turn.earlierRanWork && isStuckMessage(turn.ask)) return "complaint";
+  if (turn.earlierRanWork && complainedAbout(turn)) return "complaint";
   if (turn.earlierAsks.slice(0, 2).some((ask) => isSameAsk(ask, turn.ask)))
     return "repeat";
   return null;

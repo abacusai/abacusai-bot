@@ -49,6 +49,11 @@ export interface RunOutcomeRecord {
   networkWaitMs?: number;
   /** Time it waited while the internet worked and AbacusAI did not answer. */
   abacusWaitMs?: number;
+  /**
+   * The agent judged the user's message that opened the run: true when it
+   * says the last change did not work. Absent when not judged.
+   */
+  complained?: boolean;
   error?: AgentErrorPayload & { code?: string };
   /** The last transcript message at the terminal; null for an empty thread. */
   afterMessageId: string | null;
@@ -88,6 +93,17 @@ export const creditsOf = (metadata: unknown): number | undefined => {
   return typeof credits === "number" && Number.isFinite(credits) && credits >= 0
     ? credits
     : undefined;
+};
+
+/**
+ * The agent's verdict on the run's opening message, read off its terminal's
+ * `metadata.abacus.complained`; undefined when it did not judge one.
+ */
+export const complainedOf = (metadata: unknown): boolean | undefined => {
+  const complained = (
+    metadata as { abacus?: { complained?: unknown } } | null | undefined
+  )?.abacus?.complained;
+  return typeof complained === "boolean" ? complained : undefined;
 };
 
 /**

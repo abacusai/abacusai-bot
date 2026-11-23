@@ -13,6 +13,8 @@ export class OwnedTurn {
   failure: string | null = null;
   /** The last call answered with no text and no tool call. */
   endedEmpty = false;
+  /** The stuck guard's verdict on the opening message; null when not judged. */
+  private complained: boolean | null = null;
   private heldEnd: ((outcome: TurnOutcome) => void) | null = null;
   private closed = false;
 
@@ -20,6 +22,11 @@ export class OwnedTurn {
   noteError(error: { cause?: string; code?: string } | undefined): void {
     if (this.closed) return;
     this.failure = error?.cause ?? error?.code ?? "error";
+  }
+
+  /** The stuck guard judged the opening message (stuck-guard.ts onVerdict). */
+  noteComplaint(complained: boolean): void {
+    if (!this.closed) this.complained = complained;
   }
 
   /** The turn reached its end inside the send: emit it once the send closes. */
@@ -43,10 +50,13 @@ export class OwnedTurn {
   }
 
   outcome(interrupted: boolean): TurnOutcome {
-    if (interrupted) return { kind: "stopped" };
-    if (this.failure != null) return { kind: "failed", cause: this.failure };
+    const verdict =
+      this.complained != null ? { complained: this.complained } : {};
+    if (interrupted) return { kind: "stopped", ...verdict };
+    if (this.failure != null)
+      return { kind: "failed", cause: this.failure, ...verdict };
     // The empty-reply failure's own cause (turn-outcome.ts), reported or not.
-    if (this.endedEmpty) return { kind: "failed", cause: "empty" };
-    return { kind: "reply" };
+    if (this.endedEmpty) return { kind: "failed", cause: "empty", ...verdict };
+    return { kind: "reply", ...verdict };
   }
 }

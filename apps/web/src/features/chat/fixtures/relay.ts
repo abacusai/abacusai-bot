@@ -7,6 +7,7 @@ import type {
   PermissionDescriptor,
 } from "@abacus-ai/contract/contract";
 import {
+  complainedOf,
   contextTokensOf,
   creditsOf,
   networkWaitOf,
@@ -399,6 +400,7 @@ const fold = (
         const usage = Array.isArray(value.usage) ? value.usage[0] : undefined;
         const freeLane = freeLaneOf(value.metadata);
         const credits = creditsOf(value.metadata);
+        const complained = complainedOf(value.metadata);
         outcomes = [
           ...outcomes,
           {
@@ -412,6 +414,7 @@ const fold = (
               : {}),
             ...(freeLane != null ? { freeLane } : {}),
             ...(credits != null ? { credits } : {}),
+            ...(complained != null ? { complained } : {}),
           },
         ];
       }
