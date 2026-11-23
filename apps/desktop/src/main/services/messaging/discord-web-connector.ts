@@ -76,6 +76,23 @@ export const closeDiscordLoopback = (): void => {
     );
 };
 
+/** The window's own colour, Discord's dark, rather than white while it loads. */
+const LOADING_BACKGROUND = "#313338";
+/** Shown first: Chromium keeps it on screen until Discord's page commits. */
+const LOADING_PAGE = `data:text/html;charset=utf-8,${encodeURIComponent(
+  `<body style="margin:0;height:100vh;display:grid;place-items:center;background:${LOADING_BACKGROUND};color:#dbdee1;font:500 15px system-ui,sans-serif">Opening Discord…</body>`
+)}`;
+/** The same words over Discord's own boot screen, until its form or app shows. */
+const LOADING_OVERLAY_JS = `(() => {
+  if (document.getElementById('abacus-opening')) return;
+  const el = document.createElement('div');
+  el.id = 'abacus-opening';
+  el.textContent = 'Opening Discord…';
+  el.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;background:${LOADING_BACKGROUND};color:#dbdee1;font:500 15px system-ui,sans-serif;z-index:2147483646;pointer-events:none';
+  document.documentElement.appendChild(el);
+})();`;
+const REMOVE_LOADING_OVERLAY_JS = `document.getElementById('abacus-opening')?.remove();`;
+
 // discord.com can wedge its boot spinner under the default Electron UA.
 const userAgent = (): string =>
   `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -181,6 +198,8 @@ export class DiscordWebConnector implements MessagingConnector {
    * could not load at all.
    */
   private parked = false;
+  /** Discord's form or app has shown in the current page. */
+  private pageShown = false;
   /** The stored sign-in verdict, so a poll writes it on change only. */
   private signedInRecord: boolean | null = null;
   private readonly loginPoll = new PollScheduler(
@@ -272,10 +291,11 @@ export class DiscordWebConnector implements MessagingConnector {
     this.boot.reset();
     this.signedInRecord = readPlatformSignedIn(this.id);
 
-    // Signed out last time: a hidden page has nothing to find, so none is
-    // loaded until the user opens Discord. Never recorded (an install from
-    // before the record) loads as it always did.
-    if (this.signedInRecord === false) {
+    // Not signed in last time, or never recorded (a fresh install): a hidden
+    // page has nothing to find, and checking would load Discord's whole app
+    // before any login, the login window blank until it gave up. None is
+    // loaded until the user opens Discord.
+    if (this.signedInRecord !== true) {
       this.callbacks.onLog("discord-web: not signed in, waiting for the user");
       this.park("needs_login", NOT_SIGNED_IN);
       return;
@@ -925,7 +945,16 @@ export class DiscordWebConnector implements MessagingConnector {
     if (state == null || this.parked) return;
 
     if (state.loggedIn) this.signedOutTicks = 0;
-    if (state.loggedIn || state.loginVisible === true) this.boot.reset();
+    if (state.loggedIn || state.loginVisible === true) {
+      this.boot.reset();
+      // The form or the app is up: the loading words step aside.
+      if (!this.pageShown) {
+        this.pageShown = true;
+        void this.window?.webContents
+          .executeJavaScript(REMOVE_LOADING_OVERLAY_JS)
+          .catch(() => undefined);
+      }
+    }
 
     if (state.loggedIn && !this.loggedIn) {
       this.loggedIn = true;
@@ -1417,8 +1446,10 @@ export class DiscordWebConnector implements MessagingConnector {
 
   private buildWindow(visible: boolean): BrowserWindow {
     closeDiscordLoopback();
+    this.pageShown = false;
     const win = new BrowserWindow({
       show: visible,
+      backgroundColor: LOADING_BACKGROUND,
       width: 1000,
       height: 720,
       title: "Log in to Discord",
@@ -1449,6 +1480,22 @@ export class DiscordWebConnector implements MessagingConnector {
     win.on("closed", () => {
       if (this.window === win) this.window = null;
     });
+    // Covers Discord's own boot screen while it loads (see checkLogin).
+    win.webContents.on("dom-ready", () => {
+      if (this.window !== win || this.pageShown) return;
+      if (!win.webContents.getURL().startsWith(`${DISCORD_ORIGIN}/`)) return;
+      void win.webContents
+        .executeJavaScript(LOADING_OVERLAY_JS)
+        .catch(() => undefined);
+    });
+    // Cancelled before Discord showed anything: stop the load. Opened again,
+    // it starts clean; a form already showing is kept for a quick return.
+    win.on("hide", () => {
+      if (this.window !== win || this.loggedIn || this.pageShown) return;
+      if (!this.running || this.parked) return;
+      this.callbacks.onLog("discord-web: closed while loading, stopping it");
+      this.park("needs_login", NOT_SIGNED_IN);
+    });
     win.webContents.on(
       "did-fail-load",
       (_event, code, description, _url, isMainFrame) => {
@@ -1477,7 +1524,16 @@ export class DiscordWebConnector implements MessagingConnector {
     if (!this.running || this.parked) return null;
     // Hidden even when logged out; showLoginWindow reveals it explicitly.
     const win = this.buildWindow(false);
-    void win.loadURL(DISCORD_WEB_URL, { userAgent: userAgent() });
+    // "Opening Discord…" until Discord's page replaces it.
+    void win
+      .loadURL(LOADING_PAGE, { userAgent: userAgent() })
+      .catch(() => undefined)
+      .then(() => {
+        if (!win.isDestroyed())
+          void win
+            .loadURL(DISCORD_WEB_URL, { userAgent: userAgent() })
+            .catch(() => undefined);
+      });
     this.window = win;
     return win;
   }
