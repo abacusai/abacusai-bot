@@ -827,20 +827,9 @@ export class SkillsService {
   async openFile(request: OpenSkillFileRequest): Promise<SkillMutationResult> {
     assertHostCapability(this.platform(), "skills.openFile");
     try {
-      // Same roots remove() enforces; opening gets the same boundary as deleting.
-      const ws = request.workspacePath;
-      const roots = [
-        GLOBAL_SKILLS_DIR,
-        ...(ws != null && ws.trim() !== ""
-          ? [path.join(ws, WORKSPACE_DIR_NAME, "skills")]
-          : []),
-      ];
-      const decision = decideLocalOpen(request.path, roots);
+      const decision = decideLocalOpen(request.path);
       if (decision.action === "refuse") {
-        return {
-          success: false,
-          error: "Refusing to open a file outside a skills directory",
-        };
+        return { success: false, error: "That file is no longer there" };
       }
       // A helper script shipped with a skill is something the OS would run, so
       // it is revealed in the file manager instead, as the rest of the app does.

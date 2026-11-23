@@ -27,13 +27,9 @@ type AgentRunStatus = "queued" | "running" | "completed" | "error" | "idle";
 // like a broken app. `reason` is a code the renderer translates.
 export type OpenFilePathResult =
   | { outcome: "opened" }
-  /**
-   * Shown in the file manager instead: opening it would run it
-   * ("executable"), or it is outside the app's folders and the agent did not
-   * write it ("outside").
-   */
-  | { outcome: "revealed"; reason?: "executable" | "outside" }
-  | { outcome: "refused"; reason: "invalid" | "missing" | "outside" };
+  /** Shown in the file manager instead: opening it would run it. */
+  | { outcome: "revealed"; reason?: "executable" }
+  | { outcome: "refused"; reason: "invalid" | "missing" };
 
 export interface WorkspaceListItem {
   id: string;

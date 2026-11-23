@@ -1,8 +1,7 @@
 /**
- * What may be handed to `shell.openPath` ("double-click this file"). The paths
- * reaching it include file links out of model-generated markdown, so the guard
- * must hold against traversal, symlink escapes, and the forms each OS runs
- * instead of showing, not just honest paths.
+ * What may be handed to `shell.openPath` ("double-click this file"). Any file
+ * that exists opens, wherever it is; the forms each OS would run instead of
+ * show are revealed in the file manager, including behind a link.
  */
 import fs from "fs";
 import os from "os";
@@ -23,19 +22,18 @@ import {
   hasWindowsExecutableExtension,
 } from "./local-open-guard";
 
-/** Shorthand for the containment and executable-form checks together. */
+/** Whether the file opens rather than being revealed or refused. */
 const opensDirectly = (
   filePath: unknown,
-  roots: readonly string[],
   platform: NodeJS.Platform = process.platform
-): boolean => decideLocalOpen(filePath, roots, platform).action === "open";
+): boolean => decideLocalOpen(filePath, platform).action === "open";
 
 let root: string;
 let outside: string;
 
 beforeAll(() => {
   // realpath'd so the macOS /tmp → /private/tmp symlink doesn't skew the
-  // containment assertions the tests make about their own fixtures.
+  // resolved paths the tests compare against.
   root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "open-guard-")));
   outside = fs.realpathSync(
     fs.mkdtempSync(path.join(os.tmpdir(), "open-guard-outside-"))
@@ -59,93 +57,45 @@ afterAll(() => {
   fs.rmSync(outside, { recursive: true, force: true });
 });
 
-describe("what may be opened directly", () => {
-  it("allows files inside an allowed root, at any depth", () => {
-    expect(opensDirectly(path.join(root, "notes.txt"), [root])).toBe(true);
-    expect(opensDirectly(path.join(root, "sub", "deep.txt"), [root])).toBe(
-      true
-    );
-    expect(opensDirectly(root, [root])).toBe(true);
+describe("what opens directly", () => {
+  it("opens any file that exists, wherever it is", () => {
+    // Desktop, Downloads, another drive: where the user asked for it to be
+    // saved, or their own file the bot pointed at.
+    expect(opensDirectly(path.join(root, "notes.txt"))).toBe(true);
+    expect(opensDirectly(path.join(root, "sub", "deep.txt"))).toBe(true);
+    expect(opensDirectly(path.join(outside, "secret.txt"))).toBe(true);
+    expect(opensDirectly(path.join(root, "escape"))).toBe(true);
   });
 
-  it("checks every allowed root, not just the first", () => {
-    expect(opensDirectly(path.join(root, "notes.txt"), [outside, root])).toBe(
-      true
-    );
-  });
-
-  it("refuses paths outside every allowed root", () => {
-    expect(opensDirectly(path.join(outside, "secret.txt"), [root])).toBe(false);
-    expect(opensDirectly("/etc/hosts", [root])).toBe(false);
-  });
-
-  it("refuses traversal that dresses an outside path in an inside prefix", () => {
-    const dressed = path.join(root, "..", path.basename(outside), "secret.txt");
-    expect(opensDirectly(dressed, [root])).toBe(false);
-  });
-
-  it("is boundary-aware, not a string-prefix match", () => {
-    const sibling = `${root}-sibling`;
-    fs.mkdirSync(sibling, { recursive: true });
-    fs.writeFileSync(path.join(sibling, "x.txt"), "out");
-    try {
-      expect(opensDirectly(path.join(sibling, "x.txt"), [root])).toBe(false);
-    } finally {
-      fs.rmSync(sibling, { recursive: true, force: true });
+  it("refuses only what cannot be opened at all", () => {
+    expect(decideLocalOpen(path.join(root, "gone.txt"))).toEqual({
+      action: "refuse",
+      reason: "missing",
+    });
+    for (const value of [undefined, null, 42, ""]) {
+      expect(decideLocalOpen(value)).toEqual({
+        action: "refuse",
+        reason: "invalid",
+      });
     }
   });
 
-  it("refuses a symlink inside the root that points outside it", () => {
-    // Lexically root/escape is inside; its realpath is not, and the realpath
-    // is what the OS would open.
-    expect(opensDirectly(path.join(root, "escape"), [root])).toBe(false);
-  });
-
-  it("resolves symlinked roots before comparing", () => {
-    const linkedRoot = path.join(outside, "root-link");
-    fs.symlinkSync(root, linkedRoot);
-    try {
-      expect(opensDirectly(path.join(root, "notes.txt"), [linkedRoot])).toBe(
-        true
-      );
-    } finally {
-      fs.rmSync(linkedRoot, { force: true });
-    }
-  });
-
-  it("refuses paths that do not exist: there is nothing legitimate to open", () => {
-    expect(opensDirectly(path.join(root, "missing.txt"), [root])).toBe(false);
-    expect(opensDirectly("\\\\attacker\\share\\payload.bat", [root])).toBe(
-      false
-    );
-  });
-
-  it("refuses non-strings, empty strings, and empty root lists", () => {
-    expect(opensDirectly(undefined, [root])).toBe(false);
-    expect(opensDirectly(null, [root])).toBe(false);
-    expect(opensDirectly(42, [root])).toBe(false);
-    expect(opensDirectly("", [root])).toBe(false);
-    expect(opensDirectly(path.join(root, "notes.txt"), [])).toBe(false);
-  });
-
-  it("refuses executables on Windows, wherever they live", () => {
+  it("reveals executables on Windows, wherever they live", () => {
     const exe = path.join(root, "evil.exe");
-    expect(opensDirectly(exe, [root], "win32")).toBe(false);
-    expect(opensDirectly(exe, [root], "darwin")).toBe(true);
-    expect(opensDirectly(exe, [root], "linux")).toBe(true);
+    expect(opensDirectly(exe, "win32")).toBe(false);
+    expect(opensDirectly(exe, "darwin")).toBe(true);
+    expect(opensDirectly(exe, "linux")).toBe(true);
     // Case tricks do not help: NTFS is case-insensitive.
-    expect(opensDirectly(path.join(root, "evil.BAT"), [root], "win32")).toBe(
-      false
-    );
+    expect(opensDirectly(path.join(root, "evil.BAT"), "win32")).toBe(false);
   });
 
   it("on Windows, checks the resolved target too: a benign link to an exe is still an exe", () => {
     const link = path.join(root, "readme.md");
-    expect(opensDirectly(link, [root], "win32")).toBe(false);
-    expect(opensDirectly(link, [root], "darwin")).toBe(true);
+    expect(opensDirectly(link, "win32")).toBe(false);
+    expect(opensDirectly(link, "darwin")).toBe(true);
   });
 
-  it("refuses the forms macOS runs on open", () => {
+  it("reveals the forms macOS runs on open", () => {
     for (const name of [
       "notes.command",
       "session.terminal",
@@ -155,21 +105,21 @@ describe("what may be opened directly", () => {
       const p = path.join(root, name);
       fs.writeFileSync(p, "x");
       try {
-        expect(opensDirectly(p, [root], "darwin")).toBe(false);
+        expect(opensDirectly(p, "darwin")).toBe(false);
         // The same names mean nothing to the other platforms.
-        expect(opensDirectly(p, [root], "linux")).toBe(true);
+        expect(opensDirectly(p, "linux")).toBe(true);
       } finally {
         fs.rmSync(p, { force: true });
       }
     }
   });
 
-  it("refuses a desktop entry on Linux", () => {
+  it("reveals a desktop entry on Linux", () => {
     const p = path.join(root, "report.desktop");
     fs.writeFileSync(p, "[Desktop Entry]");
     try {
-      expect(opensDirectly(p, [root], "linux")).toBe(false);
-      expect(opensDirectly(p, [root], "darwin")).toBe(true);
+      expect(opensDirectly(p, "linux")).toBe(false);
+      expect(opensDirectly(p, "darwin")).toBe(true);
     } finally {
       fs.rmSync(p, { force: true });
     }
@@ -179,15 +129,15 @@ describe("what may be opened directly", () => {
   const posixOnly = it.skipIf(process.platform === "win32");
 
   posixOnly(
-    "refuses a script carrying the execute bit on macOS and Linux",
+    "reveals a script carrying the execute bit on macOS and Linux",
     () => {
       // A script keeps no telling extension, and the workspace is a directory
       // the agent writes to.
       const p = path.join(root, "build-something");
       fs.writeFileSync(p, "#!/bin/sh\n", { mode: 0o755 });
       try {
-        expect(opensDirectly(p, [root], "linux")).toBe(false);
-        expect(opensDirectly(p, [root], "darwin")).toBe(false);
+        expect(opensDirectly(p, "linux")).toBe(false);
+        expect(opensDirectly(p, "darwin")).toBe(false);
       } finally {
         fs.rmSync(p, { force: true });
       }
@@ -195,15 +145,15 @@ describe("what may be opened directly", () => {
   );
 
   posixOnly(
-    "refuses an executable binary by its header, not only by its name",
+    "reveals an executable binary by its header, not only by its name",
     () => {
       const p = path.join(root, "tool");
       fs.writeFileSync(p, Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x02]), {
         mode: 0o755,
       });
       try {
-        expect(opensDirectly(p, [root], "linux")).toBe(false);
-        expect(opensDirectly(p, [root], "darwin")).toBe(false);
+        expect(opensDirectly(p, "linux")).toBe(false);
+        expect(opensDirectly(p, "darwin")).toBe(false);
       } finally {
         fs.rmSync(p, { force: true });
       }
@@ -219,8 +169,8 @@ describe("what may be opened directly", () => {
       const p = path.join(root, "readme-on-a-usb-stick.md");
       fs.writeFileSync(p, "# Notes\n", { mode: 0o777 });
       try {
-        expect(opensDirectly(p, [root], "linux")).toBe(true);
-        expect(opensDirectly(p, [root], "darwin")).toBe(true);
+        expect(opensDirectly(p, "linux")).toBe(true);
+        expect(opensDirectly(p, "darwin")).toBe(true);
       } finally {
         fs.rmSync(p, { force: true });
       }
@@ -230,24 +180,23 @@ describe("what may be opened directly", () => {
   it("leaves ordinary documents openable on every platform", () => {
     const p = path.join(root, "notes.txt");
     for (const platform of ["darwin", "linux", "win32"] as const) {
-      expect(opensDirectly(p, [root], platform)).toBe(true);
+      expect(opensDirectly(p, platform)).toBe(true);
     }
   });
 });
 
 describe("decideLocalOpen", () => {
   it("reveals rather than runs a source file Windows would execute", () => {
-    // `.js` is the ordinary case in a JS project. Refusing the click outright
-    // left the button dead; revealing it never runs the file.
-    const p = path.join(root, "app.js");
+    // `.js` is the ordinary case in a JS project. Revealing it never runs it.
+    const p = path.join(outside, "app.js");
     fs.writeFileSync(p, "console.log(1)");
     try {
-      expect(decideLocalOpen(p, [root], "win32")).toEqual({
+      expect(decideLocalOpen(p, "win32")).toEqual({
         action: "reveal",
         reason: "executable",
         path: p,
       });
-      expect(decideLocalOpen(p, [root], "darwin")).toEqual({
+      expect(decideLocalOpen(p, "darwin")).toEqual({
         action: "open",
         path: p,
       });
@@ -257,165 +206,13 @@ describe("decideLocalOpen", () => {
   });
 
   it("returns the resolved path, so the caller acts on what was checked", () => {
-    // The decision is made about the resolved file. Handing the OS the path as
-    // given would let a link be re-pointed between the check and the open.
-    const link = path.join(root, "notes-link.txt");
-    fs.symlinkSync(path.join(root, "notes.txt"), link);
-    try {
-      expect(decideLocalOpen(link, [root], "darwin")).toEqual({
-        action: "open",
-        path: path.join(root, "notes.txt"),
-      });
-    } finally {
-      fs.rmSync(link, { force: true });
-    }
-  });
-
-  it("separates a refusal from a reveal, so the reason can be reported", () => {
-    expect(decideLocalOpen(path.join(outside, "secret.txt"), [root])).toEqual({
-      action: "refuse",
-      reason: "outside",
-    });
-    expect(decideLocalOpen(path.join(root, "gone.txt"), [root])).toEqual({
-      action: "refuse",
-      reason: "missing",
-    });
-    expect(decideLocalOpen("", [root])).toEqual({
-      action: "refuse",
-      reason: "invalid",
-    });
-  });
-});
-
-/**
- * Chat links to files outside every root: what the user asked the agent to
- * save on the Desktop or in Downloads, or the user's own file the agent
- * pointed at. Refusing them left the link dead, however often it was clicked.
- */
-describe("files outside every root", () => {
-  const saved = (): string => path.join(outside, "budget.xlsx");
-
-  beforeAll(() => {
-    fs.writeFileSync(path.join(outside, "budget.xlsx"), "sheet");
-    fs.writeFileSync(path.join(outside, "setup.bat"), "@echo");
-  });
-
-  it("opens a file the agent wrote, wherever it was saved", () => {
-    for (const platform of ["darwin", "linux", "win32"] as const) {
-      expect(
-        decideLocalOpen(saved(), [root], platform, { agentFiles: [saved()] })
-      ).toEqual({ action: "open", path: saved() });
-    }
-  });
-
-  it("vouches for that exact file, not its folder or its neighbours", () => {
-    const options = { agentFiles: [saved()] };
-    expect(
-      decideLocalOpen(
-        path.join(outside, "secret.txt"),
-        [root],
-        "linux",
-        options
-      )
-    ).toEqual({ action: "refuse", reason: "outside" });
-    expect(decideLocalOpen(outside, [root], "linux", options)).toEqual({
-      action: "refuse",
-      reason: "outside",
-    });
-  });
-
-  it("matches the agent's file through a linked folder, as the resolved path", () => {
-    // Recorded through a linked folder (macOS: /tmp → /private/tmp), clicked
-    // by its real path: one file.
-    const linkedFolder = path.join(root, "outside-link");
-    fs.symlinkSync(outside, linkedFolder);
-    try {
-      expect(
-        decideLocalOpen(saved(), [], "linux", {
-          agentFiles: [path.join(linkedFolder, "budget.xlsx")],
-        })
-      ).toEqual({ action: "open", path: saved() });
-    } finally {
-      fs.rmSync(linkedFolder, { force: true });
-    }
-  });
-
-  it("still reveals, never runs, an executable the agent wrote", () => {
-    const script = path.join(outside, "setup.bat");
-    expect(
-      decideLocalOpen(script, [root], "win32", { agentFiles: [script] })
-    ).toEqual({ action: "reveal", reason: "executable", path: script });
-  });
-
-  it("shows any other file that exists in the file manager", () => {
-    const options = { outside: "reveal" } as const;
-    expect(
-      decideLocalOpen(
-        path.join(outside, "secret.txt"),
-        [root],
-        "win32",
-        options
-      )
-    ).toEqual({
-      action: "reveal",
-      reason: "outside",
+    // Handing the OS the path as given would let a link be re-pointed
+    // between the check and the open.
+    expect(decideLocalOpen(path.join(root, "escape"), "darwin")).toEqual({
+      action: "open",
       path: path.join(outside, "secret.txt"),
     });
-    // Through a link, the folder shown is the real one.
-    expect(
-      decideLocalOpen(path.join(root, "escape"), [root], "linux", options)
-    ).toEqual({
-      action: "reveal",
-      reason: "outside",
-      path: path.join(outside, "secret.txt"),
-    });
-    expect(
-      decideLocalOpen(path.join(outside, "gone.xlsx"), [root], "linux", options)
-    ).toEqual({ action: "refuse", reason: "missing" });
   });
-
-  it("does not reveal a network path: touching one can leak the account", () => {
-    // `//x` resolves locally on POSIX, so the guard must look at the form.
-    const unc = `/${path.join(outside, "secret.txt")}`;
-    expect(
-      decideLocalOpen(unc, [root], "win32", { outside: "reveal" })
-    ).toEqual({ action: "refuse", reason: "outside" });
-  });
-
-  it("keeps refusing outside paths for a caller that asks it to", () => {
-    // The skills manager opens inside skill folders only, as before.
-    expect(decideLocalOpen(path.join(outside, "secret.txt"), [root])).toEqual({
-      action: "refuse",
-      reason: "outside",
-    });
-  });
-
-  it.skipIf(process.getuid == null)(
-    "neither opens nor reveals another account's temp file",
-    () => {
-      const dir = fs.realpathSync(
-        fs.mkdtempSync(path.join(os.tmpdir(), "open-guard-foreign-"))
-      );
-      const file = path.join(dir, "report.pdf");
-      fs.writeFileSync(file, "pdf");
-      const real = fs.statSync.bind(fs);
-      vi.spyOn(fs, "statSync").mockImplementation(((target: string) => {
-        const info = real(target) as fs.Stats;
-        return target === file ? { ...info, uid: info.uid + 1 } : info;
-      }) as typeof fs.statSync);
-      try {
-        expect(
-          decideLocalOpen(file, [root], "linux", {
-            agentFiles: [file],
-            outside: "reveal",
-          })
-        ).toEqual({ action: "refuse", reason: "outside" });
-      } finally {
-        vi.restoreAllMocks();
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-    }
-  );
 });
 
 describe("hasWindowsExecutableExtension", () => {
@@ -462,95 +259,5 @@ describe("hasWindowsExecutableExtension", () => {
     expect(hasWindowsExecutableExtension("notes.txt")).toBe(false);
     expect(hasWindowsExecutableExtension("archive.tar.gz")).toBe(false);
     expect(hasWindowsExecutableExtension("no-extension")).toBe(false);
-  });
-});
-
-/**
- * The temp directory is an allowed root because that is where the agent writes
- * scratch files. A plot written to /tmp and linked in the reply has to open.
- * On Linux that directory is shared with every other local account, so what
- * separates ours from theirs is who owns the file.
- */
-describe("files in the shared temp directory", () => {
-  // A real directory in the real temp directory (that is the point of these
-  // cases), but its own, so two test workers on one machine cannot collide.
-  const scratch = (): string => {
-    const dir = fs.realpathSync(
-      fs.mkdtempSync(path.join(os.tmpdir(), "open-guard-scratch-"))
-    );
-    const file = path.join(dir, "plot.png.txt");
-
-    fs.writeFileSync(file, "plot");
-    scratchDirs.push(dir);
-
-    return file;
-  };
-
-  const scratchDirs: string[] = [];
-
-  afterEach(() => {
-    while (scratchDirs.length > 0) {
-      fs.rmSync(scratchDirs.pop() as string, {
-        recursive: true,
-        force: true,
-      });
-    }
-  });
-
-  it("opens a scratch file this user wrote there", () => {
-    const file = scratch();
-
-    expect(decideLocalOpen(file, [os.tmpdir()], "linux")).toEqual({
-      action: "open",
-      path: file,
-    });
-  });
-
-  // The guard compares the file's owner against `process.getuid()`, which
-  // Windows does not have, and does not need, since it gives every account its
-  // own temp directory. Passing `"linux"` cannot conjure a uid to compare, so
-  // the case is one this platform has no way to be wrong about.
-  it.skipIf(process.getuid == null)(
-    "refuses one belonging to another account on the machine",
-    () => {
-      const file = scratch();
-      const real = fs.statSync.bind(fs);
-
-      vi.spyOn(fs, "statSync").mockImplementation(((target: string) => {
-        const info = real(target) as fs.Stats;
-
-        return target === file ? { ...info, uid: info.uid + 1 } : info;
-      }) as typeof fs.statSync);
-
-      try {
-        expect(decideLocalOpen(file, [os.tmpdir()], "linux")).toEqual({
-          action: "refuse",
-          reason: "outside",
-        });
-      } finally {
-        vi.restoreAllMocks();
-      }
-    }
-  );
-
-  it("asks the question only where the directory is shared", () => {
-    // macOS and Windows give each account its own temp directory already, and
-    // a stat there would only cost time.
-    const file = scratch();
-    const real = fs.statSync.bind(fs);
-
-    vi.spyOn(fs, "statSync").mockImplementation(((target: string) => {
-      const info = real(target) as fs.Stats;
-
-      return target === file ? { ...info, uid: info.uid + 1 } : info;
-    }) as typeof fs.statSync);
-
-    try {
-      expect(decideLocalOpen(file, [os.tmpdir()], "darwin").action).toBe(
-        "open"
-      );
-    } finally {
-      vi.restoreAllMocks();
-    }
   });
 });

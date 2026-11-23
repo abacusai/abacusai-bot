@@ -1,13 +1,10 @@
 /**
- * What the app is willing to hand to `shell.openPath`. The paths come from
- * model-generated markdown and an agent-written workspace, so a path opens
- * only inside a directory the app treats as the user's working area, or when
- * it is a file the agent itself wrote, and never when the OS would run it
- * instead of showing it. Anything else that exists can be revealed in the
- * file manager, which runs nothing, rather than dropped.
+ * What the app hands to `shell.openPath`. Any file that exists opens, wherever
+ * it is, except a form the OS would run instead of show: that one is revealed
+ * in the file manager, which runs nothing, so a link in a model's reply can
+ * never launch a program in one click.
  */
 import fs from "fs";
-import os from "os";
 import path from "path";
 
 /** Windows runs these on open; `.lnk`/`.url` launch whatever they point at. */
@@ -140,99 +137,20 @@ const isExecutableForm = (
   return hasExecuteBit(resolved) && looksRunnable(resolved);
 };
 
-/** True when `target` is `root` or inside it (boundary-aware, not substring). */
-const isWithin = (root: string, target: string): boolean => {
-  const rel = path.relative(root, target);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-};
-
-/** Realpath'd like the targets (macOS: /var/folders -> /private/var/folders). */
-const realTmpdir = ((): string => {
-  try {
-    return fs.realpathSync(os.tmpdir());
-  } catch {
-    return os.tmpdir();
-  }
-})();
-
-/**
- * A temp file owned by another local account. The temp dir is an allowed root
- * for agent scratch files, and on Linux `/tmp` is shared with every account.
- */
-const isForeignTempFile = (
-  resolved: string,
-  platform: NodeJS.Platform
-): boolean => {
-  if (platform !== "linux") return false;
-  if (!isWithin(realTmpdir, resolved)) return false;
-
-  const uid = process.getuid?.();
-  if (uid == null) return false;
-
-  try {
-    return fs.statSync(resolved).uid !== uid;
-  } catch {
-    // A file that cannot be stat'd will not open anyway.
-    return false;
-  }
-};
-
 /** `reason` is a code; the renderer owns the user-facing message. */
 export type LocalOpenDecision =
   /**
-   * `path` is the resolved target the checks ran against, so a symlink cannot
+   * `path` is the resolved target the check ran against, so a symlink cannot
    * be re-pointed between check and open.
    */
   | { action: "open"; path: string }
-  /**
-   * Safe to show in the file manager, not to hand to the OS: it would run
-   * ("executable"), or nothing vouches for its contents ("outside").
-   */
-  | { action: "reveal"; reason: "executable" | "outside"; path: string }
-  | { action: "refuse"; reason: "invalid" | "missing" | "outside" };
+  /** The OS would run it, so it is shown in the file manager instead. */
+  | { action: "reveal"; reason: "executable"; path: string }
+  | { action: "refuse"; reason: "invalid" | "missing" };
 
-export interface LocalOpenOptions {
-  /**
-   * Files the agent wrote in this app (the Artifacts ledger). Each opens as a
-   * file inside a root would, wherever the user asked for it to be saved:
-   * its contents came from the agent, as a workspace file's do. Exact files,
-   * never their folders.
-   */
-  agentFiles?: readonly string[];
-  /**
-   * What an existing path outside every root gets. "reveal" shows it in the
-   * file manager, which runs nothing; the user decides from there.
-   */
-  outside?: "refuse" | "reveal";
-}
-
-/** A Windows network path: touching it can hand the account's hash to a host. */
-const isNetworkPath = (filePath: string): boolean => /^[\\/]{2}/.test(filePath);
-
-/** Whether `realTarget` is one of `files`, compared as resolved paths. */
-const isOneOf = (realTarget: string, files: readonly string[]): boolean => {
-  const name = path.basename(realTarget).toLowerCase();
-  return files.some((file) => {
-    // The name first: a click must not realpath the whole ledger.
-    if (typeof file !== "string" || file.length === 0) return false;
-    if (path.basename(file).toLowerCase() !== name) return false;
-    try {
-      return path.relative(fs.realpathSync(file), realTarget) === "";
-    } catch {
-      return false;
-    }
-  });
-};
-
-/**
- * Target and roots are realpath'd before the boundary check, so a symlink
- * cannot smuggle the open outside an allowed root (or hide macOS's /tmp link).
- */
 export const decideLocalOpen = (
   filePath: unknown,
-  allowedRoots: readonly string[],
-  platform: NodeJS.Platform = process.platform,
-  options: LocalOpenOptions = {}
+  platform: NodeJS.Platform = process.platform
 ): LocalOpenDecision => {
   if (typeof filePath !== "string" || filePath.length === 0) {
     return { action: "refuse", reason: "invalid" };
@@ -243,29 +161,6 @@ export const decideLocalOpen = (
     realTarget = fs.realpathSync(filePath);
   } catch {
     return { action: "refuse", reason: "missing" };
-  }
-
-  const inside = allowedRoots.some((root) => {
-    if (typeof root !== "string" || root.length === 0) return false;
-    let realRoot: string;
-    try {
-      realRoot = fs.realpathSync(root);
-    } catch {
-      return false;
-    }
-    return isWithin(realRoot, realTarget);
-  });
-  // Somebody else's file, whichever list it is on.
-  if (isForeignTempFile(realTarget, platform))
-    return { action: "refuse", reason: "outside" };
-  if (!inside && !isOneOf(realTarget, options.agentFiles ?? [])) {
-    if (
-      options.outside !== "reveal" ||
-      isNetworkPath(filePath) ||
-      isNetworkPath(realTarget)
-    )
-      return { action: "refuse", reason: "outside" };
-    return { action: "reveal", reason: "outside", path: realTarget };
   }
 
   if (isExecutableForm(filePath, realTarget, platform)) {

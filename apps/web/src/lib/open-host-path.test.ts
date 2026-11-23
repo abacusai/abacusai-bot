@@ -23,11 +23,6 @@ describe("openHostPath", () => {
   it.each([
     [{ outcome: "opened" }, null, null],
     [
-      { outcome: "revealed", reason: "outside" },
-      "showInfo",
-      "openFile.revealedOutside",
-    ],
-    [
       { outcome: "revealed", reason: "executable" },
       "showInfo",
       "openFile.revealed",
@@ -42,11 +37,6 @@ describe("openHostPath", () => {
       { outcome: "refused", reason: "invalid" },
       "showError",
       "openFile.refusedInvalid",
-    ],
-    [
-      { outcome: "refused", reason: "outside" },
-      "showError",
-      "openFile.refusedOutside",
     ],
   ] as const)("%o → %s %s", async (result, kind, key) => {
     openPath.mockResolvedValueOnce(result);

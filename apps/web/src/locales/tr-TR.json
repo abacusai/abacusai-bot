@@ -4716,9 +4716,7 @@
     "failed": "Bu dosya açılamadı.",
     "refusedInvalid": "Bu bağlantı bir dosyayı göstermiyor.",
     "refusedMissing": "Bu dosya artık orada değil.",
-    "refusedOutside": "Bu dosya çalışma alanlarının dışında olduğu için açılmadı.",
-    "revealed": "Bu dosyayı açmak onu çalıştıracağı için dosya yöneticinde gösterildi.",
-    "revealedOutside": "Bu dosya çalışma alanlarının dışında olduğu için dosya yöneticinde gösterildi. Oradan aç."
+    "revealed": "Bu dosyayı açmak onu çalıştıracağı için dosya yöneticinde gösterildi."
   },
   "permissions": {
     "credentialAlways": "“Her zaman” bunları bu oturumun geri kalanında da okunabilir tutar.",

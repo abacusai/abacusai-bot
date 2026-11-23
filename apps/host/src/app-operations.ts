@@ -34,7 +34,7 @@ export const createNodeAppOperations = (lease: HostLease): AppOperations => ({
   openFolderDialog: async () => null,
   openFilesDialog: async () => null,
   openExternal: refuse("system.openExternal"),
-  openFilePath: async () => ({ outcome: "refused", reason: "outside" }),
+  openFilePath: refuse("system.openPath"),
   showItemInFolder: () => {},
   appVersion: app.getVersion,
   homeDir: homedir,

@@ -4716,9 +4716,7 @@
     "failed": "Diese Datei konnte nicht geöffnet werden.",
     "refusedInvalid": "Dieser Link benennt keine Datei.",
     "refusedMissing": "Diese Datei ist nicht mehr vorhanden.",
-    "refusedOutside": "Diese Datei liegt außerhalb Ihrer Arbeitsordner und wurde nicht geöffnet.",
-    "revealed": "Beim Öffnen würde diese Datei ausgeführt werden. Sie wurde stattdessen im Dateimanager angezeigt.",
-    "revealedOutside": "Diese Datei liegt außerhalb Ihrer Arbeitsordner und wurde daher im Dateimanager angezeigt. Öffnen Sie sie von dort."
+    "revealed": "Beim Öffnen würde diese Datei ausgeführt werden. Sie wurde stattdessen im Dateimanager angezeigt."
   },
   "permissions": {
     "credentialAlways": "„Immer“ sorgt dafür, dass diese auch für den Rest dieser Sitzung lesbar bleiben.",

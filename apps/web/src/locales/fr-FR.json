@@ -4716,9 +4716,7 @@
     "failed": "Impossible d’ouvrir ce fichier.",
     "refusedInvalid": "Ce lien ne désigne pas un fichier.",
     "refusedMissing": "Ce fichier n’existe plus.",
-    "refusedOutside": "Ce fichier se trouve en dehors de vos espaces de travail ; il n’a pas été ouvert.",
-    "revealed": "Ouvrir ce fichier l’exécuterait ; il a été affiché dans votre gestionnaire de fichiers.",
-    "revealedOutside": "Ce fichier se trouve en dehors de vos espaces de travail ; il a été affiché dans votre gestionnaire de fichiers. Ouvrez-le depuis celui-ci."
+    "revealed": "Ouvrir ce fichier l’exécuterait ; il a été affiché dans votre gestionnaire de fichiers."
   },
   "permissions": {
     "credentialAlways": "« Toujours » les rend également lisibles pour le reste de cette session.",

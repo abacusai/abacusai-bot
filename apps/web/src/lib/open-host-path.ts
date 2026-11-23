@@ -22,15 +22,8 @@ export const openHostPath = async (
     return;
   }
   if (result.outcome === "opened") return;
-  if (result.outcome === "revealed")
-    showInfo(
-      result.reason === "outside"
-        ? i18n.t("openFile.revealedOutside")
-        : i18n.t("openFile.revealed")
-    );
+  if (result.outcome === "revealed") showInfo(i18n.t("openFile.revealed"));
   else if (result.reason === "missing")
     showError(i18n.t("openFile.refusedMissing"));
-  else if (result.reason === "invalid")
-    showError(i18n.t("openFile.refusedInvalid"));
-  else showError(i18n.t("openFile.refusedOutside"));
+  else showError(i18n.t("openFile.refusedInvalid"));
 };

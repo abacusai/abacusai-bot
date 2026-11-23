@@ -35,7 +35,7 @@ On first launch, Updating your data may appear while conversations are converted
 - Opening a routine run keeps your current workspace.
 - Open scheduled tasks and run reports from Routines in the rail.
 - Each routine keeps its own model, shown on its page, where you can change it. A model you pick in a chat no longer moves your routines; a routine with no model of its own runs on your plan's default.
-- A file link in a chat opens the file the bot made, wherever you asked it to save it. A file of yours outside your folders is shown in your file manager instead, and Open externally on a page or PDF the bot made opens it.
+- A file link in a chat opens the file wherever it is, and Open externally on a page or PDF the bot made opens it. A program or script is shown in its folder instead of being run.
 
 
 A smaller download and install: the package no longer carries a second copy

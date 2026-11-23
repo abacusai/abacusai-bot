@@ -86,7 +86,7 @@ import {
   OpenLinkInbox,
   registerOpenLinkScheme,
 } from "./open-link";
-import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
+import { abacusBotHome, WORKSPACE_DIR_NAME } from "./paths";
 import { isLowEndMachine } from "./platform/low-end-machine";
 import { profileBaseDir } from "./profile-home";
 import { resetUserDataDirectories } from "./profile-home-init";
@@ -1376,33 +1376,15 @@ async function applyNativeLanguage(): Promise<void> {
 /**
  * Every way a local file is opened goes through here: a file link in a chat,
  * a file: URL handed to "open externally", a file: link opening a window.
- * The paths come from model-written markdown and agent-written pages, so
- * only the app's working folders and the files the agent itself wrote open
- * directly; anything else that exists is shown in the file manager.
+ * Any file that exists opens; one the OS would run is shown in its folder.
  */
 const openLocalPath = async (filePath: string): Promise<OpenFilePathResult> => {
-  const roots = [
-    ...workspaceServiceHost
-      .getMetadata()
-      .workspaces.filter((w) => w.isRemote !== true && w.path != null)
-      .map((w) => w.path as string),
-    abacusBotHome(),
-    // Shared on Linux; the guard admits only files this user owns.
-    userTempDir(),
-  ];
-  const agentFiles = workspaceServiceHost
-    .listSessionArtifacts()
-    .filter((artifact) => artifact.kind !== "link")
-    .map((artifact) => artifact.location);
-  const decision = decideLocalOpen(filePath, roots, process.platform, {
-    agentFiles,
-    outside: "reveal",
-  });
+  const decision = decideLocalOpen(filePath);
   if (decision.action === "refuse") {
     console.warn("[Shell] Refused to open path", filePath, decision.reason);
     return { outcome: "refused", reason: decision.reason };
   }
-  // The resolved path, which the checks ran against; a symlink can be
+  // The resolved path, which the check ran against; a symlink can be
   // re-pointed between check and open.
   if (decision.action === "reveal") {
     console.info("[Shell] Revealed", decision.reason, "path", filePath);
