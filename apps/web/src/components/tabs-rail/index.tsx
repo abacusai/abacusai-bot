@@ -16,7 +16,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { Reorder, motion, animate } from "motion/react";
+import { Reorder, motion, animate, type HTMLMotionProps } from "motion/react";
 import {
   useEffect,
   useLayoutEffect,
@@ -296,6 +296,37 @@ const RailControls = ({
 };
 
 /**
+ * One tab in a rail strip. Motion's pointer reorder uses `Reorder.Item`; a
+ * native (dock) drag uses a plain Motion element with `draggable`, whose
+ * `onDrag*` props Motion hands to the DOM. `Reorder.Item` adds its own gesture
+ * `onDrag`, which would then run on every native `drag` event with no pan info.
+ */
+const TabItem = ({
+  value,
+  nativeDrag,
+  constraints,
+  ...props
+}: Omit<HTMLMotionProps<"div">, "layout" | "children"> & {
+  children: ReactNode;
+  value: string;
+  nativeDrag: boolean;
+  constraints: React.RefObject<HTMLDivElement | null>;
+}) =>
+  nativeDrag ? (
+    <motion.div {...props} layout="position" draggable />
+  ) : (
+    <Reorder.Item
+      {...props}
+      as="div"
+      value={value}
+      layout
+      whileDrag={{ zIndex: 1 }}
+      dragConstraints={constraints}
+      dragElastic={0.05}
+    />
+  );
+
+/**
  * The panel's tab strip (canvas `BotChatPanel`, `SplitView`, `TitleMac`):
  * compact tabs with a reachable add button and overflow list. Dockview owns
  * expanded tab dragging; Motion animates rail geometry and the active marker.
@@ -535,11 +566,11 @@ const RailSegment = ({
               const label = title(tab);
               const tooltipId = `${indicator}-${encodeURIComponent(tab.id)}`;
               return (
-                <Reorder.Item
+                <TabItem
                   key={tab.id}
-                  as="div"
                   value={tab.id}
-                  layout={onDragStart ? "position" : true}
+                  nativeDrag={onDragStart != null}
+                  constraints={list}
                   data-dragging={dragging === tab.id ? "" : undefined}
                   data-drop={
                     dropAt?.id === tab.id
@@ -555,11 +586,6 @@ const RailSegment = ({
                       ? reducedTransition
                       : { layout: springs.panel }
                   }
-                  whileDrag={{ zIndex: 1 }}
-                  dragConstraints={list}
-                  dragElastic={0.05}
-                  dragListener={onDragStart == null}
-                  draggable={onDragStart != null}
                   onDragStartCapture={(event) => {
                     if (!onDragStart) return;
                     onDragStart(tab.id, event);
@@ -745,7 +771,7 @@ const RailSegment = ({
                       {label}
                     </TooltipContent>
                   </Tooltip>
-                </Reorder.Item>
+                </TabItem>
               );
             })}
           </Reorder.Group>

@@ -155,6 +155,8 @@ it("native drag keeps a dimmed placeholder, draws an unclipped preview and marks
   expect(items[0]!.hasAttribute("data-dragging")).toBe(true);
   const ghost = setDragImage.mock.calls[0]![0] as HTMLElement;
   expect(ghost.parentElement).toBe(document.body);
+  // The browser fires `drag` on the source all through a native drag.
+  fireEvent.drag(items[0]!, { dataTransfer });
   fireEvent.dragOver(items[1]!, { dataTransfer });
   expect(items[1]!.getAttribute("data-drop")).toMatch(/^(before|after)$/);
   fireEvent.dragEnd(items[0]!, { dataTransfer });
