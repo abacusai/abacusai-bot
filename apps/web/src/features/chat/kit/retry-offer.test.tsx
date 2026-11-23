@@ -295,6 +295,10 @@ const LINE = "Continue in a new chat";
 const findLine = () =>
   screen.findByRole("button", { name: LINE }, { timeout: 5000 });
 
+/** The retry offer's own funnel steps; a free plan's top-model card logs its own. */
+const offerSteps = (steps: Array<{ step: string }>) =>
+  steps.filter((each) => each.step.startsWith("retry_offer_"));
+
 const settled = async () => {
   for (let index = 0; index < 4; index += 1)
     await act(async () => {
@@ -408,7 +412,7 @@ describe("RetryOfferRow after a connector's work", () => {
     await settled();
     await settled();
     expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
-    expect(h.steps).toEqual([]);
+    expect(offerSteps(h.steps)).toEqual([]);
   });
 });
 
@@ -428,6 +432,6 @@ describe("RetryOfferRow on the agent's verdict", () => {
     await settled();
     await settled();
     expect(document.querySelector('[data-slot="retry-offer"]')).toBeNull();
-    expect(h.steps).toEqual([]);
+    expect(offerSteps(h.steps)).toEqual([]);
   });
 });
