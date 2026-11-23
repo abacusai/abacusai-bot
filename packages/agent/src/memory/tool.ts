@@ -8,7 +8,8 @@ import { ageOf, ensureProject, projectSummary, withStatus } from "./core.js";
 import {
   checkDraft,
   contentWords,
-  looksSecret,
+  SECRET_WITHHELD,
+  withholdSecrets,
   MAX_CARD_CHARS,
   MAX_JOURNAL_CHARS,
   MAX_NOTE_CHARS,
@@ -305,6 +306,10 @@ export function buildMemoryTool(
     return reply(
       [
         `Saved "${note.name}" ${where(scope)}${updating ? " (updated)" : ""}${replaces ? `, replacing "${replaces}"` : ""}.`,
+        ...(note.body.split(SECRET_WITHHELD).length >
+        text.split(SECRET_WITHHELD).length
+          ? [WITHHELD_NOTICE]
+          : []),
         ...(related.length > 0
           ? [
               "Related notes; if one now says something different, update or forget it:",
@@ -532,18 +537,23 @@ export function buildMemoryTool(
             "This turn already added a journal line; one per task is enough.",
             true
           );
-        // Secrets are refused here too; what happened at a moment is what a journal is for.
-        if (looksSecret(text))
+        // Secrets are withheld here as in notes (gate.ts); the rest of the line is kept.
+        const line = withholdSecrets(text);
+        if (line.text.replaceAll(SECRET_WITHHELD, "").trim().length < 3)
           return reply(
-            "That looks like a password, key or code. Memory never keeps those.",
+            "That is a password, key or code and nothing else. Memory never keeps those.",
             true
           );
         const result = await commit({ by: authorOf(context) }, () => ({
-          writes: [journalAppend(scope, text)],
+          writes: [journalAppend(scope, line.text)],
           value: null,
         }));
         if (!result.ok) return reply(result.message, true);
-        return reply("Noted in the journal.");
+        return reply(
+          line.withheld > 0
+            ? `Noted in the journal. ${WITHHELD_NOTICE}`
+            : "Noted in the journal."
+        );
       }
 
       return reply(
@@ -553,6 +563,9 @@ export function buildMemoryTool(
     },
   };
 }
+
+const WITHHELD_NOTICE =
+  "A password, key or code in it was withheld; suggest the user keeps it in the app's vault.";
 
 const authorOf = (context: MemoryContext): Note["by"] =>
   context.lane === "routine"

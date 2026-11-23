@@ -64,6 +64,39 @@ const ROWS: Array<{
     refused: /password, key or code/,
   },
   {
+    case: "a key and nothing else",
+    draft: draft(`Stripe: ${fakeKey}`),
+    refused: /password, key or code/,
+  },
+  {
+    case: "a dated file name built from words",
+    draft: draft(
+      "Backup of the map is data/town_map_before_shops_20261102_093015.json."
+    ),
+    refused: null,
+  },
+  {
+    case: "a UUID routine id",
+    draft: draft(
+      "The check-in routine is routine-6f1c2b7a-3d4e-4f50-8a1b-2c3d4e5f6a7b."
+    ),
+    refused: null,
+  },
+  {
+    case: "a long note that mentions a missing branch in passing",
+    draft: draft(
+      "The shop site repo is github.com/example/shop-site, private. Stack: npm workspaces, React 19, Vite 7, Tailwind v4. The default branch main does not exist yet; work is on chore/skeleton."
+    ),
+    refused: null,
+  },
+  {
+    case: "a rule-like fact that switches something off",
+    draft: draft(
+      "Pause rule for the auto-reply: when the owner replies in a chat himself, the bot stays quiet in that chat for 30 minutes, then answers again. A typed STOP is turned off after 5 minutes."
+    ),
+    refused: null,
+  },
+  {
     case: "a failed search as a fact",
     draft: draft("The file config.yaml doesn't exist in the bot folder."),
     refused: /not a fact/,
@@ -206,6 +239,37 @@ describe("checkDraft", () => {
     expect((result as Draft).body).not.toContain("K1234567");
   });
 
+  it("withholds a key inside a longer note but keeps the note", () => {
+    const sheet = ["9xQ2mPz7Lk4Rt8Vb", "Wn3Ys6Hd1Jf5_Gc0Ae"].join("");
+    const result = checkDraft({
+      draft: draft(
+        `The lead list is in leads/leads-2026-11-20.xlsx. Its Google Sheet copy has id ${sheet}. Stripe test key ${fakeKey} is in the vault.`
+      ),
+      siblings: [],
+      updating: null,
+      userWords: "",
+      byUser: false,
+      now: NOW,
+    });
+    expect(typeof result).toBe("object");
+    const body = (result as Draft).body;
+    expect(body).toContain("leads/leads-2026-11-20.xlsx");
+    expect(body).not.toContain(sheet);
+    expect(body).not.toContain(fakeKey);
+  });
+
+  it("refuses a key on the user's own edit", () => {
+    const result = checkDraft({
+      draft: draft(`The shop runs on Stripe. Key ${fakeKey}.`),
+      siblings: [],
+      updating: null,
+      userWords: "",
+      byUser: true,
+      now: NOW,
+    });
+    expect(result).toMatch(/vault/);
+  });
+
   it("fills a missing description from the first sentence", () => {
     const result = checkDraft({
       draft: draft("Works nights. Sleeps until noon."),
@@ -221,5 +285,10 @@ describe("checkDraft", () => {
   it("does not take ordinary words for secrets", () => {
     expect(looksSecret("The token budget for the event is tight")).toBe(false);
     expect(looksSecret("Prefers the secret menu at Cafe Rio")).toBe(false);
+    expect(looksSecret("The refresh token is dead, sign in again")).toBe(false);
+    expect(looksSecret("Token-Streaming, chunked replies")).toBe(false);
+    expect(
+      looksSecret("Firmware file PUMP_V2__CTRL_B12_Main_ORI_20261012_214535")
+    ).toBe(false);
   });
 });

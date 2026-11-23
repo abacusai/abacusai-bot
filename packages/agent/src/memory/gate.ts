@@ -23,25 +23,84 @@ const DUPLICATE_OVERLAP = 0.6;
 const RELATED_OVERLAP = 0.2;
 
 // ── secrets ────────────────────────────────────────────────────────────────
+//
+// A secret is withheld where it stands, as ID numbers are: the rest of the
+// note is still worth keeping. Only shapes that are credentials count, so a
+// file name, a UUID or a dated id built from words is kept as written.
 
-const SECRET_PATTERNS: RegExp[] = [
-  /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/,
-  /\bgh[pousr]_[A-Za-z0-9]{20,}/,
-  /\bgithub_pat_[A-Za-z0-9_]{20,}/,
-  /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
-  /\bAKIA[0-9A-Z]{16}\b/,
-  /\bAIza[0-9A-Za-z_-]{30,}/,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/,
-  /\bbearer\s+[A-Za-z0-9._~+/-]{16,}/i,
-  // "my password is …", "PIN: 4821", "api key = …"
-  /\b(?:password|passwd|passcode|passphrase|pass phrase|pin|pin code|api[ _-]?key|access[ _-]?key|secret|token|otp|security code)\b\s*(?:is|was|=|:|-)\s*["'`]?[^\s"'`]{3,}/i,
-  // A long run of mixed letters and digits: keys, tokens, signed URLs.
-  /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z_-]*\d)(?=[0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/,
+export const SECRET_WITHHELD = "[secret withheld]";
+
+/** Formats issued by known providers, and key material. */
+const SECRET_FORMATS: RegExp[] = [
+  /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/g,
+  /\bgh[pousr]_[A-Za-z0-9]{20,}/g,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  /\bAIza[0-9A-Za-z_-]{30,}/g,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/g,
+  /\bbearer\s+[A-Za-z0-9._~+/-]{16,}/gi,
 ];
 
+const SECRET_LABEL =
+  "password|passwd|passcode|passphrase|pass phrase|pin|pin code|api[ _-]?key|access[ _-]?key|secret|token|otp|security code";
+
+/**
+ * A value after its label. After ":", "=" or " - " any value counts
+ * ("PIN: 4821"); after "is" or "was" only one shaped like a credential, with a
+ * digit, a symbol or mixed case ("passphrase is bluemango77"), so "the token
+ * is dead" stays a sentence.
+ */
+const LABELLED_SECRET = new RegExp(
+  `\\b(${SECRET_LABEL})(\\s*[:=]\\s*|\\s+-\\s+|\\s+(?:is|was)\\s+)(["'\`]?)([^\\s"'\`]{3,})`,
+  "gi"
+);
+const CREDENTIAL_SHAPED = /\d|[^\p{L}\p{N}]|\p{Ll}\p{Lu}/u;
+const TRAILING_PUNCTUATION = /[.,;:!?)]+$/;
+
+/** A long run of letters and digits with no word structure: a random key or signed token. */
+const RANDOM_RUN = /[A-Za-z0-9_-]{32,}/g;
+const isRandom = (run: string): boolean =>
+  run
+    .split(/[_-]+/)
+    .some(
+      (part) => part.length >= 16 && /\d/.test(part) && /[A-Za-z]/.test(part)
+    );
+
+/** `text` with every secret replaced by `SECRET_WITHHELD`, and how many there were. */
+export const withholdSecrets = (
+  text: string
+): { text: string; withheld: number } => {
+  let withheld = 0;
+  let out = text;
+  for (const format of SECRET_FORMATS)
+    out = out.replace(format, () => {
+      withheld += 1;
+      return SECRET_WITHHELD;
+    });
+  out = out.replace(
+    LABELLED_SECRET,
+    (match, label: string, gap: string, quote: string, value: string) => {
+      const bare = value.replace(TRAILING_PUNCTUATION, "");
+      if (bare.length === 0 || bare.startsWith(SECRET_WITHHELD.slice(0, 7)))
+        return match;
+      if (/\s(?:is|was)\s/i.test(gap) && !CREDENTIAL_SHAPED.test(bare))
+        return match;
+      withheld += 1;
+      return `${label}${gap}${quote}${SECRET_WITHHELD}${value.slice(bare.length)}`;
+    }
+  );
+  out = out.replace(RANDOM_RUN, (run) => {
+    if (!isRandom(run)) return run;
+    withheld += 1;
+    return SECRET_WITHHELD;
+  });
+  return { text: out, withheld };
+};
+
 export const looksSecret = (text: string): boolean =>
-  SECRET_PATTERNS.some((pattern) => pattern.test(text));
+  withholdSecrets(text).withheld > 0;
 
 // ── claims that must not be saved ──────────────────────────────────────────
 
@@ -108,6 +167,29 @@ const userSaidIt = (claim: RegExp, text: string, userWords: string): boolean =>
   claim.test(userWords) &&
   containment(contentWords(text), contentWords(userWords)) >= 0.5;
 
+/** Sentences and list items: the unit a claim is made in. */
+const sentencesOf = (text: string): string[] =>
+  text
+    .split(/(?<=[.!?;])\s+|\r?\n+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+/**
+ * Whether the note is that claim: the sentences making it hold most of the
+ * note's words. A long note that mentions in passing that a branch does not
+ * exist yet, or that a rule switches auto-reply off, is about something else
+ * and is kept.
+ */
+const isTheClaim = (claim: RegExp, text: string): boolean => {
+  const all = contentWords(text).size;
+  if (all === 0) return false;
+  const claimed = new Set<string>();
+  for (const sentence of sentencesOf(text))
+    if (claim.test(sentence))
+      for (const word of contentWords(sentence)) claimed.add(word);
+  return claimed.size * 2 >= all;
+};
+
 // ── the checks ─────────────────────────────────────────────────────────────
 
 export interface Draft {
@@ -151,22 +233,29 @@ export const coreChars = (
  */
 export const checkDraft = (input: GateInput): Draft | string => {
   const { draft, siblings, updating, userWords, byUser, now } = input;
-  const body = redactIdNumbers(draft.body.trim());
-  const description = (draft.description.trim() || firstSentence(body)).slice(
+  let body = redactIdNumbers(draft.body.trim());
+  let description = (draft.description.trim() || firstSentence(body)).slice(
     0,
     MAX_DESCRIPTION_CHARS
   );
 
-  const keywords = oneLine(draft.keywords ?? "").slice(0, MAX_KEYWORDS_CHARS);
+  let keywords = oneLine(draft.keywords ?? "").slice(0, MAX_KEYWORDS_CHARS);
 
   if (body.length === 0) return "Nothing to save: the text is empty.";
   if (body.length > sizeLimit(draft.type))
     return `That is ${body.length} characters; a ${draft.type === "card" ? "project card" : "note"} holds ${sizeLimit(draft.type)}. Keep one fact per note, or split it.`;
 
-  if (looksSecret(`${description}\n${body}\n${keywords}`))
-    return byUser
-      ? "That looks like a password, key or code. Memory never keeps those; the vault is the place for them."
-      : "That looks like a password, key or code. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
+  // The user's own edit is told; a model's note keeps everything but the secret.
+  if (looksSecret(`${description}\n${body}\n${keywords}`)) {
+    if (byUser)
+      return "That looks like a password, key or code. Memory never keeps those; the vault is the place for them.";
+    // Every sentence carries a secret: the note is the secret, not a fact around it.
+    if (sentencesOf(body).every((sentence) => looksSecret(sentence)))
+      return "That is a password, key or code and nothing else. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
+    description = withholdSecrets(description).text;
+    body = withholdSecrets(body).text;
+    keywords = withholdSecrets(keywords).text;
+  }
 
   if (draft.type === "status") {
     const expires = Date.parse(draft.expires ?? "");
@@ -182,12 +271,15 @@ export const checkDraft = (input: GateInput): Draft | string => {
 
   const text = `${description}\n${body}`;
   if (!byUser && draft.type !== "card") {
-    if (LIVE_STATE.test(text) && !userSaidIt(LIVE_STATE, text, userWords))
+    if (
+      isTheClaim(LIVE_STATE, text) &&
+      !userSaidIt(LIVE_STATE, text, userWords)
+    )
       return "Not saved: whether something is connected, paused or running is read live each time, never from memory. Check it with the relevant tool instead.";
     if (
       draft.type !== "rule" &&
       draft.type !== "preference" &&
-      ABSENCE.test(text) &&
+      isTheClaim(ABSENCE, text) &&
       !userSaidIt(ABSENCE, text, userWords)
     )
       return "Not saved: a search or tool that found nothing is not a fact (the item may be hidden, renamed or elsewhere). Save it only if the user says so.";
