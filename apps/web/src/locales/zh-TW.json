@@ -4525,7 +4525,13 @@
     "openInBrowser": "在瀏覽器中開啟",
     "showInFolder": "在資料夾中顯示",
     "showLess": "顯示較少",
-    "showMore": "還有 {{count}} 項"
+    "showMore": "還有 {{count}} 項",
+    "download": "下載",
+    "downloadAll": "全部下載",
+    "downloaded": "已下載",
+    "downloadedSome": "已下載。部分檔案已不存在。",
+    "downloadMissing": "沒有下載任何內容，可能已被移動或刪除。",
+    "downloadFailed": "無法下載副本，請再試一次。"
   },
   "devicePanel": {
     "axPermissionNeeded": "需要輔助使用權限，才能在不顯示模擬器視窗的情況下鏡像模擬器。",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "儲存副本",
+    "saveCopiesTo": "選擇儲存位置",
+    "saveHere": "儲存到這裡"
   },
   "channels": {
     "sidebar": {

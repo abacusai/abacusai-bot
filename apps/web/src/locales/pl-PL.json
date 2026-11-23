@@ -4669,7 +4669,13 @@
     "openInBrowser": "Otwórz w przeglądarce",
     "showInFolder": "Pokaż w folderze",
     "showLess": "Pokaż mniej",
-    "showMore": "+{{count}} więcej"
+    "showMore": "+{{count}} więcej",
+    "download": "Pobierz",
+    "downloadAll": "Pobierz wszystko",
+    "downloaded": "Pobrano",
+    "downloadedSome": "Pobrano. Niektórych plików już nie było.",
+    "downloadMissing": "Nic nie pobrano. Mogło zostać przeniesione lub usunięte.",
+    "downloadFailed": "Nie udało się pobrać kopii. Spróbuj ponownie."
   },
   "devicePanel": {
     "axPermissionNeeded": "Do wyświetlania obrazu symulatora bez pokazywania jego okna potrzebne jest uprawnienie Dostępność.",
@@ -5663,7 +5669,10 @@
     "morePeople_one": "jeszcze {{count}}",
     "morePeople_other": "jeszcze {{count}}",
     "morePeople_few": "jeszcze {{count}}",
-    "morePeople_many": "jeszcze {{count}}"
+    "morePeople_many": "jeszcze {{count}}",
+    "saveCopy": "Zapisz kopię",
+    "saveCopiesTo": "Wybierz folder do zapisu",
+    "saveHere": "Zapisz tutaj"
   },
   "channels": {
     "sidebar": {

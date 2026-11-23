@@ -21,6 +21,7 @@ The built-in code editor is replaced by Open in editor. Sessions are grouped by 
 On first launch, Updating your data may appear while conversations are converted. Earlier data files remain in place. Going back to the previous version shows the data from before the update; conversations and settings changed after the update will not appear there. Read the Going back support article before downgrading.
 
 - Artifacts refresh automatically; the Refresh button is removed.
+- Download any file the bot made: Download on each file in a chat, in Artifacts and in a bot's Files, and Download all puts a chat's files, a bot's files or the Artifacts you are looking at into a folder you pick. Nothing already there is replaced without asking.
 - Share is a labelled button on each file you can share and at the top of the chat, and the first page or document in a chat offers its public link.
 - The rail opens the Bots sidebar directly.
 - Start a bot chat from its bot page; the start page no longer has a composer.

@@ -4525,7 +4525,13 @@
     "openInBrowser": "Ouvrir dans le navigateur",
     "showInFolder": "Afficher dans le dossier",
     "showLess": "Afficher moins",
-    "showMore": "+{{count}} plus"
+    "showMore": "+{{count}} plus",
+    "download": "Télécharger",
+    "downloadAll": "Tout télécharger",
+    "downloaded": "Téléchargé",
+    "downloadedSome": "Téléchargé. Certains fichiers n'étaient plus là.",
+    "downloadMissing": "Rien n'a été téléchargé. Il a peut-être été déplacé ou supprimé.",
+    "downloadFailed": "Impossible de télécharger une copie. Réessaie."
   },
   "devicePanel": {
     "axPermissionNeeded": "L'autorisation Accessibilité est nécessaire pour un miroir du simulateur sans afficher sa fenêtre.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Enregistrer une copie",
+    "saveCopiesTo": "Choisir un dossier de destination",
+    "saveHere": "Enregistrer ici"
   },
   "channels": {
     "sidebar": {

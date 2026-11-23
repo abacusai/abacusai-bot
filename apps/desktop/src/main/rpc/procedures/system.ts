@@ -47,6 +47,13 @@ export const systemRouter = impl.system.router({
       context.deps.app.showItemInFolder(input.path);
     }
   ),
+  saveCopy: impl.system.saveCopy.handler(({ input, context }) => {
+    // The dialog opens on this computer: only its own window may ask.
+    if (context.transport !== "message-port")
+      throw forbidden("Saving a copy requires the local desktop window.");
+    requireMainRenderer(context);
+    return context.deps.app.saveCopy(input.items);
+  }),
   info: impl.system.info.handler(({ context }) => {
     const { app, host, serviceHost } = context.deps;
     const homeDir = app.homeDir();

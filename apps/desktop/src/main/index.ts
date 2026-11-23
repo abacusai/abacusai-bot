@@ -182,6 +182,7 @@ import {
 import type { ExperienceRuntime } from "./services/updates/experience/runtime";
 import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
 import { UpdateService } from "./services/updates/update-service";
+import { saveCopies } from "./services/workspace/save-copy";
 import { runSmoke } from "./smoke";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {
@@ -1525,6 +1526,28 @@ const appOperations: AppOperations = {
   showItemInFolder(filePath) {
     shell.showItemInFolder(filePath);
   },
+
+  saveCopy: (items) =>
+    saveCopies(items, {
+      defaultDir: app.getPath("downloads"),
+      saveFile: async (defaultPath) => {
+        const result = await showSaveDialogFromApp({
+          title: nativeT("saveCopy"),
+          defaultPath,
+          properties: ["createDirectory", "showOverwriteConfirmation"],
+        });
+        return result.canceled || !result.filePath ? null : result.filePath;
+      },
+      pickFolder: async (defaultPath) => {
+        const result = await showOpenDialogFromApp({
+          title: nativeT("saveCopiesTo"),
+          defaultPath,
+          buttonLabel: nativeT("saveHere"),
+          properties: ["openDirectory", "createDirectory", "dontAddToRecent"],
+        });
+        return result.canceled ? null : (result.filePaths[0] ?? null);
+      },
+    }),
 
   startFileDrag(webContentsId, filePath) {
     const contents = electronWebContents.fromId(webContentsId);

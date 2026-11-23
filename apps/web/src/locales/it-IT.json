@@ -4525,7 +4525,13 @@
     "openInBrowser": "Apri nel browser",
     "showInFolder": "Mostra nella cartella",
     "showLess": "Mostra meno",
-    "showMore": "+{{count}} altro"
+    "showMore": "+{{count}} altro",
+    "download": "Scarica",
+    "downloadAll": "Scarica tutto",
+    "downloaded": "Scaricato",
+    "downloadedSome": "Scaricato. Alcuni file non c'erano più.",
+    "downloadMissing": "Non è stato scaricato nulla. Potrebbe essere stato spostato o eliminato.",
+    "downloadFailed": "Impossibile scaricare una copia. Riprova."
   },
   "devicePanel": {
     "axPermissionNeeded": "È necessaria l'autorizzazione Accessibilità per il mirroring del simulatore senza mostrarne la finestra.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Salva una copia",
+    "saveCopiesTo": "Scegli una cartella in cui salvare",
+    "saveHere": "Salva qui"
   },
   "channels": {
     "sidebar": {

@@ -4525,7 +4525,13 @@
     "openInBrowser": "Openen in browser",
     "showInFolder": "Tonen in map",
     "showLess": "Minder tonen",
-    "showMore": "+{{count}} meer"
+    "showMore": "+{{count}} meer",
+    "download": "Downloaden",
+    "downloadAll": "Alles downloaden",
+    "downloaded": "Gedownload",
+    "downloadedSome": "Gedownload. Sommige bestanden waren er niet meer.",
+    "downloadMissing": "Er is niets gedownload. Het is misschien verplaatst of verwijderd.",
+    "downloadFailed": "Kan geen kopie downloaden. Probeer het opnieuw."
   },
   "devicePanel": {
     "axPermissionNeeded": "Toegankelijkheidstoestemming is nodig om de simulator te spiegelen zonder het venster te tonen.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} groep",
     "groupsCount_other": "{{count}} groepen",
     "morePeople_one": "nog {{count}}",
-    "morePeople_other": "nog {{count}}"
+    "morePeople_other": "nog {{count}}",
+    "saveCopy": "Kopie opslaan",
+    "saveCopiesTo": "Kies een map om in op te slaan",
+    "saveHere": "Hier opslaan"
   },
   "channels": {
     "sidebar": {

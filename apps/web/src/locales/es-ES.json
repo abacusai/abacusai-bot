@@ -4525,7 +4525,13 @@
     "openInBrowser": "Abrir en el navegador",
     "showInFolder": "Mostrar en carpeta",
     "showLess": "Mostrar menos",
-    "showMore": "+{{count}} más"
+    "showMore": "+{{count}} más",
+    "download": "Descargar",
+    "downloadAll": "Descargar todo",
+    "downloaded": "Descargado",
+    "downloadedSome": "Descargado. Algunos archivos ya no estaban.",
+    "downloadMissing": "No se ha descargado nada. Puede que se haya movido o eliminado.",
+    "downloadFailed": "No se ha podido descargar una copia. Inténtalo de nuevo."
   },
   "devicePanel": {
     "axPermissionNeeded": "Se necesita permiso de Accesibilidad para reflejar el simulador sin mostrar su ventana.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Guardar una copia",
+    "saveCopiesTo": "Elegir una carpeta para guardar",
+    "saveHere": "Guardar aquí"
   },
   "channels": {
     "sidebar": {

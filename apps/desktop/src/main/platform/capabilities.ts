@@ -25,6 +25,8 @@ export const WEB_HOST_DENIED = [
   "system.deleteAllData",
   "system.openPath",
   "system.showItemInFolder",
+  // A native save dialog; the browser downloads the file instead.
+  "system.saveCopy",
   "system.openPrivacyPane",
   // Links open the desktop app; a hosted computer has no URL scheme.
   "system.takeOpenLink",

@@ -9,6 +9,10 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "#renderer/components/empty-state";
 import { ArtifactsIllustration } from "#renderer/components/empty-state/illustrations";
 import { FilePreview } from "#renderer/components/file-preview";
+import {
+  SaveAllButton,
+  useSaveFiles,
+} from "#renderer/components/file-preview/save-files";
 import { Segments } from "#renderer/components/form-kit/controls";
 import { PageToolbar } from "#renderer/components/form-kit/page";
 import { NavList } from "#renderer/components/nav-list";
@@ -162,6 +166,7 @@ export const ArtifactsPage = ({
   const column = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
+  const saver = useSaveFiles();
   const list = search.view === "list" || !!search.item;
   // Phone widths fit two narrower cards instead of one stretched card.
   const columns = list
@@ -216,6 +221,10 @@ export const ArtifactsPage = ({
       ...(!IS_ELECTRON || a.kind === "link"
         ? []
         : [
+            {
+              label: t("deliverables.download"),
+              run: () => saver.save([a.location]),
+            },
             {
               label: t("phase5.reveal"),
               run: () =>
@@ -277,6 +286,12 @@ export const ArtifactsPage = ({
                 { value: "list", label: t("phase5.list") },
               ]}
               onChange={(view) => set({ view: view as "grid" | "list" })}
+            />
+            <SaveAllButton
+              paths={filtered
+                .filter((a) => a.kind !== "link")
+                .map((a) => a.location)}
+              size="sm"
             />
             <NativeSelect
               aria-label={t("phase5.sort")}

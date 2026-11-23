@@ -4525,7 +4525,13 @@
     "openInBrowser": "Buka di peramban",
     "showInFolder": "Tampilkan di folder",
     "showLess": "Tampilkan lebih sedikit",
-    "showMore": "+{{count}} lagi"
+    "showMore": "+{{count}} lagi",
+    "download": "Unduh",
+    "downloadAll": "Unduh semua",
+    "downloaded": "Terunduh",
+    "downloadedSome": "Terunduh. Beberapa file sudah tidak ada.",
+    "downloadMissing": "Tidak ada yang diunduh. Mungkin sudah dipindahkan atau dihapus.",
+    "downloadFailed": "Salinan tidak dapat diunduh. Coba lagi."
   },
   "devicePanel": {
     "axPermissionNeeded": "Izin Aksesibilitas diperlukan untuk mencerminkan simulator tanpa menampilkan jendelanya.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Simpan Salinan",
+    "saveCopiesTo": "Pilih Folder Tujuan",
+    "saveHere": "Simpan di Sini"
   },
   "channels": {
     "sidebar": {

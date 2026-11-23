@@ -36,6 +36,7 @@ export const createNodeAppOperations = (lease: HostLease): AppOperations => ({
   openExternal: refuse("system.openExternal"),
   openFilePath: refuse("system.openPath"),
   showItemInFolder: () => {},
+  saveCopy: refuse("system.saveCopy"),
   appVersion: app.getVersion,
   homeDir: homedir,
   botHome: abacusBotHome,
