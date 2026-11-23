@@ -268,6 +268,10 @@ const featureBoundaryHits = (
             "features/shell/command-menu.tsx",
             "features/shell/rail.tsx",
           ].includes(file.path)) ||
+        // The palette orders the developer panels by the code-project signal.
+        (file.path === "features/shell/command-menu.tsx" &&
+          feature === "sessions" &&
+          subpath === "/data/code-project") ||
         (file.path === "features/shell/profile-menu.tsx" &&
           feature === "settings" &&
           subpath === "/referral-link");

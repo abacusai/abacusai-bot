@@ -7,6 +7,7 @@
  */
 import type { CheckoutRef } from "@abacus-ai/contract/contract/checkout";
 import { useQuery } from "@tanstack/react-query";
+import { Store, useStore } from "@tanstack/react-store";
 
 import { useCheckoutQueries, useSession, useWorkspace } from "./queries";
 
@@ -57,3 +58,19 @@ export const useCodeProject = (
     session?.worktreePath ?? workspace?.path
   );
 };
+
+/**
+ * Each session chat's signal as its route last computed it, for what sits
+ * outside the chat (the command palette). Unknown: true, as before the signal.
+ */
+const codeProjects = new Store<Record<string, boolean>>({});
+
+export const publishCodeProject = (sessionId: string, value: boolean): void => {
+  if (codeProjects.state[sessionId] === value) return;
+  codeProjects.setState((state) => ({ ...state, [sessionId]: value }));
+};
+
+export const usePublishedCodeProject = (sessionId: string | null): boolean =>
+  useStore(codeProjects, (state) =>
+    sessionId == null ? true : (state[sessionId] ?? true)
+  );

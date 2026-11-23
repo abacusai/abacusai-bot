@@ -94,7 +94,10 @@ import {
   useContinuationLinks,
   withContinuationLinks,
 } from "#renderer/features/sessions/continuation-links";
-import { useCodeProject } from "#renderer/features/sessions/data/code-project";
+import {
+  publishCodeProject,
+  useCodeProject,
+} from "#renderer/features/sessions/data/code-project";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import {
   useSession,
@@ -377,6 +380,9 @@ const SessionRoute = () => {
     row ? { workspaceId: row.workspaceId, sessionId } : null,
     projectRules
   );
+  useEffect(() => {
+    if (row) publishCodeProject(sessionId, codeProject);
+  }, [row, sessionId, codeProject]);
   const sharedCommands = useChatCommands(
     row ? { workspaceId: row.workspaceId, sessionId } : null
   );
