@@ -18,10 +18,7 @@ import type {
   SaveCopyResult,
 } from "@abacus-ai/contract/contract/system";
 
-import {
-  locateHostFile,
-  resolveHostPath,
-} from "./services/workspace/host-path";
+import { locateHostFile, resolveHostPath } from "./host-path";
 
 export interface SaveCopyDialogs {
   /** The save dialog, opened on `defaultPath`; null when cancelled. */

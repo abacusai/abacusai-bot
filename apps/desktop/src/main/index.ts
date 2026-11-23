@@ -118,7 +118,6 @@ import {
   type MessagePortTransport,
 } from "./rpc/transports/message-port";
 import { publishToWindowViews } from "./rpc/window-events";
-import { saveCopies } from "./save-copy";
 import { ServiceHost } from "./service-host";
 import { revivePreview } from "./services/agent-tools/served-previews";
 import { isSiteExport } from "./services/agent-tools/site-pack";
@@ -183,6 +182,7 @@ import {
 import type { ExperienceRuntime } from "./services/updates/experience/runtime";
 import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
 import { UpdateService } from "./services/updates/update-service";
+import { saveCopies } from "./services/workspace/save-copy";
 import { runSmoke } from "./smoke";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {

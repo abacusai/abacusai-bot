@@ -4,7 +4,7 @@ import path from "path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { connectInProcess, fakeDeps } from "./rpc/testing";
+import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import { saveCopies, type SaveCopyDialogs } from "./save-copy";
 
 let root: string;
