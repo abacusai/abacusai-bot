@@ -23,7 +23,8 @@ export type StepEventType =
   | "vault_saved"
   | "signin_decided"
   | "payment_decided"
-  | "upgraded";
+  | "upgraded"
+  | "agent_handover";
 
 const STEP_EVENT_TYPES: readonly StepEventType[] = [
   "connector_connected",
@@ -31,6 +32,7 @@ const STEP_EVENT_TYPES: readonly StepEventType[] = [
   "signin_decided",
   "payment_decided",
   "upgraded",
+  "agent_handover",
 ];
 
 /** Short structured facts: never a password, code or card number. */
@@ -201,10 +203,14 @@ const upgradedNote = (facts: StepFacts): string => {
 
 /**
  * The one text a step-done event is told by. `known`: this run asked for
- * the step; one from before a restart says what was lost with it.
+ * the step; one from before a restart says what was lost with it. Null for
+ * an event the chat never hears: `agent_handover` (the chat moved to the
+ * user's own agent, so it is no longer this bot's to speak in).
  */
-export function stepNote(event: StepEvent, known = true): string {
+export function stepNote(event: StepEvent, known = true): string | null {
   switch (event.event) {
+    case "agent_handover":
+      return null;
     case "upgraded":
       return upgradedNote(event.facts);
     case "connector_connected":
@@ -288,8 +294,8 @@ export class StepEvents {
   }
 
   /**
-   * The event's note, once: null for a duplicate. The caller delivers it (a
-   * message's own notes, the phone lane's entry).
+   * The event's note, once: null for a duplicate or an event no chat hears.
+   * The caller delivers it (a message's own notes, the phone lane's entry).
    */
   claim(event: StepEvent): string | null {
     const key = `${event.event}:${event.step}`;
