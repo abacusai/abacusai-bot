@@ -4717,7 +4717,6 @@
     "failed": "無法開啟這個檔案。",
     "refusedInvalid": "這個連結沒有指向檔案。",
     "refusedMissing": "這個檔案已經不在了。",
-    "refusedOutside": "這個檔案不在你的工作區內，所以沒有開啟。",
     "revealed": "開啟這個檔案會執行它，所以改為在檔案管理員中顯示。"
   },
   "permissions": {

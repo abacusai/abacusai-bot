@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   allowedExternalSchemes,
   isSafeExternalUrl,
+  localPathOfFileUrl,
   withUpgradeReturn,
 } from "./external-links";
 
@@ -80,6 +81,42 @@ describe("isSafeExternalUrl", () => {
       "https:",
       "mailto:",
     ]);
+  });
+});
+
+describe("localPathOfFileUrl", () => {
+  // "Open externally" on a page or PDF the agent made passes its file: URL.
+  // It goes to the local-open checks as a path, never to the OS as a URL.
+  it.skipIf(process.platform === "win32")(
+    "names the file a local file: URL points at, without its fragment",
+    () => {
+      expect(localPathOfFileUrl("file:///home/u/site/index.html#hook")).toBe(
+        "/home/u/site/index.html"
+      );
+      expect(localPathOfFileUrl("file:///home/u/a%20b.pdf?page=2")).toBe(
+        "/home/u/a b.pdf"
+      );
+      expect(localPathOfFileUrl("file://localhost/tmp/x.png")).toBe(
+        "/tmp/x.png"
+      );
+    }
+  );
+
+  it.skipIf(process.platform !== "win32")("reads a Windows drive path", () => {
+    expect(localPathOfFileUrl("file:///C:/Users/u/report.pdf#p2")).toBe(
+      "C:\\Users\\u\\report.pdf"
+    );
+  });
+
+  it("is null for another host, which Windows reaches as a network share", () => {
+    expect(localPathOfFileUrl("file://attacker/share/notes.docx")).toBeNull();
+  });
+
+  it("is null for anything that is not a file: URL", () => {
+    expect(localPathOfFileUrl("https://abacus.ai")).toBeNull();
+    expect(localPathOfFileUrl("C:/Users/u/report.pdf")).toBeNull();
+    expect(localPathOfFileUrl("not a url")).toBeNull();
+    expect(localPathOfFileUrl(undefined)).toBeNull();
   });
 });
 

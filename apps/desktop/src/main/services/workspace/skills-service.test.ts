@@ -90,28 +90,21 @@ describe("SkillsService.openFile", () => {
     expect(res.success).toBe(true);
   });
 
-  it("refuses a project-skill path when no workspace is named", async () => {
+  it("opens a skill file wherever it is, as any file link does", async () => {
     openPath.mockClear();
     const res = await skillsService.openFile({
       path: path.join(workspace, ".abacusai-bot", "skills", "local.md"),
     });
-    expect(res.success).toBe(false);
-    expect(openPath).not.toHaveBeenCalled();
+    expect(res.success).toBe(true);
+    expect(openPath).toHaveBeenCalledTimes(1);
   });
 
-  it("refuses paths outside the skills directories", async () => {
+  it("says so when the file is no longer there", async () => {
     openPath.mockClear();
-    for (const target of [
-      path.join(workspace, "README.md"),
-      path.join(home, "..", "elsewhere.txt"),
-      "/etc/hosts",
-    ]) {
-      const res = await skillsService.openFile({
-        path: target,
-        workspacePath: workspace,
-      });
-      expect(res.success).toBe(false);
-    }
+    const res = await skillsService.openFile({
+      path: path.join(home, "skills", "gone.md"),
+    });
+    expect(res.success).toBe(false);
     expect(openPath).not.toHaveBeenCalled();
   });
 });

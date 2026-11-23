@@ -4717,7 +4717,6 @@
     "failed": "无法打开该文件。",
     "refusedInvalid": "该链接没有指向文件。",
     "refusedMissing": "该文件已不存在。",
-    "refusedOutside": "该文件不在你的工作区内，因此没有打开。",
     "revealed": "打开该文件会运行它，因此改为在文件管理器中显示。"
   },
   "permissions": {

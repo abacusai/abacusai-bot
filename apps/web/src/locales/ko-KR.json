@@ -4717,7 +4717,6 @@
     "failed": "해당 파일을 열지 못했습니다.",
     "refusedInvalid": "해당 링크는 파일을 가리키지 않습니다.",
     "refusedMissing": "해당 파일이 더 이상 없습니다.",
-    "refusedOutside": "해당 파일은 작업 폴더 밖에 있어 열지 않았습니다.",
     "revealed": "해당 파일은 열면 실행되므로 파일 관리자에서 표시했습니다."
   },
   "permissions": {

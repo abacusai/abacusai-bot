@@ -16,6 +16,7 @@ import { useCollections } from "#renderer/data/db";
 import { useChatCommands } from "#renderer/lib/chat-commands";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#renderer/lib/navigation/visible-thread";
+import { openHostPath } from "#renderer/lib/open-host-path";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { openPanelTab, panelScopeKey } from "#renderer/lib/side-panel/store";
@@ -95,7 +96,7 @@ export const useBotChatSlots = (
     openPanelTab(panelKey, { kind: tab });
   const openTarget = (target: BotOpenTarget): void => {
     if (target.kind === "external")
-      void platformSystem(transport.client).openPath({ path: target.path });
+      void openHostPath(transport.client, target.path);
     else if (target.kind === "preview")
       openPanelTab(panelKey, {
         kind: "files",

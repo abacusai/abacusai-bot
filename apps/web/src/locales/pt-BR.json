@@ -4717,7 +4717,6 @@
     "failed": "Não foi possível abrir esse arquivo.",
     "refusedInvalid": "Esse link não indica um arquivo.",
     "refusedMissing": "Esse arquivo não existe mais.",
-    "refusedOutside": "Esse arquivo está fora dos seus espaços de trabalho, por isso não foi aberto.",
     "revealed": "Abrir esse arquivo o executaria, então ele foi exibido no seu gerenciador de arquivos."
   },
   "permissions": {

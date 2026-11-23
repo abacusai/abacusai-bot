@@ -41,6 +41,7 @@ import {
   useTopBarActions,
 } from "#renderer/features/shell/top-bar-slots";
 import { RoutineSearch } from "#renderer/lib/navigation/search";
+import { openHostPath } from "#renderer/lib/open-host-path";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 /** The routine in the title bar: its identity, and its actions as icons. */
@@ -97,7 +98,7 @@ const RoutineRoute = () => {
       const target = previewTargetPath(path, root);
       const inside = target !== null && !isAbsolutePreviewPath(target);
       if (target === null || (!inside && !hasInAppViewer(target)))
-        return void platformSystem(transport.client).openPath({ path });
+        return void openHostPath(transport.client, path);
       openSessionTab({
         ref:
           (key

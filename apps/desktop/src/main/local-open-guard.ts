@@ -1,12 +1,10 @@
 /**
- * What the app is willing to hand to `shell.openPath`. The paths come from
- * model-generated markdown and an agent-written workspace, so a path opens
- * only inside a directory the app treats as the user's working area, and
- * never when the OS would run it instead of showing it. An executable inside
- * an allowed root is revealed in the file manager rather than dropped.
+ * What the app hands to `shell.openPath`. Any file that exists opens, wherever
+ * it is, except a form the OS would run instead of show: that one is revealed
+ * in the file manager, which runs nothing, so a link in a model's reply can
+ * never launch a program in one click.
  */
 import fs from "fs";
-import os from "os";
 import path from "path";
 
 /** Windows runs these on open; `.lnk`/`.url` launch whatever they point at. */
@@ -139,61 +137,19 @@ const isExecutableForm = (
   return hasExecuteBit(resolved) && looksRunnable(resolved);
 };
 
-/** True when `target` is `root` or inside it (boundary-aware, not substring). */
-const isWithin = (root: string, target: string): boolean => {
-  const rel = path.relative(root, target);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-};
-
-/** Realpath'd like the targets (macOS: /var/folders -> /private/var/folders). */
-const realTmpdir = ((): string => {
-  try {
-    return fs.realpathSync(os.tmpdir());
-  } catch {
-    return os.tmpdir();
-  }
-})();
-
-/**
- * A temp file owned by another local account. The temp dir is an allowed root
- * for agent scratch files, and on Linux `/tmp` is shared with every account.
- */
-const isForeignTempFile = (
-  resolved: string,
-  platform: NodeJS.Platform
-): boolean => {
-  if (platform !== "linux") return false;
-  if (!isWithin(realTmpdir, resolved)) return false;
-
-  const uid = process.getuid?.();
-  if (uid == null) return false;
-
-  try {
-    return fs.statSync(resolved).uid !== uid;
-  } catch {
-    // A file that cannot be stat'd will not open anyway.
-    return false;
-  }
-};
-
 /** `reason` is a code; the renderer owns the user-facing message. */
 export type LocalOpenDecision =
   /**
-   * `path` is the resolved target the checks ran against, so a symlink cannot
+   * `path` is the resolved target the check ran against, so a symlink cannot
    * be re-pointed between check and open.
    */
   | { action: "open"; path: string }
-  /** Safe to show in the file manager, not to hand to the OS to run. */
+  /** The OS would run it, so it is shown in the file manager instead. */
   | { action: "reveal"; reason: "executable"; path: string }
-  | { action: "refuse"; reason: "invalid" | "missing" | "outside" };
+  | { action: "refuse"; reason: "invalid" | "missing" };
 
-/**
- * Target and roots are realpath'd before the boundary check, so a symlink
- * cannot smuggle the open outside an allowed root (or hide macOS's /tmp link).
- */
 export const decideLocalOpen = (
   filePath: unknown,
-  allowedRoots: readonly string[],
   platform: NodeJS.Platform = process.platform
 ): LocalOpenDecision => {
   if (typeof filePath !== "string" || filePath.length === 0) {
@@ -206,21 +162,6 @@ export const decideLocalOpen = (
   } catch {
     return { action: "refuse", reason: "missing" };
   }
-
-  const inside = allowedRoots.some((root) => {
-    if (typeof root !== "string" || root.length === 0) return false;
-    let realRoot: string;
-    try {
-      realRoot = fs.realpathSync(root);
-    } catch {
-      return false;
-    }
-    return isWithin(realRoot, realTarget);
-  });
-  if (!inside) return { action: "refuse", reason: "outside" };
-  // Inside the temp root by position, but somebody else's file.
-  if (isForeignTempFile(realTarget, platform))
-    return { action: "refuse", reason: "outside" };
 
   if (isExecutableForm(filePath, realTarget, platform)) {
     return { action: "reveal", reason: "executable", path: realTarget };

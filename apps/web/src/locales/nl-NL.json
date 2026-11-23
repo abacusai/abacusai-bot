@@ -4717,7 +4717,6 @@
     "failed": "Kan dat bestand niet openen.",
     "refusedInvalid": "Die link verwijst niet naar een bestand.",
     "refusedMissing": "Dat bestand bestaat niet meer.",
-    "refusedOutside": "Dat bestand staat buiten je werkruimtes en is daarom niet geopend.",
     "revealed": "Als je dat bestand opent, wordt het uitgevoerd. Daarom wordt het in plaats daarvan in je bestandsbeheerder getoond."
   },
   "permissions": {

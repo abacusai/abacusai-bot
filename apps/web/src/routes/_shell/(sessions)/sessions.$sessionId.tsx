@@ -34,6 +34,7 @@ import {
   type ComposerCommand,
 } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
+import { openHostPath } from "#renderer/lib/open-host-path";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { websitePromptSessionId } from "#renderer/lib/website-prompt";
@@ -463,7 +464,7 @@ const SessionRoute = () => {
     const target = previewTargetPath(path, root);
     const inside = target !== null && !isAbsolutePreviewPath(target);
     if (target === null || (!inside && !hasInAppViewer(target))) {
-      void platformSystem(transport.client).openPath({ path });
+      void openHostPath(transport.client, path);
       return;
     }
     const relative = target;

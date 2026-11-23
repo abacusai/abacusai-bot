@@ -4717,7 +4717,6 @@
     "failed": "Could not open that file.",
     "refusedInvalid": "That link does not name a file.",
     "refusedMissing": "That file is no longer there.",
-    "refusedOutside": "That file is outside your workspaces, so it was not opened.",
     "revealed": "Opening that file would run it, so it was shown in your file manager instead."
   },
   "permissions": {

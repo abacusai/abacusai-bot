@@ -4717,7 +4717,6 @@
     "failed": "Tidak dapat membuka berkas itu.",
     "refusedInvalid": "Tautan itu tidak menunjuk ke sebuah berkas.",
     "refusedMissing": "Berkas itu sudah tidak ada.",
-    "refusedOutside": "Berkas itu berada di luar ruang kerja Anda, jadi tidak dibuka.",
     "revealed": "Membuka berkas itu akan menjalankannya, jadi berkas ditampilkan di pengelola berkas Anda."
   },
   "permissions": {
