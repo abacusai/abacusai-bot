@@ -246,7 +246,10 @@ describe("starting up", () => {
     expect(rules.files.map((file) => path.basename(file))).toEqual([
       "AGENTS.md",
     ]);
-    expect(path.dirname(rules.files[0]!)).toBe(fs.realpathSync(cwd));
+    // Windows reports the path with forward slashes; compare it normalized.
+    expect(path.resolve(path.dirname(rules.files[0]!))).toBe(
+      path.resolve(fs.realpathSync(cwd))
+    );
     await host.waitFor((event) => event.type === "mcp_servers");
   });
 });
