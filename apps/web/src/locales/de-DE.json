@@ -1643,37 +1643,37 @@
         "name": "Wochenrückblick"
       },
       "repo-watch": {
-        "name": "Neue PRs prüfen und fehlgeschlagene CI beheben",
+        "name": "PRs prüfen, CI reparieren",
         "description": "Prüft jeden neuen Pull Request und behebt fehlgeschlagene CI auf deinen Branches, sobald GitHub davon weiß.",
-        "when": "Wenn ein Pull Request geöffnet wird oder die CI fehlschlägt",
+        "when": "Bei neuem PR oder CI-Fehler",
         "promise": "Öffnet jemand einen Pull Request, prüft er ihn und sagt dir, ob er sicher gemergt werden kann. Schlägt die CI auf deinem Branch oder dem Standard-Branch fehl, findet er die Ursache und pusht eine Korrektur auf einen Branch, nie in deine Arbeitskopie. Das Beobachten kostet keine Credits: Er läuft nur, wenn es etwas Neues gibt."
       },
       "nightly-tests": {
-        "name": "Tests ausführen und Fehler beheben",
+        "name": "Tests prüfen und fixen",
         "description": "Jede Nacht laufen die Tests, und was fehlschlägt, wird auf einem eigenen Branch behoben – morgens wartet ein Pull-Request-Entwurf.",
         "when": "Jede Nacht",
         "promise": "Führt jede Nacht deine Tests aus. Fehler werden auf einem separaten Branch mit Pull-Request-Entwurf behoben, nie auf deinem Haupt-Branch oder in deiner Arbeitskopie."
       },
       "pr-review-fixes": {
-        "name": "Review-Kommentare in meinen PRs umsetzen",
+        "name": "PR-Reviews umsetzen",
         "description": "Pusht eine Korrektur für jeden neuen Review-Kommentar auf deinen offenen Pull Requests, sobald er kommt.",
         "when": "Werktags stündlich, 9 bis 18 Uhr",
         "promise": "Kommt ein neuer Review-Kommentar auf einem deiner Pull Requests, behebt es ihn auf dessen Branch und antwortet darunter. Das Beobachten kostet keine Credits: Es läuft nur, wenn es etwas zu beheben gibt. Kommentare, die deine Entscheidung brauchen, kommen stattdessen zu dir."
       },
       "site-down": {
-        "name": "Sag mir, wenn meine Website ausfällt",
+        "name": "Website-Ausfall melden",
         "description": "Alle 5 Minuten kostenlos geprüft. Eine Nachricht, wenn sie ausfällt, eine, wenn sie wieder da ist.",
         "when": "Alle 5 Minuten",
         "promise": "Die App prüft deine Website alle 5 Minuten. Die Prüfungen kosten keine Credits: Du hörst nur davon, wenn sie ausfällt und wenn sie wieder da ist."
       },
       "overnight-changes": {
-        "name": "Was sich über Nacht in meinem Repo geändert hat",
+        "name": "Neues über Nacht",
         "description": "Jeden Werktagmorgen: neue Commits, Pull Requests, die auf dich warten, und der CI-Status, in fünf Zeilen.",
         "when": "Werktags morgens",
         "promise": "Jeden Werktagmorgen erfährst du, was sich seit gestern im Repository geändert hat, und was du dir zuerst ansehen solltest."
       },
       "game-check": {
-        "name": "Mein Spiel neu bauen und prüfen",
+        "name": "Spiel bauen und prüfen",
         "description": "Jeden Abend baut es das Spiel, spielt die erste Minute und sagt dir, was kaputt ist.",
         "when": "Jeden Abend",
         "promise": "Jeden Abend baut es dein Spiel, startet es, spielt die erste Minute und meldet Build-Fehler, Abstürze und was es gesehen hat. Es ändert keinen Code."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Handy verbinden",
       "where": "Läuft auf diesem Computer, solange er an ist und AbacusAI Bot geöffnet ist. Einen verpassten Lauf holt es nach, wenn du zurück bist.",
       "whereSite": "Prüft nur, solange dieser Computer an ist und AbacusAI Bot geöffnet ist.",
-      "whereGithub": "Prüft GitHub jede Minute, solange dieser Computer an ist und AbacusAI Bot geöffnet ist. Was passiert ist, während du weg warst, wird nachgeholt, wenn du zurück bist.",
+      "whereGithub": "Prüft GitHub jede Minute, solange dieser Computer an ist und AbacusAI Bot geöffnet ist. Was am letzten Tag passiert ist, wird nachgeholt, wenn du zurück bist.",
       "alwaysOnFree": "Mit dem Basic-Plan laufen Routinen rund um die Uhr weiter, auch wenn dieser Computer aus ist.",
       "firstRun": "Der erste Lauf startet jetzt, damit du einen Bericht siehst.",
       "start": "Starten"

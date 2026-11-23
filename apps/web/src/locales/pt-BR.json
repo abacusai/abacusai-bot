@@ -1643,19 +1643,19 @@
         "name": "Semana em revisão"
       },
       "repo-watch": {
-        "name": "Revisar PRs novos e corrigir CI com falha",
+        "name": "Revisar PRs, corrigir CI",
         "description": "Revisa cada pull request novo e corrige a CI com falha nas suas branches, assim que o GitHub tiver.",
-        "when": "Quando um pull request é aberto ou a CI falha",
+        "when": "Novo PR ou CI com falha",
         "promise": "Quando alguém abre um pull request, ele revisa e diz se é seguro fazer o merge. Quando a CI falha na sua branch ou na branch padrão, ele encontra a causa e envia uma correção para uma branch, nunca para a sua cópia de trabalho. Observar não gasta créditos: ele só roda quando há algo novo."
       },
       "nightly-tests": {
-        "name": "Rodar meus testes e corrigir falhas",
+        "name": "Corrigir testes falhos",
         "description": "Toda noite roda os testes e corrige o que falha em um branch próprio, com um rascunho de pull request esperando de manhã.",
         "when": "Toda noite",
         "promise": "Roda seus testes toda noite. As falhas são corrigidas em um branch separado com um rascunho de pull request, nunca no seu branch principal nem na sua cópia de trabalho."
       },
       "pr-review-fixes": {
-        "name": "Resolver comentários de revisão nos meus PRs",
+        "name": "Resolver revisões de PR",
         "description": "Envia uma correção para cada novo comentário de revisão nos seus pull requests abertos, assim que ele chega.",
         "when": "A cada hora em dias úteis, das 9 às 18",
         "promise": "Quando chega um novo comentário de revisão em um dos seus pull requests, ele corrige na branch desse pull request e responde abaixo. Acompanhar não usa créditos: só roda quando há um comentário para corrigir. Comentários que precisam da sua decisão vão para você."
@@ -1667,13 +1667,13 @@
         "promise": "O app verifica seu site a cada 5 minutos. As verificações não usam créditos: você só fica sabendo quando ele cai e quando volta."
       },
       "overnight-changes": {
-        "name": "O que mudou no meu repositório durante a noite",
+        "name": "O que mudou à noite",
         "description": "Toda manhã de dia útil: novos commits, pull requests esperando sua revisão e o status do CI, em cinco linhas.",
         "when": "Manhãs de dias úteis",
         "promise": "Toda manhã de dia útil você recebe o que mudou no repositório desde ontem, com a primeira coisa a olhar."
       },
       "game-check": {
-        "name": "Recompilar e verificar meu jogo",
+        "name": "Compilar e testar o jogo",
         "description": "Toda noite compila o jogo, joga o primeiro minuto e diz o que quebrou.",
         "when": "Toda noite",
         "promise": "Toda noite compila seu jogo, inicia, joga o primeiro minuto e relata erros de build, travamentos e o que viu. Não altera nenhum código."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Conectar seu celular",
       "where": "Roda neste computador enquanto ele estiver ligado e o AbacusAI Bot aberto. Uma execução perdida é feita quando você voltar.",
       "whereSite": "Só verifica enquanto este computador estiver ligado e o AbacusAI Bot aberto.",
-      "whereGithub": "Verifica o GitHub a cada minuto enquanto este computador está ligado e o AbacusAI Bot está aberto. O que aconteceu enquanto você estava fora é retomado quando você volta.",
+      "whereGithub": "Verifica o GitHub a cada minuto enquanto este computador está ligado e o AbacusAI Bot está aberto. O que aconteceu no último dia é retomado quando você volta.",
       "alwaysOnFree": "No plano Basic, as rotinas continuam rodando 24/7 com este computador desligado.",
       "firstRun": "A primeira execução começa agora, para você ver um relatório.",
       "start": "Começar"

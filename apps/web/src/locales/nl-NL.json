@@ -1643,37 +1643,37 @@
         "name": "Weekoverzicht"
       },
       "repo-watch": {
-        "name": "Nieuwe PR's reviewen en mislukte CI fixen",
+        "name": "PR's reviewen, CI fixen",
         "description": "Reviewt elke nieuwe pull request en fixt mislukte CI op je branches, zodra GitHub het heeft.",
-        "when": "Als er een pull request opent of de CI faalt",
+        "when": "Bij nieuwe PR of mislukte CI",
         "promise": "Opent iemand een pull request, dan reviewt hij die en zegt hij of mergen veilig is. Faalt de CI op je branch of de standaardbranch, dan zoekt hij de oorzaak en pusht hij een fix naar een branch, nooit naar je werkkopie. Meekijken kost geen credits: hij draait alleen als er iets nieuws is."
       },
       "nightly-tests": {
-        "name": "Mijn tests draaien en fouten oplossen",
+        "name": "Tests draaien en fixen",
         "description": "Elke nacht draait het de tests en lost het op wat faalt op een eigen branch, met 's ochtends een concept-pull-request klaar.",
         "when": "Elke nacht",
         "promise": "Draait je tests elke nacht. Fouten worden opgelost op een aparte branch met een concept-pull-request, nooit op je hoofdbranch of in je werkkopie."
       },
       "pr-review-fixes": {
-        "name": "Reviewopmerkingen in mijn PR's verwerken",
+        "name": "PR-reviews verwerken",
         "description": "Pusht een fix voor elke nieuwe reviewopmerking op je open pull requests, zodra die binnenkomt.",
         "when": "Elk uur op werkdagen, 9 tot 18 uur",
         "promise": "Komt er een nieuwe reviewopmerking op een van je pull requests, dan lost het die op in de branch van die pull request en reageert eronder. In de gaten houden kost geen credits: het draait alleen als er iets te fixen is. Opmerkingen die jouw oordeel vragen, komen bij jou terecht."
       },
       "site-down": {
-        "name": "Laat me weten wanneer mijn site plat ligt",
+        "name": "Melding bij site-storing",
         "description": "Elke 5 minuten gratis gecontroleerd. Eén bericht als hij plat gaat, één als hij terug is.",
         "when": "Elke 5 minuten",
         "promise": "De app controleert je site elke 5 minuten. Controles kosten geen credits: je hoort het alleen als hij plat gaat en als hij terug is."
       },
       "overnight-changes": {
-        "name": "Wat er vannacht in mijn repo is veranderd",
+        "name": "Nieuw sinds gisteren",
         "description": "Elke werkdagochtend: nieuwe commits, pull requests die op jou wachten en de CI-status, in vijf regels.",
         "when": "Werkdagochtenden",
         "promise": "Elke werkdagochtend krijg je wat er sinds gisteren in de repository is veranderd, met het eerste waar je naar moet kijken."
       },
       "game-check": {
-        "name": "Mijn game opnieuw bouwen en controleren",
+        "name": "Game bouwen en testen",
         "description": "Elke avond bouwt het de game, speelt de eerste minuut en vertelt wat er kapot is.",
         "when": "Elke avond",
         "promise": "Elke avond bouwt het je game, start hem, speelt de eerste minuut en meldt buildfouten, crashes en wat het zag. Het verandert geen code."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Je telefoon verbinden",
       "where": "Draait op deze computer zolang hij aan staat en AbacusAI Bot open is. Een gemiste run wordt ingehaald als je terug bent.",
       "whereSite": "Controleert alleen zolang deze computer aan staat en AbacusAI Bot open is.",
-      "whereGithub": "Controleert GitHub elke minuut zolang deze computer aan staat en AbacusAI Bot open is. Wat er gebeurde terwijl je weg was, wordt opgepakt als je terug bent.",
+      "whereGithub": "Controleert GitHub elke minuut zolang deze computer aan staat en AbacusAI Bot open is. Wat er de afgelopen dag gebeurde, wordt opgepakt als je terug bent.",
       "alwaysOnFree": "Met het Basic-abonnement blijven routines 24/7 draaien, ook als deze computer uit staat.",
       "firstRun": "De eerste run start nu, zodat je een rapport ziet.",
       "start": "Starten"

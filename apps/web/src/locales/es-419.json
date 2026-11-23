@@ -1643,31 +1643,31 @@
         "name": "Semana en revisión"
       },
       "repo-watch": {
-        "name": "Revisar PRs nuevos y arreglar CI fallida",
+        "name": "Revisar PRs, arreglar CI",
         "description": "Revisa cada pull request nuevo y arregla la CI fallida en tus ramas, en cuanto GitHub lo tiene.",
-        "when": "Cuando se abre un pull request o falla la CI",
+        "when": "Nuevo PR o CI fallida",
         "promise": "Cuando alguien abre un pull request, lo revisa y te dice si es seguro hacer merge. Cuando la CI falla en tu rama o en la rama principal, encuentra la causa y sube un arreglo a una rama, nunca a tu copia de trabajo. Vigilar no usa créditos: solo se ejecuta cuando hay algo nuevo."
       },
       "nightly-tests": {
-        "name": "Ejecutar mis pruebas y corregir fallos",
+        "name": "Corregir pruebas fallidas",
         "description": "Cada noche ejecuta las pruebas y corrige lo que falla en su propia rama, con un borrador de pull request listo por la mañana.",
         "when": "Cada noche",
         "promise": "Ejecuta tus pruebas cada noche. Los fallos se corrigen en una rama aparte con un borrador de pull request, nunca en tu rama principal ni en tu copia de trabajo."
       },
       "pr-review-fixes": {
-        "name": "Resolver los comentarios de revisión de mis PR",
+        "name": "Resolver revisiones de PR",
         "description": "Sube un arreglo para cada comentario de revisión nuevo en tus pull requests abiertos, en cuanto llega.",
         "when": "Cada hora en días hábiles, de 9 a 18",
         "promise": "Cuando llega un comentario de revisión nuevo a uno de tus pull requests, lo arregla en la rama de ese pull request y responde debajo. Vigilar no usa créditos: solo se ejecuta cuando hay un comentario que arreglar. Los comentarios que necesitan tu criterio te llegan a ti."
       },
       "site-down": {
-        "name": "Avísame cuando mi sitio se caiga",
+        "name": "Avísame si mi sitio cae",
         "description": "Se revisa cada 5 minutos sin costo. Un mensaje cuando se cae y otro cuando vuelve.",
         "when": "Cada 5 minutos",
         "promise": "La app revisa tu sitio cada 5 minutos. Las revisiones no usan créditos: solo te enteras cuando se cae y cuando vuelve."
       },
       "overnight-changes": {
-        "name": "Qué cambió en mi repo durante la noche",
+        "name": "Qué cambió anoche",
         "description": "Cada mañana de días hábiles: commits nuevos, pull requests que esperan tu revisión y el estado de CI, en cinco líneas.",
         "when": "Mañanas de días hábiles",
         "promise": "Cada mañana de días hábiles recibes lo que cambió en el repositorio desde ayer, con lo primero que conviene mirar."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Conectar tu teléfono",
       "where": "Se ejecuta en esta computadora mientras esté encendida y AbacusAI Bot esté abierto. Si se pierde una ejecución, la recupera cuando vuelvas.",
       "whereSite": "Solo revisa mientras esta computadora esté encendida y AbacusAI Bot esté abierto.",
-      "whereGithub": "Revisa GitHub cada minuto mientras esta computadora está encendida y AbacusAI Bot está abierto. Lo que pasó mientras no estabas se retoma cuando vuelves.",
+      "whereGithub": "Revisa GitHub cada minuto mientras esta computadora está encendida y AbacusAI Bot está abierto. Lo del último día se retoma cuando vuelves.",
       "alwaysOnFree": "Con el plan Basic, las rutinas siguen funcionando 24/7 con esta computadora apagada.",
       "firstRun": "La primera ejecución empieza ahora, para que veas un informe.",
       "start": "Empezar"

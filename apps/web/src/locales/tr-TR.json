@@ -1643,25 +1643,25 @@
         "name": "Haftanın özeti"
       },
       "repo-watch": {
-        "name": "Yeni PR'ları incele, başarısız CI'ı düzelt",
+        "name": "PR incele, CI'ı düzelt",
         "description": "Her yeni pull request'i inceler ve dallarındaki başarısız CI'ı, GitHub'a düştüğü anda düzeltir.",
-        "when": "Bir pull request açıldığında veya CI başarısız olduğunda",
+        "when": "Yeni PR veya CI hatası",
         "promise": "Biri pull request açtığında onu inceler ve birleştirmenin güvenli olup olmadığını söyler. CI senin dalında veya varsayılan dalda başarısız olduğunda nedenini bulur ve düzeltmeyi bir dala gönderir, çalışma kopyana asla dokunmaz. İzlemek kredi harcamaz: yalnızca yeni bir şey olduğunda çalışır."
       },
       "nightly-tests": {
-        "name": "Testlerimi çalıştır ve hataları düzelt",
+        "name": "Hatalı testleri düzelt",
         "description": "Her gece testleri çalıştırır, başarısız olanları kendi dalında düzeltir; sabah seni taslak bir pull request bekler.",
         "when": "Her gece",
         "promise": "Testlerini her gece çalıştırır. Hatalar ayrı bir dalda taslak pull request ile düzeltilir; ana dalına ya da çalışma kopyana asla dokunulmaz."
       },
       "pr-review-fixes": {
-        "name": "PR'larımdaki inceleme yorumlarını düzelt",
+        "name": "PR yorumlarını düzelt",
         "description": "Açık pull request'lerine gelen her yeni inceleme yorumu için, geldiği anda bir düzeltme push eder.",
         "when": "Hafta içi her saat, 9–18",
         "promise": "Pull request'lerinden birine yeni bir inceleme yorumu gelince, o pull request'in dalında düzeltir ve altına yanıt yazar. İzlemek kredi harcamaz: yalnızca düzeltilecek bir yorum olduğunda çalışır. Senin kararını gerektiren yorumlar sana gelir."
       },
       "site-down": {
-        "name": "Sitem çöktüğünde bana haber ver",
+        "name": "Site çökünce haber ver",
         "description": "Her 5 dakikada bir ücretsiz kontrol edilir. Çöktüğünde bir, geri geldiğinde bir mesaj.",
         "when": "Her 5 dakikada",
         "promise": "Uygulama siteni her 5 dakikada bir kontrol eder. Kontroller kredi harcamaz: yalnızca çöktüğünde ve geri geldiğinde haber alırsın."
@@ -1673,7 +1673,7 @@
         "promise": "Her hafta içi sabahı, dünden beri depoda neyin değiştiğini ve ilk bakman gereken şeyi alırsın."
       },
       "game-check": {
-        "name": "Oyunumu yeniden derle ve kontrol et",
+        "name": "Oyunu derle ve dene",
         "description": "Her akşam oyunu derler, ilk dakikayı oynar ve neyin bozulduğunu söyler.",
         "when": "Her akşam",
         "promise": "Her akşam oyununu derler, başlatır, ilk dakikayı oynar ve derleme hatalarını, çökmeleri ve ekranda gördüklerini bildirir. Hiçbir kodu değiştirmez."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Telefonunu bağla",
       "where": "Bu bilgisayar açıkken ve AbacusAI Bot açıkken çalışır. Kaçırılan bir çalıştırma döndüğünde yapılır.",
       "whereSite": "Yalnızca bu bilgisayar ve AbacusAI Bot açıkken kontrol eder.",
-      "whereGithub": "Bu bilgisayar açık ve AbacusAI Bot açıkken GitHub'ı her dakika kontrol eder. Sen yokken olanlar, döndüğünde ele alınır.",
+      "whereGithub": "Bu bilgisayar açık ve AbacusAI Bot açıkken GitHub'ı her dakika kontrol eder. Son bir günde olanlar, döndüğünde ele alınır.",
       "alwaysOnFree": "Basic planda rutinler bu bilgisayar kapalıyken de 7/24 çalışmaya devam eder.",
       "firstRun": "İlk çalıştırma şimdi başlıyor, böylece bir rapor görürsün.",
       "start": "Başlat"

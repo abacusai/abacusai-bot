@@ -1655,7 +1655,7 @@
         "promise": "Runs your tests every night. Failures are fixed on a separate branch with a draft pull request, never on your main branch or in your working copy."
       },
       "pr-review-fixes": {
-        "name": "Fix review comments on my PRs",
+        "name": "Fix PR review comments",
         "description": "Pushes a fix for each new review comment on your open pull requests, as soon as it comes in.",
         "when": "Hourly on weekdays, 9 to 6",
         "promise": "When a new review comment lands on one of your pull requests, it fixes it on that pull request's branch and replies under it. Watching costs no credits: it runs only when there is a comment to fix. Comments that need your judgment come to you instead."
@@ -1667,7 +1667,7 @@
         "promise": "The app checks your site every 5 minutes. Checks use no credits: you hear only when it goes down and when it comes back."
       },
       "overnight-changes": {
-        "name": "What changed in my repo overnight",
+        "name": "What changed overnight",
         "description": "Every weekday morning: new commits, pull requests waiting on you and CI status, in five lines.",
         "when": "Weekday mornings",
         "promise": "Each weekday morning you get what changed in the repository since yesterday, with the one thing to look at first."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Connect your phone",
       "where": "Runs on this computer while it's on and AbacusAI Bot is open. A run it misses is made up when you're back.",
       "whereSite": "Checks only while this computer is on and AbacusAI Bot is open.",
-      "whereGithub": "Checks GitHub every minute while this computer is on and AbacusAI Bot is open. What happened while you were away is picked up when you're back.",
+      "whereGithub": "Checks GitHub every minute while this computer is on and AbacusAI Bot is open. Anything from the last day is picked up when you're back.",
       "alwaysOnFree": "On the Basic plan, routines keep running 24/7 with this computer off.",
       "firstRun": "The first run starts now, so you see a report.",
       "start": "Start"

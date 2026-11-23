@@ -590,7 +590,8 @@ export const CodingRoutineSheet = ({
                     : "routines.coding.where"
               )}
             </span>
-            {plan === "free" && (
+            {/* Only a routine the server can run keeps going with this computer off. */}
+            {plan === "free" && !needsGithub && (
               <>
                 <span>{t("routines.coding.alwaysOnFree")}</span>
                 <AlwaysOnButton plan={plan} variant="outline" />

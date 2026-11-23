@@ -1643,37 +1643,37 @@
         "name": "Ulasan minggu"
       },
       "repo-watch": {
-        "name": "Tinjau PR baru dan perbaiki CI yang gagal",
+        "name": "Tinjau PR, perbaiki CI",
         "description": "Meninjau setiap pull request baru dan memperbaiki CI yang gagal di branch Anda, begitu GitHub memilikinya.",
-        "when": "Saat pull request dibuka atau CI gagal",
+        "when": "PR baru atau CI gagal",
         "promise": "Saat seseorang membuka pull request, ia meninjaunya dan memberi tahu Anda apakah aman untuk di-merge. Saat CI gagal di branch Anda atau branch default, ia mencari penyebabnya dan mendorong perbaikan ke sebuah branch, tidak pernah ke salinan kerja Anda. Memantau tidak memakai kredit: ia hanya berjalan saat ada hal baru."
       },
       "nightly-tests": {
-        "name": "Jalankan tes saya dan perbaiki yang gagal",
+        "name": "Perbaiki tes yang gagal",
         "description": "Setiap malam menjalankan tes dan memperbaiki yang gagal di branch sendiri, dengan draf pull request yang menunggu di pagi hari.",
         "when": "Setiap malam",
         "promise": "Menjalankan tes Anda setiap malam. Kegagalan diperbaiki di branch terpisah dengan draf pull request, tidak pernah di branch utama atau salinan kerja Anda."
       },
       "pr-review-fixes": {
-        "name": "Perbaiki komentar review di PR saya",
+        "name": "Perbaiki review PR",
         "description": "Mendorong perbaikan untuk tiap komentar review baru di pull request terbukamu, begitu komentar itu masuk.",
         "when": "Setiap jam pada hari kerja, 9 sampai 18",
         "promise": "Saat komentar review baru masuk di salah satu pull request-mu, ia memperbaikinya di branch pull request itu dan membalas di bawahnya. Memantau tidak memakai kredit: ia hanya berjalan saat ada komentar untuk diperbaiki. Komentar yang butuh keputusanmu dikirim ke kamu."
       },
       "site-down": {
-        "name": "Beri tahu saya saat situs saya mati",
+        "name": "Kabari jika situs mati",
         "description": "Diperiksa setiap 5 menit tanpa biaya. Satu pesan saat mati, satu lagi saat kembali.",
         "when": "Setiap 5 menit",
         "promise": "Aplikasi memeriksa situs Anda setiap 5 menit. Pemeriksaan tidak memakai kredit: Anda hanya diberi tahu saat situs mati dan saat kembali."
       },
       "overnight-changes": {
-        "name": "Apa yang berubah di repo saya semalam",
+        "name": "Perubahan semalam",
         "description": "Setiap pagi hari kerja: commit baru, pull request yang menunggu review Anda, dan status CI, dalam lima baris.",
         "when": "Pagi hari kerja",
         "promise": "Setiap pagi hari kerja Anda menerima apa yang berubah di repositori sejak kemarin, beserta hal pertama yang perlu dilihat."
       },
       "game-check": {
-        "name": "Build ulang dan periksa game saya",
+        "name": "Build dan cek game",
         "description": "Setiap sore ia mem-build game, memainkan menit pertama, dan memberi tahu apa yang rusak.",
         "when": "Setiap sore",
         "promise": "Setiap sore ia mem-build game Anda, menjalankannya, memainkan menit pertama, dan melaporkan error build, crash, serta apa yang terlihat. Tidak ada kode yang diubah."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Hubungkan ponsel Anda",
       "where": "Berjalan di komputer ini selama menyala dan AbacusAI Bot terbuka. Jalannya yang terlewat dijalankan saat Anda kembali.",
       "whereSite": "Hanya memeriksa selama komputer ini menyala dan AbacusAI Bot terbuka.",
-      "whereGithub": "Memeriksa GitHub setiap menit selama komputer ini menyala dan AbacusAI Bot terbuka. Yang terjadi saat Anda pergi akan diproses saat Anda kembali.",
+      "whereGithub": "Memeriksa GitHub setiap menit selama komputer ini menyala dan AbacusAI Bot terbuka. Yang terjadi dalam sehari terakhir diproses saat Anda kembali.",
       "alwaysOnFree": "Dengan paket Basic, rutinitas tetap berjalan 24/7 meskipun komputer ini mati.",
       "firstRun": "Jalannya pertama dimulai sekarang, agar Anda melihat laporannya.",
       "start": "Mulai"

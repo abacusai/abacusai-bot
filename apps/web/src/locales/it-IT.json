@@ -1643,37 +1643,37 @@
         "name": "Settimana in rassegna"
       },
       "repo-watch": {
-        "name": "Rivedi le nuove PR e correggi la CI fallita",
+        "name": "Rivedi PR, correggi CI",
         "description": "Rivede ogni nuova pull request e corregge la CI fallita sui tuoi branch, appena GitHub ce l'ha.",
-        "when": "Quando si apre una pull request o la CI fallisce",
+        "when": "Nuova PR o CI fallita",
         "promise": "Quando qualcuno apre una pull request, la rivede e ti dice se è sicuro fare il merge. Quando la CI fallisce sul tuo branch o sul branch predefinito, trova la causa e fa il push di una correzione su un branch, mai nella tua copia di lavoro. Controllare non costa crediti: viene eseguito solo quando c'è qualcosa di nuovo."
       },
       "nightly-tests": {
-        "name": "Esegui i miei test e correggi gli errori",
+        "name": "Correggi i test falliti",
         "description": "Ogni notte esegue i test e corregge ciò che fallisce su un branch dedicato, con una pull request in bozza pronta al mattino.",
         "when": "Ogni notte",
         "promise": "Esegue i tuoi test ogni notte. Gli errori vengono corretti su un branch separato con una pull request in bozza, mai sul branch principale né nella tua copia di lavoro."
       },
       "pr-review-fixes": {
-        "name": "Risolvi i commenti di revisione delle mie PR",
+        "name": "Risolvi le revisioni PR",
         "description": "Invia una correzione per ogni nuovo commento di revisione sulle tue pull request aperte, appena arriva.",
         "when": "Ogni ora nei giorni feriali, dalle 9 alle 18",
         "promise": "Quando arriva un nuovo commento di revisione su una tua pull request, lo corregge sul branch di quella pull request e risponde sotto. Il controllo non usa crediti: parte solo quando c'è un commento da sistemare. I commenti che richiedono il tuo giudizio arrivano a te."
       },
       "site-down": {
-        "name": "Avvisami quando il mio sito è giù",
+        "name": "Avvisami se il sito cade",
         "description": "Controllato ogni 5 minuti senza costi. Un messaggio quando va giù, uno quando torna.",
         "when": "Ogni 5 minuti",
         "promise": "L'app controlla il tuo sito ogni 5 minuti. I controlli non usano crediti: vieni avvisato solo quando va giù e quando torna."
       },
       "overnight-changes": {
-        "name": "Cosa è cambiato nel mio repo durante la notte",
+        "name": "Cosa è cambiato stanotte",
         "description": "Ogni mattina feriale: nuovi commit, pull request in attesa della tua revisione e stato della CI, in cinque righe.",
         "when": "Mattine feriali",
         "promise": "Ogni mattina feriale ricevi cosa è cambiato nel repository da ieri, con la prima cosa da guardare."
       },
       "game-check": {
-        "name": "Ricompila e controlla il mio gioco",
+        "name": "Compila e prova il gioco",
         "description": "Ogni sera compila il gioco, gioca il primo minuto e ti dice cosa si è rotto.",
         "when": "Ogni sera",
         "promise": "Ogni sera compila il tuo gioco, lo avvia, gioca il primo minuto e segnala errori di build, crash e ciò che ha visto. Non modifica il codice."
@@ -1856,7 +1856,7 @@
       "connectPhone": "Collega il telefono",
       "where": "Viene eseguita su questo computer finché è acceso e AbacusAI Bot è aperto. Un'esecuzione persa viene recuperata al tuo ritorno.",
       "whereSite": "Controlla solo finché questo computer è acceso e AbacusAI Bot è aperto.",
-      "whereGithub": "Controlla GitHub ogni minuto mentre questo computer è acceso e AbacusAI Bot è aperto. Quello che è successo mentre eri via viene ripreso al tuo ritorno.",
+      "whereGithub": "Controlla GitHub ogni minuto mentre questo computer è acceso e AbacusAI Bot è aperto. Quello che è successo nell'ultimo giorno viene ripreso al tuo ritorno.",
       "alwaysOnFree": "Con il piano Basic le routine continuano 24/7 anche a computer spento.",
       "firstRun": "La prima esecuzione parte ora, così vedi un report.",
       "start": "Avvia"

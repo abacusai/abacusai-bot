@@ -159,7 +159,8 @@ it("the full form offers no coding routine: its settings come only with its own 
     for (const name of [
       "Tell me when my site is down",
       "Run my tests and fix failures",
-      "Fix review comments on my PRs",
+      "Fix PR review comments",
+      "Review new PRs, fix CI",
     ])
       expect(screen.queryByRole("button", { name })).toBeNull();
   } finally {

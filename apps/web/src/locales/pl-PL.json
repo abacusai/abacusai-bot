@@ -1659,31 +1659,31 @@
         "name": "Podsumowanie tygodnia"
       },
       "repo-watch": {
-        "name": "Przeglądaj nowe PR-y i naprawiaj nieudane CI",
+        "name": "Przegląd PR, naprawa CI",
         "description": "Przegląda każdy nowy pull request i naprawia nieudane CI na Twoich gałęziach, gdy tylko GitHub je ma.",
-        "when": "Gdy otwiera się pull request albo CI zawodzi",
+        "when": "Nowy PR lub błąd CI",
         "promise": "Gdy ktoś otworzy pull request, przegląda go i mówi, czy można go bezpiecznie scalić. Gdy CI zawiedzie na Twojej gałęzi lub gałęzi domyślnej, znajduje przyczynę i wypycha poprawkę na gałąź, nigdy do Twojej kopii roboczej. Obserwowanie nie kosztuje kredytów: uruchamia się tylko, gdy jest coś nowego."
       },
       "nightly-tests": {
-        "name": "Uruchom moje testy i napraw błędy",
+        "name": "Napraw nieudane testy",
         "description": "Co noc uruchamia testy i naprawia to, co nie przechodzi, na osobnej gałęzi — rano czeka szkic pull requesta.",
         "when": "Co noc",
         "promise": "Co noc uruchamia Twoje testy. Błędy są naprawiane na osobnej gałęzi ze szkicem pull requesta, nigdy na gałęzi głównej ani w Twojej kopii roboczej."
       },
       "pr-review-fixes": {
-        "name": "Popraw komentarze z review w moich PR",
+        "name": "Popraw uwagi z review",
         "description": "Wypycha poprawkę do każdego nowego komentarza z recenzji w Twoich otwartych pull requestach, gdy tylko się pojawi.",
         "when": "Co godzinę w dni robocze, 9–18",
         "promise": "Gdy w Twoim pull requeście pojawi się nowy komentarz z recenzji, poprawia go na gałęzi tego pull requesta i odpowiada pod nim. Obserwowanie nie zużywa kredytów: działa tylko, gdy jest komentarz do poprawy. Komentarze wymagające Twojej decyzji trafiają do Ciebie."
       },
       "site-down": {
-        "name": "Powiadom mnie, gdy moja strona nie działa",
+        "name": "Alert, gdy strona padnie",
         "description": "Sprawdzana co 5 minut bez kosztów. Jedna wiadomość, gdy padnie, druga, gdy wróci.",
         "when": "Co 5 minut",
         "promise": "Aplikacja sprawdza Twoją stronę co 5 minut. Sprawdzanie nie zużywa kredytów: dowiesz się tylko, gdy strona padnie i gdy wróci."
       },
       "overnight-changes": {
-        "name": "Co zmieniło się w moim repo w nocy",
+        "name": "Zmiany z nocy",
         "description": "W każdy poranek dnia roboczego: nowe commity, pull requesty czekające na Twoje review i stan CI, w pięciu linijkach.",
         "when": "Poranki w dni robocze",
         "promise": "W każdy poranek dnia roboczego dostajesz to, co zmieniło się w repozytorium od wczoraj, i to, na co spojrzeć najpierw."
@@ -1878,7 +1878,7 @@
       "connectPhone": "Połącz telefon",
       "where": "Działa na tym komputerze, gdy jest włączony, a AbacusAI Bot otwarty. Pominięte uruchomienie zostanie nadrobione po Twoim powrocie.",
       "whereSite": "Sprawdza tylko wtedy, gdy ten komputer jest włączony, a AbacusAI Bot otwarty.",
-      "whereGithub": "Sprawdza GitHub co minutę, gdy ten komputer jest włączony, a AbacusAI Bot otwarty. To, co działo się pod Twoją nieobecność, zostanie nadrobione po powrocie.",
+      "whereGithub": "Sprawdza GitHub co minutę, gdy ten komputer jest włączony, a AbacusAI Bot otwarty. To, co działo się w ostatniej dobie, zostanie nadrobione po powrocie.",
       "alwaysOnFree": "W planie Basic rutyny działają 24/7, nawet gdy ten komputer jest wyłączony.",
       "firstRun": "Pierwsze uruchomienie startuje teraz, żebyś zobaczył raport.",
       "start": "Uruchom"
