@@ -33,8 +33,12 @@ export const UpdateNotice = ({
   const dismissible =
     placement === "page" &&
     (ready || (manual != null && !update.status?.criticalUpdate));
+  // The offer comes at a pause: while a turn runs, taking it would only
+  // queue, so it steps aside and returns when the work ends (the title-bar
+  // pill stays for a restart after the task).
   if (
     !updateVisible(update.status, update.phase) ||
+    (ready && update.status?.workRunning === true) ||
     (dismissible && dismissedVersion === version)
   )
     return null;
@@ -45,7 +49,7 @@ export const UpdateNotice = ({
   return (
     <section
       data-slot={`${placement}-update`}
-      className={placement === "page" ? "mx-4 mt-3 mb-2 shrink-0" : "mb-2"}
+      className={`${placement === "page" ? "mx-4 mt-3 mb-2 shrink-0" : "mb-2"} ${ready ? "animate-in fade-in-0 slide-in-from-bottom-1 duration-200" : ""}`}
       aria-label={t("phase5.settings.updates")}
     >
       <div className="bg-card border-border overflow-hidden rounded-xl border">
@@ -60,7 +64,7 @@ export const UpdateNotice = ({
                 ? t("updateBanner.title")
                 : t(`phase5.updates.${update.phase}`, { version, percent })}
             </p>
-            {placement === "page" && ready && (
+            {ready && (
               <p className="text-muted-foreground text-xs">
                 {t("updateBanner.subtitle")}
               </p>
@@ -100,6 +104,7 @@ export const UpdateNotice = ({
               installError={update.installError}
               onInstall={update.install}
               onCheck={update.check}
+              primary={ready}
             />
           )}
           {dismissible && (

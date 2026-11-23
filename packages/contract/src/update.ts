@@ -44,6 +44,12 @@ export interface UpdateStatus {
    * `installing` follows once it is staged. Absent from older shells.
    */
   preparing?: boolean;
+  /**
+   * A downloaded build waits while an agent turn runs (a chat, a bot or a
+   * routine): a restart now would cut it off, so a click queues instead. The
+   * restart offer steps aside until the work ends. Absent from older shells.
+   */
+  workRunning?: boolean;
 }
 
 export interface UpdateManualInstall {

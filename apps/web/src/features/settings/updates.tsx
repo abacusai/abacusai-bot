@@ -453,6 +453,7 @@ export const UpdatePillButton = ({
   onManualInstall,
   compact = false,
   showFailureLabel = true,
+  primary = false,
 }: {
   status: UpdateStatus | undefined;
   clicked?: boolean;
@@ -463,6 +464,8 @@ export const UpdatePillButton = ({
   onManualInstall?(): void;
   compact?: boolean;
   showFailureLabel?: boolean;
+  /** The restart offer's own button, rather than the quiet title-bar pill. */
+  primary?: boolean;
 }) => {
   const { t } = useTranslation();
   const phase = phaseWith(status, clicked, installError);
@@ -474,7 +477,7 @@ export const UpdatePillButton = ({
   return (
     <Button
       size="sm"
-      variant="secondary"
+      variant={primary ? "default" : "secondary"}
       disabled={!retry && !install && !manual}
       className={
         compact

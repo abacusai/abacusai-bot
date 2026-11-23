@@ -62,10 +62,10 @@ const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 // Idle threshold before a downloaded update may apply itself.
 const AUTO_RESTART_IDLE_SECONDS = 10 * 60;
-const AUTO_RESTART_POLL_MS = 60_000;
-// A restart the user asked for mid-task: polled faster, and taken anyway
-// once the cap is reached.
-const REQUESTED_RESTART_POLL_MS = 2_000;
+// While a build waits: how soon a turn's end shows the restart offer, and how
+// soon a restart the user asked for mid-task follows the task.
+const RESTART_POLL_MS = 2_000;
+// A restart the user asked for mid-task is taken anyway once this passes.
 const REQUESTED_RESTART_MAX_WAIT_MS = 10 * 60 * 1000;
 
 // After quitAndInstall() only our own exit stands between the user and the
@@ -157,6 +157,7 @@ const initialStatus = (): UpdateStatus => ({
   manualInstall: null,
   restartQueued: false,
   preparing: false,
+  workRunning: false,
 });
 
 /**
@@ -364,6 +365,7 @@ export class UpdateService {
       if (this.debPackage) this.debCanElevate = debInstallCanElevate();
       this.setUpdaterHasPendingBuild(true);
       this.refreshManualInstall();
+      this.refreshWorkRunning();
       this.emitStatusUpdate();
       this.startAutoRestartPoll();
     });
@@ -382,9 +384,24 @@ export class UpdateService {
     this.staging?.cancel();
     this.staging = null;
     this.status.manualInstall = null;
+    this.status.workRunning = false;
     this.endRestartRequest();
     this.stopAutoRestartPoll();
     this.setUpdaterHasPendingBuild(false);
+  }
+
+  /**
+   * Whether a restart now would cut off an agent turn (a chat, a bot or a
+   * routine): the gate a click meets, so the offer shows only when taking it
+   * restarts at once. True when it changed.
+   */
+  private refreshWorkRunning(): boolean {
+    const running =
+      this.status.downloaded &&
+      this.deps.isSafeToRestart?.({ requested: true }) === false;
+    if (running === this.status.workRunning) return false;
+    this.status.workRunning = running;
+    return true;
   }
 
   private endRestartRequest(): void {
@@ -456,19 +473,18 @@ export class UpdateService {
     autoUpdater.autoInstallOnAppQuit = false;
   }
 
-  // Wait for a moment when a restart destroys nothing and take it silently;
-  // the pill stays as the manual path. A pill click while that moment has
-  // not come arms the same wait (installUpdate whenSafe).
+  // Follow the running work so the offer shows once it ends, and wait for a
+  // moment when a restart destroys nothing to take it silently; the pill
+  // stays as the manual path. A pill click while that moment has not come
+  // arms the same wait (installUpdate whenSafe).
   private startAutoRestartPoll(): void {
     if (this.autoRestartTimer != null || this.status.manualInstall != null)
       return;
 
-    this.autoRestartTimer = setInterval(
-      () => this.tryAutoRestart(),
-      this.restartRequestedAt != null
-        ? REQUESTED_RESTART_POLL_MS
-        : AUTO_RESTART_POLL_MS
-    );
+    this.autoRestartTimer = setInterval(() => {
+      if (this.refreshWorkRunning()) this.emitStatusUpdate();
+      this.tryAutoRestart();
+    }, RESTART_POLL_MS);
     this.autoRestartTimer.unref();
   }
 
@@ -743,7 +759,6 @@ export class UpdateService {
       );
       this.status.restartQueued = true;
       this.emitStatusUpdate();
-      this.stopAutoRestartPoll();
       this.startAutoRestartPoll();
       return Promise.resolve({ success: true });
     }
