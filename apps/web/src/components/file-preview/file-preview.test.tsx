@@ -19,6 +19,12 @@ import {
   resolveWorkspacePath,
 } from "./paths";
 
+const saveFiles = vi.hoisted(() => vi.fn());
+vi.mock("#platform/preview-files", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  saveFiles,
+}));
+
 beforeAll(async () => {
   await initI18n();
   await i18n.changeLanguage("en-US");
@@ -307,6 +313,15 @@ describe("FilePreview header", () => {
     expect(open).toHaveBeenCalledWith("/w/dir/theme.scss");
     expect(reveal).toHaveBeenCalledWith("/w/dir/theme.scss");
     expect(screen.getByRole("button", { name: "Copy path" })).toBeTruthy();
+    // Download asks main for a copy where the user picks.
+    saveFiles.mockRejectedValueOnce(new Error("disk full"));
+    fireEvent.click(screen.getByRole("button", { name: "Download" }));
+    expect(saveFiles).toHaveBeenCalledWith([
+      { filePath: "/w/dir/theme.scss", hostRoot: "/w" },
+    ]);
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Couldn't download a copy. Try again."
+    );
     vi.unstubAllGlobals();
   });
 

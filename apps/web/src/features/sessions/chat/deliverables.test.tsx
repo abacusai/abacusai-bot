@@ -15,6 +15,19 @@ import {
 vi.mock("#renderer/components/share/share-row-button", () => ({
   ShareRowButton: () => null,
 }));
+const saving = vi.hoisted(() => ({
+  saveFiles: vi.fn(),
+  showInfo: vi.fn(),
+  showError: vi.fn(),
+}));
+vi.mock("#platform/preview-files", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  saveFiles: saving.saveFiles,
+}));
+vi.mock("#renderer/lib/toast", () => ({
+  showInfo: saving.showInfo,
+  showError: saving.showError,
+}));
 
 beforeAll(async () => {
   await initI18n();
@@ -79,6 +92,93 @@ describe("deliverablesAfter", () => {
     );
     fireEvent.click(screen.getByText("report.md"));
     expect(onOpenFile).toHaveBeenCalledWith("/w/report.md");
+  });
+});
+
+describe("Download on the files card", () => {
+  const card = () =>
+    render(
+      sessionDeliverablesCard(
+        [
+          { path: "report.md", isUrl: false },
+          { path: "https://x.dev", label: "App", isUrl: true },
+          // A guest path: main places it under the workspace root.
+          { path: "/workspace/site", isUrl: false },
+        ],
+        {
+          workspaceRoot: "/w",
+          onOpenFile: vi.fn(),
+          onOpenUrl: vi.fn(),
+          onOpenExternal: vi.fn(),
+        }
+      )
+    );
+
+  it("saves one row's file, resolved, and says where it went", async () => {
+    saving.saveFiles.mockResolvedValueOnce({
+      destination: "/d/report.md",
+      saved: 1,
+      skipped: 0,
+    });
+    card();
+    // One Download per file row; a link has none.
+    const rows = screen.getAllByRole("button", { name: "Download" });
+    expect(rows).toHaveLength(2);
+    fireEvent.click(rows[0]!);
+    expect(saving.saveFiles).toHaveBeenCalledWith([
+      { filePath: "/w/report.md", hostRoot: "/w" },
+    ]);
+    await vi.waitFor(() =>
+      expect(saving.showInfo).toHaveBeenCalledWith(
+        "Downloaded",
+        expect.objectContaining({ description: "/d/report.md" })
+      )
+    );
+  });
+
+  it("Download all takes every file and no link; cancel says nothing", async () => {
+    saving.showInfo.mockClear();
+    saving.saveFiles.mockResolvedValueOnce({
+      destination: null,
+      saved: 0,
+      skipped: 0,
+    });
+    card();
+    fireEvent.click(screen.getByRole("button", { name: "Download all" }));
+    expect(saving.saveFiles).toHaveBeenLastCalledWith([
+      { filePath: "/w/report.md", hostRoot: "/w" },
+      { filePath: "/workspace/site", hostRoot: "/w" },
+    ]);
+    await vi.waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Download all" })
+          .hasAttribute("disabled")
+      ).toBe(false)
+    );
+    expect(saving.showInfo).not.toHaveBeenCalled();
+    expect(saving.showError).not.toHaveBeenCalled();
+  });
+
+  it("says when nothing was there to save, and when the copy failed", async () => {
+    saving.saveFiles
+      .mockResolvedValueOnce({ destination: null, saved: 0, skipped: 1 })
+      .mockRejectedValueOnce(new Error("disk full"));
+    card();
+    const [first] = screen.getAllByRole("button", { name: "Download" });
+    fireEvent.click(first!);
+    await vi.waitFor(() =>
+      expect(saving.showError).toHaveBeenCalledWith(
+        "Nothing was downloaded. It may have been moved or deleted."
+      )
+    );
+    await vi.waitFor(() => expect(first!.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(first!);
+    await vi.waitFor(() =>
+      expect(saving.showError).toHaveBeenLastCalledWith(
+        "Couldn't download a copy. Try again."
+      )
+    );
   });
 });
 

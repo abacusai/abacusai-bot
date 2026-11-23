@@ -4525,7 +4525,13 @@
     "openInBrowser": "Open in browser",
     "showInFolder": "Show in folder",
     "showLess": "Show less",
-    "showMore": "+{{count}} more"
+    "showMore": "+{{count}} more",
+    "download": "Download",
+    "downloadAll": "Download all",
+    "downloaded": "Downloaded",
+    "downloadedSome": "Downloaded. Some files were no longer there.",
+    "downloadMissing": "Nothing was downloaded. It may have been moved or deleted.",
+    "downloadFailed": "Couldn't download a copy. Try again."
   },
   "devicePanel": {
     "axPermissionNeeded": "Accessibility permission is needed to mirror the simulator without showing its window.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Save a Copy",
+    "saveCopiesTo": "Choose a Folder to Save To",
+    "saveHere": "Save Here"
   },
   "channels": {
     "sidebar": {

@@ -4525,7 +4525,13 @@
     "openInBrowser": "Tarayıcıda aç",
     "showInFolder": "Klasörde göster",
     "showLess": "Daha az göster",
-    "showMore": "+{{count}} daha"
+    "showMore": "+{{count}} daha",
+    "download": "İndir",
+    "downloadAll": "Tümünü indir",
+    "downloaded": "İndirildi",
+    "downloadedSome": "İndirildi. Bazı dosyalar artık yoktu.",
+    "downloadMissing": "Hiçbir şey indirilmedi. Taşınmış veya silinmiş olabilir.",
+    "downloadFailed": "Kopya indirilemedi. Tekrar dene."
   },
   "devicePanel": {
     "axPermissionNeeded": "Simülatörü penceresini göstermeden yansıtmak için Erişilebilirlik izni gerekiyor.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Kopyasını Kaydet",
+    "saveCopiesTo": "Kaydedilecek Klasörü Seç",
+    "saveHere": "Buraya Kaydet"
   },
   "channels": {
     "sidebar": {

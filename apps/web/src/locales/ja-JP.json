@@ -4525,7 +4525,13 @@
     "openInBrowser": "ブラウザで開く",
     "showInFolder": "フォルダ内に表示",
     "showLess": "表示を少なくする",
-    "showMore": "+{{count}} 詳細"
+    "showMore": "+{{count}} 詳細",
+    "download": "ダウンロード",
+    "downloadAll": "すべてダウンロード",
+    "downloaded": "ダウンロードしました",
+    "downloadedSome": "ダウンロードしました。一部のファイルは見つかりませんでした。",
+    "downloadMissing": "何もダウンロードされませんでした。移動または削除された可能性があります。",
+    "downloadFailed": "コピーをダウンロードできませんでした。もう一度お試しください。"
   },
   "devicePanel": {
     "axPermissionNeeded": "ウインドウを表示せずにシミュレーターをミラーリングするにはアクセシビリティの許可が必要です。",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "コピーを保存",
+    "saveCopiesTo": "保存先のフォルダーを選択",
+    "saveHere": "ここに保存"
   },
   "channels": {
     "sidebar": {

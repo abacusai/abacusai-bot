@@ -1,3 +1,5 @@
+import type { SaveCopyResult } from "@abacus-ai/contract/contract/system";
+
 import { hostFiles, type HostFile } from "#renderer/lib/browser/host-files";
 export const browserPreview = true;
 export const previewBlob = async (
@@ -22,7 +24,7 @@ export const previewBlob = async (
 };
 export const previewSize = (input: HostFile, signal: AbortSignal) =>
   hostFiles.size(input, signal);
-export const downloadFile = async (input: HostFile) => {
+const downloadFile = async (input: HostFile) => {
   const link = document.createElement("a");
   link.href = await hostFiles.downloadUrl(input);
   link.download = input.filePath.split("/").at(-1) ?? "";
@@ -31,3 +33,10 @@ export const downloadFile = async (input: HostFile) => {
   link.click();
   link.remove();
 };
+/** The browser's own downloads: each file in turn, where it saves them. */
+export const saveFiles = async (items: HostFile[]): Promise<SaveCopyResult> => {
+  for (const item of items) await downloadFile(item);
+  return { destination: null, saved: items.length, skipped: 0 };
+};
+/** A download has no folder here to show: the browser lists it. */
+export const revealSaved = async (_path: string): Promise<void> => {};

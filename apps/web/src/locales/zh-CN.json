@@ -4525,7 +4525,13 @@
     "openInBrowser": "在浏览器中打开",
     "showInFolder": "在文件夹中显示",
     "showLess": "收起",
-    "showMore": "还有 {{count}} 项"
+    "showMore": "还有 {{count}} 项",
+    "download": "下载",
+    "downloadAll": "全部下载",
+    "downloaded": "已下载",
+    "downloadedSome": "已下载。部分文件已不存在。",
+    "downloadMissing": "未下载任何内容，可能已被移动或删除。",
+    "downloadFailed": "无法下载副本，请重试。"
   },
   "devicePanel": {
     "axPermissionNeeded": "需要辅助功能权限才能在不显示模拟器窗口的情况下镜像模拟器。",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "保存副本",
+    "saveCopiesTo": "选择保存位置",
+    "saveHere": "保存到此处"
   },
   "channels": {
     "sidebar": {

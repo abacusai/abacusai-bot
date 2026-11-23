@@ -107,6 +107,7 @@ export type {
   QuitGuardAnswer,
   QuitGuardState,
   QuitGuardWork,
+  SaveCopyResult,
   SystemEvent,
   SystemInfo,
 } from "./system";

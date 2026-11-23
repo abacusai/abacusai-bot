@@ -3,6 +3,7 @@
  * BotChat attachment rows): "Files {n}", three rows then Show all. A row
  * opens the file (read-only preview) or URL; its secondary button reveals the
  * file in the folder or opens the URL in the browser. Nothing opens itself.
+ * The header can carry an action for all of them (Save all).
  */
 import {
   ExternalLink,
@@ -35,6 +36,8 @@ export interface DeliverablesCardProps {
   onOpenUrl(item: DeliverableItem): void;
   /** A further action at the end of a row, after its folder button. */
   rowAction?(item: DeliverableItem): ReactNode;
+  /** At the end of the header, for the whole card. */
+  headerAction?: ReactNode;
 }
 
 const VISIBLE_ROWS = 3;
@@ -67,6 +70,7 @@ export const DeliverablesCard = ({
   onReveal,
   onOpenUrl,
   rowAction,
+  headerAction,
 }: DeliverablesCardProps) => {
   const { t } = useTranslation();
   const [showAll, setShowAll] = useState(false);
@@ -85,6 +89,9 @@ export const DeliverablesCard = ({
         <span className="text-muted-foreground text-xs tabular-nums">
           {items.length}
         </span>
+        {headerAction != null && (
+          <span className="ms-auto flex items-center">{headerAction}</span>
+        )}
       </div>
       <ul className="flex flex-col gap-0.5">
         {visible.map((item, index) => {

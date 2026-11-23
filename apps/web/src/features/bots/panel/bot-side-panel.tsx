@@ -12,6 +12,10 @@ import {
   FilePreview,
   containmentRootFor,
 } from "#renderer/components/file-preview";
+import {
+  SaveAllButton,
+  useSaveFiles,
+} from "#renderer/components/file-preview/save-files";
 import { FileTreeView } from "#renderer/components/file-tree";
 import { SettingSwitch } from "#renderer/components/form-kit/controls";
 import { GroupCard, SettingRow } from "#renderer/components/form-kit/page";
@@ -398,6 +402,7 @@ export const FilesTab = ({
   }, [db]);
   const preview = tab.path;
   const tree = treeOf(files, workspaceRoot);
+  const saver = useSaveFiles(workspaceRoot);
   const links = files.filter((file) => file.kind === "link");
   const open = (relative: string, where: "here" | "tab") => {
     const location = tree.byPath.get(relative);
@@ -428,9 +433,15 @@ export const FilesTab = ({
               description={t("bots.panel.filesIntro")}
             />
           ) : (
-            <p className="text-muted-foreground text-xs">
-              {t("bots.panel.filesIntro")}
-            </p>
+            <div className="flex items-start gap-2">
+              <p className="text-muted-foreground flex-1 text-xs">
+                {t("bots.panel.filesIntro")}
+              </p>
+              <SaveAllButton
+                paths={[...tree.byPath.values()]}
+                workspaceRoot={workspaceRoot}
+              />
+            </div>
           )}
           {tree.paths.length > 0 && (
             <FileTreeView
@@ -456,6 +467,13 @@ export const FilesTab = ({
                       },
                       ...(IS_ELECTRON
                         ? [
+                            {
+                              label: t("deliverables.download"),
+                              run: () => {
+                                const location = tree.byPath.get(item.path);
+                                if (location) saver.save([location]);
+                              },
+                            },
                             {
                               label: t("artifacts.revealInFolder"),
                               run: () =>

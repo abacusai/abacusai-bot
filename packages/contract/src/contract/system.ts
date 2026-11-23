@@ -92,6 +92,29 @@ export interface PickedFile {
   size?: number;
 }
 
+/** What `saveCopy` did. */
+export interface SaveCopyResult {
+  /**
+   * The saved file (one file) or the folder the copies went into; null when
+   * the user cancelled, nothing was found, or the browser downloaded them.
+   */
+  destination: string | null;
+  saved: number;
+  /** Items not saved: no longer there, or the copy failed. */
+  skipped: number;
+}
+
+/** A file as the readers take it: the path the agent named, and its root. */
+export interface SaveCopyItem {
+  filePath: string;
+  hostRoot: string;
+}
+
+const SaveCopyItemSchema = v.object({
+  filePath: v.pipe(v.string(), v.nonEmpty()),
+  hostRoot: v.pipe(v.string(), v.nonEmpty()),
+});
+
 export const system = {
   activity: mutation.input(NoInput).output(type<void>()),
   openPrivacyPane: mutation
@@ -128,6 +151,23 @@ export const system = {
   showItemInFolder: mutation
     .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
     .output(type<void>()),
+  /**
+   * "Save" / "Save all" on files the bot made, from the local window only.
+   * One file: the OS save dialog, which asks before replacing. Several, or a
+   * folder: a folder picker, each copied in under a name not yet taken there.
+   * Paths resolve as the file readers' do (`~`, `/workspace`, relative).
+   */
+  saveCopy: mutation
+    .input(
+      v.object({
+        items: v.pipe(
+          v.array(SaveCopyItemSchema),
+          v.minLength(1),
+          v.maxLength(1000)
+        ),
+      })
+    )
+    .output(type<SaveCopyResult>()),
   info: query.input(NoInput).output(type<SystemInfo>()),
   acknowledgeLegacyDrafts: mutation
     .input(v.object({ keys: v.array(v.string()) }))

@@ -118,6 +118,7 @@ import {
   type MessagePortTransport,
 } from "./rpc/transports/message-port";
 import { publishToWindowViews } from "./rpc/window-events";
+import { saveCopies } from "./save-copy";
 import { ServiceHost } from "./service-host";
 import { revivePreview } from "./services/agent-tools/served-previews";
 import { isSiteExport } from "./services/agent-tools/site-pack";
@@ -1525,6 +1526,28 @@ const appOperations: AppOperations = {
   showItemInFolder(filePath) {
     shell.showItemInFolder(filePath);
   },
+
+  saveCopy: (items) =>
+    saveCopies(items, {
+      defaultDir: app.getPath("downloads"),
+      saveFile: async (defaultPath) => {
+        const result = await showSaveDialogFromApp({
+          title: nativeT("saveCopy"),
+          defaultPath,
+          properties: ["createDirectory", "showOverwriteConfirmation"],
+        });
+        return result.canceled || !result.filePath ? null : result.filePath;
+      },
+      pickFolder: async (defaultPath) => {
+        const result = await showOpenDialogFromApp({
+          title: nativeT("saveCopiesTo"),
+          defaultPath,
+          buttonLabel: nativeT("saveHere"),
+          properties: ["openDirectory", "createDirectory", "dontAddToRecent"],
+        });
+        return result.canceled ? null : (result.filePaths[0] ?? null);
+      },
+    }),
 
   startFileDrag(webContentsId, filePath) {
     const contents = electronWebContents.fromId(webContentsId);

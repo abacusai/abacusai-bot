@@ -4525,7 +4525,13 @@
     "openInBrowser": "Im Browser öffnen",
     "showInFolder": "Im Ordner anzeigen",
     "showLess": "Weniger anzeigen",
-    "showMore": "+{{count}} mehr"
+    "showMore": "+{{count}} mehr",
+    "download": "Herunterladen",
+    "downloadAll": "Alle herunterladen",
+    "downloaded": "Heruntergeladen",
+    "downloadedSome": "Heruntergeladen. Einige Dateien waren nicht mehr vorhanden.",
+    "downloadMissing": "Nichts heruntergeladen. Die Datei wurde vielleicht verschoben oder gelöscht.",
+    "downloadFailed": "Die Kopie konnte nicht heruntergeladen werden. Versuche es erneut."
   },
   "devicePanel": {
     "axPermissionNeeded": "Für die Spiegelung des Simulators ohne sichtbares Fenster wird die Bedienungshilfen-Berechtigung benötigt.",
@@ -5483,7 +5489,10 @@
     "groupsCount_one": "{{count}} group",
     "groupsCount_other": "{{count}} groups",
     "morePeople_one": "{{count}} more",
-    "morePeople_other": "{{count}} more"
+    "morePeople_other": "{{count}} more",
+    "saveCopy": "Kopie speichern",
+    "saveCopiesTo": "Ordner zum Speichern auswählen",
+    "saveHere": "Hier speichern"
   },
   "channels": {
     "sidebar": {

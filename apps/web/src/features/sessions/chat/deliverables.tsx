@@ -12,6 +12,10 @@ import {
   resolveWorkspacePath,
 } from "#renderer/components/file-preview";
 import { LookRowButton } from "#renderer/components/file-preview/look-row-button";
+import {
+  SaveAllButton,
+  SaveRowButton,
+} from "#renderer/components/file-preview/save-files";
 import { ShareRowButton } from "#renderer/components/share/share-row-button";
 import {
   turnDeliverables,
@@ -89,9 +93,21 @@ export const sessionDeliverablesCard = (
           : undefined
       }
       onOpenUrl={(item) => options.onOpenExternal(item.path)}
+      headerAction={
+        <SaveAllButton
+          paths={items
+            .filter((item) => !item.isUrl)
+            .map((item) => resolve(item.path))}
+          workspaceRoot={options.workspaceRoot}
+        />
+      }
       rowAction={(item) =>
         item.isUrl ? null : (
           <>
+            <SaveRowButton
+              path={resolve(item.path)}
+              workspaceRoot={options.workspaceRoot}
+            />
             <LookRowButton path={resolve(item.path)} />
             <ShareRowButton path={resolve(item.path)} />
           </>

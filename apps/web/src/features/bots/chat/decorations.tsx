@@ -33,6 +33,10 @@ import {
  * structurally (identical to the kit's).
  */
 import { LookRowButton } from "#renderer/components/file-preview/look-row-button";
+import {
+  SaveAllButton,
+  SaveRowButton,
+} from "#renderer/components/file-preview/save-files";
 import { ShareRowButton } from "#renderer/components/share/share-row-button";
 import type { Transport } from "#renderer/data/transport";
 import { stampLabel } from "#renderer/lib/bot-turns/gap-stamp";
@@ -600,9 +604,21 @@ export const botMessageDecorations = (
           : undefined
       }
       onOpenUrl={(item) => options.onOpenExternal(item.path)}
+      headerAction={
+        <SaveAllButton
+          paths={items
+            .filter((item) => !item.isUrl)
+            .map((item) => resolve(item.path))}
+          workspaceRoot={options.workspaceRoot}
+        />
+      }
       rowAction={(item) =>
         item.isUrl ? null : (
           <>
+            <SaveRowButton
+              path={resolve(item.path)}
+              workspaceRoot={options.workspaceRoot}
+            />
             <LookRowButton path={resolve(item.path)} />
             <ShareRowButton path={resolve(item.path)} />
           </>

@@ -21,7 +21,7 @@ import {
   browserPreview,
   previewBlob,
   previewSize,
-  downloadFile,
+  saveFiles,
 } from "#platform/preview-files";
 import {
   ACTION_BUTTON_CLASS,
@@ -41,6 +41,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { previewKind } from "./paths";
 import { PptxSlides } from "./pptx-slides";
+import { announceSaved } from "./save-files";
 
 interface FilePreviewReaders {
   text(
@@ -230,16 +231,17 @@ export const FilePreview = ({
       icon: htmlPreview ? Code : Eye,
       run: () => setHtmlChoice({ key: htmlKey, preview: !htmlPreview }),
     });
-  if (browserPreview)
+  // The browser downloads; the desktop asks where and copies it there.
+  if (browserPreview || showActions)
     actions.push({
       key: "download",
-      label: t("web.files.download"),
+      label: t("deliverables.download"),
       icon: Download,
       run: () => {
         setDownloadFailure(null);
-        void downloadFile({ filePath: path, hostRoot }).catch(() =>
-          setDownloadFailure(key)
-        );
+        void saveFiles([{ filePath: path, hostRoot }])
+          .then((result) => announceSaved(result, t))
+          .catch(() => setDownloadFailure(key));
       },
     });
   if (showActions) {
@@ -356,7 +358,15 @@ export const FilePreview = ({
             : "min-h-0 flex-1 overflow-auto p-3 text-sm"
         }
       >
-        {downloadError && <p role="alert">{t("web.files.downloadFailed")}</p>}
+        {downloadError && (
+          <p role="alert">
+            {t(
+              browserPreview
+                ? "web.files.downloadFailed"
+                : "deliverables.downloadFailed"
+            )}
+          </p>
+        )}
         {kind === "external" && !browserPreview ? (
           <div className="flex flex-col items-start gap-2" role="status">
             <p className="text-muted-foreground">

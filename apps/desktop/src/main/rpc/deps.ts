@@ -17,6 +17,8 @@ import type {
   PickedFile,
   QuitGuardAnswer,
   QuitGuardState,
+  SaveCopyItem,
+  SaveCopyResult,
 } from "@abacus-ai/contract/contract/system";
 import type {
   BrowserRuntimeLease,
@@ -74,6 +76,8 @@ export interface AppOperations {
   openExternal(url: string): Promise<void>;
   openFilePath(filePath: string): Promise<OpenFilePathResult>;
   showItemInFolder(filePath: string): void;
+  /** "Save" / "Save all": copies where the user picks (save-copy.ts). */
+  saveCopy(items: SaveCopyItem[]): Promise<SaveCopyResult>;
   /** Drags a project zip the app made (site-pack.ts) out of the window; anything else is refused. */
   startFileDrag?(webContentsId: number, filePath: string): void;
   appVersion(): string;
