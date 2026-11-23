@@ -27,9 +27,9 @@ import {
   writeVendored,
 } from "@abacus-ai/config/vendor-fetch";
 
-const VERSION = "4.6.0";
+const VERSION = "4.8.2";
 const SHA256 =
-  "5bfb88027f14a4d8c9e319374e8bb4083201906881cf8c74f75789b32e4106bd";
+  "b1a9c3c42357ad2a9fb7504f460c909dcf0e2b1ad8129abdb485f151164a4b10";
 const URL = `https://github.com/wppconnect-team/wa-js/releases/download/v${VERSION}/wppconnect-wa.js`;
 
 const ROOT = path.resolve(import.meta.dirname, "..");
