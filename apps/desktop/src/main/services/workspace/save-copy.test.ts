@@ -11,7 +11,11 @@ let root: string;
 let work: string;
 let out: string;
 beforeEach(() => {
-  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "save-copy-")));
+  // Native, as the code under test resolves: on Windows only it expands an
+  // 8.3 short name (RUNNER~1) in the temp dir to the long one.
+  root = fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), "save-copy-"))
+  );
   work = path.join(root, "work");
   out = path.join(root, "out");
   fs.mkdirSync(work);
