@@ -5158,6 +5158,7 @@
       "key_invalid": "Votre clé {{provider}} a été refusée : elle est invalide ou a expiré.",
       "own_key_quota": "Votre clé {{provider}} a atteint son quota. Passez à un autre modèle ou vérifiez l'offre de la clé.",
       "model_unavailable": "Ce modèle n'a pas pu accepter la demande. Choisissez un autre modèle.",
+      "content_refused": "Le modèle a refusé cette demande en raison de ses règles de contenu, et la refuserait à nouveau. Reformulez la demande ou passez à un autre modèle.",
       "free_pool_spent": "Toutes les sources gratuites sont épuisées pour le moment. Connectez une autre source gratuite ou choisissez un autre modèle.",
       "rate_limited": "Les modèles gratuits sont occupés en ce moment. Réessayez dans quelques minutes ou passez à un autre modèle.",
       "empty": "Le modèle a renvoyé une réponse vide. Réessayez ou passez à un autre modèle.",

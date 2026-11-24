@@ -5158,6 +5158,7 @@
       "key_invalid": "Kunci {{provider}} kamu ditolak — tidak valid atau sudah kedaluwarsa.",
       "own_key_quota": "Kunci {{provider}} kamu sudah mencapai kuotanya. Beralih ke model lain, atau periksa paket kunci tersebut.",
       "model_unavailable": "Model ini tidak bisa menerima permintaan. Pilih model lain.",
+      "content_refused": "Model menolak permintaan ini karena aturan kontennya, dan akan menolaknya lagi. Ubah kata-kata permintaanmu, atau beralih ke model lain.",
       "free_pool_spent": "Semua sumber gratis sudah habis untuk saat ini. Hubungkan sumber gratis lain, atau pilih model lain.",
       "rate_limited": "Model gratis sedang sibuk. Coba lagi dalam beberapa menit, atau beralih ke model lain.",
       "empty": "Model mengembalikan balasan kosong. Coba lagi, atau beralih ke model lain.",

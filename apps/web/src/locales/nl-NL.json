@@ -5158,6 +5158,7 @@
       "key_invalid": "Je {{provider}}-sleutel is geweigerd: hij is ongeldig of verlopen.",
       "own_key_quota": "Je {{provider}}-sleutel heeft zijn quotum bereikt. Kies een ander model of controleer het abonnement van de sleutel.",
       "model_unavailable": "Dit model kon het verzoek niet aannemen. Kies een ander model.",
+      "content_refused": "Het model heeft dit verzoek geweigerd vanwege zijn inhoudsregels en zou het opnieuw weigeren. Formuleer het verzoek anders, of kies een ander model.",
       "free_pool_spent": "Alle gratis bronnen zijn voorlopig op. Koppel een andere gratis bron of kies een ander model.",
       "rate_limited": "De gratis modellen zijn nu druk bezet. Probeer het over een paar minuten opnieuw of kies een ander model.",
       "empty": "Het model gaf een leeg antwoord. Probeer het opnieuw of kies een ander model.",

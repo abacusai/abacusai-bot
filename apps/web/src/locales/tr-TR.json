@@ -5158,6 +5158,7 @@
       "key_invalid": "{{provider}} anahtarın reddedildi: geçersiz ya da süresi dolmuş.",
       "own_key_quota": "{{provider}} anahtarın kotasını doldurdu. Başka bir modele geç veya anahtarın planını kontrol et.",
       "model_unavailable": "Bu model isteği kabul edemedi. Başka bir model seç.",
+      "content_refused": "Model bu isteği içerik kuralları nedeniyle reddetti ve yeniden de reddeder. İsteği farklı sözcüklerle yaz ya da başka bir modele geç.",
       "free_pool_spent": "Şimdilik tüm ücretsiz kaynaklar tükendi. Başka bir ücretsiz kaynak bağla veya başka bir model seç.",
       "rate_limited": "Ücretsiz modeller şu anda yoğun. Birkaç dakika sonra tekrar dene veya başka bir modele geç.",
       "empty": "Model boş bir yanıt döndürdü. Tekrar dene veya başka bir modele geç.",

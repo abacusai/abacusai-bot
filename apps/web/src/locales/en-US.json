@@ -5158,6 +5158,7 @@
       "key_invalid": "Your {{provider}} key was rejected — it's invalid or expired.",
       "own_key_quota": "Your {{provider}} key hit its quota. Switch to a different model, or check the key's plan.",
       "model_unavailable": "This model couldn't take the request. Pick a different model.",
+      "content_refused": "The model declined this request under its content rules, and it would decline it again. Reword the request, or switch to a different model.",
       "free_pool_spent": "Every free source is used up for now. Connect another free source, or pick a different model.",
       "rate_limited": "The free models are busy right now. Try again in a few minutes, or switch to a different model.",
       "empty": "The model returned an empty reply. Try again, or switch to a different model.",

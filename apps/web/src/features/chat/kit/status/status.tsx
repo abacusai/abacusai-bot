@@ -172,6 +172,7 @@ const OUTCOME_CAUSES = new Set([
   "key_invalid",
   "own_key_quota",
   "model_unavailable",
+  "content_refused",
   "free_pool_spent",
   "rate_limited",
   "empty",
