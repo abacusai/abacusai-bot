@@ -7,6 +7,11 @@
  * both and `sequenceOf` answers for the part a rating names
  * (`feedbackSegmentId`).
  *
+ * The upload log is append-only, so a part goes up once and is never
+ * replaced. While a run is open its last assistant part may still be growing
+ * (a reply mid-stream, a tool call whose input is still arriving), so it is
+ * held back until the run ends; uploading it then would keep the cut copy.
+ *
  * Messages migrated from v1 (they carry `metadata.abacus.segments`) are not
  * uploaded again: their segments are the v1 transcript's, already keyed by
  * segment id, which is what feedback names for them (a text part's
@@ -91,16 +96,24 @@ export const messageCreatedAt = (message: unknown): number | null => {
   return null;
 };
 
-/** One entry per part of every live (non-migrated) message, in order. */
+/**
+ * One entry per part of every live (non-migrated) message, in order. With
+ * `runOpen`, the last part of a closing assistant message is left out: it may
+ * still be streaming.
+ */
 export const aguiSyncEntries = (
-  messages: readonly unknown[]
+  messages: readonly unknown[],
+  runOpen = false
 ): Array<Record<string, unknown>> =>
-  messages.flatMap((raw) => {
+  messages.flatMap((raw, index) => {
     const message = raw as MessageLike;
     if (typeof message.id !== "string" || message.id.length === 0) return [];
     if (fromV1(message) || !Array.isArray(message.parts)) return [];
     const createdAt = messageCreatedAt(message);
-    return message.parts.map((part, partIndex) => ({
+    const growing =
+      runOpen && index === messages.length - 1 && message.role === "assistant";
+    const parts = growing ? message.parts.slice(0, -1) : message.parts;
+    return parts.map((part, partIndex) => ({
       id: aguiEntryKey(message.id as string, partIndex),
       type: AGUI_ENTRY_TYPE,
       messageId: message.id,
@@ -122,6 +135,8 @@ export const syncLogFor = (
     readV1(sessionId: string): StoredTranscript | null;
     readThread(sessionId: string): ThreadLike | null;
     readOutcomes?(sessionId: string): readonly TurnRecordLike[];
+    /** Whether the thread has a run open now; its streaming tail waits. */
+    runOpen?(sessionId: string): boolean;
   }
 ): StoredTranscript | null => {
   const v1 = sources.readV1(sessionId);
@@ -132,7 +147,9 @@ export const syncLogFor = (
     thread = null;
   }
   const agui =
-    thread?.source.kind === "agui" ? aguiSyncEntries(thread.messages) : [];
+    thread?.source.kind === "agui"
+      ? aguiSyncEntries(thread.messages, sources.runOpen?.(sessionId) === true)
+      : [];
   if (v1 == null && agui.length === 0) return null;
   const outcomes = outcomeSyncEntries(sources.readOutcomes?.(sessionId) ?? []);
   if (agui.length === 0 && outcomes.length === 0) return v1;
