@@ -1235,6 +1235,7 @@ export class ServiceHost {
         readV1: (id) => this.transcriptService.read(id),
         readThread: (id) => this.threadStore.readAguiFile(id),
         readOutcomes: (id) => this.turnLedger.records(id),
+        runOpen: (id) => this.aguiRelay.runOpen(id),
       }),
     clientVersion: app.getVersion(),
   });

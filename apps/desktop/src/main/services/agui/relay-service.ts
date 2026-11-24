@@ -631,6 +631,11 @@ export class AguiRelayService implements AguiSource {
     return Array.from(ids);
   }
 
+  /** Whether one thread has a run open, its last message possibly mid-stream. */
+  runOpen(threadId: string): boolean {
+    return this.#threads.get(threadId)?.activeRunId != null;
+  }
+
   /**
    * Whether one thread needs its agent now: a run open or being admitted, a
    * permission or question waiting on the user, or messages queued behind it.
