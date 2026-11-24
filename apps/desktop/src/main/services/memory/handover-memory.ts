@@ -188,10 +188,10 @@ export async function handOverMemory(
     return { ok: false, reason: "unreadable", retryable: false };
   }
   const outcome = await postHandoverMemory(payload);
-  log(
-    outcome.ok === true
-      ? `[handover] memory sent (${payload.memory.length} chars, instructions ${payload.instructions.length} chars)`
-      : `[handover] memory not sent: ${outcome.reason}`
-  );
+  if (outcome.ok === true)
+    log(
+      `[handover] memory sent (${payload.memory.length} chars, instructions ${payload.instructions.length} chars)`
+    );
+  else log(`[handover] memory not sent: ${outcome.reason}`);
   return outcome;
 }
