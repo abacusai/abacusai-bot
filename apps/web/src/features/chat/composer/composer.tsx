@@ -81,6 +81,7 @@ import {
   addFiles,
   addDroppedFiles,
   addPaths,
+  longPasteFile,
   removeAttachment,
   retryAttachment,
 } from "./attachments";
@@ -1065,6 +1066,13 @@ export const ThreadComposer = () => {
       return;
     }
     const files = [...event.clipboardData.files];
+    // Very long text is attached as a file, where there is a place to save it.
+    const long =
+      files.length === 0 &&
+      (runtime.host.uploadFile != null || config.attachmentsBase != null)
+        ? longPasteFile(event.clipboardData.getData("text/plain"))
+        : null;
+    if (long != null) files.push(long);
     if (files.length === 0) return;
     event.preventDefault();
     void addFiles(
