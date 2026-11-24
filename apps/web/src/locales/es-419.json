@@ -5164,6 +5164,7 @@
       "key_invalid": "Se rechazó tu clave de {{provider}}: no es válida o venció.",
       "own_key_quota": "Tu clave de {{provider}} alcanzó su cuota. Cambia a otro modelo o revisa el plan de la clave.",
       "model_unavailable": "Este modelo no pudo aceptar la solicitud. Elige otro modelo.",
+      "content_refused": "El modelo rechazó esta solicitud por sus reglas de contenido y la volvería a rechazar. Reformula la solicitud o cambia a otro modelo.",
       "free_pool_spent": "Todas las fuentes gratuitas están agotadas por ahora. Conecta otra fuente gratuita o elige otro modelo.",
       "rate_limited": "Los modelos gratuitos están ocupados ahora mismo. Vuelve a intentarlo en unos minutos o cambia a otro modelo.",
       "empty": "El modelo devolvió una respuesta vacía. Vuelve a intentarlo o cambia a otro modelo.",

@@ -55,6 +55,12 @@ export type FailureCause =
   | "own_key_quota"
   /** The model is gone, cannot take tools, or rejects the request's format. */
   | "model_unavailable"
+  /**
+   * The model or its provider declined the request under its content rules.
+   * The same request is declined again, so the way on is to reword it or to
+   * pick another model, never to send it as it is.
+   */
+  | "content_refused"
   /** Every free source refused the account for now. */
   | "free_pool_spent"
   /** A real rate limit or an overloaded provider: worth waiting for. */
@@ -92,7 +98,14 @@ const offAbacus = (provider: string | undefined): provider is string =>
 const KEY_REFUSED =
   /invalid[_ ]api[_ ]key|incorrect api key|api key (?:not valid|is invalid)|no api key|unauthori[sz]ed|authentication|invalid (?:token|credentials)|not allowed for this api/i;
 const MODEL_REFUSED =
-  /model[_ ]not[_ ]found|model .*(?:does not exist|not found|decommissioned|deprecated)|no endpoints found|is not a valid model|failed to template|chat template|wrote its tool call as text/i;
+  /model[_ ]not[_ ]found|model .*(?:does not exist|not found|decommissioned|deprecated)|no endpoints found|is not a valid model|\binvalid model\b|failed to template|chat template|wrote its tool call as text/i;
+/**
+ * A refusal on content grounds, in the words the providers use: Abacus's
+ * relay of a model's refusal, an OpenAI-style `content_filter` finish or
+ * error code, a safety screen on the input.
+ */
+const CONTENT_REFUSED =
+  /refused to respond because of a content violation|finish_reason: content_filter|content[_ ](?:policy|management)[_ ]violation|content[_ ]filter(?:ed|ing)? (?:triggered|blocked)|content policy error|flagged for possible|rejected by content safety|blocked by (?:the )?(?:content|safety) (?:filter|policy|system)/i;
 const DAILY_LIMIT =
   /per day|daily|\brpd\b|\btpd\b|requests? per day|tokens? per day/i;
 const BUSY =
@@ -152,6 +165,8 @@ export function classifyAttempt(
 
   if (isStreamCut(raw, provider)) return "stream_cut";
 
+  if (CONTENT_REFUSED.test(raw)) return "content_refused";
+
   if (
     ownKey(provider) &&
     (isOwnKeyOutOfCredit(raw, provider) ||
@@ -204,6 +219,8 @@ const CAUSE_PRIORITY: readonly FailureCause[] = [
   // source's quota line.
   "free_pool_spent",
   "own_key_quota",
+  // The request itself: another model, or the same words changed, answers it.
+  "content_refused",
   "model_unavailable",
   "rate_limited",
   "stream_cut",
@@ -432,6 +449,8 @@ const routedMessage = (failure: TurnFailure): string => {
       return "The free model couldn't take this request. Pick a different model.";
     case "free_pool_spent":
       return OPENLLM_POOL_SHUT_MESSAGE;
+    case "content_refused":
+      return CONTENT_REFUSED_MESSAGE;
     case "rate_limited":
       return OPENLLM_POOL_BUSY_MESSAGE;
     case "empty":
@@ -496,6 +515,9 @@ const PAID_CREDITS_OUT_MESSAGE =
 /** The one line that says "busy": every failed call was a real rate limit. */
 export const OPENLLM_POOL_BUSY_MESSAGE =
   "All free models are busy right now. Try again in a few minutes, or switch to a different model.";
+
+export const CONTENT_REFUSED_MESSAGE =
+  "The model declined this request under its content rules, and it would decline it again. Reword the request, or switch to a different model.";
 
 export const EMPTY_REPLY_MESSAGE =
   "The model returned an empty reply. Try again, or switch to a different model.";
@@ -603,6 +625,8 @@ const MOVES_TO_OPENLLM: ReadonlySet<FailureCause> = new Set([
   "empty",
   "stalled",
   "unknown",
+  // As "unknown" did before it was named: another model may well answer it.
+  "content_refused",
   "own_key_quota",
   "key_invalid",
 ]);
@@ -825,6 +849,7 @@ const failureActions = (
         : [{ type: "switch-model" }];
     case "not_in_plan":
     case "model_unavailable":
+    case "content_refused":
       return [{ type: "switch-model" }];
     case "empty":
       return [{ type: "retry" }, { type: "switch-model" }];
@@ -938,6 +963,7 @@ export function presentFailure(
     failure.cause === "empty" ||
     failure.cause === "stalled" ||
     failure.cause === "stream_cut" ||
+    failure.cause === "content_refused" ||
     failure.cause === "payment_required" ||
     failure.cause === "phone_verification";
   const unavailable = actions.find(
@@ -1184,6 +1210,15 @@ export function classifyProviderFailure(
     };
   }
 
+  // Before the status branches: the refusal is the request's, and "try again"
+  // gets the same answer.
+  if (CONTENT_REFUSED.test(raw)) {
+    return {
+      summary: "The model declined this request under its content rules",
+      remedy: "Reword the request, or switch to a different model.",
+    };
+  }
+
   // Before the rate-limit branch too: OpenAI's empty balance answers 429
   // `insufficient_quota`, and waiting a moment never refills it.
   if (namesEmptyBalance(raw)) {
@@ -1224,6 +1259,15 @@ export function classifyProviderFailure(
     return {
       summary: "This conversation is too long for the model",
       remedy: "Switch to a model with a larger context.",
+    };
+  }
+
+  // Retired, unknown, or unable to take this request (no endpoint for its
+  // images): sending it to the same model again changes nothing.
+  if (status === 404 || status === 410 || MODEL_REFUSED.test(raw)) {
+    return {
+      summary: "This model isn't available for this request",
+      remedy: "Switch to a different model.",
     };
   }
 

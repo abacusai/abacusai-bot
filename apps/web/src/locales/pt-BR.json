@@ -5164,6 +5164,7 @@
       "key_invalid": "Sua chave do {{provider}} foi recusada: ela é inválida ou expirou.",
       "own_key_quota": "Sua chave do {{provider}} atingiu a cota. Mude para outro modelo ou confira o plano da chave.",
       "model_unavailable": "Este modelo não conseguiu aceitar o pedido. Escolha outro modelo.",
+      "content_refused": "O modelo recusou este pedido por causa das regras de conteúdo dele e recusaria de novo. Reformule o pedido ou troque para outro modelo.",
       "free_pool_spent": "Todas as fontes gratuitas se esgotaram por enquanto. Conecte outra fonte gratuita ou escolha outro modelo.",
       "rate_limited": "Os modelos gratuitos estão ocupados agora. Tente de novo em alguns minutos ou mude para outro modelo.",
       "empty": "O modelo devolveu uma resposta vazia. Tente de novo ou mude para outro modelo.",

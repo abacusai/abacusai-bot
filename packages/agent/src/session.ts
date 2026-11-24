@@ -2770,9 +2770,16 @@ export class AbacusBotSession {
       return;
     }
 
+    // pi does not retry a content refusal (the same request is declined
+    // again), so no "retrying" line for it.
+    const cause = classifyAttempt(text, this.session?.model?.provider);
+    if (cause === "content_refused") {
+      return;
+    }
+
     // This machine's write (pi's session file), not the provider: nothing retries
     // it, and the chain recorded it at the reply (TurnChain.replied).
-    if (classifyAttempt(text, this.session?.model?.provider) === "disk_full") {
+    if (cause === "disk_full") {
       process.stderr.write(
         `[disk] the disk is full; this turn ends: ${text.slice(0, 200)}\n`
       );

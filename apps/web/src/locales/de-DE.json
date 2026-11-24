@@ -5164,6 +5164,7 @@
       "key_invalid": "Dein {{provider}}-Schlüssel wurde abgelehnt – er ist ungültig oder abgelaufen.",
       "own_key_quota": "Dein {{provider}}-Schlüssel hat sein Kontingent erreicht. Wechsle zu einem anderen Modell oder prüfe den Tarif des Schlüssels.",
       "model_unavailable": "Dieses Modell konnte die Anfrage nicht annehmen. Wähle ein anderes Modell.",
+      "content_refused": "Das Modell hat diese Anfrage wegen seiner Inhaltsregeln abgelehnt und würde sie wieder ablehnen. Formuliere die Anfrage um oder wechsle zu einem anderen Modell.",
       "free_pool_spent": "Alle kostenlosen Quellen sind vorerst aufgebraucht. Verbinde eine weitere kostenlose Quelle oder wähle ein anderes Modell.",
       "rate_limited": "Die kostenlosen Modelle sind gerade ausgelastet. Versuche es in ein paar Minuten erneut oder wechsle zu einem anderen Modell.",
       "empty": "Das Modell hat eine leere Antwort geliefert. Versuche es erneut oder wechsle zu einem anderen Modell.",

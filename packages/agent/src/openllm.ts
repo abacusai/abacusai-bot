@@ -60,13 +60,15 @@ export interface FailureScope {
 
 /**
  * The HTTP status a failure carries: up front (`429: …`), else inside a bare
- * JSON body (`{"error":{"code":429}}`) or named in prose (`HTTP 429`).
+ * JSON body (`{"error":{"code":429}}`), named in prose (`HTTP 429`), or in a
+ * provider SDK's own error line (`Mistral API error (400): …`).
  */
 export function failureStatus(raw: string): string | undefined {
   return (
     raw.match(/^\s*(\d{3})\b/)?.[1] ??
     raw.match(/^\s*[[{][\s\S]*?"(?:code|status)"\s*:\s*"?(\d{3})\b/)?.[1] ??
-    raw.match(/\b(?:HTTP|status(?: code)?)\s*:?\s*(\d{3})\b/i)?.[1]
+    raw.match(/\b(?:HTTP|status(?: code)?)\s*:?\s*(\d{3})\b/i)?.[1] ??
+    raw.match(/^[^:\n]{0,40}\berror \(([45]\d\d)\)/i)?.[1]
   );
 }
 

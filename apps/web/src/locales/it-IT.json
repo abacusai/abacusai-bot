@@ -5164,6 +5164,7 @@
       "key_invalid": "La tua chiave {{provider}} è stata rifiutata: non è valida o è scaduta.",
       "own_key_quota": "La tua chiave {{provider}} ha raggiunto la quota. Passa a un altro modello o controlla il piano della chiave.",
       "model_unavailable": "Questo modello non ha potuto accettare la richiesta. Scegli un altro modello.",
+      "content_refused": "Il modello ha rifiutato questa richiesta per le sue regole sui contenuti e la rifiuterebbe di nuovo. Riformula la richiesta o passa a un altro modello.",
       "free_pool_spent": "Tutte le fonti gratuite sono esaurite per ora. Collega un'altra fonte gratuita o scegli un altro modello.",
       "rate_limited": "I modelli gratuiti sono occupati in questo momento. Riprova tra qualche minuto o passa a un altro modello.",
       "empty": "Il modello ha restituito una risposta vuota. Riprova o passa a un altro modello.",

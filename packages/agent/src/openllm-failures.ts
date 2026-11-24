@@ -94,7 +94,7 @@ export const asksForRetry = (failure: string): boolean => {
 const KEY_REFUSED =
   /invalid[_ ]api[_ ]key|incorrect api key|api key (?:not valid|is invalid)|unauthori[sz]ed|authentication|invalid (?:token|credentials)/i;
 const MODEL_GONE =
-  /model[_ ]not[_ ]found|model .*(?:does not exist|not found|decommissioned|deprecated)|no endpoints found|is not a valid model/i;
+  /model[_ ]not[_ ]found|model .*(?:does not exist|not found|decommissioned|deprecated)|no endpoints found|is not a valid model|\binvalid model\b/i;
 /** The pool is for agent turns: a model that cannot take tools is no use. */
 const NO_TOOLS =
   /(?:does not|doesn't) support (?:tools|tool use|tool calling|function calling)|tools? (?:are|is) not supported|tool[_ ]use[_ ]not[_ ]supported/i;
