@@ -38,13 +38,12 @@ export const UPGRADE_SRCS = [
   "free_model_down",
   // Screens that shared a value before: the free plan's milestone card (was
   // low_credits), the wall's card in a chat (was chat_credits, or credit_wall
-  // in a read-only chat), and the picker, retry offer and top-model card (all
-  // model_locked). The platform knows each by name; older builds keep theirs.
+  // in a read-only chat), and the picker and retry offer (both model_locked).
+  // The platform knows each by name; older builds keep theirs.
   "credits_milestone",
   "wall_card",
   "model_picker",
   "retry_offer",
-  "top_model_card",
 ] as const;
 
 export type UpgradeSrc = (typeof UPGRADE_SRCS)[number];
@@ -54,7 +53,6 @@ export const MODEL_UPGRADE_SRCS: readonly UpgradeSrc[] = [
   "model_locked",
   "model_picker",
   "retry_offer",
-  "top_model_card",
 ];
 
 /** A plan the account could be on: its price, monthly credits and what it gives. */
@@ -92,17 +90,7 @@ export interface BillingPlan {
    * pitch's feature line, which is marketing text.
    */
   topModels?: PlanTopModel[];
-  /**
-   * A free account's arm in the server's top-model retry 50/50 (opus_retry):
-   * "opus", its retry runs the paid plans' Opus on its own credits in a new
-   * chat; "dialog", its retry opens the upgrade dialog. Absent from older
-   * servers, null for a paid plan or with the test off.
-   */
-  opusRetry?: OpusRetryArm | null;
 }
-
-/** The arms of the top-model retry 50/50 (BillingPlan.opusRetry). */
-export type OpusRetryArm = "opus" | "dialog";
 
 /** One of the paid plans' leading models. */
 export interface PlanTopModel {

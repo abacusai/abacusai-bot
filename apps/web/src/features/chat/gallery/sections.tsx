@@ -363,12 +363,6 @@ const gallerySlots = (scenario: Scenario, threadId: string): ChatViewSlots => ({
   ...(scenario.view?.topModelRetry != null && {
     topModelRetryPreview: scenario.view.topModelRetry,
   }),
-  ...(scenario.view?.topModelCard != null && {
-    topModelCardPreview: {
-      ...scenario.view.topModelCard,
-      billing: GALLERY_BILLING,
-    },
-  }),
   ...(scenario.view?.freeModelDown != null && {
     freeModelDownPreview: {
       ...scenario.view.freeModelDown,

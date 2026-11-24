@@ -3821,20 +3821,13 @@
     "retryOffer": {
       "title": "Spróbuj ponownie z {{model}}",
       "newChat": "Spróbuj ponownie w nowej rozmowie z {{model}}",
-      "freeTopModel": "To zadanie jest trudne dla taniego modelu. {{model}}, jeden z najlepszych modeli w ogóle, jest tu dla Ciebie dostępny. Szybciej zużywa kredyty.",
       "continue": "Kontynuuj w nowym czacie",
       "paidBody": "Nowy czat zacznie od podsumowania tego, na najlepszym modelu. Szybciej zużywa kredyty."
     },
     "topModelRetry": {
-      "retry": "Ponów z {{model}}",
       "upgradeRetry": "Ulepsz plan, by spróbować ponownie z {{model}} i innymi topowymi modelami",
       "dismiss": "Zamknij",
-      "opusBody": "Nasz najmocniejszy model przejmie to w nowym czacie, od miejsca, w którym skończyłeś. Zużywa kredyty szybciej.",
       "dialogBody": "Nasz najmocniejszy model do trudnych zadań, w ramach {{plan}}."
-    },
-    "topModelCard": {
-      "title": "Pracuj dalej z {{model}} w planie {{plan}}",
-      "line": "{{model}} szybko zużywa darmowe kredyty. Z planem {{plan}} zachowasz go, razem ze wszystkim poniżej."
     },
     "routerAfterUpgrade": {
       "stay": "Zostań przy {{model}}"

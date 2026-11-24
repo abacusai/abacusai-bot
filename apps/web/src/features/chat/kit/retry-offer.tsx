@@ -5,12 +5,9 @@ import { planTopModelIds, wallOffer } from "@abacus-ai/contract/billing-plan";
  * models, in a new chat that starts from a summary of this one
  * (continue-chat.ts): the top model reads a page instead of the whole stuck
  * history, and this chat keeps its model. A paying plan already runs the
- * model, so a tap starts it at once. A free plan's tap is the server's
- * top-model retry 50/50 (#renderer/lib/opus-retry): in the "opus" arm it runs
- * the paid plans' Opus there too, on its own credits, and that chat pitches
- * the plan after each turn (top-model-card.tsx); otherwise (the "dialog" arm,
- * an older server, any other top model) it opens the upgrade dialog with the
- * message waiting. Only a listed session chat has it. Caps live in prefs.
+ * model, so a tap starts it at once; a free plan's tap opens the upgrade
+ * dialog with the message waiting. Only a listed session chat has it. Caps
+ * live in prefs.
  */
 import {
   isSuggestTasksTool,
@@ -26,11 +23,9 @@ import {
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import {
   isPlanHandoffTool,
-  modelIdentity,
   retryOfferModel,
   type RetryOfferReason,
   retryOfferReason,
-  TOP_MODEL_FAMILIES,
 } from "@abacus-ai/contract/retry-offer";
 import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
 import { isWorkCall } from "@abacus-ai/contract/work-tools";
@@ -45,7 +40,6 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import { messageTools } from "#renderer/lib/bot-turns/tool-parts";
 import { turnReplyText, turnsOf } from "#renderer/lib/bot-turns/turns";
 import { creditsTier } from "#renderer/lib/credits";
-import { useOpusRetryArm } from "#renderer/lib/opus-retry";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
 import { upgradeSeen } from "#renderer/lib/upgrade";
@@ -151,7 +145,6 @@ export const RetryOfferRow = ({
   const db = useDb();
   const prefs = usePrefs();
   const { data: account } = useAccount();
-  const arm = useOpusRetryArm();
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -222,15 +215,6 @@ export const RetryOfferRow = ({
   const label =
     preview?.label ??
     (model != null && model.id !== current ? model.label : null);
-  // A free plan's retry on the paid plans' Opus starts at once, like a paying
-  // one's, only in the opus_retry test's "opus" arm (the server serves it there).
-  const freeTop =
-    preview?.freeTop ??
-    (free &&
-      arm === "opus" &&
-      model != null &&
-      modelIdentity(model.id).family === TOP_MODEL_FAMILIES.opus);
-  const direct = paying || freeTop;
   const showing = allowed && label != null ? target : null;
 
   const base: DeliverableOfferCard = card ?? EMPTY_DELIVERABLE_OFFER_CARD;
@@ -245,13 +229,7 @@ export const RetryOfferRow = ({
     void transport.client.system
       .funnelStep({
         step,
-        detail: paying
-          ? `${reason}_paid`
-          : freeTop
-            ? `${reason}_free_top`
-            : arm === "dialog"
-              ? `${reason}_free_dialog`
-              : reason,
+        detail: paying ? `${reason}_paid` : reason,
       })
       .catch(() => undefined);
   };
@@ -272,9 +250,8 @@ export const RetryOfferRow = ({
   const shown = useEffectEvent(() => {
     if (showing == null || card?.shownOffer === showing.id) return;
     funnel("retry_offer_shown", showing.reason);
-    // Only a tap that goes to the plan is an upgrade: a paying plan, or a free
-    // one with the top model already open to it, retries at once.
-    if (preview == null && !direct)
+    // Only a tap that goes to the plan is an upgrade: a paying plan retries at once.
+    if (preview == null && !paying)
       upgradeSeen(transport.client, "retry_offer", showing.id);
     write({
       ...base,
@@ -305,7 +282,7 @@ export const RetryOfferRow = ({
     if (model == null) return;
     const reason = showing.reason;
     const answer = () => write({ ...base, answered: showing.id, misses: 0 });
-    if (direct) {
+    if (paying) {
       // Up with a spinner until the new chat opens; a failure leaves it for another try.
       setPreparing(true);
       void continueOn(model.id, reason).then(answer, () => {
@@ -366,11 +343,9 @@ export const RetryOfferRow = ({
             {paying
               ? // The plan runs it now, at a top model's price.
                 t("chat.retryOffer.paidBody")
-              : freeTop
-                ? t("chat.retryOffer.freeTopModel", { model: label })
-                : t("chat.composer.includedIn", {
-                    plan: preview?.plan ?? offer?.planName,
-                  })}
+              : t("chat.composer.includedIn", {
+                  plan: preview?.plan ?? offer?.planName,
+                })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">

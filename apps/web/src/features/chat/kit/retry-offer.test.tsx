@@ -36,8 +36,6 @@ const account = (tier: "free" | "basic") => ({
 });
 
 const billing = (tier: "free" | "basic"): BillingPlan => ({
-  // The top-model retry 50/50's opus arm: a free retry runs Opus.
-  ...(tier === "free" && { opusRetry: "opus" as const }),
   current: {
     plan: tier,
     planName: tier === "free" ? "Free" : "Basic",
@@ -356,25 +354,24 @@ describe("RetryOfferRow on a paying plan", () => {
 });
 
 describe("RetryOfferRow on a free plan", () => {
-  it("continues in a new chat on Opus at once, on the account's own credits", async () => {
+  it("opens the upgrade dialog with the message waiting, and runs nothing on Opus", async () => {
     const h = await mount("free");
     const line = await findLine();
-    expect(line.closest('[data-slot="retry-offer"]')?.textContent).toContain(
-      "uses your credits faster"
-    );
     fireEvent.click(line);
     await waitFor(() =>
-      expect(h.continued).toEqual([[OPUS, "It still doesn't work, same error"]])
+      expect(upgradeDialogStore.state.request).toMatchObject({
+        kind: "plan",
+        src: "retry_offer",
+        pendingText: "It still doesn't work, same error",
+      })
     );
-    expect(upgradeDialogStore.state.request).toBeNull();
+    await settled();
+    expect(h.continued).toEqual([]);
     expect(h.relay.stats.send).toHaveLength(0);
-    expect(h.moved).toEqual([]);
-    await waitFor(() =>
-      expect(h.steps.map((step) => [step.step, step.detail])).toContainEqual([
-        "retry_offer_resumed",
-        "complaint_free_top",
-      ])
-    );
+    expect(h.steps.map((step) => [step.step, step.detail])).toContainEqual([
+      "retry_offer_tapped",
+      "complaint",
+    ]);
   });
 });
 

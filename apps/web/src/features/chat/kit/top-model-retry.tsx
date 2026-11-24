@@ -1,32 +1,29 @@
 /**
  * The card under a free account's finished reply: the paid plans' top model,
- * one tap away. What the tap does is the server's top-model retry 50/50
- * (#renderer/lib/opus-retry): "opus" continues the task on that model in a
- * new chat, on the account's own credits, where the top-model card pitches the
- * plan after each turn; "dialog" opens the upgrade dialog naming the model,
- * and the task continues there once the plan is active. Only a session chat
- * that can continue in a new chat has it, it never shares the space under a
- * reply with another card, and its × closes it for good.
+ * one tap away. The tap opens the upgrade dialog naming the model, and the
+ * task continues on it in a new chat once the plan is active. Only a session
+ * chat that can continue in a new chat has it, it never shares the space
+ * under a reply with another card, and its × closes it for good.
  */
-import type { OpusRetryArm } from "@abacus-ai/contract/billing-plan";
 import { planTopModelIds, wallOffer } from "@abacus-ai/contract/billing-plan";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, RotateCcw, Sparkles, X } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { Sparkles, X } from "lucide-react";
+import { useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { useOpusRetryArm } from "#renderer/lib/opus-retry";
+import { creditsTier } from "#renderer/lib/credits";
 import { showError } from "#renderer/lib/toast";
 import { upgradeSeen } from "#renderer/lib/upgrade";
 import {
   lastUserText,
   requestUpgradeDialog,
 } from "#renderer/lib/upgrade-dialog";
+import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
@@ -51,14 +48,13 @@ export const TopModelRetryRow = ({
   const { transport } = useAppContext();
   const db = useDb();
   const prefs = usePrefs();
-  const liveArm = useOpusRetryArm();
+  const { data: account } = useAccount();
+  // A paid plan runs the top models already.
+  const free = creditsTier(account) === "free";
   const tail = useTailCards(session.threadId);
-  // The gallery shows it for an arm of its own, and keeps no answer.
+  // The gallery shows it on a model of its own, and keeps no answer.
   const preview = slots.topModelRetryPreview ?? null;
-  const arm: OpusRetryArm | null = preview?.arm ?? liveArm;
   const closed = prefs.dismissals.topModelRetryClosedAt != null;
-  // Up with a spinner until the new chat opens.
-  const [preparing, setPreparing] = useState(false);
   const outcome = useThreadStore(session, (state) =>
     state.runs.outcomes.at(-1)
   );
@@ -72,7 +68,7 @@ export const TopModelRetryRow = ({
   const eligible =
     reply != null &&
     (preview != null ||
-      (arm != null &&
+      (free &&
         !closed &&
         !active &&
         composer.readOnly == null &&
@@ -103,30 +99,26 @@ export const TopModelRetryRow = ({
   const plan =
     preview?.plan ?? (billing != null ? wallOffer(billing)?.planName : null);
   const showing =
-    eligible && reply != null && label != null && plan != null && arm != null
+    eligible && reply != null && label != null && plan != null
       ? reply.id
       : null;
 
   const funnel = (step: FunnelStep): void => {
-    if (preview != null || arm == null) return;
-    void transport.client.system
-      .funnelStep({ step, detail: arm })
-      .catch(() => undefined);
+    if (preview != null) return;
+    void transport.client.system.funnelStep({ step }).catch(() => undefined);
   };
   const shown = useEffectEvent(() => {
     if (showing == null || shownOn.has(showing)) return;
     shownOn.add(showing);
     funnel("top_model_retry_shown");
-    // Only the dialog arm offers the plan; the other retries on credits.
-    if (preview == null && arm != null && arm !== "opus")
+    if (preview == null)
       upgradeSeen(transport.client, "retry_top_model", showing);
   });
   useEffect(() => {
     if (showing != null) shown();
   }, [showing]);
   useTailCardClaim(session.threadId, showing);
-  if (showing == null || label == null || plan == null || arm == null)
-    return null;
+  if (showing == null || label == null || plan == null) return null;
 
   const continueOn = async (id: string): Promise<void> => {
     await composer.onContinueInNewChat?.(
@@ -137,17 +129,6 @@ export const TopModelRetryRow = ({
   const retry = (): void => {
     funnel("top_model_retry_tapped");
     if (preview != null || model == null) return;
-    if (arm === "opus") {
-      setPreparing(true);
-      void continueOn(model.id).then(
-        () => setPreparing(false),
-        () => {
-          showError(t("chat.continuation.failed"));
-          setPreparing(false);
-        }
-      );
-      return;
-    }
     const pendingText = lastUserText(messages);
     requestUpgradeDialog(
       {
@@ -176,7 +157,6 @@ export const TopModelRetryRow = ({
   return (
     <div
       data-slot="top-model-retry"
-      data-arm={arm}
       role="group"
       aria-label={label}
       className="relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-3.5 pr-9 text-sm dark:border-violet-900/70 dark:bg-violet-950/30"
@@ -191,9 +171,7 @@ export const TopModelRetryRow = ({
         <div className="flex flex-col gap-0.5">
           <p className="font-semibold">{label}</p>
           <p className="text-muted-foreground">
-            {arm === "opus"
-              ? t("chat.topModelRetry.opusBody")
-              : t("chat.topModelRetry.dialogBody", { plan })}
+            {t("chat.topModelRetry.dialogBody", { plan })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -201,22 +179,10 @@ export const TopModelRetryRow = ({
             size="sm"
             className="bg-violet-600 text-white hover:bg-violet-700"
             data-action="retry"
-            disabled={preparing}
             onClick={retry}
           >
-            {preparing ? (
-              <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
-            ) : arm === "opus" ? (
-              <RotateCcw aria-hidden className="size-3.5 shrink-0" />
-            ) : (
-              <Sparkles aria-hidden className="size-3.5 shrink-0" />
-            )}
-            {preparing
-              ? t("chat.continuation.preparing", { model: label })
-              : arm === "opus"
-                ? t("chat.topModelRetry.retry", { model: label })
-                : // The dialog arm's tap is an upgrade: the button says so.
-                  t("chat.topModelRetry.upgradeRetry", { model: label })}
+            <Sparkles aria-hidden className="size-3.5 shrink-0" />
+            {t("chat.topModelRetry.upgradeRetry", { model: label })}
           </Button>
         </div>
       </div>

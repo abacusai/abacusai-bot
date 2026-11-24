@@ -3681,20 +3681,13 @@
     "retryOffer": {
       "title": "Riprova con {{model}}",
       "newChat": "Riprova in una nuova chat con {{model}}",
-      "freeTopModel": "Questo compito è difficile per il modello economico. {{model}}, uno dei modelli più capaci in assoluto, qui è a tua disposizione. Consuma i crediti più in fretta.",
       "continue": "Continua in una nuova chat",
       "paidBody": "Una nuova chat riparte da un riassunto di questa, su un modello di punta. Consuma i crediti più in fretta."
     },
     "topModelRetry": {
-      "retry": "Riprova con {{model}}",
       "upgradeRetry": "Passa a un piano superiore per riprovare con {{model}} e altri modelli top",
       "dismiss": "Chiudi",
-      "opusBody": "Il nostro modello più potente riprende da qui in una nuova chat, dal punto in cui ti eri fermato. Consuma crediti più in fretta.",
       "dialogBody": "Il nostro modello più potente per i compiti difficili, incluso in {{plan}}."
-    },
-    "topModelCard": {
-      "title": "Continua con {{model}} con {{plan}}",
-      "line": "{{model}} consuma in fretta i crediti gratuiti. Con {{plan}} lo tieni, insieme a tutto quello qui sotto."
     },
     "routerAfterUpgrade": {
       "stay": "Resta su {{model}}"
