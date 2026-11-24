@@ -583,6 +583,17 @@ describe("paid-plan capabilities", () => {
     );
     expect(tool?.description).toMatch(/Never tell the user you cannot/);
     expect(tool?.description).toMatch(/Canva, Hugging Face/);
+    // Watching a video is the plan's; a plain edit of their own file is local work.
+    expect(tool?.description).toMatch(/watch or\ndescribe what is in a video/);
+    expect(tool?.description).toMatch(
+      /Not one of these: describing an image, and plain edits of the user's own media file that add nothing new \(cut, trim/
+    );
+    expect(tool?.description).toMatch(
+      /Adding or changing what an image or video shows \(a person, object, outfit or motion\) is one of these\./
+    );
+    expect(tool?.description).toMatch(
+      /installing it with their OK\nif missing/
+    );
     expect(featureEnum(tool)).toEqual([
       "video_gen",
       "image_gen",
@@ -619,6 +630,9 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/Never say you cannot do it/);
     expect(text).toMatch(/no Canva, Hugging Face or other connector/);
     expect(text).toMatch(/ffmpeg, Blender, Python/);
+    expect(text).toMatch(
+      /A plain edit of their own file \(cut, trim, compress, convert\) is not this: do that here as usual\./
+    );
     // No question to end on, so a yes still means only the plan; a no ends the pitch.
     expect(text).not.toMatch(/Offer no other work in this reply/);
     expect(text).toMatch(
