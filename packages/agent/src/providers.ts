@@ -20,11 +20,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { abacusStreamSimple } from "./abacus-credits.js";
-import {
-  abacusV1BaseUrl,
-  experimentsHeaders,
-  sponsoredRunHeaders,
-} from "./abacus-endpoint.js";
+import { abacusV1BaseUrl, sponsoredRunHeaders } from "./abacus-endpoint.js";
 import { writeFileAtomicSync } from "./atomic-file.js";
 import {
   abacusBotDir,
@@ -610,10 +606,10 @@ const writeLastGoodCatalog = (
 
 /**
  * A list plus the static catalog's models it leaves out, routers aside (a
- * paying plan is told apart by its router). A chat pinned to one (the retry
- * offer's top model on a free plan) then runs, and the server decides: it
- * serves the free plan's retry model and refuses the rest with the plan card.
- * Never pooled, so the free pool and the fallback never pick one.
+ * paying plan is told apart by its router). A chat pinned to one (a top model
+ * a free plan does not include, as after a downgrade) still reaches the
+ * server, which refuses it with the plan card instead of the agent failing to
+ * find the model. Never pooled, so the free pool and the fallback never pick one.
  */
 const withUnlisted = (listed: AbacusPiModel[]): AbacusPiModel[] => {
   const ids = new Set(listed.map((model) => model.id));
@@ -643,7 +639,7 @@ export async function registerAbacusProvider(
   const live = await fetchAbacusCatalog(apiKey);
   if (live.length > 0) writeLastGoodCatalog(apiKey, live);
   const lastGood = live.length > 0 ? [] : readLastGoodCatalog(apiKey);
-  const headers = { ...experimentsHeaders(), ...sponsoredRunHeaders() };
+  const sponsored = sponsoredRunHeaders();
 
   registerProvider(registry, "abacus", {
     name: "Abacus.AI",
@@ -658,7 +654,7 @@ export async function registerAbacusProvider(
         : lastGood.length > 0
           ? withUnlisted(lastGood)
           : STATIC_ABACUS_MODELS,
-    headers,
+    ...(Object.keys(sponsored).length > 0 ? { headers: sponsored } : {}),
   });
 }
 

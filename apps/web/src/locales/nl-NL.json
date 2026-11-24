@@ -3681,20 +3681,13 @@
     "retryOffer": {
       "title": "Probeer het opnieuw met {{model}}",
       "newChat": "Probeer opnieuw in een nieuwe chat met {{model}}",
-      "freeTopModel": "Deze taak is lastig voor het goedkope model. {{model}}, een van de sterkste modellen die er zijn, staat hier voor je open. Het gebruikt je credits sneller.",
       "continue": "Ga verder in een nieuwe chat",
       "paidBody": "Een nieuwe chat gaat verder vanaf een samenvatting van deze, op een topmodel. Die verbruikt credits sneller."
     },
     "topModelRetry": {
-      "retry": "Opnieuw met {{model}}",
       "upgradeRetry": "Upgrade om opnieuw te proberen met {{model}} en andere topmodellen",
       "dismiss": "Sluiten",
-      "opusBody": "Ons sterkste model pakt dit op in een nieuwe chat, precies waar je was gebleven. Het verbruikt sneller credits.",
       "dialogBody": "Ons sterkste model voor lastige taken, inbegrepen bij {{plan}}."
-    },
-    "topModelCard": {
-      "title": "Ga door met {{model}} via {{plan}}",
-      "line": "{{model}} verbruikt gratis credits snel. Met {{plan}} houd je het, plus alles hieronder."
     },
     "routerAfterUpgrade": {
       "stay": "Blijf op {{model}}"

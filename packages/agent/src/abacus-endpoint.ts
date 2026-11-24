@@ -64,15 +64,3 @@ export const sponsoredRunHeaders = (
   sponsoredRunActive(env, now)
     ? { [SPONSORED_RUN_HEADER]: (env.ABACUSAI_BOT_SPONSORED_RUN ?? "").trim() }
     : {};
-
-/**
- * The server's coin tosses this build shows, on every model request to Abacus
- * (the same list the billing plan read sends): the platform serves a free
- * account's top-model retry on Opus only to a build that lists opus_retry.
- */
-export const EXPERIMENTS_HEADER = "X-Abacusaibot-Experiments";
-export const APP_EXPERIMENTS = ["opus_retry"] as const;
-
-export const experimentsHeaders = (): Record<string, string> => ({
-  [EXPERIMENTS_HEADER]: APP_EXPERIMENTS.join(","),
-});

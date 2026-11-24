@@ -3681,20 +3681,13 @@
     "retryOffer": {
       "title": "Try this again on {{model}}",
       "newChat": "Try again in a new chat with {{model}}",
-      "freeTopModel": "This task is hard for the low-cost model. {{model}}, one of the most capable models there is, is open to you here. It uses your credits faster.",
       "continue": "Continue in a new chat",
       "paidBody": "A new chat picks up from a summary of this one, on a top model. It uses credits faster."
     },
     "topModelRetry": {
-      "retry": "Retry with {{model}}",
       "upgradeRetry": "Upgrade to retry with {{model}} and other top models",
       "dismiss": "Close",
-      "opusBody": "Our strongest model takes this on in a new chat, picking up where you left off. It uses credits faster.",
       "dialogBody": "Our strongest model for hard tasks, included in {{plan}}."
-    },
-    "topModelCard": {
-      "title": "Keep going on {{model}} with {{plan}}",
-      "line": "{{model}} spends free credits fast. With {{plan}} you keep it, and everything below."
     },
     "routerAfterUpgrade": {
       "stay": "Stay on {{model}}"

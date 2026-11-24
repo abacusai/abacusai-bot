@@ -3681,20 +3681,13 @@
     "retryOffer": {
       "title": "Tente de novo com o {{model}}",
       "newChat": "Tentar de novo em um novo chat com {{model}}",
-      "freeTopModel": "Esta tarefa é difícil para o modelo econômico. O {{model}}, um dos modelos mais capazes que existem, está liberado para você aqui. Ele gasta seus créditos mais rápido.",
       "continue": "Continuar em um novo chat",
       "paidBody": "Um novo chat continua a partir de um resumo deste, em um modelo de ponta. Ele gasta créditos mais rápido."
     },
     "topModelRetry": {
-      "retry": "Tentar de novo com {{model}}",
       "upgradeRetry": "Faça upgrade para tentar de novo com {{model}} e outros modelos top",
       "dismiss": "Fechar",
-      "opusBody": "Nosso modelo mais forte assume isso em um novo chat, de onde você parou. Ele usa créditos mais rápido.",
       "dialogBody": "Nosso modelo mais forte para tarefas difíceis, incluído no {{plan}}."
-    },
-    "topModelCard": {
-      "title": "Continue com o {{model}} no {{plan}}",
-      "line": "O {{model}} gasta os créditos grátis rápido. Com o {{plan}} você continua com ele, e com tudo abaixo."
     },
     "routerAfterUpgrade": {
       "stay": "Continuar no {{model}}"

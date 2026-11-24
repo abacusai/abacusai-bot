@@ -26,7 +26,6 @@ import {
 } from "#renderer/lib/continuity/composer-drafts";
 import { accountTier, creditsTier } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { useOpusRetryRuns } from "#renderer/lib/opus-retry";
 import { showError } from "#renderer/lib/toast";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
@@ -102,9 +101,7 @@ export const useSessionComposerModel = (
     settings.data?.defaultModel,
     models
   );
-  // The opus_retry test's Opus runs for this free account: not unavailable here.
-  const opusRetryRuns = useOpusRetryRuns(value);
-  const unavailable = chip?.unavailable === true && !opusRetryRuns;
+  const unavailable = chip?.unavailable === true;
   // An unavailable pin runs as is: no other model to name in its place.
   const other = chip?.unavailable
     ? null

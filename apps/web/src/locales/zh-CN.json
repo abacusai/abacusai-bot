@@ -3681,20 +3681,13 @@
     "retryOffer": {
       "title": "用 {{model}} 再试一次",
       "newChat": "在新对话中用 {{model}} 再试一次",
-      "freeTopModel": "这个任务对低成本模型来说很难。{{model}} 是目前最强的模型之一，在这里可以直接使用。它消耗点数更快。",
       "continue": "在新对话中继续",
       "paidBody": "新对话会基于本对话的摘要，由顶级模型继续。消耗点数更快。"
     },
     "topModelRetry": {
-      "retry": "用 {{model}} 重试",
       "upgradeRetry": "升级后用 {{model}} 等顶级模型重试",
       "dismiss": "关闭",
-      "opusBody": "我们最强的模型会在新对话中接着处理，从你停下的地方继续。它消耗额度更快。",
       "dialogBody": "我们处理难题最强的模型，包含在 {{plan}} 中。"
-    },
-    "topModelCard": {
-      "title": "升级 {{plan}}，继续使用 {{model}}",
-      "line": "{{model}} 消耗免费点数很快。升级 {{plan}} 即可继续使用，还包括以下全部内容。"
     },
     "routerAfterUpgrade": {
       "stay": "继续使用 {{model}}"

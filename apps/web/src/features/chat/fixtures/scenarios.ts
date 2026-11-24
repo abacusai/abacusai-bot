@@ -41,12 +41,11 @@ export interface Scenario {
     /** The deliverable offer judged without its caps. */
     deliverableOffer?: boolean;
     /** The retry offer on this model, without its caps. */
-    retryOffer?: { label: string; plan: string; freeTop?: boolean };
-    topModelCard?: { label: string };
+    retryOffer?: { label: string; plan: string };
     /** The "Send it to anyone" card, without its once-per-chat rule. */
     shareOffer?: boolean;
-    /** The card under a reply for a top model, in an opus_retry arm. */
-    topModelRetry?: { label: string; plan: string; arm: "opus" | "dialog" };
+    /** The card under a reply for a top model; its tap opens the upgrade dialog. */
+    topModelRetry?: { label: string; plan: string };
     /** The free-model card on the gallery's plan; `first` for a chat's first message. */
     freeModelDown?: { first?: boolean };
     /** The composer's top-model hint on a paying plan, without its caps. */
@@ -1598,47 +1597,18 @@ export const SCENARIOS: Scenario[] = [
     view: { retryOffer: { label: "Claude Opus 5.5", plan: "Basic" } },
   },
   {
-    id: "retry-offer-free-top",
-    canvas: ["RetryOffer", "free plan, Opus"],
-    skin: "session",
-    events: retryAfterComplaint,
-    view: {
-      retryOffer: { label: "Claude Opus 5.5", plan: "Basic", freeTop: true },
-    },
-  },
-  {
     id: "retry-offer-connector",
     canvas: ["RetryOffer", "after a connector's work"],
     skin: "session",
     events: retryAfterConnectorWork,
-    view: {
-      retryOffer: { label: "Claude Opus 5.5", plan: "Basic", freeTop: true },
-    },
+    view: { retryOffer: { label: "Claude Opus 5.5", plan: "Basic" } },
   },
   {
-    id: "top-model-card",
-    canvas: ["TopModelCard", "session"],
+    id: "top-model-retry",
+    canvas: ["TopModelRetry", "session"],
     skin: "session",
     events: headerAnswered,
-    view: { topModelCard: { label: "Claude Opus 5.5" } },
-  },
-  {
-    id: "top-model-retry-opus",
-    canvas: ["TopModelRetry", "opus arm"],
-    skin: "session",
-    events: headerAnswered,
-    view: {
-      topModelRetry: { label: "Claude Opus 5.5", plan: "Basic", arm: "opus" },
-    },
-  },
-  {
-    id: "top-model-retry-dialog",
-    canvas: ["TopModelRetry", "dialog arm"],
-    skin: "session",
-    events: headerAnswered,
-    view: {
-      topModelRetry: { label: "Claude Opus 5.5", plan: "Basic", arm: "dialog" },
-    },
+    view: { topModelRetry: { label: "Claude Opus 5.5", plan: "Basic" } },
   },
   {
     id: "retry-offer-bot",
