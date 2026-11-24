@@ -2425,7 +2425,9 @@ export class AbacusBotSession {
 
     if (failure == null) return null;
 
-    return isContextTooLong(failure) ? { failure, messages } : null;
+    return isContextTooLong(failure, this.openLlmActive)
+      ? { failure, messages }
+      : null;
   }
 
   /**

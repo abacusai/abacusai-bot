@@ -2890,7 +2890,7 @@ export class ForeverEngine {
     if (failure == null || MALFORMED_TOOL_CALL_PATTERN.test(failure))
       return null;
 
-    return isContextTooLong(failure) ? failure : null;
+    return isContextTooLong(failure, this.openLlmActive) ? failure : null;
   }
 
   private finishTurn(): void {
