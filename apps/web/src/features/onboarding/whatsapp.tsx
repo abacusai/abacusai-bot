@@ -9,7 +9,14 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -33,6 +40,8 @@ const Chat = v.object({
   status: v.nullish(v.picklist(["linked", "unlinked"])),
   phone: v.nullish(v.string()),
   number: v.nullish(v.string()),
+  /** Unlinked because the user upgraded: the personal agent that now answers their WhatsApp chat (its web and app link). */
+  agent: v.nullish(v.object({ name: v.string(), url: v.string() })),
 });
 export type WhatsAppChat = v.InferOutput<typeof Chat>;
 
@@ -599,6 +608,54 @@ const LaptopCard = () => {
   );
 };
 
+const whatsAppChatUrl = (number: string | null | undefined) =>
+  `https://wa.me/${(number ?? "").replace(/\D/g, "")}`;
+
+/**
+ * After an upgrade the server hands the WhatsApp chat to the user's personal
+ * agent: the same chat goes on with it, so this page offers no new link (one
+ * would take the chat back) and points to the chat and the agent instead.
+ */
+const AgentHasChat = ({
+  agent,
+  number,
+  children,
+}: {
+  agent: { name: string; url: string };
+  number: string | null | undefined;
+  children?: ReactNode;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
+      <h1 className="page-title">{t("web.whatsappBot.agentTitle")}</h1>
+      <p className="text-muted-foreground text-sm/relaxed">
+        {t("web.whatsappBot.agentBody", { name: agent.name })}
+      </p>
+      <Button
+        size="lg"
+        className="self-end max-[799px]:w-full"
+        nativeButton={false}
+        render={
+          <a href={whatsAppChatUrl(number)} target="_blank" rel="noreferrer" />
+        }
+      >
+        {t("web.whatsapp.openWhatsApp")}
+      </Button>
+      <Button
+        variant="ghost"
+        size="lg"
+        className="self-end max-[799px]:w-full"
+        nativeButton={false}
+        render={<a href={agent.url} target="_blank" rel="noreferrer" />}
+      >
+        {t("web.whatsappBot.openAgent", { name: agent.name })}
+      </Button>
+      {children}
+    </FlowPage>
+  );
+};
+
 /**
  * AbacusAI Bot on a phone is WhatsApp: connect a number, then chat there.
  * Only these two screens draw (no Skip); the bot runs on the server. The
@@ -620,6 +677,12 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
       })
       .finally(() => setBusy(false));
   };
+  if (chat.data?.status !== "linked" && chat.data?.agent)
+    return (
+      <AgentHasChat agent={chat.data.agent} number={chat.data.number}>
+        <LaptopCard />
+      </AgentHasChat>
+    );
   return (
     <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
       {chat.data?.status === "linked" ? (
@@ -639,7 +702,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
             nativeButton={false}
             render={
               <a
-                href={`https://wa.me/${(chat.data.number ?? "").replace(/\D/g, "")}`}
+                href={whatsAppChatUrl(chat.data.number)}
                 target="_blank"
                 rel="noreferrer"
               />
@@ -718,6 +781,12 @@ export const DesktopWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
       {t("web.whatsappBot.download")}
     </Button>
   );
+  if (chat.data?.status !== "linked" && chat.data?.agent)
+    return (
+      <AgentHasChat agent={chat.data.agent} number={chat.data.number}>
+        {download}
+      </AgentHasChat>
+    );
   if (chat.data?.status === "linked")
     return (
       <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
@@ -796,7 +865,7 @@ export const WhatsAppIntro = ({
   const chat = useQuery({ ...whatsappChatQuery(callApps), enabled: !seen });
   const [closed, setClosed] = useState(false);
   if (seen || (!onOpenChange && closed) || !chat.data?.available) return null;
-  if (chat.data.status === "linked") return null;
+  if (chat.data.status === "linked" || chat.data.agent) return null;
   const close = (linked: boolean) => {
     setClosed(true);
     onOpenChange?.(false);
