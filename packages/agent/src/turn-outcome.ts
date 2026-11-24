@@ -854,20 +854,50 @@ const ABACUS_REFUSALS: ReadonlySet<FailureCause> = new Set([
 const bareSwitch = (action: NotificationAction): boolean =>
   action.type === "switch-model" && action.model == null;
 
+/** Causes whose card has a way on of its own that the plan does not give. */
+const NO_PLAN_OFFER: ReadonlySet<FailureCause> = new Set([
+  ...ABACUS_REFUSALS,
+  "connection",
+  "disk_full",
+]);
+
+/** An action that already puts the plan in front of the user. */
+const offersPlan = (action: NotificationAction): boolean =>
+  action.type === "upgrade-abacus" ||
+  action.type === "plan-offer" ||
+  (action.type === "free-pool-out" && action.cause !== "busy");
+
+/**
+ * On RouteLLM - Open with the Abacus credits used up, every card carries the
+ * plan's offer beside its own way on (an outgrown chat keeps New chat and a
+ * roomier model first), so no failure leaves a free account without it.
+ */
+const poolPlanOffer = (
+  actions: NotificationAction[],
+  failure: TurnFailure,
+  context: FailureContext
+): NotificationAction[] =>
+  context.abacus !== "out" ||
+  NO_PLAN_OFFER.has(failure.cause) ||
+  actions.some(offersPlan)
+    ? actions
+    : [...actions, { type: "plan-offer" }];
+
 /**
  * Every card's model switch, by where the Abacus credits stand, for a turn on
  * a model other than RouteLLM - Open: with credits left the switch is to
  * RouteLLM - Open (the picker stays beside it); with them used up there is
  * no switch, and the card carries the plan's offer (`plan-offer`). On
- * RouteLLM - Open, signed out, or when Abacus itself refused, as it was.
+ * RouteLLM - Open see poolPlanOffer; signed out, or when Abacus itself
+ * refused, as it was.
  */
 const abacusWayOn = (
   actions: NotificationAction[],
   failure: TurnFailure,
   context: FailureContext
 ): NotificationAction[] => {
+  if (context.routed) return poolPlanOffer(actions, failure, context);
   if (
-    context.routed ||
     context.abacus == null ||
     ABACUS_REFUSALS.has(failure.cause) ||
     !actions.some(bareSwitch)
