@@ -979,14 +979,33 @@ export const isBusyCause = (raw: string, provider: string | undefined) =>
  * it is not the same refusal again, and without it every later turn re-sends
  * the same transcript and is refused the same way.
  */
-export const isContextTooLong = (raw: string): boolean => {
+export const isContextTooLong = (raw: string, routed = false): boolean => {
   const text = raw.toLowerCase();
+  // On the pool a per-minute cap is one source's allowance: the next source
+  // takes the chat as it is, so rotating answers it, not compacting.
+  if (routed && isRateWindowCap(raw)) return false;
   return (
     CONTEXT_LENGTH_PATTERN.test(text) ||
     failureStatus(raw) === "413" ||
     REQUEST_TOO_LARGE_PATTERN.test(text)
   );
 };
+
+/**
+ * A size refusal against a per-minute or per-day token allowance (Groq's
+ * free tier: "on tokens per minute (TPM): Limit 8000"), not the model's
+ * window. On a model the user picked it reads as too large; on the pool it is
+ * that source's allowance, and the chat's length is not what failed.
+ */
+export const isRateWindowCap = (raw: string): boolean => {
+  const text = raw.toLowerCase();
+  return (
+    (failureStatus(raw) === "413" || REQUEST_TOO_LARGE_PATTERN.test(text)) &&
+    RATE_WINDOW_PATTERN.test(text)
+  );
+};
+
+const RATE_WINDOW_PATTERN = /\btokens? per (?:minute|day)\b|\btp[md]\b/;
 
 /**
  * A provider saying the request did not fit. These all arrive as a plain 400,

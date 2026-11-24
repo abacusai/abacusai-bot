@@ -28,6 +28,7 @@ import {
 import { OpenLlmRotation, openLlmCandidates } from "./openllm.js";
 import { listModels, type ModelChoice, payingPlanRouter } from "./providers.js";
 import {
+  isRateWindowCap,
   TurnChain,
   type FailureContext,
   type TurnFailure,
@@ -288,7 +289,12 @@ export class OpenLlmRouter {
 
     if (verdict.network === true) return { network: true };
 
-    const cause = this.chain.failed(failure, current?.provider);
+    // A source's per-minute size cap is its allowance, not the chat's length.
+    const cause = this.chain.failed(
+      failure,
+      current?.provider,
+      isRateWindowCap(failure) ? "rate_limited" : undefined
+    );
     // Free credits held until the account verifies a phone: only the user
     // lifts it, and no other model is the answer. The turn ends here and
     // nothing sits out, so the first send after verifying runs as usual.
