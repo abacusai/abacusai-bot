@@ -83,6 +83,22 @@ const governed = (
 const closeOuts = (pi: ReturnType<typeof fakePi>) =>
   pi.messages.filter((m) => m.customType === "abacusai-bot-close-out");
 
+/** pi delivers the close-out instruction to the model, as it does a steer. */
+const hearCloseOut = (pi: ReturnType<typeof fakePi>) =>
+  pi.fire("message_end", {
+    message: { role: "custom", customType: "abacusai-bot-close-out" },
+  });
+
+/** One model call during the close-out that asks for `toolName`. */
+const closingCall = async (
+  pi: ReturnType<typeof fakePi>,
+  ctx: unknown,
+  toolName: string
+) => {
+  await pi.fire("turn_start", {}, ctx);
+  await pi.fire("tool_call", { toolName, toolCallId: toolName, input: {} });
+};
+
 describe("a run that runs long", () => {
   afterEach(() => {
     delete process.env.ABACUSAI_BOT_TURN_CAP;
@@ -143,8 +159,16 @@ describe("a run that runs long", () => {
     expect(spendStopReason()).toBeNull();
   });
 
-  it("stops a run that has not closed out a few calls later, in the user's words", async () => {
-    const { aborts, pi } = await run(250, 254);
+  it("stops a run that keeps working after it heard the stop, in the user's words", async () => {
+    const { aborts, pi } = await run(250, 251);
+    const ctx = ctxOn(undefined, aborts);
+    await hearCloseOut(pi);
+    // Handing over is what it was told to do: never counted.
+    await closingCall(pi, ctx, "present_deliverable");
+    await closingCall(pi, ctx, "bash");
+    await closingCall(pi, ctx, "bash");
+    expect(aborts).toEqual([]);
+    await pi.fire("turn_start", {}, ctx);
 
     expect(aborts).toHaveLength(1);
     const reason = spendStopReason() ?? "";
@@ -170,9 +194,10 @@ describe("a run that runs long", () => {
       await pi.fire("turn_start", {}, ctx);
       expect(closeOuts(pi)).toHaveLength(1);
       expect(String(closeOuts(pi)[0]?.content)).toContain("60 minutes");
+      await hearCloseOut(pi);
       await pi.fire("agent_start", {});
-      await pi.fire("turn_start", {}, ctx);
-      await pi.fire("turn_start", {}, ctx);
+      await closingCall(pi, ctx, "bash");
+      await closingCall(pi, ctx, "bash");
       expect(aborts).toEqual([]);
       await pi.fire("turn_start", {}, ctx);
       expect(aborts).toHaveLength(1);

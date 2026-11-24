@@ -55,8 +55,15 @@ import {
 /** How far short of the call cap each warning lands. */
 const WRAP_UP_MARGIN = 100;
 const FINAL_MARGIN = 50;
-/** Model calls a closing run gets to write its closing message. */
-const CLOSE_OUT_TURNS = 2;
+/**
+ * Calls a closing run may spend still trying to work once it was told to
+ * stop, before it is stopped. Handing over and the closing message are what
+ * it was told to do, so they never count.
+ */
+const CLOSE_OUT_IGNORED = 2;
+/** Calls a close-out gets in all, handing over included: a run that never closes still ends. */
+const CLOSE_OUT_CALLS = 6;
+const CLOSE_OUT_TYPE = "abacusai-bot-close-out";
 const PRESENT_TOOL = "present_deliverable";
 /** What a closing run may still call: handing over what exists, never new work. */
 const HANDOVER_TOOLS = [PRESENT_TOOL, "send_media"];
@@ -72,6 +79,22 @@ export type SpendLimitHit =
   | { cause: "calls"; amount: number }
   | { cause: "time"; amount: number }
   | { cause: "budget"; amount: number };
+
+/** A run closing out on a limit, and how it answers the instruction to stop. */
+interface CloseOut {
+  hit: SpendLimitHit;
+  /**
+   * The instruction reached the model. The call the limit was met on was
+   * already on its way without it (pi takes steering before turn_start), so
+   * only the calls after this one are its answer.
+   */
+  heard: boolean;
+  /** Calls since the close-out began. */
+  calls: number;
+  /** Calls after `heard` that still tried to work, and the last one counted. */
+  ignored: number;
+  ignoredAt: number | null;
+}
 
 /** The slice of a pi model the governor reads. */
 export interface GovernedModel {
@@ -449,8 +472,7 @@ export class SpendGovernor {
   private kind: SpendKind;
   private turns = 0;
   private turnStartedAt = Date.now();
-  private closingTurns: number | null = null;
-  private closingHit: SpendLimitHit | null = null;
+  private closeOut: CloseOut | null = null;
   /** Abacus credits billed in the user's turn so far, and in this pi run. */
   private turnCredits = 0;
   /** Billed turns this session, for the reserve's "turns left". */
@@ -526,7 +548,7 @@ export class SpendGovernor {
 
   /** Whether the run is closing out: other nudges hold their tongue. */
   closing(): boolean {
-    return this.closingTurns != null;
+    return this.closeOut != null;
   }
 
   /** Billed credits so far in the user's turn. */
@@ -564,8 +586,7 @@ export class SpendGovernor {
     this.kind = this.options.kind;
     this.memoryStart = null;
     // A close-out the upkeep met is its own; the user's next turn starts clean.
-    this.closingTurns = null;
-    this.closingHit = null;
+    this.closeOut = null;
   }
 
   /** Where the current memory upkeep started, for its own limits. */
@@ -835,11 +856,16 @@ export class SpendGovernor {
 
   /** Begin the close-out for `hit`: hidden instruction, visible line. */
   private startCloseOut(pi: ExtensionAPI, hit: SpendLimitHit): void {
-    this.closingTurns = 0;
-    this.closingHit = hit;
+    this.closeOut = {
+      hit,
+      heard: false,
+      calls: 0,
+      ignored: 0,
+      ignoredAt: null,
+    };
     pi.sendMessage(
       {
-        customType: "abacusai-bot-close-out",
+        customType: CLOSE_OUT_TYPE,
         content: closeOutPrompt(closeOutReason(hit)),
         display: false,
       },
@@ -931,8 +957,7 @@ export class SpendGovernor {
       this.memoryCredits = 0;
       this.costCompactedThisTurn = false;
       this.turnStartedAt = Date.now();
-      this.closingTurns = null;
-      this.closingHit = null;
+      this.closeOut = null;
       this.recoveryCompacted = false;
       this.need = null;
     });
@@ -945,6 +970,7 @@ export class SpendGovernor {
     pi.on("message_end", (event) => {
       const message = event.message as {
         role?: string;
+        customType?: string;
         stopReason?: string;
         abacusCredits?: number;
         usage?: {
@@ -953,6 +979,20 @@ export class SpendGovernor {
           cacheWrite?: number;
         };
       };
+      if (
+        message.role === "custom" &&
+        message.customType === CLOSE_OUT_TYPE &&
+        this.closeOut != null
+      )
+        this.closeOut.heard = true;
+      // The close-out's line asks for a message to keep going. One that lands
+      // mid-run (a steer, a contact's next message) is that answer: the limit
+      // starts over from it, as it does for a message sent while idle.
+      if (message.role === "user" && this.closeOut != null) {
+        this.closeOut = null;
+        this.turnStartedAt = Date.now();
+        this.turns = 0;
+      }
       if (message.role !== "assistant" || message.stopReason === "error")
         return;
       const usage = message.usage;
@@ -991,11 +1031,16 @@ export class SpendGovernor {
       if (this.turns === finalAt) steer(finalPrompt(this.turns, cap));
       else if (this.turns === wrapUpAt) steer(wrapUpPrompt(this.turns, cap));
 
-      // Closing out: a few calls to say what was done, then the stop.
-      if (this.closingTurns != null) {
-        this.closingTurns += 1;
-        if (this.closingTurns > CLOSE_OUT_TURNS && this.closingHit != null) {
-          stoppedBecause = stoppedMessage(this.closingHit);
+      // Closing out: hand over and say what was done; a run that keeps
+      // working after it heard the stop, or never closes, is stopped.
+      const closeOut = this.closeOut;
+      if (closeOut != null) {
+        closeOut.calls += 1;
+        if (
+          closeOut.ignored >= CLOSE_OUT_IGNORED ||
+          closeOut.calls > CLOSE_OUT_CALLS
+        ) {
+          stoppedBecause = stoppedMessage(closeOut.hit);
           if (ctx.hasUI)
             ctx.ui.notify(
               "AbacusAI Bot: the run did not close out; stopping it",
@@ -1032,7 +1077,13 @@ export class SpendGovernor {
     });
 
     pi.on("tool_call", (event) => {
-      if (this.closingTurns == null || isHandoverTool(event.toolName)) return;
+      const closeOut = this.closeOut;
+      if (closeOut == null || isHandoverTool(event.toolName)) return;
+      // One count per call, however many tools it asked for at once.
+      if (closeOut.heard && closeOut.ignoredAt !== closeOut.calls) {
+        closeOut.ignored += 1;
+        closeOut.ignoredAt = closeOut.calls;
+      }
       return {
         block: true,
         reason:
