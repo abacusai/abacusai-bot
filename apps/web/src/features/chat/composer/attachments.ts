@@ -29,6 +29,7 @@ const pastedName = (
   id: string,
   file: { name: string; type: string }
 ): string => {
+  if (isPastedText(file.name)) return file.name;
   const own = /\.([A-Za-z0-9]{1,8})$/.exec(file.name)?.[1];
   const ext =
     own ??
@@ -96,8 +97,20 @@ export const LONG_PASTE_CHARS = 100_000;
 /** Pasted text to attach as a file instead of typing it, or null to paste it as text. */
 export const longPasteFile = (text: string): File | null =>
   text.length > LONG_PASTE_CHARS
-    ? new File([text], "pasted-text.txt", { type: "text/plain" })
+    ? new File([text], `pasted-text-${nextId()}.txt`, { type: "text/plain" })
     : null;
+
+/** A file the composer saved from pasted text, by its name or path. */
+export const isPastedText = (pathOrName: string): boolean =>
+  /^pasted-text-[\w-]+\.txt$/.test(pathOrName.split(/[\\/]/).at(-1) ?? "");
+
+/** A paste's chip title: its first line with text, whitespace folded. */
+export const pastedTextTitle = (head: string): string =>
+  head
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .find((line) => line !== "")
+    ?.slice(0, 120) ?? "";
 
 /** Dropped or pasted `File`s: real paths directly, blobs saved first. */
 export const addFiles = async (

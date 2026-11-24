@@ -3254,6 +3254,7 @@
       "stop": "停止",
       "uploading": "Wait for the attachments to finish saving",
       "pasteUnavailable": "Pasting files isn't available here",
+      "pastedText": "貼り付けたテキスト",
       "modes": "権限モード",
       "noModels": "一致するモデルがありません",
       "listening": "聞き取り中",

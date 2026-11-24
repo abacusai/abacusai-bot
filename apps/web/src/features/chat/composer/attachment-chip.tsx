@@ -1,4 +1,4 @@
-import { FileText, Folder, RotateCcw } from "lucide-react";
+import { FileText, Folder, RotateCcw, ScanText } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,7 +19,7 @@ import {
 } from "#renderer/ui/hover-card";
 
 import type { ChatHostActions } from "../runtime/host-actions";
-import { formatSize } from "./attachments";
+import { formatSize, isPastedText, pastedTextTitle } from "./attachments";
 
 export const AttachmentChip = ({
   attachment,
@@ -47,6 +47,7 @@ export const AttachmentChip = ({
     /\.(txt|md|json|csv|log|tsx?|jsx?|py|css|html|ya?ml)$/i.test(
       attachment.name
     );
+  const pasted = isPastedText(attachment.name);
   useEffect(() => {
     if (!attachment.path || attachment.state !== "done") return;
     const hostRoot = containmentRootFor(attachment.path, root);
@@ -58,7 +59,8 @@ export const AttachmentChip = ({
           if (active) setImage(url);
         })
         .catch(() => {});
-    if (open && isText && text === undefined && host.readText)
+    // A paste is titled by its first line, so it is read without the hover.
+    if ((open || pasted) && isText && text === undefined && host.readText)
       void host
         .readText(attachment.path, hostRoot)
         .then((value) => {
@@ -78,9 +80,15 @@ export const AttachmentChip = ({
     isText,
     image,
     text,
+    pasted,
   ]);
-  const details =
-    attachment.kind === "folder"
+  const pastedLabel = t("chat.composer.pastedText");
+  const title = pasted
+    ? pastedTextTitle(text ?? "") || pastedLabel
+    : attachment.name;
+  const details = pasted
+    ? [pastedLabel, formatSize(attachment.size)].filter(Boolean).join(" · ")
+    : attachment.kind === "folder"
       ? attachment.count == null
         ? ""
         : t("chat.composer.folderItems", { count: attachment.count })
@@ -89,7 +97,7 @@ export const AttachmentChip = ({
     <Attachment
       size="chip"
       state={attachment.state}
-      className="max-w-60 min-w-0"
+      className={pasted ? "max-w-80 min-w-0" : "max-w-60 min-w-0"}
       data-slot="attachment-chip"
     >
       <HoverCard open={open} onOpenChange={setOpen}>
@@ -98,7 +106,7 @@ export const AttachmentChip = ({
             <button
               type="button"
               className="flex min-w-0 flex-1 items-center gap-1.5 text-start outline-none"
-              aria-label={attachment.name}
+              aria-label={title}
               aria-describedby={
                 attachment.state === "error" ? errorId : undefined
               }
@@ -110,6 +118,8 @@ export const AttachmentChip = ({
               <Spinner aria-label={t("chat.composer.uploading")} />
             ) : image ? (
               <img src={image} alt="" className="size-full object-cover" />
+            ) : pasted ? (
+              <ScanText aria-hidden />
             ) : attachment.kind === "folder" || attachment.files ? (
               <Folder aria-hidden />
             ) : (
@@ -117,7 +127,7 @@ export const AttachmentChip = ({
             )}
           </AttachmentMedia>
           <AttachmentContent>
-            <AttachmentTitle>{attachment.name}</AttachmentTitle>
+            <AttachmentTitle>{title}</AttachmentTitle>
           </AttachmentContent>
           {details ? (
             <span className="text-muted-foreground shrink-0 text-[11px]">
@@ -133,7 +143,7 @@ export const AttachmentChip = ({
               className="mb-2 max-h-60 max-w-60 rounded-md object-contain"
             />
           ) : null}
-          <p className="max-w-60 truncate font-medium">{attachment.name}</p>
+          <p className="max-w-60 truncate font-medium">{title}</p>
           {text ? (
             <pre className="mt-1 max-h-40 max-w-60 overflow-auto text-xs whitespace-pre-wrap">
               {text}
