@@ -3254,6 +3254,7 @@
       "stop": "Durdur",
       "uploading": "Eklerin kaydedilmesini bekle",
       "pasteUnavailable": "Burada dosya yapıştırılamıyor",
+      "pastedText": "Yapıştırılan metin",
       "modes": "İzin modları",
       "noModels": "Eşleşen model yok",
       "listening": "Dinliyor",

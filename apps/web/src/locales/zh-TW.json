@@ -3254,6 +3254,7 @@
       "stop": "停止",
       "uploading": "請等待附件儲存完成",
       "pasteUnavailable": "這裡無法貼上檔案",
+      "pastedText": "貼上的文字",
       "modes": "權限模式",
       "noModels": "沒有符合的模型",
       "listening": "聆聽中",

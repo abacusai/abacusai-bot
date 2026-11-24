@@ -3254,6 +3254,7 @@
       "stop": "停止",
       "uploading": "请等待附件保存完成",
       "pasteUnavailable": "此处无法粘贴文件",
+      "pastedText": "粘贴的文本",
       "modes": "权限模式",
       "noModels": "没有匹配的模型",
       "listening": "正在聆听",

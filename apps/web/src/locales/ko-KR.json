@@ -3254,6 +3254,7 @@
       "stop": "중지",
       "uploading": "Wait for the attachments to finish saving",
       "pasteUnavailable": "Pasting files isn't available here",
+      "pastedText": "붙여넣은 텍스트",
       "modes": "권한 모드",
       "noModels": "일치하는 모델이 없습니다",
       "listening": "듣는 중",

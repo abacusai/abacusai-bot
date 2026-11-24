@@ -3254,6 +3254,7 @@
       "stop": "Stop",
       "uploading": "Wait for the attachments to finish saving",
       "pasteUnavailable": "Pasting files isn't available here",
+      "pastedText": "Pasted text",
       "modes": "Permission modes",
       "noModels": "No models match",
       "listening": "Listening",

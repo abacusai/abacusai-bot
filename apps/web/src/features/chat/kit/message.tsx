@@ -27,6 +27,7 @@ import {
   ListChecks,
   MessageCircleQuestionMark,
   PackageCheck,
+  ScanText,
   Plug,
   Search,
   Sparkles,
@@ -67,6 +68,7 @@ import {
 } from "#renderer/ui/collapsible";
 import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
+import { isPastedText, pastedTextTitle } from "../composer/attachments";
 import { Markdown } from "../markdown/markdown";
 import { coalescedIds, isBlankText, isThinking } from "../scroller/coalesce";
 import { useToolWindow } from "../scroller/row-context";
@@ -132,9 +134,12 @@ const textOf = (message: UIMessage): string =>
 const IMAGE = /\.(png|jpe?g|gif|webp|avif|heic|bmp|svg)$/i;
 
 const AttachmentChip = ({ path }: { path: string }) => {
+  const { t } = useTranslation();
   const { runtime, workspaceRoot, onOpenFile } = useChatView();
   const name = path.split(/[\\/]/).at(-1) ?? path;
   const ext = name.includes(".") ? name.split(".").at(-1)!.toUpperCase() : "";
+  const pasted = isPastedText(name);
+  const [pastedTitle, setPastedTitle] = useState("");
   const [thumb, setThumb] = useState<string | null>(null);
   const image = IMAGE.test(name);
   const chip = useRef<HTMLDivElement>(null);
@@ -166,10 +171,24 @@ const AttachmentChip = ({ path }: { path: string }) => {
       live = false;
     };
   }, [image, inView, path, runtime, workspaceRoot]);
+  // A paste is titled by its first line: one small read once it is in view.
+  useEffect(() => {
+    if (!pasted || !inView || runtime.host.readText == null) return;
+    let live = true;
+    runtime.host
+      .readText(path, containmentRootFor(path, workspaceRoot))
+      .then((head) => live && setPastedTitle(pastedTextTitle(head)))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [pasted, inView, path, runtime, workspaceRoot]);
+  const label = pasted ? t("chat.composer.pastedText") : ext;
+  const title = pasted ? pastedTitle || label : name;
   return (
     <Attachment className="w-64 cursor-pointer" ref={chip}>
       <AttachmentTrigger
-        aria-label={name}
+        aria-label={title}
         onClick={() =>
           onOpenFile != null
             ? onOpenFile(path)
@@ -184,13 +203,15 @@ const AttachmentChip = ({ path }: { path: string }) => {
             loading="lazy"
             className="size-full object-cover"
           />
+        ) : pasted ? (
+          <ScanText aria-hidden />
         ) : (
           <FileText aria-hidden />
         )}
       </AttachmentMedia>
       <AttachmentContent>
-        <AttachmentTitle>{name}</AttachmentTitle>
-        <AttachmentDescription>{ext}</AttachmentDescription>
+        <AttachmentTitle>{title}</AttachmentTitle>
+        <AttachmentDescription>{label}</AttachmentDescription>
       </AttachmentContent>
     </Attachment>
   );
