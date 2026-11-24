@@ -25,6 +25,7 @@ import {
 } from "../data/queries";
 import { PrChip } from "../pr/pr-chip";
 import type { StartDraft } from "../start/start-session";
+import { ProjectRulesChip } from "./project-rules-chip";
 export const SessionContextTray = ({
   workspaceId,
   sessionId,
@@ -34,6 +35,8 @@ export const SessionContextTray = ({
   worktree,
   onWorkspace,
   onWorktree,
+  projectRules = [],
+  onOpenRules,
 }: {
   workspaceId: string;
   sessionId?: string;
@@ -43,6 +46,9 @@ export const SessionContextTray = ({
   worktree?: StartDraft["worktree"];
   onWorkspace?: (id: string) => void;
   onWorktree?: (choice: StartDraft["worktree"]) => void;
+  /** The rules files the chat's agent reads (`useProjectRules`). */
+  projectRules?: readonly string[];
+  onOpenRules?: (path: string) => void;
 }) => {
   const { t } = useTranslation();
   const execLocked = busy || agentRunning;
@@ -200,6 +206,7 @@ export const SessionContextTray = ({
             sessionId={sessionId}
           />
         ) : null}
+        <ProjectRulesChip files={projectRules} onOpen={onOpenRules} />
       </div>
       {exec.data &&
       exec.data.statuses.filter((status) => status.ready).length > 1 ? (

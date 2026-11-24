@@ -94,6 +94,10 @@ import {
   useContinuationLinks,
   withContinuationLinks,
 } from "#renderer/features/sessions/continuation-links";
+import {
+  publishCodeProject,
+  useCodeProject,
+} from "#renderer/features/sessions/data/code-project";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import {
   useSession,
@@ -364,6 +368,21 @@ const SessionRoute = () => {
   // Its routines' reports, as the app delivered them here.
   const reports = useRunReports(sessionId);
   const continuations = useContinuationLinks(row);
+  const session = runtime.session(sessionId);
+  // Only the inner store handle: the host state also carries the streaming
+  // messages, and subscribing to it here would re-render the route (and the
+  // dock under it) on every stream tick.
+  const hostCore = useSelector(session.hostStore, (s) => s.store);
+  // One signal for the developer tools: a git work tree, or rules files kept
+  // in the folder (data/code-project.ts).
+  const projectRules = useSelector(hostCore, (s) => s.projectRules);
+  const codeProject = useCodeProject(
+    row ? { workspaceId: row.workspaceId, sessionId } : null,
+    projectRules
+  );
+  useEffect(() => {
+    if (row) publishCodeProject(sessionId, codeProject);
+  }, [row, sessionId, codeProject]);
   const sharedCommands = useChatCommands(
     row ? { workspaceId: row.workspaceId, sessionId } : null
   );
@@ -376,16 +395,24 @@ const SessionRoute = () => {
       description: t("chat.commands.rename"),
       run: (label) => renameSession(db, sessionId, label),
     },
-    {
-      name: "diff",
-      description: t("chat.commands.diff"),
-      run: () =>
-        navigate({
-          to: ".",
-          search: (p: Record<string, unknown>) => ({ ...p, tab: "changes" }),
-          transition: "none",
-        }),
-    },
+    // Git's diff: nothing to show outside a code project.
+    ...(codeProject
+      ? [
+          {
+            name: "diff",
+            description: t("chat.commands.diff"),
+            run: () =>
+              navigate({
+                to: ".",
+                search: (p: Record<string, unknown>) => ({
+                  ...p,
+                  tab: "changes",
+                }),
+                transition: "none",
+              }),
+          },
+        ]
+      : []),
     ...(IS_ELECTRON
       ? [
           {
@@ -402,11 +429,6 @@ const SessionRoute = () => {
       : []),
   ];
   const prefs = usePrefs();
-  const session = runtime.session(sessionId);
-  // Only the inner store handle: the host state also carries the streaming
-  // messages, and subscribing to it here would re-render the route (and the
-  // dock under it) on every stream tick.
-  const hostCore = useSelector(session.hostStore, (s) => s.store);
   const incarnation = useSelector(hostCore, (s) => s.incarnation);
   const outcomes = useSelector(hostCore, (s) => s.runs.outcomes);
   const plan = useSelector(hostCore, (s) => s.agent?.plan);
@@ -524,6 +546,7 @@ const SessionRoute = () => {
       <SessionWorkspace
         row={row}
         incarnation={incarnation}
+        codeProject={codeProject}
         presenter={presenter}
         blocked={(rect: DOMRect) =>
           document.querySelector('[role="dialog"]') !== null ||
@@ -686,6 +709,8 @@ const SessionRoute = () => {
                   agentRunning={
                     row.status === "running" || row.status === "starting"
                   }
+                  projectRules={projectRules}
+                  onOpenRules={openFile}
                 />
               ),
             }}

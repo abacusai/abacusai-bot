@@ -327,6 +327,33 @@ describe("what still runs past its turn", () => {
   });
 });
 
+describe("the project rules the agent reads", () => {
+  const files = ["/Users/me/code/app/AGENTS.md"];
+
+  it("is whole each time, outside any run", () => {
+    let state = fold([b.custom("project_rules.loaded", { files })]);
+    expect(state.projectRules).toEqual(files);
+    state = applyEvent(
+      state,
+      2,
+      b.custom("project_rules.loaded", { files: [] })
+    );
+    expect(state.projectRules).toEqual([]);
+  });
+
+  it("is there when the chat is opened again", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.custom("project_rules.loaded", { files }),
+    ]);
+    const session = new ThreadSession({ ai: relay.ai, threadId: "t-1" });
+    sessions.push(session);
+    await session.load();
+    expect(session.store.state.projectRules).toEqual(files);
+  });
+});
+
 describe("R2-T8 through the session", () => {
   it("hydrates session slices with no further events", async () => {
     const d = b.descriptor({ type: "run_terminal", command: "ls" } as never, {

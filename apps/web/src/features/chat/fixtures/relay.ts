@@ -213,6 +213,7 @@ interface Folded {
   queue: QueueEntry[];
   agent: AgentState | null;
   skills: AiHydration["abacus"]["skills"];
+  projectRules: string[];
   backgroundTasks: AiHydration["abacus"]["backgroundTasks"];
   activity: AiHydration["abacus"]["activity"];
   notices: AiNotice[];
@@ -243,6 +244,7 @@ const fold = (
   let queue: QueueEntry[] = [];
   let agent: AgentState | null = null;
   let skills: Folded["skills"] = [];
+  let projectRules: string[] = [];
   let backgroundTasks: Folded["backgroundTasks"] = [];
   let activity: Folded["activity"] = {
     status: AgentStatus.Idle,
@@ -301,6 +303,10 @@ const fold = (
       else if (name === "skills.loaded")
         skills = Array.isArray(value.skills)
           ? (value.skills as Folded["skills"])
+          : [];
+      else if (name === "project_rules.loaded")
+        projectRules = Array.isArray(value.files)
+          ? (value.files as string[])
           : [];
       else if (name === "background.tasks")
         backgroundTasks = Array.isArray(value.tasks)
@@ -434,6 +440,7 @@ const fold = (
     queue: queue.filter((entry) => entry.hidden !== true),
     agent,
     skills,
+    projectRules,
     backgroundTasks,
     activity,
     notices,
@@ -573,6 +580,7 @@ export class FakeRelay {
         queue: folded.queue,
         agent: folded.agent,
         skills: folded.skills,
+        projectRules: folded.projectRules,
         backgroundTasks: folded.backgroundTasks,
         activity: folded.activity,
         notices: folded.notices,

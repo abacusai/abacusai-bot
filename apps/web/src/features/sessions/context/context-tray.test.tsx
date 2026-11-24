@@ -47,6 +47,7 @@ vi.mock("../data/queries", () => {
 });
 import { initI18n } from "#renderer/lib/i18n";
 
+import { isCodeProject } from "../data/code-project";
 import { SessionContextTray } from "./context-tray";
 it("idle running agents lock both the backend trigger and an already-open picker", async () => {
   await initI18n();
@@ -108,4 +109,53 @@ it("renders no PR placeholder and hides the environment control with one availab
   expect(screen.queryByRole("button", { name: "Local" })).toBeNull();
   view.unmount();
   qc.clear();
+});
+
+it("names the project rules the agent reads, opens one on click, and shows nothing without", async () => {
+  await initI18n();
+  const qc = new QueryClient();
+  const open = vi.fn();
+  const view = render(
+    <QueryClientProvider client={qc}>
+      <SessionContextTray
+        workspaceId="w"
+        sessionId="s"
+        projectRules={["/Users/me/code/app/AGENTS.md"]}
+        onOpenRules={open}
+      />
+    </QueryClientProvider>
+  );
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Using project rules: AGENTS.md",
+    })
+  );
+  expect(open).toHaveBeenCalledExactlyOnceWith("/Users/me/code/app/AGENTS.md");
+  view.rerender(
+    <QueryClientProvider client={qc}>
+      <SessionContextTray workspaceId="w" sessionId="s" />
+    </QueryClientProvider>
+  );
+  expect(document.querySelector('[data-slot="project-rules-chip"]')).toBeNull();
+  view.unmount();
+  qc.clear();
+});
+
+it("a code project is a git work tree, or a folder keeping its own rules file", () => {
+  const rows: Array<[boolean, string[], string | null, boolean]> = [
+    [true, [], "/Users/me/code/app", true],
+    [false, ["/Users/me/code/app/AGENTS.md"], "/Users/me/code/app", true],
+    // The home folder's rules are the person's, not this folder's.
+    [false, ["/Users/me/CLAUDE.md"], "/Users/me/Documents/trip", false],
+    // A sibling folder that shares the name's prefix.
+    [false, ["/Users/me/code/app-old/AGENTS.md"], "/Users/me/code/app", false],
+    // Windows: the agent reports forward slashes, the workspace backslashes.
+    [false, ["C:/Users/me/app/CLAUDE.md"], "C:\\Users\\me\\app\\", true],
+    [false, ["/Users/me/code/app/AGENTS.md"], null, false],
+    [false, [], "/Users/me/Documents", false],
+  ];
+  for (const [git, rules, root, expected] of rows)
+    expect(isCodeProject(git, rules, root), JSON.stringify(rules)).toBe(
+      expected
+    );
 });

@@ -343,6 +343,8 @@ export interface CustomValues {
   "queue.steered": { content: string };
   "queue.dequeued": { content: string };
   "skills.loaded": { skills: SkillMetadata[] };
+  /** The project rules files the agent reads, as model paths (load order). */
+  "project_rules.loaded": { files: string[] };
   /** Everything still running past its turn, whole each time. */
   "background.tasks": { tasks: BackgroundTask[] };
   "mcp.servers": { servers: CliMcpServerSnapshot[] };

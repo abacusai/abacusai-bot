@@ -26,6 +26,7 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { useCollections } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { usePublishedCodeProject } from "#renderer/features/sessions/data/code-project";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { dispatchHotkeyAction } from "#renderer/lib/hotkeys";
@@ -116,11 +117,41 @@ const CommandMenuBody = () => {
     ? sessionConversationKey(current.workspaceId, current.id)
     : "";
   const tabs = useSessionPanelTabs(key || null).tabs;
+  // Outside a code project the developer tools come after the other panels.
+  const codeProject = usePublishedCodeProject(current?.id ?? null);
   const listed = (sessions ?? [])
     .filter(isListedSession)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const recent = listed.slice(0, 5);
   const recentIds = new Set(recent.map((session) => session.id));
+  // Files, Changes and PR: put forward in a code project only (the dock's rule).
+  const developerPanels: Entry[] = current
+    ? [
+        "files" as const,
+        "changes" as const,
+        ...(prefs.githubIntegration !== false ? ["pr" as const] : []),
+      ]
+        .filter((kind) => !tabs.some((tab) => tab.ref === kind))
+        .map((kind): Entry => ({
+          id: `panel:${kind}`,
+          title: t(`sessions.dock.${kind}`),
+          group: "panels",
+          icon:
+            kind === "files"
+              ? Folder
+              : kind === "pr"
+                ? GitPullRequest
+                : GitCompare,
+          run: () =>
+            navigateSession({
+              to: "/sessions/$sessionId",
+              params: { sessionId: current.id },
+              search: (previous) => ({ ...previous, tab: kind }),
+              replace: true,
+              transition: "none",
+            }),
+        }))
+    : [];
   const entries: Entry[] = [
     ...listed.map((session): Entry => ({
       id: `session:${session.id}`,
@@ -245,31 +276,7 @@ const CommandMenuBody = () => {
                 transition: "none",
               }),
           })),
-          ...[
-            "files" as const,
-            "changes" as const,
-            ...(prefs.githubIntegration !== false ? ["pr" as const] : []),
-          ]
-            .filter((kind) => !tabs.some((tab) => tab.ref === kind))
-            .map((kind): Entry => ({
-              id: `panel:${kind}`,
-              title: t(`sessions.dock.${kind}`),
-              group: "panels",
-              icon:
-                kind === "files"
-                  ? Folder
-                  : kind === "pr"
-                    ? GitPullRequest
-                    : GitCompare,
-              run: () =>
-                navigateSession({
-                  to: "/sessions/$sessionId",
-                  params: { sessionId: current.id },
-                  search: (previous) => ({ ...previous, tab: kind }),
-                  replace: true,
-                  transition: "none",
-                }),
-            })),
+          ...(codeProject ? developerPanels : []),
           {
             id: "expand",
             title: t("sessions.dock.full"),
@@ -287,6 +294,7 @@ const CommandMenuBody = () => {
                 transition: "none",
               }),
           },
+          ...(codeProject ? [] : developerPanels),
           {
             id: "new-terminal",
             shortcut: shortcut("new-terminal-tab", "Mod+`"),

@@ -262,6 +262,9 @@ export class AguiEmitter {
       case "skills_loaded":
         return [custom("skills.loaded", { skills: event.skills })];
 
+      case "project_rules_loaded":
+        return [custom("project_rules.loaded", { files: event.files })];
+
       case "queue_updated":
         return [
           custom("queue.updated", {

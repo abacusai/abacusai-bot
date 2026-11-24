@@ -229,10 +229,27 @@ describe("starting up", () => {
     expect(ready.agentSessionId).toBeTruthy();
   });
 
-  it("publishes the skill list and the MCP roster", async () => {
-    const host = start(workspace());
+  it("publishes the skill list, the project rules and the MCP roster", async () => {
+    const cwd = workspace();
+    fs.writeFileSync(path.join(cwd, "AGENTS.md"), "Run the tests first.\n");
+    // The app's own agent dir is not the user's project: left out of the list.
+    fs.mkdirSync(path.join(home, "agent"), { recursive: true });
+    fs.writeFileSync(path.join(home, "agent", "AGENTS.md"), "App notes.\n");
+    const host = start(cwd);
 
     await host.waitFor((event) => event.type === "skills_loaded");
+    const rules = (await host.waitFor(
+      (event) => event.type === "project_rules_loaded"
+    )) as Extract<DesktopEvent, { type: "project_rules_loaded" }>;
+    fs.rmSync(path.join(home, "agent", "AGENTS.md"));
+
+    expect(rules.files.map((file) => path.basename(file))).toEqual([
+      "AGENTS.md",
+    ]);
+    // Windows reports the path with forward slashes; compare it normalized.
+    expect(path.resolve(path.dirname(rules.files[0]!))).toBe(
+      path.resolve(fs.realpathSync(cwd))
+    );
     await host.waitFor((event) => event.type === "mcp_servers");
   });
 });

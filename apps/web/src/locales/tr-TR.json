@@ -2160,7 +2160,10 @@
       "createBranch": "{{name}} dalını oluştur",
       "tasks": "Görevler {{done}} / {{total}}",
       "noBranch": "Bu checkout'un dalı yok.",
-      "newBranch": "Yeni dal"
+      "newBranch": "Yeni dal",
+      "rules": "Proje kuralları kullanılıyor",
+      "rulesLabel": "Proje kuralları kullanılıyor: {{files}}",
+      "rulesChip": "{{files}} kullanılıyor"
     },
     "routine": {
       "talk": "Rutinle konuş"

@@ -2160,7 +2160,10 @@
       "createBranch": "创建分支 {{name}}",
       "tasks": "任务 {{done}} / {{total}}",
       "noBranch": "此检出没有分支。",
-      "newBranch": "新建分支"
+      "newBranch": "新建分支",
+      "rules": "正在使用项目规则",
+      "rulesLabel": "正在使用项目规则：{{files}}",
+      "rulesChip": "正在使用 {{files}}"
     },
     "routine": {
       "talk": "与例行任务对话"

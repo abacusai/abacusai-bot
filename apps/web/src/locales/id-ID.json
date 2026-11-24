@@ -2160,7 +2160,10 @@
       "createBranch": "Create branch {{name}}",
       "tasks": "Tasks {{done}} of {{total}}",
       "noBranch": "This checkout has no branch.",
-      "newBranch": "New branch"
+      "newBranch": "New branch",
+      "rules": "Memakai aturan proyek",
+      "rulesLabel": "Memakai aturan proyek: {{files}}",
+      "rulesChip": "Memakai {{files}}"
     },
     "routine": {
       "talk": "Talk to the routine"

@@ -116,6 +116,41 @@ it("a fresh panel opens on one closable launcher, and the kind picked there take
   }
 });
 
+it("outside a code project, the launcher leaves the developer tools to the + menu", async () => {
+  const harness = await renderApp("/sessions/compress-installers", {
+    notGit: true,
+  });
+  try {
+    fireEvent.click(await screen.findByTestId("panel-toggle"));
+    const launcher = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(
+        '[data-slot="dock-launcher"]'
+      );
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    await waitFor(() =>
+      expect(
+        within(launcher).queryByRole("button", { name: "Changes" })
+      ).toBeNull()
+    );
+    for (const name of ["Terminal", "Files"])
+      expect(within(launcher).queryByRole("button", { name })).toBeNull();
+    expect(
+      within(launcher).getByRole("button", { name: "Agents" })
+    ).toBeTruthy();
+    // Still there, after the rest.
+    fireEvent.click(screen.getByRole("button", { name: "Add tab" }));
+    const items = await screen.findAllByRole("menuitem");
+    const names = items.map((item) => item.textContent);
+    expect(names.indexOf("Changes")).toBeGreaterThan(names.indexOf("Agents"));
+    expect(names.indexOf("Files")).toBeGreaterThan(names.indexOf("Agents"));
+  } finally {
+    harness.view.unmount();
+    await harness.cleanup();
+  }
+});
+
 it("restores the selected workspace file when returning to a session without URL state", async () => {
   const key = sessionConversationKey("default", "spreadsheet");
   const harness = await renderApp(

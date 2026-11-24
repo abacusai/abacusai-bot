@@ -120,7 +120,7 @@ import {
   MEMORY_SAVE_CHECK_TYPE,
 } from "./memory/chat.js";
 import { refreshLiveModelIds } from "./model-catalog.js";
-import { MODEL_PATH_RESOURCES } from "./model-path.js";
+import { MODEL_PATH_RESOURCES, modelPath } from "./model-path.js";
 import {
   BUSY_RETRY_PROMPT,
   BusyWait,
@@ -913,6 +913,8 @@ export class AbacusBotSession {
   private unsubscribe: (() => void) | undefined;
   /** Kept so `skill_add` can re-scan skills mid-session. */
   private resourceLoader: DefaultResourceLoader | undefined;
+  /** Whether the last `project_rules_loaded` named any file. */
+  private projectRulesReported = false;
   /** The instructions the current prompt was built with; compared per turn. */
   private promptInstructions = "";
   /** The reply-language block the prompt was built with. */
@@ -1397,6 +1399,7 @@ export class AbacusBotSession {
     }
 
     this.emitSkills(resourceLoader);
+    this.emitProjectRules(resourceLoader);
     this.emitMcpServers();
   }
 
@@ -4389,6 +4392,7 @@ export class AbacusBotSession {
     // the supported way to force that. It lands on the next turn.
     this.session?.setActiveToolsByName(this.session.getActiveToolNames());
     this.emitSkills(loader);
+    this.emitProjectRules(loader);
   }
 
   /** Whom a reply is judged against: the person's words, their saved language, and the device's reading of both. */
@@ -4467,6 +4471,24 @@ export class AbacusBotSession {
       }));
 
     this.options.emit({ type: "skills_loaded", skills });
+  }
+
+  /**
+   * The AGENTS.md / CLAUDE.md files pi put in the prompt for this folder and
+   * its parents, so the chat can say which ones it follows. The app's own
+   * agent-dir file is not the user's project, so it is left out. An empty
+   * list is sent only to clear one sent before: most folders have none.
+   */
+  private emitProjectRules(resourceLoader: DefaultResourceLoader): void {
+    const own = modelPath(agentDir());
+    const files = resourceLoader
+      .getAgentsFiles()
+      .agentsFiles.map((file) => file.path)
+      .filter((file) => modelPath(path.dirname(file)) !== own);
+    if (files.length === 0 && !this.projectRulesReported) return;
+    this.projectRulesReported = files.length > 0;
+
+    this.options.emit({ type: "project_rules_loaded", files });
   }
 
   private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {

@@ -2160,7 +2160,10 @@
       "createBranch": "建立分支 {{name}}",
       "tasks": "任務 {{done}} / {{total}}",
       "noBranch": "這份簽出沒有分支。",
-      "newBranch": "新增分支"
+      "newBranch": "新增分支",
+      "rules": "正在使用專案規則",
+      "rulesLabel": "正在使用專案規則：{{files}}",
+      "rulesChip": "正在使用 {{files}}"
     },
     "routine": {
       "talk": "與例行工作對話"

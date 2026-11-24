@@ -897,6 +897,9 @@ export type DesktopEvent =
       request: PermissionRequest;
     }
   | { type: "skills_loaded"; skills: SkillMetadata[] }
+  // The project rules files (AGENTS.md / CLAUDE.md) pi read for this chat's
+  // folder and its parents, in load order. Empty when none, or unattended.
+  | { type: "project_rules_loaded"; files: string[] }
   | {
       type: "queue_updated";
       messages: QueueEntry[];

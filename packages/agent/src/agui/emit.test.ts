@@ -175,6 +175,21 @@ describe("messages", () => {
     ]);
   });
 
+  it("reports the project rules files outside a run, as a session-scoped custom", () => {
+    const r = rig();
+    const files = ["/Users/me/code/app/AGENTS.md"];
+
+    r.desktop({ type: "project_rules_loaded", files });
+
+    expect(r.out).toHaveLength(1);
+    expect(r.out[0]).toMatchObject({
+      type: "CUSTOM",
+      name: "project_rules.loaded",
+      value: { files },
+    });
+    expect(isRunScoped(r.out[0]!)).toBe(false);
+  });
+
   it("carries steered input as a user message", () => {
     const r = rig();
 
