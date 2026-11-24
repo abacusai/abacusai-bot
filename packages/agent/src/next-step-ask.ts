@@ -10,10 +10,19 @@ export const NEXT_STEP_TYPE = "abacusai-bot:next-step";
 
 export const NEXT_STEP_PROMPT = [
   "[App note, not from the user; never mention it.] The work above is done, so",
-  "end on what comes next. Write one short, specific question naming the",
-  "likeliest next step, in the user's language, without restating the result.",
-  `Then call ${SUGGEST_TASKS_TOOL} with after_result: true and one or two tasks that`,
-  "answer it. If the work uses placeholder or sample content, the step is putting",
+  "end on what comes next. First read the last lines of your reply. If they",
+  "already offer more work or ask the user for something, in any words or",
+  'language (an "if you want, I can also…", a "want me to…", a "send me…",',
+  'a "tell me…", a note naming what is still missing), write no text at all:',
+  "the buttons answer that ending, and asking it again repeats you.",
+  "Otherwise write one short, specific question offering",
+  "the likeliest next piece of work you could do, in the user's language, without",
+  "restating the result. Never ask whether the user has tried, opened, run or",
+  "checked what you just made or told them: they are reading your reply right",
+  "now. Either way, call",
+  `${SUGGEST_TASKS_TOOL} with after_result: true and one or two tasks: work you`,
+  "would do when tapped, never an answer about how it went for them. If the",
+  "work uses placeholder or sample content, the step is putting",
   "the user's own in, never a tweak: pass fields for what only they know (their",
   "name, what they do or their business, whatever the placeholders stand for)",
   "and one task, the form's button; once per chat, so after a form the user filled,",
@@ -23,8 +32,9 @@ export const NEXT_STEP_PROMPT = [
   "project's tests, its pull requests' reviews, a build), make the second task a",
   "routine: true task, in words naming when it runs; never one that needs a",
   "connection that is missing.",
-  "In a reply to a message from a chat app, write the question only. If the work",
-  "did not really succeed, ask only what would unblock it, with no tool call.",
+  "In a reply to a message from a chat app, write the question only, and nothing",
+  "when the reply already ends on one. If the work did not really succeed, ask",
+  "only what would unblock it, with no tool call, unless the reply already asks it.",
 ].join(" ");
 
 /**
