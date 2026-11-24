@@ -513,6 +513,19 @@ const OUTCOME_ERRORS: Record<
     detail: "410 status code (no body)",
     actions: [OWN_KEY_GONE],
   },
+  // A chat outgrown on the free models with the credits used up: its own way
+  // out first, the plan's offer beside it (turn-outcome.ts poolPlanOffer).
+  "context-too-long-credits-out": {
+    message:
+      "This conversation is too long for the model. Pick a model with a larger context.",
+    cause: "context_too_long",
+    detail: "",
+    actions: [
+      { type: "new-chat" },
+      { type: "switch-model" },
+      { type: "plan-offer" },
+    ],
+  },
   // The free model overloaded on a free account (turn-outcome.ts
   // freeModelOverloaded): one card however the turn ended on it.
   "free-model-down": {
