@@ -79,8 +79,9 @@ const NEVER_CANNOT =
 const leadWithYes = (example: string, opening = "your reply"): string =>
   `Open ${opening} with the yes: your first words say what makes it and where, for example "${example}" (in their language). Never open with what this app or chat lacks.`;
 
+/** A plain edit of the user's own file (a cut, a trim) is local work, not a detour. */
 const NO_DETOURS =
-  "Do not make it another way instead: no Canva, Hugging Face or other connector, and no local script or program (ffmpeg, Blender, Python and the like), unless the user named that app or tool themselves. This answer is the answer.";
+  "Do not make it another way instead: no Canva, Hugging Face or other connector, and no local script or program (ffmpeg, Blender, Python and the like), unless the user named that app or tool themselves. This answer is the answer. A plain edit of their own file (cut, trim, compress, convert) is not this: do that here as usual.";
 
 const ATTACHED =
   "If they gave you an image or file to edit, tell them to attach it there.";
@@ -368,17 +369,21 @@ export function phoneHandoffResult(
   return host.ok(phoneAppLines(call, botUpgradePage("whatsapp")).join("\n"));
 }
 
+/** Asked to cut the dull parts of their own recording, the model pitched video analysis: plain edits stay local. */
 const description = (host: HostCapabilities): string =>
   [
     `${capitalized(names(host.withheldFeatures))}: the paid plans include these, and this account does not have them here.`,
-    "When the user asks for one (to create, generate or edit an image, make a video, or make speech or audio, reading a",
-    'text aloud included), call this first, before you write anything: no preamble, no "let me check", nothing about',
-    "what this chat lacks. It says which plan includes it and where, at what price, with the link and how to word and",
-    "order your reply (on the free plan, the part this chat makes in text comes first); the app offers them the",
-    "upgrade or Abacus AI Agent on the web.",
+    "When the user asks for one (to create, generate or edit an image, make a video or change what one shows, watch or",
+    "describe what is in a video, or make speech or audio, reading a text aloud included), call this first, before you",
+    'write anything: no preamble, no "let me check", nothing about what this chat lacks. It says which plan includes it',
+    "and where, at what price, with the link and how to word and order your reply (on the free plan, the part this chat",
+    "makes in text comes first); the app offers them the upgrade or Abacus AI Agent on the web.",
     "Never tell the user you cannot do one of these or that it is not available, and never make one through a connector",
-    "(Canva, Hugging Face) or a local script (ffmpeg, Blender, Python) instead, unless the user named that app. Reading",
-    "or describing an image or video is not one of these.",
+    "(Canva, Hugging Face) or a local script (ffmpeg, Blender, Python) instead, unless the user named that app.",
+    "Not one of these: describing an image, and plain edits of the user's own media file that add nothing new (cut, trim,",
+    "split, join, compress, convert, extract audio, resize, rotate, crop, or keep only the parts they want: ask which, or",
+    "find the silences and scene changes). Do those on this computer with ffmpeg or the like, installing it with their OK",
+    "if missing. Adding or changing what an image or video shows (a person, object, outfit or motion) is one of these.",
   ].join("\n");
 
 /** The schema both the app and the phone take. */
