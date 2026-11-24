@@ -36,6 +36,7 @@ import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
 import { visibleUserText } from "@abacus-ai/contract/transcript/user-text";
 
 import { connectInProcess } from "#main/rpc/testing";
+import { saveNote } from "#main/services/memory/memory-service";
 import { SessionTurnStateService } from "#main/services/session/session-turn-state-service";
 import { TurnAbandoner } from "#main/services/session/turn-abandoner";
 
@@ -462,6 +463,85 @@ describe("connectors connected elsewhere", () => {
     }
   }, 20_000);
 });
+// The server moved the WhatsApp chat to a personal agent of the user's own.
+describe("a WhatsApp chat moved to the user's own agent", () => {
+  it("hands the new agent the bot's memory once, with no turn and nothing said to the user", async () => {
+    const posts: Array<{ method: string; body: any }> = [];
+    vi.stubGlobal("fetch", async (input: string | URL, init?: RequestInit) => {
+      const method = new URL(String(input)).pathname.split("/").at(-1)!;
+      posts.push({
+        method,
+        body: init?.body == null ? null : JSON.parse(String(init.body)),
+      });
+      return method === "abacusaibot_handover_memory" ||
+        method === "abacusaibot_channels"
+        ? Response.json({ status: "ok" })
+        : new Response("{}", { status: 404 });
+    });
+    const host = await composeNodeHost();
+    const send = vi.spyOn(host.serviceHost, "sendAgentMessage");
+    const handovers = () =>
+      posts.filter((post) => post.method === "abacusaibot_handover_memory");
+    const channelCalls = () =>
+      posts
+        .filter((post) => post.method === "abacusaibot_channels")
+        .map((post) => post.body);
+    try {
+      await saveNote({
+        scope: "you",
+        type: "fact",
+        description: "Has a dog",
+        text: "Has a dog called Rex.",
+      });
+      await saveNote({ scope: "you", type: "rule", text: "Keep it short." });
+
+      const handover = {
+        kind: "event",
+        event: "agent_handover",
+        step: "agent-7",
+        facts: { agent: "Travel helper" },
+      };
+      host.phoneLane.arrive({ id: "ev-1", ...handover });
+      await vi.waitFor(() => {
+        expect(handovers()).toHaveLength(1);
+        expect(channelCalls()).toContainEqual(
+          expect.objectContaining({
+            action: "ack",
+            message_ids: expect.arrayContaining(["ev-1"]),
+          })
+        );
+      });
+      expect(handovers()[0]!.body.memory).toContain("Has a dog called Rex.");
+      expect(handovers()[0]!.body.instructions).toBe("Keep it short.");
+
+      // The server's second copy of the same step: acked, never sent again.
+      host.phoneLane.arrive({ id: "ev-2", ...handover });
+      await vi.waitFor(() =>
+        expect(channelCalls()).toContainEqual(
+          expect.objectContaining({
+            action: "ack",
+            message_ids: expect.arrayContaining(["ev-2"]),
+          })
+        )
+      );
+      expect(handovers()).toHaveLength(1);
+
+      // Nothing reached a session or the user: no turn, no typing, no reply.
+      expect(send).not.toHaveBeenCalled();
+      expect(host.phoneLane.busy).toBe(false);
+      expect(
+        channelCalls().filter(
+          (body) => body.action === "typing" || body.action === "reply"
+        )
+      ).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      await host.dispose();
+    }
+  }, 20_000);
+});
+
 /** A screenshot the media store holds. */
 const SHOT = "media-00112233445566778899aabb";
 const SHOT_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7]);
