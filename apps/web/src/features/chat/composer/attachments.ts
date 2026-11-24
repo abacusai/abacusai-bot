@@ -85,6 +85,20 @@ export const addPaths = (
     ],
   }));
 
+/**
+ * Pasted text longer than this goes in as a file. Roughly 25-30k tokens:
+ * under it the model reads the text inline at no extra call; over it a page
+ * dump or a log would fill a small window and be re-sent on every turn,
+ * where one read or grep of a file finds what the task needs.
+ */
+export const LONG_PASTE_CHARS = 100_000;
+
+/** Pasted text to attach as a file instead of typing it, or null to paste it as text. */
+export const longPasteFile = (text: string): File | null =>
+  text.length > LONG_PASTE_CHARS
+    ? new File([text], "pasted-text.txt", { type: "text/plain" })
+    : null;
+
 /** Dropped or pasted `File`s: real paths directly, blobs saved first. */
 export const addFiles = async (
   threadId: string,
