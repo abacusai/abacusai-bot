@@ -549,6 +549,7 @@ import {
 import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
 import { readTranscriptTail } from "./services/mcp/transcript-tail";
 import { watchPort } from "./services/mcp/unattended-browser";
+import { handOverMemory } from "./services/memory/handover-memory";
 import { memoryEnv } from "./services/memory/memory-env";
 import {
   chatProject,
@@ -2498,6 +2499,15 @@ export class ServiceHost {
    * start (connectorSync).
    */
   private stepLanded(event: StepEvent): void {
+    // The chat moved to the user's own agent: it gets what this bot knows of
+    // them. No turn and no note: the chat is no longer this bot's.
+    if (event.event === "agent_handover") {
+      void handOverMemory(
+        isToolsetEnabled("memory", readToolsetPreferences()),
+        (line) => console.log(line)
+      );
+      return;
+    }
     // A payment landed: the plan's tier is read before the turn it starts.
     if (event.event === "upgraded") {
       const plan = event.facts.plan;

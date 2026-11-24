@@ -6,7 +6,7 @@ export {
   memoryBlock,
   memoryNews,
 } from "./core.js";
-export { checkDraft, type Draft } from "./gate.js";
+export { checkDraft, type Draft, looksSecret } from "./gate.js";
 export { type Lane, type MemoryContext, readMemoryContext } from "./lanes.js";
 export {
   migrateOnce,
