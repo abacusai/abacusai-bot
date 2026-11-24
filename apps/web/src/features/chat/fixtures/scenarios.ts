@@ -526,6 +526,37 @@ const OUTCOME_ERRORS: Record<
       { type: "plan-offer" },
     ],
   },
+  // The generic failure card, one per kind of way on.
+  "context-too-long": {
+    message:
+      "This conversation is too long for the model. Pick a model with a larger context.",
+    cause: "context_too_long",
+    detail: "",
+    actions: [{ type: "new-chat" }, { type: "switch-model" }],
+  },
+  "key-invalid": {
+    message: "Your Gemini key was rejected — it's invalid or expired.",
+    cause: "key_invalid",
+    detail: '401 "API key not valid. Please pass a valid API key."',
+    actions: [
+      { type: "fix-key", provider: "gemini" },
+      { type: "switch-to-abacus" },
+    ],
+  },
+  "disk-full": {
+    message:
+      "The disk is full, so this chat can't be saved and the agent can't write files. Free some space, then try again.",
+    cause: "disk_full",
+    detail: "ENOSPC: no space left on device, write",
+    actions: [{ type: "retry" }],
+  },
+  unknown: {
+    message:
+      "The model couldn't finish this. Try again, or switch to a different model.",
+    cause: "unknown",
+    detail: "500 Internal Server Error",
+    actions: [{ type: "retry" }, { type: "switch-model" }],
+  },
   // The free model overloaded on a free account (turn-outcome.ts
   // freeModelOverloaded): one card however the turn ended on it.
   "free-model-down": {

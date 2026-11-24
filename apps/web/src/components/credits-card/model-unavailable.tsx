@@ -7,11 +7,11 @@ import {
   type UpgradeSrc,
   wallOffer,
 } from "@abacus-ai/contract/billing-plan";
-import { AlertTriangle, Check, Lock } from "lucide-react";
+import { Check, CirclePause, Cpu, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { GroupCard } from "#renderer/components/form-kit/page";
+import { ChatCard } from "#renderer/components/chat-card";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { Button } from "#renderer/ui/button";
@@ -160,7 +160,7 @@ export const PlanOffer = ({
         )}
       </p>
       <OfferPitch billing={billing} />
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-1.5">
         <OfferButtons
           billing={billing}
           src="chat_credits"
@@ -265,24 +265,19 @@ export const ModelUnavailableCard = ({
         ? nextPlan()
         : void host.openUpgrade(upgradeSrc);
   const plan = kind === "plan" && !creditsOut;
-  const Icon = kind === "plan" ? Lock : AlertTriangle;
+  const Icon = kind === "plan" ? Lock : Cpu;
   const seePlans = () =>
     void (upgradeOnly && host.openNextPlan != null
       ? host.openNextPlan()
       : host.openUpgrade(upgradeSrc));
   return (
     <div data-slot="credits-card" data-variant="model-unavailable">
-      <GroupCard>
-        <h2
-          className="phone:px-4 phone:text-[15px] flex items-center gap-2 px-3 py-3 text-[13px] font-semibold"
-          data-kind={kind}
-        >
-          <Icon
-            aria-hidden
-            className="size-4 shrink-0 text-[var(--chat-status-attention)]"
-          />
-          {title ?? t(`outcome.unavailable.title.${kind}`, { model: label })}
-        </h2>
+      <ChatCard
+        icon={<Icon />}
+        title={
+          title ?? t(`outcome.unavailable.title.${kind}`, { model: label })
+        }
+      >
         <div
           className="flex flex-col gap-3 p-3 text-sm"
           data-slot="model-unavailable"
@@ -392,7 +387,7 @@ export const ModelUnavailableCard = ({
             </p>
           )}
         </div>
-      </GroupCard>
+      </ChatCard>
     </div>
   );
 };
@@ -545,14 +540,7 @@ export const CutOffCard = ({
       data-state={state}
       data-resolved={resolved ?? undefined}
     >
-      <GroupCard>
-        <h2 className="phone:px-4 phone:text-[15px] flex items-center gap-2 px-3 py-3 text-[13px] font-semibold">
-          <AlertTriangle
-            aria-hidden
-            className="size-4 shrink-0 text-[var(--chat-status-attention)]"
-          />
-          {t("outcome.cutoff.title")}
-        </h2>
+      <ChatCard icon={<CirclePause />} title={t("outcome.cutoff.title")}>
         <div className="flex flex-col gap-3 p-3 text-sm" data-slot="cut-off">
           <p>
             {t(
@@ -603,7 +591,7 @@ export const CutOffCard = ({
             </div>
           )
         )}
-      </GroupCard>
+      </ChatCard>
     </div>
   );
 };

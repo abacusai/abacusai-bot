@@ -283,7 +283,7 @@ describe("R2-T15 status", () => {
     current = await renderRelay(relay, "session");
     expect(await screen.findByText("Stopped")).toBeTruthy();
     expect(
-      screen.getByText("The model provider had a problem (400).")
+      screen.getByText("The model provider had a problem (400)")
     ).toBeTruthy();
     const log = screen.getByRole("log");
     const order = [
@@ -1331,8 +1331,9 @@ describe("the turn's outcome card", () => {
       "session"
     );
     await screen.findByText(
-      "The disk is full (12 MB left), so this chat can't be saved and the agent can't write files. Free some space, then try again."
+      "The disk is full (12 MB left), so this chat can't be saved and the agent can't write files"
     );
+    expect(screen.getByText("Free some space, then try again.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(screen.queryByText(/different model/)).toBeNull();
   });
@@ -1384,9 +1385,10 @@ describe("the turn's outcome card", () => {
       "session",
       { onNewChat }
     );
-    await screen.findByText(
-      "This conversation is too long for the model. Pick a model with a larger context."
-    );
+    await screen.findByText("This conversation is too long for the model");
+    expect(
+      screen.getByText("Pick a model with a larger context.")
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
     expect(onNewChat).toHaveBeenCalledOnce();
   });
@@ -1403,9 +1405,10 @@ describe("the turn's outcome card", () => {
       }),
       "session"
     );
-    await screen.findByText(
-      "Your Google Gemini key hit its quota. Switch to a different model, or check the key's plan."
-    );
+    await screen.findByText("Your Google Gemini key hit its quota");
+    expect(
+      screen.getByText("Switch to a different model, or check the key's plan.")
+    ).toBeTruthy();
     expect(screen.getByText("Check the key")).toBeTruthy();
   });
 
@@ -1420,7 +1423,7 @@ describe("the turn's outcome card", () => {
     });
     current = await renderRelay(relay, "session");
     await screen.findByText(
-      "Your OpenAI key was rejected — it's invalid or expired."
+      "Your OpenAI key was rejected — it's invalid or expired"
     );
     expect(screen.getByText("Check the key")).toBeTruthy();
     fireEvent.click(
@@ -1480,7 +1483,7 @@ describe("the turn's outcome card", () => {
     return screen.findByText(
       error.cause === "model_unavailable"
         ? "Kimi K3 on NVIDIA NIM isn't available anymore"
-        : String(error.message)
+        : String(error.message).replace(/\.$/, "")
     );
   };
   const notice = () =>

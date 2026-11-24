@@ -14,15 +14,15 @@ import {
   providerDisplayName,
 } from "@abacus-ai/contract/settings";
 import type { TFunction } from "i18next";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Coins } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ChatCard } from "#renderer/components/chat-card";
 import {
   ConnectNote,
   ConnectPending,
 } from "#renderer/components/form-kit/connect-dialog";
-import { GroupCard } from "#renderer/components/form-kit/page";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { connectErrorText } from "#renderer/lib/connect-page";
@@ -267,7 +267,8 @@ export const CreditsCard = ({
   return (
     <>
       <div data-slot="credits-card">
-        <GroupCard
+        <ChatCard
+          icon={<Coins />}
           title={
             wall != null
               ? creditWallTitle(t, wall, paying || tier === "unknown")
@@ -450,14 +451,13 @@ export const CreditsCard = ({
               </Button>
             )}
             {alternatives && (
-              <>
-                <Separator />
-                <div className="flex flex-col gap-2">{alternatives}</div>
-              </>
+              <div className="flex flex-wrap gap-1.5 empty:hidden">
+                {alternatives}
+              </div>
             )}
             {error && !asking && <p role="alert">{error}</p>}
           </div>
-        </GroupCard>
+        </ChatCard>
       </div>
       <Dialog
         open={asking != null}

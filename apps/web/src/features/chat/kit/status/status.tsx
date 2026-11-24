@@ -24,17 +24,34 @@ import { Store, useStore } from "@tanstack/react-store";
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleAlert,
+  Clock,
   CloudOff,
+  CreditCard,
+  Cpu,
+  Gauge,
+  HardDrive,
+  Hourglass,
+  KeyRound,
   Loader2,
   CircleStop,
   Info,
+  MessageSquareDashed,
+  MessagesSquare,
+  Smartphone,
   WifiOff,
   X,
-  XCircle,
 } from "lucide-react";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  cloneElement,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
+import { ChatCard } from "#renderer/components/chat-card";
 import {
   CreditsCard,
   creditWallTitle,
@@ -47,7 +64,6 @@ import {
   PlanOffer,
 } from "#renderer/components/credits-card/model-unavailable";
 import { PaidOfferButtons } from "#renderer/components/credits-card/paid-offer";
-import { GroupCard } from "#renderer/components/form-kit/page";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import {
@@ -705,7 +721,7 @@ const OwnKeyCard = ({
           })}
         />
       ) : (
-        <GroupCard title={title}>
+        <ChatCard icon={<KeyRound />} title={title}>
           <div className="text-muted-foreground flex flex-col gap-1 p-3 text-sm">
             <p data-slot="own-key-why">{why}</p>
             <p>{t("ownKey.paidBody")}</p>
@@ -729,7 +745,7 @@ const OwnKeyCard = ({
               </Button>
             )}
           </div>
-        </GroupCard>
+        </ChatCard>
       )}
     </div>
   );
@@ -775,7 +791,8 @@ const PaymentConfirmingCard = ({
       data-cause="unconfirmed"
       data-phase={late ? "late" : "confirming"}
     >
-      <GroupCard
+      <ChatCard
+        icon={<CreditCard />}
         title={t(
           late ? "paymentRequired.lateTitle" : "paymentRequired.confirmingTitle"
         )}
@@ -810,7 +827,7 @@ const PaymentConfirmingCard = ({
             </Button>
           </div>
         )}
-      </GroupCard>
+      </ChatCard>
     </div>
   );
 };
@@ -832,7 +849,7 @@ const PaymentLapsedCard = () => {
       data-variant="payment-required"
       data-cause="lapsed"
     >
-      <GroupCard title={t("paymentRequired.lapsedTitle")}>
+      <ChatCard icon={<CreditCard />} title={t("paymentRequired.lapsedTitle")}>
         <p className="text-muted-foreground p-3 text-sm">
           {t("paymentRequired.lapsedBody")}
         </p>
@@ -856,7 +873,7 @@ const PaymentLapsedCard = () => {
             </Button>
           )}
         </div>
-      </GroupCard>
+      </ChatCard>
     </div>
   );
 };
@@ -896,17 +913,14 @@ const VerifyPhoneCard = ({
         data-variant="verify-phone"
         data-state="unlocked"
       >
-        <GroupCard>
-          {/* GroupCard's own title, with the check after it. */}
-          <h2 className="phone:px-4 phone:text-[15px] flex items-center gap-1.5 px-3 py-3 text-[13px] font-semibold">
-            {credits != null
+        <ChatCard
+          icon={<CheckCircle2 className="text-primary" />}
+          title={
+            credits != null
               ? t("outcome.verifyPhone.unlockedTitle", { credits })
-              : t("outcome.verifyPhone.unlockedTitleNoCount")}
-            <CheckCircle2
-              aria-hidden
-              className="text-primary size-4 shrink-0"
-            />
-          </h2>
+              : t("outcome.verifyPhone.unlockedTitleNoCount")
+          }
+        >
           <p className="text-muted-foreground p-3 text-sm">
             {t("outcome.verifyPhone.unlockedBody")}
           </p>
@@ -917,7 +931,7 @@ const VerifyPhoneCard = ({
               </Button>
             </div>
           )}
-        </GroupCard>
+        </ChatCard>
       </div>
     );
   return (
@@ -929,7 +943,8 @@ const VerifyPhoneCard = ({
       data-variant="verify-phone"
       data-state="held"
     >
-      <GroupCard
+      <ChatCard
+        icon={<Smartphone />}
         title={
           action.credits != null
             ? t("outcome.verifyPhone.title", { credits: action.credits })
@@ -954,7 +969,7 @@ const VerifyPhoneCard = ({
             </Button>
           </div>
         )}
-      </GroupCard>
+      </ChatCard>
     </div>
   );
 };
@@ -1226,7 +1241,7 @@ export const ErrorCard = ({
   latest,
   tier: providedTier,
 }: ErrorCardProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session, composer, runtime, skin, slots } = useChatView();
   const { transport } = useAppContext();
   const resume = useUpgradeResume();
@@ -1623,7 +1638,12 @@ export const ErrorCard = ({
       case "retry":
         return latest && canReply
           ? [
-              <Button key={index} variant="secondary" onClick={retry}>
+              <Button
+                key={index}
+                variant="secondary"
+                data-action="retry"
+                onClick={retry}
+              >
                 {t(connection ? "outcome.action.tryAgain" : "chat.error.retry")}
               </Button>,
             ]
@@ -1730,100 +1750,144 @@ export const ErrorCard = ({
     !actions.some((action) => action.type === "retry")
   )
     buttons.push(
-      <Button key="retry" variant="secondary" onClick={retry}>
+      <Button
+        key="retry"
+        variant="secondary"
+        data-action="retry"
+        onClick={retry}
+      >
         {t("chat.error.retry")}
       </Button>
     );
+  const planOffered =
+    canReply && actions.some((action) => action.type === "plan-offer");
+  // One way on leads: RouteLLM - Open when offered, else the first. None when
+  // the plan's offer below carries the card's one filled button.
+  const lead = planOffered
+    ? -1
+    : Math.max(
+        0,
+        buttons.findIndex(
+          (button) => button.props["data-action"] === "switch-to-abacus"
+        )
+      );
+  const line = crashed
+    ? t("chat.error.crashed")
+    : connection
+      ? t("outcome.connection.title")
+      : cause === "disk_full"
+        ? diskFullLine(actions, t)
+        : cause != null && OUTCOME_CAUSES.has(cause)
+          ? t(`outcome.cause.${cause}`, {
+              provider: providerDisplayName(
+                actions.find((action) => action.provider != null)?.provider ??
+                  ""
+              ),
+            })
+          : providerMessage(error.message) || t("errors.genericDescription");
+  const { title, body } = connection
+    ? { title: line, body: t("outcome.connection.body") }
+    : splitLine(line, i18n.language);
+  const raw = [
+    detail,
+    providerMessage(error.message) !== error.message ? error.message : null,
+  ]
+    .filter((part): part is string => part != null && part !== "")
+    .join("\n\n");
+  const Icon = connection
+    ? WifiOff
+    : (CAUSE_ICON[cause as keyof typeof CAUSE_ICON] ?? CircleAlert);
   return (
     <div
       role="group"
       aria-label={t("chat.error.label")}
-      className="bg-destructive/10 dark:bg-destructive/15 mx-auto flex w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)] flex-col gap-2 rounded-2xl p-4 text-sm"
+      className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
       data-slot="error-card"
+      data-cause={cause}
     >
-      <div className="flex items-start gap-2">
-        <XCircle
-          aria-hidden
-          className="text-destructive mt-0.5 size-4 shrink-0"
-        />
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="font-medium" data-cause={cause}>
-            {crashed
-              ? t("chat.error.crashed")
-              : connection
-                ? t("outcome.connection.title")
-                : cause === "disk_full"
-                  ? diskFullLine(actions, t)
-                  : cause != null && OUTCOME_CAUSES.has(cause)
-                    ? t(`outcome.cause.${cause}`, {
-                        provider: providerDisplayName(
-                          actions.find((action) => action.provider != null)
-                            ?.provider ?? ""
-                        ),
-                      })
-                    : providerMessage(error.message) ||
-                      t("errors.genericDescription")}
+      <ChatCard icon={<Icon />} title={title} description={body}>
+        {buttons.length > 0 || raw !== "" ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {buttons.map((button, index) =>
+              cloneElement(button, {
+                size: "sm",
+                variant: index === lead ? "default" : "secondary",
+              })
+            )}
           </div>
-          {connection ? (
-            <p className="text-muted-foreground text-xs">
-              {t("outcome.connection.body")}
-            </p>
-          ) : detail != null && detail !== "" ? (
-            <p className="text-muted-foreground text-xs break-words">
-              {detail}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      {connection && detail != null && detail !== "" ? (
-        <details className="ps-6 text-xs" data-slot="connection-details">
-          <summary className="cursor-pointer">
-            {t("outcome.action.viewDetails")}
-          </summary>
-          <pre className="mt-2 max-h-40 overflow-auto break-all whitespace-pre-wrap">
-            {detail}
-          </pre>
-        </details>
-      ) : (
-        providerMessage(error.message) !== error.message && (
-          <details className="ps-6 text-xs">
-            <summary className="cursor-pointer">{t("phase5.details")}</summary>
-            <pre className="mt-2 max-h-40 overflow-auto break-all whitespace-pre-wrap">
-              {error.message}
+        ) : null}
+        {raw !== "" && (
+          <details
+            className="group/details text-xs"
+            data-slot={connection ? "connection-details" : "error-details"}
+          >
+            <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden">
+              {t(connection ? "outcome.action.viewDetails" : "phase5.details")}
+            </summary>
+            <pre className="bg-muted/60 text-muted-foreground mt-1.5 max-h-40 overflow-auto rounded-md p-2 font-mono text-[11px] break-all whitespace-pre-wrap">
+              {raw}
             </pre>
           </details>
-        )
-      )}
-      {buttons.length > 0 ? (
-        <div className="flex flex-wrap gap-2 ps-6">{buttons}</div>
-      ) : null}
-      {canReply && actions.some((action) => action.type === "plan-offer") && (
-        <div className="ps-6">
-          <PlanOffer
-            host={runtime.host}
-            paid={paying}
-            onUpgrade={() =>
-              requestUpgradeDialog(
-                {
-                  kind: "credits",
-                  key: `plan-offer:${outcome.runId}:${Date.now()}`,
-                  src: "chat_credits",
-                  threadId: session.threadId,
-                  pendingText: lastUserText(session.hostStore.state.messages),
-                  resume,
-                },
-                true
-              )
-            }
-            {...(paying && {
-              onTopUp: paidCheckout.topUp,
-              onNextPlan: paidCheckout.nextPlan,
-            })}
-          />
-        </div>
-      )}
+        )}
+        {planOffered && (
+          <div className="border-t pt-3">
+            <PlanOffer
+              host={runtime.host}
+              paid={paying}
+              onUpgrade={() =>
+                requestUpgradeDialog(
+                  {
+                    kind: "credits",
+                    key: `plan-offer:${outcome.runId}:${Date.now()}`,
+                    src: "chat_credits",
+                    threadId: session.threadId,
+                    pendingText: lastUserText(session.hostStore.state.messages),
+                    resume,
+                  },
+                  true
+                )
+              }
+              {...(paying && {
+                onTopUp: paidCheckout.topUp,
+                onNextPlan: paidCheckout.nextPlan,
+              })}
+            />
+          </div>
+        )}
+      </ChatCard>
     </div>
   );
+};
+
+/** A calm mark per cause: what went wrong, never an alarm. */
+const CAUSE_ICON = {
+  context_too_long: MessagesSquare,
+  key_invalid: KeyRound,
+  own_key_quota: Gauge,
+  model_unavailable: Cpu,
+  free_pool_spent: Hourglass,
+  rate_limited: Clock,
+  empty: MessageSquareDashed,
+  disk_full: HardDrive,
+} as const;
+
+/**
+ * A cause's line as the card's title (its first sentence) and body (the
+ * rest, what to do). Sentences as the language segments them, so every
+ * locale's copy splits without a second set of strings.
+ */
+export const splitLine = (
+  line: string,
+  language: string
+): { title: string; body: string } => {
+  const [first] = new Intl.Segmenter(language, { granularity: "sentence" })
+    .segment(line)
+    [Symbol.iterator]();
+  const lead = first?.segment ?? line;
+  return {
+    title: lead.trim().replace(/[.。．]$/u, ""),
+    body: line.slice(lead.length).trim(),
+  };
 };
 
 const formatBytes = (bytes: number): string =>
@@ -1946,7 +2010,7 @@ const SEVERITY_ICON = {
   info: Info,
   success: CheckCircle2,
   warning: AlertTriangle,
-  error: XCircle,
+  error: CircleAlert,
 } as const;
 
 export const NoticeRow = ({
@@ -2025,8 +2089,8 @@ export const NoticeRow = ({
         <Icon
           aria-hidden
           className={cn(
-            severity === "error" && "text-destructive",
-            severity === "warning" && "text-[var(--chat-status-attention)]"
+            (severity === "error" || severity === "warning") &&
+              "text-[var(--chat-status-attention)]"
           )}
         />
       </MarkerIcon>

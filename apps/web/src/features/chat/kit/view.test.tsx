@@ -110,7 +110,7 @@ describe("ChatView over scenarios", () => {
     });
     const card = await screen.findByRole("group", { name: "Error" });
     expect(
-      within(card).getByText("Claude is rate limited right now.")
+      within(card).getByText("Claude is rate limited right now")
     ).toBeTruthy();
     expect(within(card).getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(
