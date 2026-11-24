@@ -7,6 +7,7 @@ import type { AgentSession } from "@earendil-works/pi-coding-agent";
 
 import {
   abacusReachable,
+  asleepBetween,
   hostConnectivity,
   hostIsGone,
   onHostGone,
@@ -227,6 +228,16 @@ export type NetworkWaitOutcome = "retry" | "gave-up" | "cancelled";
 export class NetworkWait {
   private startedAt: number | null = null;
   private attempts = 0;
+  /**
+   * Each budget this outage asked for, from its own first wait, with its own
+   * backoff: a verdict that changes mid-outage (the Abacus API answering
+   * again) gets that budget's retries, not what the other left. Each runs
+   * once per outage, so a verdict that flips back and forth never stretches it.
+   */
+  private readonly budgets = new Map<
+    number,
+    { startedAt: number; attempts: number }
+  >();
   private cancelWait: (() => void) | null = null;
   /**
    * Time this turn spent in outages, from the first failed call to the call
@@ -243,6 +254,7 @@ export class NetworkWait {
   beginTurn(): void {
     this.startedAt = null;
     this.attempts = 0;
+    this.budgets.clear();
     this.turnWaitedMs = 0;
     this.turnAbacusWaitedMs = 0;
   }
@@ -272,6 +284,7 @@ export class NetworkWait {
     else this.turnWaitedMs += this.openOutageMs();
     this.startedAt = null;
     this.attempts = 0;
+    this.budgets.clear();
   }
 
   cancel(): void {
@@ -288,14 +301,22 @@ export class NetworkWait {
       this.startedAt = now;
       this.outageAbacus = hostConnectivity() === "degraded";
     }
-    const left = this.startedAt + budgetMs - now;
+    let budget = this.budgets.get(budgetMs);
+    if (budget == null) {
+      budget = { startedAt: now, attempts: 0 };
+      this.budgets.set(budgetMs, budget);
+    }
+    // Time asleep waited for nothing: a wake gets the rest of the budget.
+    const spent = now - budget.startedAt - asleepBetween(budget.startedAt, now);
+    const left = budgetMs - spent;
     if (left <= 0) return Promise.resolve("gave-up");
 
     const step =
       NETWORK_BACKOFF_MS[
-        Math.min(this.attempts, NETWORK_BACKOFF_MS.length - 1)
+        Math.min(budget.attempts, NETWORK_BACKOFF_MS.length - 1)
       ]!;
     const delayMs = Math.min(step, left);
+    budget.attempts += 1;
     this.attempts += 1;
     onWait(this.attempts, delayMs);
 
