@@ -5329,7 +5329,6 @@
       "empty": "Model zwrócił pustą odpowiedź. Spróbuj ponownie lub przełącz się na inny model.",
       "stalled": "Model przestał odpowiadać. Spróbuj ponownie lub przełącz się na inny model.",
       "stream_cut": "Odpowiedź urwała się w połowie, nawet po ponownej prośbie. Spróbuj ponownie lub przełącz się na inny model.",
-      "config_rejected": "Twój dostawca odrzucił ustawienie w konfiguracji tego modelu. Sprawdź ustawienia modelu lub przełącz się na inny model.",
       "disk_full": "Dysk jest pełny (zostało {{free}}), więc nie da się zapisać tego czatu, a agent nie może zapisywać plików. Zwolnij trochę miejsca i spróbuj ponownie.",
       "disk_fullUnmeasured": "Dysk jest pełny, więc nie da się zapisać tego czatu, a agent nie może zapisywać plików. Zwolnij trochę miejsca i spróbuj ponownie.",
       "unknown": "Model nie zdołał tego dokończyć. Spróbuj ponownie lub przełącz się na inny model."

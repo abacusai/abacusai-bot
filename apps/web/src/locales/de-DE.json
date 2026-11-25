@@ -5179,7 +5179,6 @@
       "empty": "Das Modell hat eine leere Antwort geliefert. Versuche es erneut oder wechsle zu einem anderen Modell.",
       "stalled": "Das Modell hat aufgehört zu antworten. Versuche es erneut oder wechsle zu einem anderen Modell.",
       "stream_cut": "Die Antwort wurde mittendrin abgebrochen, auch nach einem erneuten Versuch. Versuche es erneut oder wechsle zu einem anderen Modell.",
-      "config_rejected": "Dein Anbieter hat eine Einstellung in der Konfiguration dieses Modells abgelehnt. Prüfe die Einstellungen des Modells oder wechsle zu einem anderen Modell.",
       "disk_full": "Der Speicher ist voll ({{free}} frei), daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
       "disk_fullUnmeasured": "Der Speicher ist voll, daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
       "unknown": "Das Modell konnte das nicht abschließen. Versuche es erneut oder wechsle zu einem anderen Modell."

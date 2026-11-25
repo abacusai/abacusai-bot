@@ -5179,7 +5179,6 @@
       "empty": "El modelo devolvió una respuesta vacía. Vuelve a intentarlo o cambia a otro modelo.",
       "stalled": "El modelo dejó de responder. Vuelve a intentarlo o cambia a otro modelo.",
       "stream_cut": "La respuesta se cortó a mitad, incluso después de volver a pedirla. Vuelve a intentarlo o cambia a otro modelo.",
-      "config_rejected": "Tu proveedor ha rechazado un ajuste de la configuración de este modelo. Revisa los ajustes del modelo o cambia a otro modelo.",
       "disk_full": "El disco está lleno (quedan {{free}}), así que este chat no se puede guardar y el agente no puede escribir archivos. Libera algo de espacio y vuelve a intentarlo.",
       "disk_fullUnmeasured": "El disco está lleno, así que este chat no se puede guardar y el agente no puede escribir archivos. Libera algo de espacio y vuelve a intentarlo.",
       "unknown": "El modelo no pudo terminar esto. Vuelve a intentarlo o cambia a otro modelo."

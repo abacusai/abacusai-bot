@@ -21,6 +21,21 @@ export class UserFacingError extends Error {
   override name = "UserFacingError";
 }
 
+/**
+ * A failure as a page keeps it until it shows it: a code (or main's text)
+ * it words with `errorText`, or main's sentence for the user.
+ */
+export type ShownFailure = string | UserFacingError;
+
+/** An `{ ok: false }` outcome's error, kept with whether main wrote it for the user. */
+export const outcomeFailure = (outcome: {
+  error: string;
+  userFacing?: boolean;
+}): ShownFailure =>
+  outcome.userFacing === true
+    ? new UserFacingError(outcome.error)
+    : outcome.error;
+
 /** A procedure's `{ success: false }` answer, as a mutation's error. */
 export class FailedAnswer extends Error {
   constructor(

@@ -14,7 +14,11 @@ import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
-import { failureCode } from "#renderer/lib/error-text";
+import {
+  failureCode,
+  outcomeFailure,
+  type ShownFailure,
+} from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { connectTarget } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -33,7 +37,8 @@ export type FlowState = {
   connectorId: string | null;
   /** `waiting`: the connect page or the host's route is open in another tab. */
   phase: "idle" | "waiting" | "fields" | "pairing" | "signing-in";
-  error?: string;
+  /** A code or main's text the page words, or main's sentence for the user. */
+  error?: ShownFailure;
 };
 export const connectPlatform = async (
   deps: Pick<FlowDeps, "transport" | "queryClient">,
@@ -135,7 +140,9 @@ export const createConnectFlow = (deps: FlowDeps) => {
       store.setState(() => ({
         connectorId: a.connectorId,
         phase: "idle",
-        ...(!result.ok && !result.cancelled ? { error: result.error } : {}),
+        ...(!result.ok && !result.cancelled
+          ? { error: outcomeFailure(result) }
+          : {}),
       }));
     }
     a.resolve(result);

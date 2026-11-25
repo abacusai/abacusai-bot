@@ -27,7 +27,7 @@ import { useBotNumberConnect } from "#platform/whatsapp-bot";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
-import { errorText } from "#renderer/lib/error-text";
+import { errorText, type ShownFailure } from "#renderer/lib/error-text";
 import { formatExpiryDate, formatTimeLeft } from "#renderer/lib/format-time";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
@@ -52,7 +52,7 @@ const useLinkClock = (expiresAt: number | undefined): number => {
 export interface ConnectorRequestCardProps {
   request: ConnectorRequest;
   busy: boolean;
-  error: string | null;
+  error: ShownFailure | null;
   onConnect(values?: Record<string, string>): void;
   onDecline(): void;
   /** Connected outside `onConnect` (the web's WhatsApp link): answer the ask. */

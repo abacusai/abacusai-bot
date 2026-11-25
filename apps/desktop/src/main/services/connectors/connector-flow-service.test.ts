@@ -241,6 +241,7 @@ describe("an MCP server connector", () => {
     expect(await flow().connect("notion")).toEqual({
       ok: false,
       error: "Notion sign-in did not finish.",
+      userFacing: true,
     });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("ENOTFOUND"));
     warn.mockRestore();
@@ -263,9 +264,11 @@ describe("an MCP server connector", () => {
       success: false,
       error: "locked",
     } as never);
+    // The admin's own reason is for the log; the user reads the app's.
     expect(await flow().disconnect("notion")).toEqual({
       ok: false,
-      error: "locked",
+      error: "Could not remove Notion.",
+      userFacing: true,
     });
   });
 });

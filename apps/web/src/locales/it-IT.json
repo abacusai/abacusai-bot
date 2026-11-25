@@ -5179,7 +5179,6 @@
       "empty": "Il modello ha restituito una risposta vuota. Riprova o passa a un altro modello.",
       "stalled": "Il modello ha smesso di rispondere. Riprova o passa a un altro modello.",
       "stream_cut": "La risposta si è interrotta a metà, anche dopo averla richiesta di nuovo. Riprova o passa a un altro modello.",
-      "config_rejected": "Il tuo provider ha rifiutato un'impostazione nella configurazione di questo modello. Controlla le impostazioni del modello o passa a un altro modello.",
       "disk_full": "Il disco è pieno (restano {{free}}), quindi questa chat non può essere salvata e l'agente non può scrivere file. Libera un po' di spazio, poi riprova.",
       "disk_fullUnmeasured": "Il disco è pieno, quindi questa chat non può essere salvata e l'agente non può scrivere file. Libera un po' di spazio, poi riprova.",
       "unknown": "Il modello non è riuscito a completare. Riprova o passa a un altro modello."

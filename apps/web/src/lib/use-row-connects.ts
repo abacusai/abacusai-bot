@@ -7,12 +7,16 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { failureCode } from "#renderer/lib/error-text";
+import {
+  failureCode,
+  outcomeFailure,
+  type ShownFailure,
+} from "#renderer/lib/error-text";
 
 /** How a row's wait ended. A cancelled one is not a failure. */
 export type RowConnectOutcome =
   | { ok: true }
-  | { ok: false; error: string; cancelled?: boolean };
+  | { ok: false; error: string; cancelled?: boolean; userFacing?: boolean };
 
 export interface RowConnect {
   /** The wait itself, started inside the click. A rejection is a failure. */
@@ -25,7 +29,7 @@ export interface RowConnect {
   connected?(): Promise<unknown>;
 }
 
-type RowState = { waiting: true } | { waiting: false; error: string };
+type RowState = { waiting: true } | { waiting: false; error: ShownFailure };
 
 export const useRowConnects = () => {
   const [rows, setRows] = useState<Readonly<Record<string, RowState>>>({});
@@ -72,7 +76,7 @@ export const useRowConnects = () => {
           key,
           outcome.ok || outcome.cancelled === true
             ? null
-            : { waiting: false, error: outcome.error }
+            : { waiting: false, error: outcomeFailure(outcome) }
         );
       });
   };
@@ -87,8 +91,8 @@ export const useRowConnects = () => {
     start,
     cancel,
     waiting: (key: string): boolean => rows[key]?.waiting === true,
-    /** The row's last failure, the host's code or text (see `errorText`). */
-    error: (key: string): string | null => {
+    /** The row's last failure, for `errorText`: a code, main's text or its sentence. */
+    error: (key: string): ShownFailure | null => {
       const row = rows[key];
       return row != null && !row.waiting ? row.error : null;
     },

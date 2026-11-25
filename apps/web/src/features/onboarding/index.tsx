@@ -13,7 +13,7 @@ import {
 } from "#renderer/components/payment-required";
 import { useDb } from "#renderer/data/db";
 import { GITHUB_CONNECTOR_ID } from "#renderer/lib/build-starters";
-import { failureText } from "#renderer/lib/error-text";
+import { failureText, outcomeFailure } from "#renderer/lib/error-text";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 
 import { ConnectFailed } from "./connect";
@@ -187,7 +187,13 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     } catch (error) {
       setError(
         error instanceof ConnectFailed
-          ? failureText(error.message, "phase5.connectFailed")
+          ? failureText(
+              outcomeFailure({
+                error: error.message,
+                userFacing: error.userFacing,
+              }),
+              "phase5.connectFailed"
+            )
           : t("onboarding.frame.failed")
       );
     }

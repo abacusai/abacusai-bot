@@ -5179,7 +5179,6 @@
       "empty": "Het model gaf een leeg antwoord. Probeer het opnieuw of kies een ander model.",
       "stalled": "Het model is gestopt met antwoorden. Probeer het opnieuw of kies een ander model.",
       "stream_cut": "Het antwoord werd halverwege afgebroken, ook na opnieuw vragen. Probeer het opnieuw of kies een ander model.",
-      "config_rejected": "Je provider heeft een instelling in de configuratie van dit model geweigerd. Controleer de instellingen van het model of kies een ander model.",
       "disk_full": "De schijf is vol ({{free}} over), dus deze chat kan niet worden opgeslagen en de agent kan geen bestanden schrijven. Maak wat ruimte vrij en probeer het opnieuw.",
       "disk_fullUnmeasured": "De schijf is vol, dus deze chat kan niet worden opgeslagen en de agent kan geen bestanden schrijven. Maak wat ruimte vrij en probeer het opnieuw.",
       "unknown": "Het model kon dit niet afronden. Probeer het opnieuw of kies een ander model."

@@ -5179,7 +5179,6 @@
       "empty": "The model returned an empty reply. Try again, or switch to a different model.",
       "stalled": "The model stopped answering. Try again, or switch to a different model.",
       "stream_cut": "The reply was cut off partway, even after asking again. Try again, or switch to a different model.",
-      "config_rejected": "Your provider rejected a setting in this model's config. Check the model's settings, or switch to a different model.",
       "disk_full": "The disk is full ({{free}} left), so this chat can't be saved and the agent can't write files. Free some space, then try again.",
       "disk_fullUnmeasured": "The disk is full, so this chat can't be saved and the agent can't write files. Free some space, then try again.",
       "unknown": "The model couldn't finish this. Try again, or switch to a different model."

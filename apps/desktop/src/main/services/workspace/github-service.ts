@@ -11,6 +11,7 @@ import type {
 
 import {
   GhError,
+  ghStatusMessage,
   parseAuthStatusJson,
   parseAuthStatusText,
   parseGhVersion,
@@ -122,21 +123,16 @@ export class GithubService {
     try {
       version = parseGhVersion((await this.run(["--version"])).stdout);
     } catch (error) {
-      return error instanceof GhError && error.kind === "missing"
-        ? {
-            state: "missing",
-            version: null,
-            account: null,
-            host: null,
-            message: error.message,
-          }
-        : {
-            state: "error",
-            version: null,
-            account: null,
-            host: null,
-            message: error instanceof Error ? error.message : String(error),
-          };
+      return {
+        state:
+          error instanceof GhError && error.kind === "missing"
+            ? "missing"
+            : "error",
+        version: null,
+        account: null,
+        host: null,
+        ...ghStatusMessage(error),
+      };
     }
     const auth = await this.auth();
     return auth.signedIn
@@ -153,6 +149,8 @@ export class GithubService {
           account: null,
           host: null,
           message: auth.message,
+          // The app's own sentence ("run `gh auth login`").
+          userFacing: auth.message != null,
         };
   }
 
@@ -193,6 +191,7 @@ export class GithubService {
               ...(await this.status()),
               state: "error",
               message: "GitHub CLI answered with something unreadable",
+              userFacing: true,
             },
           }
         : { kind: "ok", pr };
@@ -213,7 +212,7 @@ export class GithubService {
             status: {
               ...(await this.status()),
               state: "error",
-              message: error.message,
+              ...ghStatusMessage(error),
             },
           };
       }

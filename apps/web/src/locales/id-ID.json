@@ -5179,7 +5179,6 @@
       "empty": "Model mengembalikan balasan kosong. Coba lagi, atau beralih ke model lain.",
       "stalled": "Model berhenti menjawab. Coba lagi, atau beralih ke model lain.",
       "stream_cut": "Balasan terpotong di tengah jalan, bahkan setelah diminta lagi. Coba lagi, atau beralih ke model lain.",
-      "config_rejected": "Penyedia Anda menolak salah satu pengaturan di konfigurasi model ini. Periksa pengaturan model, atau beralih ke model lain.",
       "disk_full": "Disk penuh (tersisa {{free}}), jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "disk_fullUnmeasured": "Disk penuh, jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "unknown": "Model tidak bisa menyelesaikan ini. Coba lagi, atau beralih ke model lain."

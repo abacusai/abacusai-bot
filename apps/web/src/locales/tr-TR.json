@@ -5179,7 +5179,6 @@
       "empty": "Model boş bir yanıt döndürdü. Tekrar dene veya başka bir modele geç.",
       "stalled": "Model yanıt vermeyi bıraktı. Tekrar dene veya başka bir modele geç.",
       "stream_cut": "Yanıt, yeniden istense de yarıda kesildi. Tekrar dene veya başka bir modele geç.",
-      "config_rejected": "Sağlayıcın bu modelin yapılandırmasındaki bir ayarı reddetti. Modelin ayarlarını kontrol et veya başka bir modele geç.",
       "disk_full": "Disk dolu ({{free}} kaldı), bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "disk_fullUnmeasured": "Disk dolu, bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "unknown": "Model bunu tamamlayamadı. Tekrar dene veya başka bir modele geç."

@@ -7,7 +7,11 @@ import { useState, useSyncExternalStore } from "react";
 
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { noticeSnapshot } from "#renderer/data/queries/notices";
-import { failureCode } from "#renderer/lib/error-text";
+import {
+  failureCode,
+  outcomeFailure,
+  type ShownFailure,
+} from "#renderer/lib/error-text";
 import { useAppContext } from "#renderer/lib/use-app-context";
 /** The pending connector asks of these run sessions, one card each. */
 export const RunRequests = ({
@@ -34,7 +38,7 @@ export const RunRequests = ({
       : [];
   });
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ShownFailure | null>(null);
   const respond = async (
     request: ConnectorRequest,
     outcome: "connected" | "declined" | "failed",
@@ -65,7 +69,7 @@ export const RunRequests = ({
         } else if (result.cancelled) await respond(request, "declined");
         else {
           // The card puts the code (or main's text) in the app's words.
-          setError(result.error);
+          setError(outcomeFailure(result));
           await respond(request, "failed", result.error);
         }
       } catch (e) {

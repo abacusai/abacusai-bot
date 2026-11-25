@@ -6,7 +6,7 @@ export interface TurnFailureView {
   message?: string;
   code?: string;
   cause?: string;
-  /** The provider's own sentence: read here to classify, never shown. */
+  /** The provider's own sentence: for the log, never read here. */
   detail?: string;
   actions?: ReadonlyArray<{
     type: string;
@@ -32,29 +32,12 @@ const CAUSE_KEYS: Readonly<Record<string, string>> = {
   unknown: "outcome.cause.unknown",
 };
 
-/**
- * What a provider's own refusal says, when the user can fix it: a setting
- * the model's config sends, the key, or the context. Read from the detail,
- * never shown from it.
- */
-const DETAIL_CAUSES: ReadonlyArray<[RegExp, string]> = [
-  [
-    /context (?:length|window)|maximum context|too many tokens|prompt is too long/i,
-    "context_too_long",
-  ],
-  [
-    /invalid (?:x-)?api[ _-]?key|incorrect api key|api key not valid|unauthori[sz]ed|authentication/i,
-    "key_invalid",
-  ],
-  [
-    /insufficient[_ ]quota|exceeded your current quota|credit balance is too low|billing/i,
-    "own_key_quota",
-  ],
-  [
-    /unsupported (?:parameter|value)|unknown (?:parameter|field)|unrecognized (?:request )?argument|extra inputs are not permitted|is not supported (?:with|by|for) this model|invalid (?:value|parameter)|does not support/i,
-    "config_rejected",
-  ],
-];
+/** Keys that are the platform's, not the user's: never "your key". */
+const PLATFORM_PROVIDERS: ReadonlySet<string> = new Set([
+  "abacus",
+  "openllm",
+  "local",
+]);
 
 const formatBytes = (bytes: number): string =>
   bytes >= 1024 ** 3
@@ -62,10 +45,9 @@ const formatBytes = (bytes: number): string =>
     : `${Math.round(bytes / 1024 ** 2)} MB`;
 
 /**
- * A failed turn's line in the app's words, for the card and for the
- * screen reader alike: the crash or the connection, the cause's own line,
- * else what the provider's refusal says the user can fix, else the generic
- * one. The agent's message and the provider's detail are for the log.
+ * A failed turn's line in the app's words: the crash or the connection,
+ * else the line of the cause the agent decided, else the generic one. The
+ * agent's message and the provider's detail are for the log.
  */
 export const failureLine = (t: TFunction, error: TurnFailureView): string => {
   if (error.code === "agent_exit" || error.code === "agent_crashed")
@@ -79,23 +61,17 @@ export const failureLine = (t: TFunction, error: TurnFailureView): string => {
       ? t("outcome.cause.disk_full", { free: formatBytes(free) })
       : t("outcome.cause.disk_fullUnmeasured");
   }
-  const provider = providerDisplayName(
-    actions.find((action) => action.provider != null)?.provider ?? ""
-  );
-  const vague =
-    error.cause == null ||
-    error.cause === "unknown" ||
-    error.cause === "model_unavailable";
-  const fromDetail =
-    vague && error.detail != null
-      ? DETAIL_CAUSES.find(([pattern]) => pattern.test(error.detail!))?.[1]
-      : undefined;
-  if (fromDetail === "config_rejected")
-    return t("outcome.cause.config_rejected");
-  const cause = fromDetail ?? error.cause;
-  // A key's line names its provider: without one it is the generic line.
+  // Only the agent's own reading of the failure (classifyAttempt) picks
+  // the line: the provider's detail is never read here.
+  const cause = error.cause;
+  // A key's line is for the user's own key: its provider names it.
+  const ownKey = actions.find(
+    (action) =>
+      action.provider != null && !PLATFORM_PROVIDERS.has(action.provider)
+  )?.provider;
+  const provider = providerDisplayName(ownKey ?? "");
   const key =
-    (cause === "key_invalid" || cause === "own_key_quota") && provider === ""
+    (cause === "key_invalid" || cause === "own_key_quota") && ownKey == null
       ? undefined
       : cause != null
         ? CAUSE_KEYS[cause]

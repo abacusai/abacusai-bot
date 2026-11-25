@@ -796,7 +796,14 @@ export interface AbacusConnectorsSnapshot {
 export type AbacusConnectorOutcome =
   /** `url`: the connect link a platform connector opens, absolute. */
   | { ok: true; url?: string }
-  | { ok: false; error: string; cancelled?: boolean };
+  | {
+      ok: false;
+      /** A code the app words, or a sentence (`userFacing`), or main's text. */
+      error: string;
+      cancelled?: boolean;
+      /** `error` is the app's own sentence for the user: shown as it is. */
+      userFacing?: boolean;
+    };
 
 /** Same contract for every connector kind. */
 export type ConnectorOutcome = AbacusConnectorOutcome;

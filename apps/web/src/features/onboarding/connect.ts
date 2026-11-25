@@ -7,7 +7,15 @@ import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { connectTarget } from "#renderer/lib/platform-system";
 
 /** A connect that did not finish, with the outcome's reason for the step to show. */
-export class ConnectFailed extends Error {}
+/** A connect that failed: its code or text, and whether main wrote it for the user. */
+export class ConnectFailed extends Error {
+  constructor(
+    message: string,
+    readonly userFacing = false
+  ) {
+    super(message);
+  }
+}
 
 /** The step's pending connect. */
 let waiting: { id: string; attempt: ConnectAttempt } | null = null;
@@ -52,7 +60,7 @@ export const connectOnboarding = async (
   try {
     const outcome = await attempt.result;
     if (!outcome.ok && !outcome.cancelled)
-      throw new ConnectFailed(outcome.error);
+      throw new ConnectFailed(outcome.error, outcome.userFacing === true);
     return outcome;
   } finally {
     if (waiting?.attempt === attempt) waiting = null;

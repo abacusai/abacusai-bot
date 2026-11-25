@@ -5179,7 +5179,6 @@
       "empty": "O modelo devolveu uma resposta vazia. Tente de novo ou mude para outro modelo.",
       "stalled": "O modelo parou de responder. Tente de novo ou mude para outro modelo.",
       "stream_cut": "A resposta foi cortada no meio, mesmo depois de pedir de novo. Tente de novo ou mude para outro modelo.",
-      "config_rejected": "Seu provedor recusou uma configuração deste modelo. Confira as configurações do modelo ou mude para outro modelo.",
       "disk_full": "O disco está cheio (restam {{free}}), então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
       "disk_fullUnmeasured": "O disco está cheio, então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
       "unknown": "O modelo não conseguiu terminar isso. Tente de novo ou mude para outro modelo."

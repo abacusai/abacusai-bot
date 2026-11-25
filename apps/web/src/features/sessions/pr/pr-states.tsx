@@ -156,7 +156,7 @@ export const PrUnavailable = ({
   onRetry,
   retrying,
 }: {
-  status: Pick<GithubStatus, "state" | "message">;
+  status: Pick<GithubStatus, "state" | "message" | "userFacing">;
   onRetry(): void;
   retrying: boolean;
 }) => {
@@ -195,7 +195,12 @@ export const PrUnavailable = ({
     <PrNotice
       icon={CircleAlert}
       title={t("sessions.pr.state.error.title")}
-      description={status.message ?? t("sessions.pr.state.error.detail")}
+      // gh's own words only when main marked them a sentence for the user.
+      description={
+        status.userFacing === true && status.message != null
+          ? status.message
+          : t("sessions.pr.state.error.detail")
+      }
     >
       {retry}
       <SettingsButton />

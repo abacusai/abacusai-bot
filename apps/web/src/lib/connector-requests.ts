@@ -21,7 +21,11 @@ import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { CONNECTED_PARAM } from "#renderer/lib/connect-target";
-import { failureCode } from "#renderer/lib/error-text";
+import {
+  failureCode,
+  outcomeFailure,
+  type ShownFailure,
+} from "#renderer/lib/error-text";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
 
@@ -59,7 +63,7 @@ export const reduceRequests = (
 export type ConnectResult =
   | { kind: "connected" }
   | { kind: "declined" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: ShownFailure };
 
 /** Answer the ask (never throws: an answer that fails is logged by main). */
 const respond = async (
@@ -116,7 +120,7 @@ export const connectRequest = async (
       if (signal?.aborted !== true) await respond(client, request, "declined");
       return { kind: "declined" };
     }
-    return { kind: "error", message: outcome.error };
+    return { kind: "error", message: outcomeFailure(outcome) };
   }
   return answerConnected(client, request);
 };
@@ -137,7 +141,7 @@ export interface ConnectorRequestsState {
   /** The ask on screen (the oldest pending for this conversation). */
   current: ConnectorRequest | null;
   busy: boolean;
-  error: string | null;
+  error: ShownFailure | null;
   connect(values?: Record<string, string>): void;
   /** Connected outside the attempt (the web's WhatsApp link): answer the ask. */
   connected(): void;
@@ -166,7 +170,7 @@ export const useConnectorRequests = (
       ),
     }));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ShownFailure | null>(null);
   const waiting = useRef<AbortController | null>(null);
   // Unmounting cancels the attempt; its answer then sets nothing.
   useEffect(

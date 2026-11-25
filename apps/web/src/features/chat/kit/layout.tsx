@@ -54,7 +54,6 @@ import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
 import { QueueSlot } from "./queue-slot";
 import { RunningStrip } from "./running-strip";
-import { failureLine, type TurnFailureView } from "./status/failure-line";
 import { NoticeRow } from "./status/status";
 
 /** The skin's message widget, for the transcript's rows. */
@@ -97,6 +96,35 @@ const isLive = (outcome: RunOutcomeRecord): boolean =>
   (outcome as RunOutcomeRecord & { live?: boolean }).live === true;
 
 const ANNOUNCE_GAP_MS = 500;
+/** How long a failure's announcement waits for its card: 6 × 500 ms. */
+const CARD_WAIT_TRIES = 6;
+
+/**
+ * What a failed run's card says, read from the card itself: its title, else
+ * its text (a one-line card, or the marker it gives way to). The card is the one owner of what a failure says (credit wall,
+ * payment, phone, model or the generic line), so the screen reader hears
+ * exactly what is on screen.
+ */
+const failureHeadline = (runId: string): string | null => {
+  const row = [...document.querySelectorAll<HTMLElement>("[data-run-id]")].find(
+    (node) => node.dataset.runId === runId
+  );
+  // The card, or the marker a card gives way to (credits already back).
+  const card = row?.querySelector(
+    '[data-slot="error-card"], [data-slot="run-marker"]'
+  );
+  if (card == null) return null;
+  const title = card.querySelector("h2");
+  if (title != null) return title.textContent?.trim() || null;
+  // A one-line card or a marker: its words, not its buttons' labels.
+  const words: string[] = [];
+  const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node != null; node = walker.nextNode())
+    if (node.parentElement?.closest("button") == null)
+      words.push(node.textContent ?? "");
+  const text = words.join("").trim();
+  return text === "" ? null : text;
+};
 
 /**
  * One status line per milestone, each announced once, at most one per
@@ -121,7 +149,15 @@ const Announcer = () => {
     count: number;
     unread: number;
   } | null>(null);
-  const queue = useRef<Array<{ kind: "milestone" | "new"; text: string }>>([]);
+  const queue = useRef<
+    Array<{
+      kind: "milestone" | "new";
+      text: string;
+      /** A failed run: its text is its card's title, once the card shows. */
+      runId?: string;
+      tries?: number;
+    }>
+  >([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awayFromEnd = scrollable.end;
   useEffect(() => {
@@ -151,13 +187,9 @@ const Announcer = () => {
             ? t("chat.announce.finished")
             : outcome.kind === "cancelled"
               ? t("chat.announce.stopped")
-              : t("chat.announce.error", {
-                  // The card's own line, so both say the same.
-                  message: failureLine(
-                    t,
-                    (outcome.error ?? {}) as TurnFailureView
-                  ),
-                }),
+              : "",
+        // A failure says what its card says: read from the card itself.
+        ...(outcome.kind === "error" && { runId: outcome.runId, tries: 0 }),
       });
     }
     for (const item of items) {
@@ -199,7 +231,21 @@ const Announcer = () => {
         timer.current = null;
         return;
       }
-      setText(next.text);
+      if (next.runId != null) {
+        const headline = failureHeadline(next.runId);
+        // A card can wait on the account's plan before it shows: try again.
+        if (headline == null && (next.tries ?? 0) < CARD_WAIT_TRIES) {
+          queue.current.unshift({ ...next, tries: (next.tries ?? 0) + 1 });
+          timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
+          return;
+        }
+        // No card on screen: nothing to read out either.
+        if (headline == null) {
+          timer.current = setTimeout(flush, 0);
+          return;
+        }
+        setText(t("chat.announce.error", { message: headline }));
+      } else setText(next.text);
       timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
     };
     if (timer.current == null && queue.current.length > 0)

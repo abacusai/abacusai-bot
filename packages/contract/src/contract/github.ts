@@ -32,6 +32,11 @@ export interface GithubStatus {
   account: string | null;
   host: string | null;
   message: string | null;
+  /**
+   * `message` is a sentence for the user (the app's own, or gh's when it
+   * is plain): shown as it is. Without it the app shows its own words.
+   */
+  userFacing?: boolean;
 }
 
 export interface PrAuthor {

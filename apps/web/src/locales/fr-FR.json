@@ -5179,7 +5179,6 @@
       "empty": "Le modèle a renvoyé une réponse vide. Réessayez ou passez à un autre modèle.",
       "stalled": "Le modèle a cessé de répondre. Réessayez ou passez à un autre modèle.",
       "stream_cut": "La réponse a été coupée en cours de route, même après une nouvelle demande. Réessayez ou passez à un autre modèle.",
-      "config_rejected": "Votre fournisseur a refusé un paramètre de la configuration de ce modèle. Vérifiez les paramètres du modèle ou passez à un autre modèle.",
       "disk_full": "Le disque est plein (il reste {{free}}) : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "disk_fullUnmeasured": "Le disque est plein : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "unknown": "Le modèle n'a pas pu terminer. Réessayez ou passez à un autre modèle."

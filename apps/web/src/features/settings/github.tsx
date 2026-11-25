@@ -15,7 +15,6 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useMutation } from "#renderer/data/query-client";
-import { errorText } from "#renderer/lib/error-text";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showFailure } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -128,8 +127,12 @@ const cliDetail = (
     case "unauthenticated":
       return t("settings.github.unauthenticatedDetail");
     case "error":
-      // The CLI's own words are for the log.
-      return errorText(status.message) ?? undefined;
+      // gh's own words only when main marked them a sentence for the user.
+      return status.userFacing === true
+        ? (status.message ?? undefined)
+        : status.message
+          ? t("errors.tryAgain")
+          : undefined;
     case "disabled":
       return undefined;
   }

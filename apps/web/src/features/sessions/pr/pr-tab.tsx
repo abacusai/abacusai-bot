@@ -69,6 +69,8 @@ const PrTabContent = ({
         status={{
           state: "error",
           message: errorText(result.error),
+          // Already the app's words.
+          userFacing: true,
         }}
         onRetry={retry}
         retrying={retrying}

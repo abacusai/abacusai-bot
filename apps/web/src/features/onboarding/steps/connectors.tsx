@@ -77,6 +77,8 @@ export const ConnectorsStep = ({
               error instanceof ConnectFailed
                 ? error.message
                 : failureCode(error),
+            ...(error instanceof ConnectFailed &&
+              error.userFacing && { userFacing: true }),
           };
         }
       },

@@ -133,6 +133,53 @@ const firstLine = (value: string): string =>
     .map((line) => line.trim())
     .find((line) => line.length > 0) ?? "";
 
+/**
+ * gh's own line as a sentence the user can act on ("Can not approve your
+ * own pull request"), or null when it carries internals: a URL, a path, an
+ * HTTP status, JSON or a stack. Its "GraphQL:" lead and the operation's
+ * name in brackets are dropped.
+ */
+export const plainGhSentence = (line: string): string | null => {
+  const text = line
+    .trim()
+    .replace(/^(?:GraphQL|gh|error):\s*/i, "")
+    .replace(/\s*\([A-Za-z]+\)\.?$/, "")
+    .trim();
+  if (text === "" || text.length > 160) return null;
+  if (
+    /https?:|[\\/{}[\]<>`$]|\bHTTP\b|\b\d{3}\b|\bat\s+\S+:\d|[A-Z_]{4,}/.test(
+      text
+    )
+  )
+    return null;
+  return text;
+};
+
+/**
+ * A failure as a status line: the app's own sentences (gh missing, timed
+ * out, signed out) and gh's plain ones are for the user; anything else
+ * keeps its text for the log, unmarked.
+ */
+export const ghStatusMessage = (
+  error: unknown
+): { message: string; userFacing: boolean } => {
+  if (!(error instanceof GhError))
+    return {
+      message: error instanceof Error ? error.message : String(error),
+      userFacing: false,
+    };
+  if (
+    error.kind === "missing" ||
+    error.kind === "timeout" ||
+    error.kind === "unauthenticated"
+  )
+    return { message: error.message, userFacing: true };
+  const plain = plainGhSentence(error.message);
+  return plain != null
+    ? { message: plain, userFacing: true }
+    : { message: error.message, userFacing: false };
+};
+
 /** Sorts a failed run by its error code and stderr (spec: classification table). */
 export function classifyGhFailure(failure: GhFailure): GhError {
   const stderr = failure.stderr ?? "";

@@ -1,5 +1,6 @@
 import type { WorkspaceGitContext } from "@abacus-ai/contract/contracts";
 
+import { plainGhSentence } from "../../services/workspace/github-cli";
 import {
   DISABLED_STATUS,
   GithubRequestError,
@@ -25,28 +26,6 @@ const checkoutFor = (
   const checkout = context.deps.serviceHost.gitContextPath(target);
   if (checkout == null) throw notFound("workspace", target.workspaceId);
   return checkout;
-};
-
-/**
- * gh's own line as a sentence the user can act on ("Can not approve your
- * own pull request"), or null when it carries internals: a URL, a path, an
- * HTTP status, JSON or a stack. Its "GraphQL:" lead and the operation's
- * name in brackets are dropped.
- */
-export const plainGhSentence = (line: string): string | null => {
-  const text = line
-    .trim()
-    .replace(/^(?:GraphQL|gh|error):\s*/i, "")
-    .replace(/\s*\([A-Za-z]+\)\.?$/, "")
-    .trim();
-  if (text === "" || text.length > 160) return null;
-  if (
-    /https?:|[\\/{}[\]<>`$]|\bHTTP\b|\b\d{3}\b|\bat\s+\S+:\d|[A-Z_]{4,}/.test(
-      text
-    )
-  )
-    return null;
-  return text;
 };
 
 /**

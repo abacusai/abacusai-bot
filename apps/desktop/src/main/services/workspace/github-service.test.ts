@@ -253,7 +253,9 @@ describe("pr", () => {
       status: {
         state: "error",
         account: "octocat",
-        message: "GraphQL: API rate limit exceeded",
+        // gh's plain sentence, marked for the user.
+        message: "API rate limit exceeded",
+        userFacing: true,
       },
     });
   });
