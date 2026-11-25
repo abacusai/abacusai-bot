@@ -2036,7 +2036,6 @@
       "device": "Apparaat",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "{{name}} sluiten",
       "full": "Volledige weergave aan/uit",
       "move": "Tabblad verplaatsen",
       "movePane": "Verplaatsen naar paneel {{name}}",
@@ -2144,7 +2143,21 @@
       "exited": "Proces beëindigd ({{code}})",
       "newShell": "Nieuwe terminal · {{shell}}",
       "planRequired": "De terminal is niet beschikbaar in het gratis abonnement voor je gehoste computer. Upgrade om hem te gebruiken.",
-      "planUnreadable": "Je abonnement kon niet worden gecontroleerd, dus de terminal staat voorlopig uit. Probeer het zo opnieuw."
+      "planUnreadable": "Je abonnement kon niet worden gecontroleerd, dus de terminal staat voorlopig uit. Probeer het zo opnieuw.",
+      "restart": "Herstarten",
+      "starting": "Terminal wordt gestart…",
+      "startingShell": "{{shell}} wordt gestart…",
+      "actions": "Terminalacties",
+      "clear": "Wissen",
+      "kill": "Terminal beëindigen",
+      "copy": "Kopiëren",
+      "paste": "Plakken",
+      "busyTitle": "{{program}} stoppen?",
+      "busyBody": "{{program}} draait nog in deze terminal. Als je de terminal sluit, stopt het.",
+      "busyConfirm": "Terminal sluiten",
+      "folderMissing": "De map van deze chat is er niet meer: {{path}}. Zet hem terug en druk dan op Herstarten.",
+      "folderDenied": "Je hebt geen toestemming om de map van deze chat te openen: {{path}}. Pas de rechten aan en druk dan op Herstarten.",
+      "signalled": "Proces gestopt (signaal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "Standaardshell",
       "description": "De shell die op deze computer als standaard is ingesteld."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} is nu niet bruikbaar, dus nieuwe terminals openen in {{effective}}.",
     "inUse": "In gebruik",
@@ -2987,7 +3006,12 @@
       "loading": "Sessies, bots en werkruimtes laden…",
       "navigate": "navigeren",
       "select": "selecteren",
-      "close": "sluiten"
+      "close": "sluiten",
+      "focusComposer": "Naar het chatvak",
+      "focusTerminal": "Naar de terminal",
+      "renameTerminal": "Terminal hernoemen",
+      "clearTerminal": "Terminal wissen",
+      "killTerminal": "Terminal beëindigen"
     },
     "connectionLost": "Verbinding met de app verbroken. Opnieuw laden…",
     "boot": {

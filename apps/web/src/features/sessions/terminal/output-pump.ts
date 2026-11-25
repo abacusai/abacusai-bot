@@ -1,17 +1,22 @@
 import type { TerminalOutputChunk } from "@abacus-ai/contract/contract/terminal";
 export interface OutputView {
   offset: number | undefined;
-  write(data: string): void | Promise<void>;
-  reset(): void;
+  /** `replay`: output written before, again (a reattached terminal). */
+  write(data: string, replay?: boolean): void | Promise<void>;
+  reset(): void | Promise<void>;
+  /** After a whole output was written again (a reattached terminal). */
+  replayed?(): void;
 }
 export const applyTerminalOutput = async (
   view: OutputView,
   chunk: TerminalOutputChunk
 ): Promise<void> => {
   if (chunk.type === "snapshot") {
-    if (chunk.from !== view.offset) view.reset();
-    await view.write(chunk.data);
+    const replay = chunk.from !== view.offset;
+    if (replay) await view.reset();
+    await view.write(chunk.data, replay);
     view.offset = chunk.offset;
+    if (replay && chunk.data.length > 0) view.replayed?.();
   } else if (chunk.type === "data") {
     await view.write(chunk.data);
     view.offset = chunk.offset;

@@ -172,7 +172,9 @@ describe("conversation terminal runtime registry", () => {
     );
     expect(registry.hide(result.key, result.generation - 1)).toBe(false);
     expect(registry.write(result.key, result.generation, "current")).toBe(true);
-    expect(registry.resize(result.key, result.generation, 90, 28)).toBe(true);
+    expect(registry.resize(result.key, result.generation, 90, 28)).toEqual(
+      expect.any(Number)
+    );
     expect(ptys[0]!.write).toHaveBeenCalledWith("current");
     expect(ptys[0]!.resize).toHaveBeenCalledWith(90, 28);
   });

@@ -25,6 +25,8 @@ import type { Terminal as GhosttyTerminal } from "ghostty-web";
 
 /** DEC private modes a program sets to ask for any of this. */
 const MODE = {
+  /** DECCKM: arrow keys as ESC O A rather than ESC [ A. */
+  cursorKeys: 1,
   clickTracking: 1000,
   buttonTracking: 1002,
   anyMotion: 1003,
@@ -208,14 +210,47 @@ export const installMouseReporting = (
     if (isTracking(term) && !event.shiftKey) event.preventDefault();
   };
 
-  const onFocusIn = (): void => {
+  // One report per real change, none for focus moving inside the terminal
+  // (its element and the hidden textarea).
+  let focused = false;
+  const within = (event: FocusEvent): boolean =>
+    event.relatedTarget instanceof Node &&
+    element.contains(event.relatedTarget);
+  const onFocusIn = (event: FocusEvent): void => {
+    if (focused || within(event)) return;
+    focused = true;
     if (modeEnabled(term, MODE.focusEvents)) send("[I");
   };
-  const onFocusOut = (): void => {
+  const onFocusOut = (event: FocusEvent): void => {
+    if (!focused || within(event)) return;
+    focused = false;
     if (modeEnabled(term, MODE.focusEvents)) send("[O");
   };
 
   term.attachCustomWheelEventHandler((event) => {
+    // A full-screen program not tracking the mouse (less, vim): the wheel
+    // moves it with arrow keys, spelled in the cursor mode it set (ESC O A
+    // in application mode). The library's own fallback always sent ESC [ A,
+    // which they ignore there.
+    if (
+      !isTracking(term) &&
+      !event.shiftKey &&
+      (term.wasmTerm?.isAlternateScreen() ?? false)
+    ) {
+      pendingRows += wheelLines(
+        event.deltaY,
+        event.deltaMode,
+        term.renderer?.getMetrics()?.height ?? 0
+      );
+      const rows = Math.trunc(pendingRows);
+      pendingRows -= rows;
+      const arrow =
+        (modeEnabled(term, MODE.cursorKeys) ? "\x1bO" : "\x1b[") +
+        (rows < 0 ? "A" : "B");
+      for (let step = 0; step < Math.min(Math.abs(rows), 10); step += 1)
+        send(arrow);
+      return true;
+    }
     // Not tracking: the library scrolls its own viewport, which is right.
     if (!isTracking(term) || event.shiftKey) return false;
     const at = cellAt(term, grid(), event);

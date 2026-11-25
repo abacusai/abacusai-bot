@@ -1,4 +1,8 @@
 import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
+import {
+  conversationRefFromKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 
 import { persistedStore } from "#renderer/lib/continuity/registry";
 
@@ -23,6 +27,56 @@ export const panelTabsStore = persistedStore<Record<string, PanelTabs>>(
   () => ({})
 );
 export const EMPTY_TABS: PanelTabs = { tabs: [], last: null };
+/**
+ * Each chat's terminal tabs, kept across app restarts (the tabs above live
+ * only as long as the window). The shells die with the app; their tabs come
+ * back with fresh ones in the chat's folder (`reconcileTerminals`).
+ */
+type SavedTerminals = Record<
+  string,
+  { tabs: Pick<PanelTab, "ref" | "title" | "shell">[]; shown: string | null }
+>;
+const savedTerminals = persistedStore<SavedTerminals>(
+  "abacusai-bot:abacus.sessions.terminals",
+  () => ({}),
+  { durable: true, bind: false }
+);
+const isTerminal = (ref: string | null | undefined) =>
+  !!ref?.startsWith("terminal:");
+/** Chats whose terminals this window has already reconciled with main. */
+const reconciled = new Set<string>();
+// Mirrored from the chats this window has reconciled (so what was saved is
+// revived before anything here can overwrite it); a chat it never opened
+// keeps what was saved for it. A new chat's draft is not kept.
+panelTabsStore.subscribe((state) =>
+  savedTerminals.setState((saved) => {
+    let next = saved;
+    for (const [key, entry] of Object.entries(state)) {
+      if (
+        !reconciled.has(key) ||
+        conversationRefFromKey(key as ConversationKey)?.kind !== "session"
+      )
+        continue;
+      const tabs = entry.tabs
+        .filter((tab) => isTerminal(tab.ref))
+        .map(({ ref, title, shell }) => ({
+          ref,
+          title,
+          ...(shell ? { shell } : {}),
+        }));
+      const shown = entry.open && isTerminal(entry.last) ? entry.last : null;
+      if (
+        JSON.stringify(saved[key] ?? null) ===
+        JSON.stringify(tabs.length ? { tabs, shown } : null)
+      )
+        continue;
+      next = { ...next };
+      if (tabs.length) next[key] = { tabs, shown };
+      else delete next[key];
+    }
+    return next;
+  })
+);
 // Kept out of sessionStorage: restored references have no pending start.
 const pendingTerminalStarts = new Map<
   string,
@@ -131,7 +185,39 @@ export const updateTab = (
 /** The tab closing `ref` lands on, without closing it. */
 export const nextTab = (key: string, ref: string): string | undefined =>
   removeRefs(panelTabsStore.state[key] ?? EMPTY_TABS, [ref]).last ?? undefined;
+/**
+ * Terminals whose shell exited in this window: main keeps no shell for them,
+ * but the tab stays (its output, Restart) until the user closes it.
+ */
+const exitedTerminals = new Set<string>();
+export const markTerminalExited = (
+  key: string,
+  ref: string,
+  exited: boolean
+): void => {
+  if (exited) exitedTerminals.add(`${key} ${ref}`);
+  else exitedTerminals.delete(`${key} ${ref}`);
+};
+/** The shell a terminal tab started with, kept on the tab once known. */
+export const rememberTerminalShell = (
+  key: string,
+  ref: string,
+  shell: NonNullable<PanelTab["shell"]>
+): void =>
+  updateTabs(key, (s) =>
+    s.tabs.some((tab) => tab.ref === ref && tab.shell !== shell)
+      ? {
+          ...s,
+          tabs: s.tabs.map((tab) =>
+            tab.ref === ref ? { ...tab, shell } : tab
+          ),
+        }
+      : s
+  );
+export const terminalExited = (key: string, ref: string): boolean =>
+  exitedTerminals.has(`${key} ${ref}`);
 export const closeTab = (key: string, ref: string): string | undefined => {
+  exitedTerminals.delete(`${key} ${ref}`);
   const pending = pendingTerminalStarts.get(key);
   pending?.delete(ref);
   if (pending && !pending.size) pendingTerminalStarts.delete(key);
@@ -146,11 +232,41 @@ export const closeTab = (key: string, ref: string): string | undefined => {
   });
   return next;
 };
+/**
+ * A new terminal's title, told apart from the chat's others: "Terminal",
+ * then "Terminal 2", "Terminal 3", the lowest number not in use.
+ */
+export const terminalTitle = (key: string, base: string): string => {
+  const used = new Set(
+    (panelTabsStore.state[key]?.tabs ?? [])
+      .filter((tab) => tab.ref.startsWith("terminal:"))
+      .map((tab) => tab.title)
+  );
+  let n = 1;
+  while (used.has(n === 1 ? base : `${base} ${n}`)) n++;
+  return n === 1 ? base : `${base} ${n}`;
+};
 export const reconcileTerminals = (
   key: string,
   states: TerminalSessionSnapshot[],
   title = "Terminal"
 ): void => {
+  // First word from main in this window: saved terminal tabs it has no
+  // shell for (the app restarted) come back, each starting a fresh shell in
+  // the chat's folder when it mounts.
+  if (!reconciled.has(key)) {
+    reconciled.add(key);
+    const saved = savedTerminals.state[key];
+    const current = panelTabsStore.state[key]?.tabs ?? [];
+    const revived = (saved?.tabs ?? []).filter(
+      (tab) =>
+        !current.some((open) => open.ref === tab.ref) &&
+        !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
+    );
+    for (const tab of revived) openTerminalTab(key, tab);
+    if (revived.length && saved?.shown)
+      updateTabs(key, (s) => ({ ...s, open: true, last: saved.shown }));
+  }
   updateTabs(key, (s) =>
     removeRefs(
       s,
@@ -159,17 +275,24 @@ export const reconcileTerminals = (
           (tab) =>
             tab.ref.startsWith("terminal:") &&
             !pendingTerminalStarts.get(key)?.has(tab.ref) &&
+            !exitedTerminals.has(`${key} ${tab.ref}`) &&
             !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
         )
         .map((tab) => tab.ref)
     )
   );
   const previousLast = panelTabsStore.state[key]?.last;
+  // A tab already open keeps its title (numbered, or renamed).
   for (const state of states)
-    openTab(key, {
-      ref: `terminal:${state.terminalId}`,
-      title,
-    });
+    if (
+      !panelTabsStore.state[key]?.tabs.some(
+        (tab) => tab.ref === `terminal:${state.terminalId}`
+      )
+    )
+      openTab(key, {
+        ref: `terminal:${state.terminalId}`,
+        title: terminalTitle(key, title),
+      });
   updateTabs(key, (s) => ({ ...s, last: previousLast ?? s.last }));
 };
 export const promoteTabs = (from: string, to: string): void =>

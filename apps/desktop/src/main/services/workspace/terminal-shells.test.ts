@@ -21,6 +21,7 @@ vi.mock("#main/resources", () => ({
 }));
 
 const {
+  defaultWindowsShell,
   effectiveTerminalShell,
   resetBusyboxForTesting,
   resolveTerminalShell,
@@ -53,8 +54,9 @@ afterEach(() => {
 });
 
 describe("terminal shells on Windows", () => {
-  const windows = (extra: NodeJS.ProcessEnv = {}) => ({
+  const windows = (extra: NodeJS.ProcessEnv = {}, wsl = false) => ({
     platform: "win32" as const,
+    wslInstalled: () => wsl,
     env: {
       PATH: binDir,
       PATHEXT: ".COM;.EXE;.CMD",
@@ -225,7 +227,57 @@ describe("terminal shells on Windows", () => {
       "powershell",
       "pwsh",
       "busybox",
+      "wsl",
+      "gitbash",
     ]);
+  });
+
+  it("defaults to PowerShell 7 when it is on PATH, else Windows PowerShell", () => {
+    expect(defaultWindowsShell({ PATH: binDir, PATHEXT: ".EXE" })).toBe(
+      "powershell"
+    );
+    put("pwsh.exe");
+    expect(defaultWindowsShell({ PATH: binDir, PATHEXT: ".EXE" })).toBe("pwsh");
+  });
+
+  it("offers WSL only with a Linux installed, Git Bash only where Git is", () => {
+    const systemRoot = path.join(root, "Windows");
+    fs.mkdirSync(path.join(systemRoot, "System32"), { recursive: true });
+    fs.writeFileSync(path.join(systemRoot, "System32", "wsl.exe"), "");
+    // System32's bash.exe is WSL's launcher, never Git Bash.
+    fs.writeFileSync(path.join(systemRoot, "System32", "bash.exe"), "");
+    const env = {
+      SystemRoot: systemRoot,
+      PATH: path.join(systemRoot, "System32"),
+    };
+    const available = (options: ReturnType<typeof windows>, id: string) =>
+      terminalShellStatuses(options).find((status) => status.id === id)
+        ?.available;
+
+    // wsl.exe ships with Windows; without a distribution it opens nothing.
+    expect(available(windows(env, false), "wsl")).toBe(false);
+    expect(resolveTerminalShell("wsl", windows(env, true))).toMatchObject({
+      id: "wsl",
+      file: path.join(systemRoot, "System32", "wsl.exe"),
+    });
+    expect(available(windows(env), "gitbash")).toBe(false);
+
+    // Git for Windows found beside the git on PATH (Git\cmd → Git\bin).
+    const git = path.join(root, "Tools", "Git");
+    fs.mkdirSync(path.join(git, "cmd"), { recursive: true });
+    fs.mkdirSync(path.join(git, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(git, "cmd", "git.exe"), "");
+    fs.writeFileSync(path.join(git, "bin", "bash.exe"), "");
+    expect(
+      resolveTerminalShell(
+        "gitbash",
+        windows({ ...env, PATH: path.join(git, "cmd") })
+      )
+    ).toEqual({
+      id: "gitbash",
+      file: path.join(git, "bin", "bash.exe"),
+      args: ["--login", "-i"],
+    });
   });
 
   it("falls back to the command prompt when a stored shell stopped existing", () => {

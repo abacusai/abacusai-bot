@@ -21,19 +21,17 @@ const resolveShell = vi.fn((id: TerminalShellId) => ({
   env: id === "busybox" ? { BB_OVERRIDE_APPLETS: ";tar" } : undefined,
 }));
 
-vi.mock("../config/settings", () => ({
-  readTerminalShell: () => storedShell(),
-}));
-
 vi.mock("./terminal-shells", () => ({
   resolveTerminalShell: (id: TerminalShellId) => resolveShell(id),
+  preferredTerminalShell: () => storedShell(),
 }));
 
 vi.mock("@lydell/node-pty", () => ({
   spawn: (...args: unknown[]) => ptySpawn(...args) as unknown,
 }));
 
-const fakePty = () => ({
+const fakePty = (foreground = "system") => ({
+  process: foreground,
   onData: vi.fn(),
   onExit: vi.fn(),
   write: vi.fn(),
@@ -65,7 +63,8 @@ const service = (): TerminalSessionService =>
   });
 
 const draftRequest = () => {
-  const conversation = draftConversationRef("workspace-1");
+  // A new chat's draft carries its id, as the renderer sends it.
+  const conversation = draftConversationRef("workspace-1", "draft-1");
   return {
     conversation,
     conversationKey: conversationKey(conversation),
@@ -212,6 +211,8 @@ describe("conversation terminal session service", () => {
     });
     const first = sessionConversationRef("workspace-1", "chat-a");
     const second = sessionConversationRef("workspace-1", "chat-b");
+    for (const chat of ["chat-a", "chat-b"])
+      fs.mkdirSync(path.join(workspace, chat));
 
     for (const conversation of [first, second]) {
       await terminals.startSession({
@@ -257,8 +258,8 @@ describe("conversation terminal session service", () => {
     expect(ptySpawn).toHaveBeenCalledTimes(1);
   });
 
-  it("restarts a promoted draft in the session worktree", async () => {
-    const worktree = path.join(workspace, "managed-chat");
+  it("keeps a promoted draft's shells in a new worktree, typing nothing into them", async () => {
+    const worktree = path.join(workspace, "it's-chat");
     const terminals = new TerminalSessionService({
       resolveWorkspacePath: (_workspaceId, sessionId) =>
         sessionId == null ? workspace : worktree,
@@ -267,7 +268,11 @@ describe("conversation terminal session service", () => {
       emitTerminalState: () => {},
     });
     const draft = draftRequest();
-    await terminals.startSession(draft);
+    const idle = fakePty("-system");
+    const busy = fakePty("vim");
+    ptySpawn.mockReturnValueOnce(idle).mockReturnValueOnce(busy);
+    await terminals.startSession({ ...draft, terminalId: "a" });
+    await terminals.startSession({ ...draft, terminalId: "b" });
     const sessionConversation = sessionConversationRef("workspace-1", "saved");
 
     const promoted = await terminals.promoteDraftToSession({
@@ -279,7 +284,31 @@ describe("conversation terminal session service", () => {
 
     expect(promoted?.conversation).toEqual(sessionConversation);
     expect(ptySpawn).toHaveBeenCalledTimes(2);
-    expect(ptySpawn.mock.calls[1]?.[2]).toMatchObject({ cwd: worktree });
-    expect(ptySpawn.mock.results[0]?.value.kill).toHaveBeenCalledOnce();
+    expect(idle.kill).not.toHaveBeenCalled();
+    expect(busy.kill).not.toHaveBeenCalled();
+    expect(idle.write).not.toHaveBeenCalled();
+    expect(busy.write).not.toHaveBeenCalled();
   });
+
+  it.skipIf(process.platform === "win32")(
+    "names the terminals running a program, not those at their prompt",
+    async () => {
+      const terminals = service();
+      const draft = draftRequest();
+      ptySpawn
+        .mockReturnValueOnce(fakePty("-system"))
+        .mockReturnValueOnce(fakePty("python3"));
+      await terminals.startSession({ ...draft, terminalId: "idle" });
+      await terminals.startSession({ ...draft, terminalId: "server" });
+
+      expect(terminals.busyTerminals()).toEqual([
+        {
+          key: draft.conversationKey,
+          terminalId: "server",
+          program: "python3",
+        },
+      ]);
+      expect(terminals.busyProgram(draft.conversationKey, "idle")).toBeNull();
+    }
+  );
 });

@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "Réessayer",
-      "cancel": "Cancel",
+      "cancel": "Annuler",
       "save": "Enregistrer"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "Ajouter un onglet",
       "new": "Nouvel onglet",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "Appareil",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "Processus terminé ({{code}})",
+      "newShell": "Nouveau terminal · {{shell}}",
       "planRequired": "Le terminal n'est pas disponible avec l'offre gratuite sur votre ordinateur hébergé. Passez à une offre supérieure pour l'utiliser.",
-      "planUnreadable": "Votre offre n'a pas pu être vérifiée, le terminal est donc désactivé pour le moment. Réessayez dans un instant."
+      "planUnreadable": "Votre offre n'a pas pu être vérifiée, le terminal est donc désactivé pour le moment. Réessayez dans un instant.",
+      "restart": "Redémarrer",
+      "starting": "Démarrage du terminal…",
+      "startingShell": "Démarrage de {{shell}}…",
+      "actions": "Actions du terminal",
+      "clear": "Effacer",
+      "kill": "Tuer le terminal",
+      "copy": "Copier",
+      "paste": "Coller",
+      "busyTitle": "Arrêter {{program}} ?",
+      "busyBody": "{{program}} tourne encore dans ce terminal. Fermer le terminal l’arrête.",
+      "busyConfirm": "Fermer le terminal",
+      "folderMissing": "Le dossier de cette discussion n’existe plus : {{path}}. Remettez-le en place, puis appuyez sur Redémarrer.",
+      "folderDenied": "Vous n’avez pas la permission d’ouvrir le dossier de cette discussion : {{path}}. Corrigez ses droits, puis appuyez sur Redémarrer.",
+      "signalled": "Processus arrêté (signal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "Shell par défaut",
       "description": "Quel que soit le nom que cette machine donne à son shell par défaut."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} n'est pas utilisable pour le moment, donc de nouveaux terminaux s'ouvrent dans {{effective}}.",
     "inUse": "En cours d'utilisation",
@@ -2957,10 +2976,10 @@
         "pr": "Pull request"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "Fermer {{name}}",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "Renommer l'onglet",
+      "saveTab": "Enregistrer",
       "searchTabs": "Rechercher des onglets…"
     },
     "sidebar": {
@@ -2983,11 +3002,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "Nouveau terminal",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Aller à la zone de discussion",
+      "focusTerminal": "Aller au terminal",
+      "renameTerminal": "Renommer le terminal",
+      "clearTerminal": "Effacer le terminal",
+      "killTerminal": "Tuer le terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {
@@ -4181,7 +4205,7 @@
       "sound-done": "Terminé",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "Shell du terminal",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Afficher les aperçus des liens dans les réponses",
@@ -4364,7 +4388,7 @@
     "removeEmail": "Retirer {{email}}",
     "loadingGmailContacts": "Chargement des adresses e-mail de vos amis…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "Introuvable sur cet ordinateur",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4374,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "Les nouveaux terminaux utilisent {{shell}}, car le shell choisi n'est pas disponible.",
+    "terminalShell": "Shell du terminal",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

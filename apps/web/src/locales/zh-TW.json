@@ -2036,7 +2036,6 @@
       "device": "裝置",
       "terminal": "終端機",
       "browser": "瀏覽器",
-      "closeTab": "關閉 {{name}}",
       "full": "切換完整檢視",
       "move": "移動分頁",
       "movePane": "移到窗格 {{name}}",
@@ -2144,7 +2143,21 @@
       "exited": "處理程序已結束（{{code}}）",
       "newShell": "新增終端機 · {{shell}}",
       "planRequired": "免費方案下，你的託管電腦無法使用終端機。升級後即可使用。",
-      "planUnreadable": "無法檢查你的方案，因此終端機暫時關閉。請稍後再試。"
+      "planUnreadable": "無法檢查你的方案，因此終端機暫時關閉。請稍後再試。",
+      "restart": "重新啟動",
+      "starting": "正在啟動終端機…",
+      "startingShell": "正在啟動 {{shell}}…",
+      "actions": "終端機動作",
+      "clear": "清除",
+      "kill": "終止終端機",
+      "copy": "複製",
+      "paste": "貼上",
+      "busyTitle": "要停止 {{program}} 嗎？",
+      "busyBody": "{{program}} 仍在此終端機中執行。關閉終端機會停止它。",
+      "busyConfirm": "關閉終端機",
+      "folderMissing": "此聊天的資料夾已不存在：{{path}}。請放回原處，然後按「重新啟動」。",
+      "folderDenied": "你沒有開啟此聊天資料夾的權限：{{path}}。請修正權限，然後按「重新啟動」。",
+      "signalled": "程序已停止（訊號 {{signal}}）"
     },
     "tray": {
       "workspaceLabel": "工作區：{{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "預設 Shell",
       "description": "這台電腦設定的預設 Shell。"
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} 目前無法使用，新的終端機會在 {{effective}} 中開啟。",
     "inUse": "使用中",
@@ -2987,7 +3006,12 @@
       "loading": "正在載入工作階段、機器人和工作區…",
       "navigate": "導覽",
       "select": "選擇",
-      "close": "關閉"
+      "close": "關閉",
+      "focusComposer": "前往聊天輸入框",
+      "focusTerminal": "前往終端機",
+      "renameTerminal": "重新命名終端機",
+      "clearTerminal": "清除終端機",
+      "killTerminal": "終止終端機"
     },
     "connectionLost": "與應用程式的連線已中斷。正在重新載入…",
     "boot": {

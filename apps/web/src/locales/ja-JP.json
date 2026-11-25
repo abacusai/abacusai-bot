@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "再試行",
-      "cancel": "Cancel",
+      "cancel": "キャンセル",
       "save": "保存"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "タブを追加",
       "new": "新しいタブ",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "デバイス",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "プロセスが終了しました ({{code}})",
+      "newShell": "新しいターミナル · {{shell}}",
       "planRequired": "無料プランでは、ホスト型コンピューターでターミナルを使えません。使うにはアップグレードしてください。",
-      "planUnreadable": "プランを確認できなかったため、ターミナルは現在オフです。しばらくしてからもう一度お試しください。"
+      "planUnreadable": "プランを確認できなかったため、ターミナルは現在オフです。しばらくしてからもう一度お試しください。",
+      "restart": "再起動",
+      "starting": "ターミナルを起動しています…",
+      "startingShell": "{{shell}} を起動しています…",
+      "actions": "ターミナルの操作",
+      "clear": "クリア",
+      "kill": "ターミナルを終了",
+      "copy": "コピー",
+      "paste": "貼り付け",
+      "busyTitle": "{{program}} を停止しますか？",
+      "busyBody": "このターミナルでは {{program}} がまだ実行中です。ターミナルを閉じると停止します。",
+      "busyConfirm": "ターミナルを閉じる",
+      "folderMissing": "このチャットのフォルダーが見つかりません: {{path}}。元に戻してから「再起動」を押してください。",
+      "folderDenied": "このチャットのフォルダーを開く権限がありません: {{path}}。権限を直してから「再起動」を押してください。",
+      "signalled": "プロセスが停止されました (シグナル {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "デフォルトのシェル",
       "description": "このマシンがデフォルトのシェルと呼ぶもの。"
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} は現在使用できないため、新しい端末は {{effective}} で開きます。",
     "inUse": "使用中",
@@ -2957,10 +2976,10 @@
         "pr": "プルリクエスト"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "{{name}} を閉じる",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "タブの名前を変更",
+      "saveTab": "保存",
       "searchTabs": "タブを検索…"
     },
     "sidebar": {
@@ -2983,11 +3002,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "新しいターミナル",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "チャット入力欄に移動",
+      "focusTerminal": "ターミナルに移動",
+      "renameTerminal": "ターミナルの名前を変更",
+      "clearTerminal": "ターミナルをクリア",
+      "killTerminal": "ターミナルを終了"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {
@@ -4181,7 +4205,7 @@
       "sound-done": "完了",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "ターミナルのシェル",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "返信にリンクのプレビューを表示",
@@ -4364,7 +4388,7 @@
     "removeEmail": "{{email}} を削除",
     "loadingGmailContacts": "友達のメールアドレスを読み込み中…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "このコンピューターにはありません",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4374,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "選択したシェルが使えないため、新しいターミナルは {{shell}} を使います。",
+    "terminalShell": "ターミナルのシェル",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

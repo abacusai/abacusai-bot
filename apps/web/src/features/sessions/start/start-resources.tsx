@@ -1,44 +1,57 @@
-import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
+import {
+  draftConversationKey,
+  draftConversationRef,
+} from "@abacus-ai/contract/conversation-scope";
 import { useSelector } from "@tanstack/react-store";
 import {
   lazy,
-  Suspense,
   useEffect,
   useEffectEvent,
-  useState,
   type ReactNode,
   type ComponentProps,
 } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { BrowserSurface } from "#renderer/components/browser-surface";
-import { Button } from "#renderer/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
+import type { TerminalAction } from "#renderer/components/terminal/keys";
 
 const BrowserTab = lazy(() =>
   import("#platform/browser-tab").then((m) => ({ default: m.BrowserTab }))
+);
+const TerminalTab = lazy(() =>
+  import("../terminal/terminal-tab").then((m) => ({ default: m.TerminalTab }))
 );
 import { useWorkspace } from "../data/queries";
 import { isRelativePath } from "../data/search";
 import {
   openTab,
-  closeTab,
   panelTabsStore,
+  updateTabs,
   EMPTY_TABS,
 } from "../dock/panel-tabs-store";
+import { SessionDock, type SessionDockProps } from "../dock/session-dock";
 const SessionFilePreview = lazy(() =>
   import("../files/files-tab").then((m) => ({ default: m.SessionFilePreview }))
 );
 import { startDraftStore } from "./start-session";
 
+/**
+ * A new chat's side panel: the chat's own dock (tab strip, menus, icon row)
+ * keyed by the draft, so terminals, pages and previews opened before the
+ * first message move into the chat with it (promoteTabs).
+ */
 export const SessionStartResources = ({
   workspaceId,
   children,
   register,
   presenter,
   blocked,
+  dispatch,
+  registerHotkeys,
 }: {
   workspaceId: string | null;
+  dispatch: (id: TerminalAction) => void;
+  registerHotkeys: SessionDockProps["registerHotkeys"];
   children: ReactNode;
   register(
     key: string,
@@ -55,7 +68,6 @@ export const SessionStartResources = ({
   const entries = useSelector(panelTabsStore, (s) =>
     key ? (s[key] ?? EMPTY_TABS) : EMPTY_TABS
   );
-  const [selected, setSelected] = useState<string | null>(null);
   const receive = useEffectEvent((event: { path?: string; url?: string }) => {
     if (!key || !workspace?.path) return false;
     const path = event.path?.startsWith(`${workspace.path}/`)
@@ -73,85 +85,78 @@ export const SessionStartResources = ({
         path?.split("/").at(-1) ?? event.url ?? t("sessions.browser.title"),
       ...(path ? { path } : { url: event.url }),
     });
-    setSelected(ref);
+    updateTabs(key, (s) => ({ ...s, open: true }));
     return true;
   });
   useEffect(
     () => (key ? register(key, (event) => receive(event)) : undefined),
     [key, register]
   );
-  const active =
-    entries.tabs.find((tab) => tab.ref === selected) ?? entries.tabs.at(-1);
+  if (!id || !key) return <div className="size-full min-h-0">{children}</div>;
+  const root = workspace?.path ?? "";
+  const row = { workspaceId: id, id: draft.id };
   return (
-    <div className="flex size-full min-h-0 flex-wrap">
-      <div className="min-w-0 flex-1">{children}</div>
-      {active && key && workspace?.path ? (
-        <Suspense fallback={null}>
-          <aside
-            className="flex min-h-0 w-[min(480px,100%)] flex-col border-l"
-            aria-label={t("sessions.files.preview")}
-          >
-            <Tabs
-              value={active.ref}
-              onValueChange={(value) => {
-                if (typeof value === "string") setSelected(value);
+    <SessionDock
+      draft
+      row={row}
+      chat={children}
+      registerHotkeys={registerHotkeys}
+      renderTab={(tab, visible, onClose) => {
+        const tabId = tab.ref.slice(tab.ref.indexOf(":") + 1);
+        if (tab.ref.startsWith("terminal:"))
+          return (
+            <TerminalTab
+              row={row}
+              conversation={draftConversationRef(id, draft.id)}
+              id={tabId}
+              shell={tab.shell}
+              visible={visible}
+              onClose={onClose}
+              dispatch={dispatch}
+              onUrl={(url) => {
+                openTab(key, {
+                  ref: `browser:${crypto.randomUUID()}`,
+                  title: url,
+                  url,
+                });
+                updateTabs(key, (s) => ({ ...s, open: true }));
               }}
-            >
-              <TabsList className="w-full justify-start overflow-auto">
-                {entries.tabs.map((tab) => (
-                  <TabsTrigger key={tab.ref} value={tab.ref}>
-                    {tab.title}
-                    {entries.tabs.filter((t) => t.title === tab.title).length >
-                    1
-                      ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
-                      : ""}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => closeTab(key, active.ref)}
-            >
-              {t("sessions.dock.closeTab", { name: active.title })}
-            </Button>
-            <div className="flex min-h-0 flex-1 flex-col">
-              {active.path ? (
-                <SessionFilePreview
-                  inTab
-                  root={workspace.path}
-                  scope={key ?? undefined}
-                  path={active.path}
-                  renderLocal={(file) => (
-                    <BrowserTab
-                      row={{ workspaceId: workspace.id, id: draft.id }}
-                      scope={key ?? undefined}
-                      id={active.ref.slice(active.ref.indexOf(":") + 1)}
-                      root={workspace.path!}
-                      file={file}
-                      visible
-                      presenter={presenter}
-                      blocked={blocked}
-                    />
-                  )}
-                />
-              ) : (
+            />
+          );
+        if (tab.ref.startsWith("preview:") && tab.path)
+          return (
+            <SessionFilePreview
+              inTab
+              root={root}
+              scope={key}
+              path={tab.path}
+              renderLocal={(file) => (
                 <BrowserTab
-                  row={{ workspaceId: workspace.id, id: draft.id }}
-                  scope={key ?? undefined}
-                  id={active.ref.slice(active.ref.indexOf(":") + 1)}
-                  root={workspace.path}
-                  url={active.url}
-                  visible
+                  row={row}
+                  scope={key}
+                  id={tabId}
+                  root={root}
+                  file={file}
+                  visible={visible}
                   presenter={presenter}
                   blocked={blocked}
                 />
               )}
-            </div>
-          </aside>
-        </Suspense>
-      ) : null}
-    </div>
+            />
+          );
+        return (
+          <BrowserTab
+            row={row}
+            scope={key}
+            id={tabId}
+            root={root}
+            url={tab.url}
+            visible={visible}
+            presenter={presenter}
+            blocked={blocked}
+          />
+        );
+      }}
+    />
   );
 };

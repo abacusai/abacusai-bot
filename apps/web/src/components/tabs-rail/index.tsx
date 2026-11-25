@@ -2,7 +2,7 @@ import type { DockviewApi } from "dockview-react";
 import {
   ArrowDownToLine,
   Check,
-  Ellipsis,
+  ChevronDown,
   LayoutPanelLeft,
   LayoutPanelTop,
   Terminal,
@@ -130,6 +130,17 @@ export const nativeDragImage = (event: React.DragEvent<HTMLElement>) => {
   dataTransfer.setDragImage(ghost, clientX - box.left, clientY - box.top);
   setTimeout(() => ghost.remove(), 0);
 };
+/** A tab's width beyond its title: icon and gap, padding, the close mark. */
+const TAB_CHROME = 64;
+let measure: CanvasRenderingContext2D | null | undefined;
+/** The widest of these titles in the tab font (13px, medium). */
+const widestTitle = (titles: string[]): number => {
+  measure ??= document.createElement("canvas").getContext("2d");
+  if (!measure) return 0;
+  measure.font = `500 13px ${getComputedStyle(document.body).fontFamily}`;
+  return Math.max(0, ...titles.map((text) => measure!.measureText(text).width));
+};
+
 const TAB_CLASS =
   "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground data-active:bg-transparent data-active:text-sidebar-foreground dark:data-active:bg-transparent dark:data-active:text-sidebar-foreground group/tab relative flex h-7 [&>svg]:relative [&>span:not([aria-hidden])]:relative max-w-44 min-w-0 flex-none items-center gap-1 rounded-lg border-0 pr-1.5 pl-3 text-[13px] font-medium shadow-none transition-[background-color,color] duration-150 ease-out select-none data-active:pr-1";
 
@@ -229,7 +240,8 @@ const RailControls = ({
           <DropdownMenuTrigger
             render={<BarButton label={t("sessions.dock.move")} />}
           >
-            <Ellipsis />
+            {/* Not "…": the terminal's actions menu sits beside it. */}
+            <LayoutPanelLeft />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {(["left", "right", "top", "bottom"] as const).map((position) => (
@@ -346,6 +358,7 @@ const RailSegment = ({
   onReopen,
   renderIcon,
   onRename,
+  renameRequest,
   controls = true,
   shortcuts = true,
   measureToolbar = true,
@@ -375,6 +388,8 @@ const RailSegment = ({
   renderIcon?(tab: PanelTab): ReactNode;
   onReopen?(): void;
   onRename?(id: string, title: string): void;
+  /** Opens the rename dialog for a tab from elsewhere (a menu); `at` repeats it. */
+  renameRequest?: { id: string; at: number } | null;
   workspaceApi?: React.RefObject<DockviewApi | null>;
   onMove?(id: string, position: "left" | "right" | "top" | "bottom"): void;
 }) => {
@@ -383,23 +398,30 @@ const RailSegment = ({
   const [rename, setRename] = useState<{ id: string; title: string } | null>(
     null
   );
+  // A request opens the dialog once, during render (no effect round trip).
+  const [renameSeen, setRenameSeen] = useState(renameRequest?.at ?? null);
+  if (renameRequest && renameRequest.at !== renameSeen) {
+    setRenameSeen(renameRequest.at);
+    const tab = tabs.find((tab) => tab.id === renameRequest.id);
+    if (tab && onRename) setRename({ id: tab.id, title: title(tab) });
+  }
   const motionPref = useMotionPreference();
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [overflow, setOverflow] = useState(false);
-  const [compact, setCompact] = useState(false);
+  const [railWidth, setRailWidth] = useState(600);
   useEffect(() => {
     const element = root.current;
     if (!element) return;
     const observer = new ResizeObserver(() => {
-      if (element.clientWidth > 0)
-        setCompact(element.clientWidth < MIN_TITLE_RAIL_WIDTH);
+      if (element.clientWidth > 0) setRailWidth(element.clientWidth);
     });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
   const [allOpen, setAllOpen] = useState(false);
+  const activeTab = tabs.find((tab) => tab.id === active);
   // Native (dock) drag: the source stays in flow as a dimmed placeholder, and
   // the insertion point is an inset edge, so nothing reflows mid-drag.
   const [dragging, setDragging] = useState<string | null>(null);
@@ -407,6 +429,13 @@ const RailSegment = ({
     null
   );
   const prefs = usePrefs();
+  // Folded to one button naming the tab on screen when the tabs can't all
+  // show their whole titles. A tab needs its longest title plus icon,
+  // padding and close mark.
+  const compact =
+    railWidth < MIN_TITLE_RAIL_WIDTH ||
+    (tabs.length > 1 &&
+      railWidth / tabs.length < widestTitle(tabs.map(title)) + TAB_CHROME);
   const layout = railLayout(
     tabs.length,
     width,
@@ -648,8 +677,11 @@ const RailSegment = ({
                   className={cn(
                     "min-w-0 rounded-lg",
                     "data-dragging:opacity-40 data-[drop=after]:shadow-[inset_-2px_0_0_var(--primary)] data-[drop=before]:shadow-[inset_2px_0_0_var(--primary)]",
+                    // Scrolling anyway: each tab as wide as its title needs
+                    // (up to the single-row cap), so "Terminal 10" is read
+                    // whole rather than cut to "Termi…".
                     layout.mode === "scroll"
-                      ? "w-28 shrink-0"
+                      ? "max-w-44 min-w-28 shrink-0"
                       : layout.mode === "single"
                         ? "max-w-44 flex-1 basis-28"
                         : "flex-1 basis-28"
@@ -779,10 +811,36 @@ const RailSegment = ({
       </Tabs>
       {(overflow || compact) && (
         <Popover open={allOpen} onOpenChange={setAllOpen}>
+          {/* Folded (too narrow for tabs): the trigger names the tab on
+              screen, so the strip still says where you are. */}
           <PopoverTrigger
-            render={<BarButton label={t("shell.topBar.panelTabs")} />}
+            render={
+              compact ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={t("shell.topBar.panelTabs")}
+                  title={t("shell.topBar.panelTabs")}
+                  className="titlebar-nodrag text-sidebar-foreground min-w-0 shrink justify-start gap-1 px-2 text-[13px] font-medium"
+                />
+              ) : (
+                <BarButton label={t("shell.topBar.panelTabs")} />
+              )
+            }
           >
-            <ArrowDownToLine />
+            {compact && activeTab ? (
+              <>
+                {(() => {
+                  const Icon =
+                    activeTab.id === "chat" ? Bot : tabIcon(activeTab.kind);
+                  return <Icon className="size-3.5 shrink-0" aria-hidden />;
+                })()}
+                <span className="min-w-0 truncate">{title(activeTab)}</span>
+                <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+              </>
+            ) : (
+              <ArrowDownToLine />
+            )}
           </PopoverTrigger>
           <PopoverContent
             align="end"

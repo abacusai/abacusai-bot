@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "Reintentar",
-      "cancel": "Cancel",
+      "cancel": "Cancelar",
       "save": "Guardar"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "Agregar pestaña",
       "new": "Nueva pestaña",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "Dispositivo",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "El proceso terminó ({{code}})",
+      "newShell": "Nueva terminal · {{shell}}",
       "planRequired": "La terminal no está disponible con el plan gratuito en tu computadora alojada. Mejora tu plan para usarla.",
-      "planUnreadable": "No se pudo verificar tu plan, así que la terminal está desactivada por ahora. Vuelve a intentarlo en un momento."
+      "planUnreadable": "No se pudo verificar tu plan, así que la terminal está desactivada por ahora. Vuelve a intentarlo en un momento.",
+      "restart": "Reiniciar",
+      "starting": "Iniciando la terminal…",
+      "startingShell": "Iniciando {{shell}}…",
+      "actions": "Acciones de la terminal",
+      "clear": "Limpiar",
+      "kill": "Cerrar la terminal",
+      "copy": "Copiar",
+      "paste": "Pegar",
+      "busyTitle": "¿Detener {{program}}?",
+      "busyBody": "{{program}} sigue en ejecución en esta terminal. Si cierras la terminal, se detendrá.",
+      "busyConfirm": "Cerrar la terminal",
+      "folderMissing": "La carpeta de este chat ya no está: {{path}}. Vuelve a ponerla y luego pulsa Reiniciar.",
+      "folderDenied": "No tienes permiso para abrir la carpeta de este chat: {{path}}. Corrige sus permisos y luego pulsa Reiniciar.",
+      "signalled": "Proceso detenido (señal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "Shell predeterminado",
       "description": "Como sea que esta máquina llame a su shell predeterminado."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} no se puede utilizar en este momento, por lo que se abren nuevos terminales en {{effective}}.",
     "inUse": "En uso",
@@ -2957,10 +2976,10 @@
         "pr": "Pull request"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "Cerrar {{name}}",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "Cambiar el nombre de la pestaña",
+      "saveTab": "Guardar",
       "searchTabs": "Buscar pestañas…"
     },
     "sidebar": {
@@ -2983,11 +3002,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "Nueva terminal",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Ir al cuadro del chat",
+      "focusTerminal": "Ir a la terminal",
+      "renameTerminal": "Cambiar el nombre de la terminal",
+      "clearTerminal": "Limpiar la terminal",
+      "killTerminal": "Cerrar la terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {
@@ -4181,7 +4205,7 @@
       "sound-done": "Listo",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "Shell de la terminal",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Mostrar vistas previas de enlaces en las respuestas",
@@ -4364,7 +4388,7 @@
     "removeEmail": "Quitar {{email}}",
     "loadingGmailContacts": "Cargando las direcciones de correo de tus amigos…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "No se encontró en esta computadora",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4374,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "Las terminales nuevas usan {{shell}} porque el shell elegido no está disponible.",
+    "terminalShell": "Shell de la terminal",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

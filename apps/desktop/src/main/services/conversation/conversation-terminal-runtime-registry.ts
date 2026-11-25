@@ -17,6 +17,8 @@ export type TerminalPty = {
   write: (data: string) => void;
   resize: (cols: number, rows: number) => void;
   kill: (signal?: string) => void;
+  /** The foreground program's name (node-pty), where the platform tells it. */
+  readonly process?: string;
 };
 
 export type CreateConversationTerminalPty = (request: {
@@ -48,10 +50,10 @@ export type ConversationTerminalExitEvent = ConversationTerminalEvent & {
 
 /**
  * Why a generation ended without its own exit: closed (explicitly, or with
- * its scope or workspace), or superseded by a scope promotion that moved the
- * shell to a new key and generation.
+ * its scope or workspace), superseded by a scope promotion that moved the
+ * shell to a new key and generation, or quit with the app (its tab stays).
  */
-export type TerminalRetireReason = "closed" | "superseded";
+export type TerminalRetireReason = "closed" | "superseded" | "quit";
 
 export type ConversationTerminalRetireEvent = ConversationTerminalEvent & {
   reason: TerminalRetireReason;
@@ -362,19 +364,27 @@ export class ConversationTerminalRuntimeRegistry {
     return true;
   }
 
+  /** A running terminal's PTY, whatever its generation. */
+  ptyOf(key: ConversationKey, terminalId: string): TerminalPty | null {
+    return this.runtimes.get(runtimeKey(key, terminalId))?.pty ?? null;
+  }
+
   resize(
     key: ConversationKey,
     generation: number,
     cols: number,
     rows: number,
     terminalId = DEFAULT_TERMINAL_ID
-  ): boolean {
+  ): number | false {
     const runtime = this.currentRuntime(key, terminalId, generation);
     if (runtime == null) return false;
+    // Where its output stands as ConPTY takes the size: the renderer resizes
+    // its screen at exactly that point of the stream (Windows).
+    const at = runtime.scrollback.end;
     runtime.cols = cols;
     runtime.rows = rows;
     runtime.pty.resize(cols, rows);
-    return true;
+    return at;
   }
 
   hide(
@@ -391,7 +401,8 @@ export class ConversationTerminalRuntimeRegistry {
   close(
     key: ConversationKey,
     expectedGeneration?: number,
-    terminalId = DEFAULT_TERMINAL_ID
+    terminalId = DEFAULT_TERMINAL_ID,
+    reason: TerminalRetireReason = "closed"
   ): boolean {
     const id = runtimeKey(key, terminalId);
     const runtime = this.currentRuntime(key, terminalId, expectedGeneration);
@@ -410,7 +421,7 @@ export class ConversationTerminalRuntimeRegistry {
       this.runtimes.delete(id);
       // Its exit is suppressed from here on (it is no longer current), so
       // readers of this generation are told now.
-      this.retire(runtime, "closed");
+      this.retire(runtime, reason);
       runtime.pty.kill();
     }
     return true;
@@ -539,8 +550,11 @@ export class ConversationTerminalRuntimeRegistry {
         terminalId: pending.terminalId,
       });
     }
+    // The app is quitting: the shells end, but nobody closed a tab, so
+    // readers are told "quit", not "closed" (on "closed" the window drops
+    // the tab, and these come back on the next start).
     for (const { key, terminalId } of entries.values()) {
-      this.close(key, undefined, terminalId);
+      this.close(key, undefined, terminalId, "quit");
     }
     this.promotedSessionKeys.clear();
     return entries.size;

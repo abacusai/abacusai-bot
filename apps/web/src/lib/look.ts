@@ -341,12 +341,26 @@ const table = (keys: string, values: string): Record<string, string> => {
 };
 const STOCK_KEYS =
   "background foreground card card-foreground popover popover-foreground primary primary-foreground secondary secondary-foreground muted muted-foreground accent accent-foreground destructive border input ring chart-1 chart-2 chart-3 chart-4 chart-5 sidebar sidebar-foreground sidebar-primary sidebar-primary-foreground sidebar-accent sidebar-accent-foreground sidebar-border sidebar-ring control-border selected-surface selected-text chat-surface chat-surface-2 chat-inset chat-status-running chat-status-attention status-failed chat-status-done chat-status-muted chat-diff-add-bg chat-diff-add-fg chat-diff-del-bg chat-diff-del-fg chat-user-bubble bots-attention bots-attention-foreground bots-running bots-done";
-/** Ghostty's own ANSI palette: the stock terminal. */
-export const STOCK_ANSI =
-  "#000000 #cd3131 #0dbc79 #e5e510 #2472c8 #bc3fbc #11a8cd #e5e5e5 #666666 #f14c4c #23d18b #f5f543 #3b8eea #d670d6 #29b8db #ffffff".split(
+/**
+ * The stock terminal's ANSI palette, VS Code's for each background: the dark
+ * set's yellow is unreadable on white. In light every colour but the two
+ * whites is 4.5:1 or more: no yellow (amber and orange; PowerShell types
+ * commands in bright yellow), darker cyans and bright green.
+ */
+export const STOCK_ANSI: Readonly<Record<ResolvedTheme, readonly string[]>> = {
+  dark: "#000000 #cd3131 #0dbc79 #e5e510 #2472c8 #bc3fbc #11a8cd #e5e5e5 #666666 #f14c4c #23d18b #f5f543 #3b8eea #d670d6 #29b8db #ffffff".split(
     " "
-  );
-const stock = (values: string, syntax: string): Record<string, string> => {
+  ),
+  light:
+    "#000000 #cd3131 #107c10 #b45309 #0451a5 #bc05bc #0e7490 #555555 #666666 #cd3131 #15803d #c2410c #0451a5 #bc05bc #0e7490 #a5a5a5".split(
+      " "
+    ),
+};
+const stock = (
+  values: string,
+  syntax: string,
+  ansi: readonly string[]
+): Record<string, string> => {
   const t = table(STOCK_KEYS, values);
   const th = syntax.split(" ");
   return {
@@ -360,7 +374,7 @@ const stock = (values: string, syntax: string): Record<string, string> => {
     ...Object.fromEntries(
       THEME_SYNTAX_CLASSES.map((name, i) => [`th-${name}`, th[i]!])
     ),
-    ...Object.fromEntries(STOCK_ANSI.map((color, i) => [`term-${i}`, color])),
+    ...Object.fromEntries(ansi.map((color, i) => [`term-${i}`, color])),
   };
 };
 /**
@@ -373,11 +387,13 @@ const stock = (values: string, syntax: string): Record<string, string> => {
 export const STOCK: Readonly<Record<ResolvedTheme, ThemeColors>> = {
   light: stock(
     "#ffffff #0a0a0a #f7f7f7 #0a0a0a #ffffff #0a0a0a #171717 #fafafa #f5f5f5 #171717 #f5f5f5 #636363 #f5f5f5 #171717 #e7000b #e5e5e5 #bebebe #a1a1a1 #d4d4d4 #737373 #525252 #404040 #262626 #fafafa #0a0a0a #171717 #fafafa #f5f5f5 #171717 #e5e5e5 #a1a1a1 #8f8f8f #171717 #fafafa #f5f5f5 #ededed #fafafa #a94700 #a94700 #a0388f #146d34 #636363 #d8f9dd #00521f #ffe5e3 #9b1e22 #e8e8e8 #a94700 #fafafa #a94700 #146d34",
-    "#cf222e #0a7f64 #6e7781 #8250df #953800 #0550ae #116329 #0550ae #0550ae #0550ae #953800 #8250df #1a7f37 #cf222e #57606a #0550ae #0969da #953800 #116329 #8250df"
+    "#cf222e #0a7f64 #6e7781 #8250df #953800 #0550ae #116329 #0550ae #0550ae #0550ae #953800 #8250df #1a7f37 #cf222e #57606a #0550ae #0969da #953800 #116329 #8250df",
+    STOCK_ANSI.light
   ),
   dark: stock(
     "#0a0a0a #fafafa #171717 #fafafa #171717 #fafafa #e5e5e5 #171717 #262626 #fafafa #262626 #a1a1a1 #262626 #fafafa #ff6467 #232323 #2f2f2f #737373 #d4d4d4 #737373 #525252 #404040 #262626 #171717 #fafafa #e5e5e5 #171717 #262626 #fafafa #232323 #737373 #808080 #dedede #121212 #232325 #1b1b1e #111113 #fbbb87 #fbbb87 #eea0dc #99ebaa #9e9e9e #132717 #9ceead #2e1818 #fda1a0 #232325 #fbbb87 #171717 #fbbb87 #99ebaa",
-    "#ff7b72 #a5d6ff #8b949e #d2a8ff #ffa657 #79c0ff #7ee787 #79c0ff #79c0ff #79c0ff #ffa657 #d2a8ff #7ee787 #ff7b72 #8b949e #79c0ff #58a6ff #ffa657 #7ee787 #d2a8ff"
+    "#ff7b72 #a5d6ff #8b949e #d2a8ff #ffa657 #79c0ff #7ee787 #79c0ff #79c0ff #79c0ff #ffa657 #d2a8ff #7ee787 #ff7b72 #8b949e #79c0ff #58a6ff #ffa657 #7ee787 #d2a8ff",
+    STOCK_ANSI.dark
   ),
 };
 
@@ -608,9 +624,7 @@ const ACCENT_TOKENS = [
  * design tokens (app.css, chat.css, the stock terminal palette):
  *
  * light: destructive on card 4.45 and muted 4.38 (< 4.5); th-comment on
- *   chat-inset 4.36 and chat-surface 4.17; ANSI on white: 2 green 2.47,
- *   3 yellow 1.35, 6 cyan 2.80, 9 3.57, 10 1.99, 11 1.17, 12 3.36,
- *   13 2.94, 14 2.34; input on background/card/popover 1.73–1.86 (< 3);
+ *   chat-inset 4.36 and chat-surface 4.17 (the ANSI colours pass); input on background/card/popover 1.73–1.86 (< 3);
  *   chart-1 1.38–1.48; ring at 50% on background/card/popover/muted
  *   1.49–1.54, sidebar-ring 1.49–1.51.
  * dark: ANSI 1 red 3.85, 4 blue 4.07, 5 magenta 4.31, 8 bright black

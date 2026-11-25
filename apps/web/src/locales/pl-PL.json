@@ -2058,7 +2058,6 @@
       "device": "Urządzenie",
       "terminal": "Terminal",
       "browser": "Przeglądarka",
-      "closeTab": "Zamknij {{name}}",
       "full": "Przełącz widok pełny",
       "move": "Przenieś kartę",
       "movePane": "Przenieś do panelu {{name}}",
@@ -2166,7 +2165,21 @@
       "exited": "Proces zakończony ({{code}})",
       "newShell": "Nowy terminal · {{shell}}",
       "planRequired": "Terminal nie jest dostępny w darmowym planie dla Twojego komputera w chmurze. Przejdź na wyższy plan, aby z niego korzystać.",
-      "planUnreadable": "Nie udało się sprawdzić Twojego planu, więc terminal jest na razie wyłączony. Spróbuj ponownie za chwilę."
+      "planUnreadable": "Nie udało się sprawdzić Twojego planu, więc terminal jest na razie wyłączony. Spróbuj ponownie za chwilę.",
+      "restart": "Uruchom ponownie",
+      "starting": "Uruchamianie terminala…",
+      "startingShell": "Uruchamianie {{shell}}…",
+      "actions": "Akcje terminala",
+      "clear": "Wyczyść",
+      "kill": "Zakończ terminal",
+      "copy": "Kopiuj",
+      "paste": "Wklej",
+      "busyTitle": "Zatrzymać {{program}}?",
+      "busyBody": "{{program}} nadal działa w tym terminalu. Zamknięcie terminala go zatrzyma.",
+      "busyConfirm": "Zamknij terminal",
+      "folderMissing": "Folderu tego czatu już nie ma: {{path}}. Przywróć go, a potem naciśnij Uruchom ponownie.",
+      "folderDenied": "Nie masz uprawnień do otwarcia folderu tego czatu: {{path}}. Popraw uprawnienia, a potem naciśnij Uruchom ponownie.",
+      "signalled": "Proces zatrzymany (sygnał {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Obszar roboczy: {{name}}",
@@ -2367,6 +2380,12 @@
     "system": {
       "label": "Domyślna powłoka",
       "description": "Powłoka ustawiona jako domyślna na tym komputerze."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} jest teraz niedostępna, więc nowe terminale otwierają się w {{effective}}.",
     "inUse": "W użyciu",
@@ -3019,7 +3038,12 @@
       "loading": "Wczytywanie sesji, botów i obszarów roboczych…",
       "navigate": "nawiguj",
       "select": "wybierz",
-      "close": "zamknij"
+      "close": "zamknij",
+      "focusComposer": "Przejdź do pola czatu",
+      "focusTerminal": "Przejdź do terminala",
+      "renameTerminal": "Zmień nazwę terminala",
+      "clearTerminal": "Wyczyść terminal",
+      "killTerminal": "Zakończ terminal"
     },
     "connectionLost": "Utracono połączenie z aplikacją. Ponowne wczytywanie…",
     "boot": {

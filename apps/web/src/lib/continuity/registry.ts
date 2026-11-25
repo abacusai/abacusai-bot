@@ -197,6 +197,23 @@ export const CONTINUITY_STORES: ReadonlyArray<{
     schema: tabs,
   },
   {
+    key: "sessions.terminalTabs.v1",
+    storage: "abacusai-bot:abacus.sessions.terminals",
+    schema: v.record(
+      v.string(),
+      v.object({
+        tabs: v.array(
+          v.object({
+            ref: v.string(),
+            title: v.string(),
+            shell: v.optional(v.custom(isTerminalShellId)),
+          })
+        ),
+        shown: nullableString,
+      })
+    ),
+  },
+  {
     key: "shell.panel.v1",
     storage: "abacusai-bot:abacus.shell.panel",
     schema: panel,

@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "다시 시도",
-      "cancel": "Cancel",
+      "cancel": "취소",
       "save": "저장"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "탭 추가",
       "new": "새 탭",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "기기",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "프로세스가 종료됨 ({{code}})",
+      "newShell": "새 터미널 · {{shell}}",
       "planRequired": "무료 요금제에서는 호스팅 컴퓨터에서 터미널을 사용할 수 없습니다. 사용하려면 업그레이드하세요.",
-      "planUnreadable": "요금제를 확인할 수 없어 지금은 터미널이 꺼져 있습니다. 잠시 후 다시 시도하세요."
+      "planUnreadable": "요금제를 확인할 수 없어 지금은 터미널이 꺼져 있습니다. 잠시 후 다시 시도하세요.",
+      "restart": "재시작",
+      "starting": "터미널을 시작하는 중…",
+      "startingShell": "{{shell}} 시작하는 중…",
+      "actions": "터미널 작업",
+      "clear": "지우기",
+      "kill": "터미널 종료",
+      "copy": "복사",
+      "paste": "붙여넣기",
+      "busyTitle": "{{program}}을(를) 중지할까요?",
+      "busyBody": "이 터미널에서 {{program}}이(가) 아직 실행 중입니다. 터미널을 닫으면 중지됩니다.",
+      "busyConfirm": "터미널 닫기",
+      "folderMissing": "이 채팅의 폴더가 더 이상 없습니다: {{path}}. 폴더를 되돌린 뒤 재시작을 누르세요.",
+      "folderDenied": "이 채팅의 폴더를 열 권한이 없습니다: {{path}}. 권한을 고친 뒤 재시작을 누르세요.",
+      "signalled": "프로세스가 중지됨 (시그널 {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "기본 쉘",
       "description": "이 기계가 기본 쉘이라고 부르는 것은 무엇이든 상관없습니다."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}}는 현재 사용할 수 없으므로 {{effective}}에 새 터미널이 열립니다.",
     "inUse": "사용 중",
@@ -2957,10 +2976,10 @@
         "pr": "풀 리퀘스트"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "{{name}} 닫기",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "탭 이름 바꾸기",
+      "saveTab": "저장",
       "searchTabs": "탭 검색…"
     },
     "sidebar": {
@@ -2983,11 +3002,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "새 터미널",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "채팅 입력란으로 이동",
+      "focusTerminal": "터미널로 이동",
+      "renameTerminal": "터미널 이름 바꾸기",
+      "clearTerminal": "터미널 지우기",
+      "killTerminal": "터미널 종료"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {
@@ -4181,7 +4205,7 @@
       "sound-done": "완료",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "터미널 셸",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "답변에 링크 미리보기 표시",
@@ -4364,7 +4388,7 @@
     "removeEmail": "{{email}} 삭제",
     "loadingGmailContacts": "친구의 이메일 주소를 불러오는 중…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "이 컴퓨터에 없음",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4374,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "선택한 셸을 사용할 수 없어 새 터미널은 {{shell}}을(를) 사용합니다.",
+    "terminalShell": "터미널 셸",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

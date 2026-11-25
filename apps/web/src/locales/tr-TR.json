@@ -2036,7 +2036,6 @@
       "device": "Cihaz",
       "terminal": "Terminal",
       "browser": "Tarayıcı",
-      "closeTab": "{{name}} sekmesini kapat",
       "full": "Tam görünümü aç/kapat",
       "move": "Sekmeyi taşı",
       "movePane": "{{name}} bölmesine taşı",
@@ -2144,7 +2143,21 @@
       "exited": "İşlem sonlandı ({{code}})",
       "newShell": "Yeni terminal · {{shell}}",
       "planRequired": "Terminal, barındırılan bilgisayarınızda ücretsiz planda kullanılamaz. Kullanmak için planınızı yükseltin.",
-      "planUnreadable": "Planınız kontrol edilemedi, bu yüzden terminal şimdilik kapalı. Birazdan tekrar deneyin."
+      "planUnreadable": "Planınız kontrol edilemedi, bu yüzden terminal şimdilik kapalı. Birazdan tekrar deneyin.",
+      "restart": "Yeniden başlat",
+      "starting": "Terminal başlatılıyor…",
+      "startingShell": "{{shell}} başlatılıyor…",
+      "actions": "Terminal işlemleri",
+      "clear": "Temizle",
+      "kill": "Terminali sonlandır",
+      "copy": "Kopyala",
+      "paste": "Yapıştır",
+      "busyTitle": "{{program}} durdurulsun mu?",
+      "busyBody": "{{program}} bu terminalde hâlâ çalışıyor. Terminali kapatmak onu durdurur.",
+      "busyConfirm": "Terminali kapat",
+      "folderMissing": "Bu sohbetin klasörü artık yok: {{path}}. Geri koyun, ardından Yeniden başlat’a basın.",
+      "folderDenied": "Bu sohbetin klasörünü açma izniniz yok: {{path}}. İzinlerini düzeltin, ardından Yeniden başlat’a basın.",
+      "signalled": "İşlem durduruldu (sinyal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Çalışma alanı: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "Varsayılan kabuk",
       "description": "Bu makinenin varsayılan kabuğu ne ise o."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} şu anda kullanılamıyor, bu yüzden yeni terminaller {{effective}} ile açılıyor.",
     "inUse": "Kullanımda",
@@ -2987,7 +3006,12 @@
       "loading": "Oturumlar, botlar ve çalışma alanları yükleniyor…",
       "navigate": "gezin",
       "select": "seç",
-      "close": "kapat"
+      "close": "kapat",
+      "focusComposer": "Sohbet kutusuna git",
+      "focusTerminal": "Terminale git",
+      "renameTerminal": "Terminali yeniden adlandır",
+      "clearTerminal": "Terminali temizle",
+      "killTerminal": "Terminali sonlandır"
     },
     "connectionLost": "Uygulamayla bağlantı kesildi. Yeniden yükleniyor…",
     "boot": {

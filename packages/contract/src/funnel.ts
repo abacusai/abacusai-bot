@@ -110,6 +110,9 @@ export const FUNNEL_STEPS = [
   // The agent asked for a routine that already exists, and got that one back;
   // the detail is how it compared (same, alike or check-in) and where it lives.
   "routine_duplicate_avoided",
+  // A terminal shell started (not a reattach), at most once a day per
+  // install; the detail is the shell (system, powershell, pwsh, cmd, ...).
+  "terminal_opened",
   // A free account's chat on another provider's model: the RouteLLM notice.
   "routellm_nudge_shown",
   "routellm_nudge_switched",

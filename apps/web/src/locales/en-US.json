@@ -2036,7 +2036,6 @@
       "device": "Device",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2144,7 +2143,21 @@
       "exited": "Process exited ({{code}})",
       "newShell": "New terminal · {{shell}}",
       "planRequired": "The terminal isn't available on the free plan for your hosted computer. Upgrade to use it.",
-      "planUnreadable": "Your plan couldn't be checked, so the terminal is off for now. Try again shortly."
+      "planUnreadable": "Your plan couldn't be checked, so the terminal is off for now. Try again shortly.",
+      "restart": "Restart",
+      "starting": "Starting the terminal…",
+      "startingShell": "Starting {{shell}}…",
+      "actions": "Terminal actions",
+      "clear": "Clear",
+      "kill": "Kill terminal",
+      "copy": "Copy",
+      "paste": "Paste",
+      "busyTitle": "Stop {{program}}?",
+      "busyBody": "{{program}} is still running in this terminal. Closing the terminal stops it.",
+      "busyConfirm": "Close terminal",
+      "folderMissing": "This chat's folder isn't there any more: {{path}}. Put it back, then press Restart.",
+      "folderDenied": "You don't have permission to open this chat's folder: {{path}}. Fix its permissions, then press Restart.",
+      "signalled": "Process stopped (signal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2345,6 +2358,12 @@
     "system": {
       "label": "Default shell",
       "description": "Whatever this machine calls its default shell."
+    },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
     },
     "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
     "inUse": "In use",
@@ -2987,7 +3006,12 @@
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Go to the chat box",
+      "focusTerminal": "Go to the terminal",
+      "renameTerminal": "Rename terminal",
+      "clearTerminal": "Clear terminal",
+      "killTerminal": "Kill terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

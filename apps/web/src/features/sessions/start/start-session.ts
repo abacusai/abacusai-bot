@@ -252,7 +252,18 @@ export const startSession = async (
   }
   navigating.set(store, (navigating.get(store) ?? 0) + 1);
   try {
-    await task;
+    try {
+      await task;
+    } finally {
+      // The dock's tabs follow the shells to the chat as the app switches to
+      // it: moved earlier, a slow handoff leaves the new-chat page empty.
+      const { workspaceId, stage } = store.state;
+      if (workspaceId && (stage === "checkout-ready" || stage === "handed-off"))
+        promoteTabs(
+          draftConversationKey(workspaceId, sessionId),
+          sessionConversationKey(workspaceId, sessionId)
+        );
+    }
     if (!managed || startDraftStore.state.id === sessionId)
       await deps.navigate(sessionId);
     if (navigating.get(store) === 1) {
@@ -361,7 +372,6 @@ const runStartSession = async (
     for (const result of promotions)
       if (result.status === "rejected")
         console.warn("Scope promotion failed", result.reason);
-    promoteTabs(from, to);
     patch({ stage: "checkout-ready" });
   }
   await deps.handoff(sessionId, store.state.envelope!);

@@ -10,7 +10,7 @@ describe("R5-T25 keymap contexts", () => {
     expect(map.window["close-tab"]).toBe("Alt+W");
     expect(map.terminal["close-tab"]).toBe("Ctrl+Shift+W");
     expect(map.window["new-in-area"]).toBeNull();
-    expect(map.terminal["new-in-area"]).toBeNull();
+    expect(map.terminal["new-in-area"]).toBe("Ctrl+N");
   });
   it("overrides each context independently", () => {
     expect(
