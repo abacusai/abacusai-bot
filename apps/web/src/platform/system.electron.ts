@@ -3,6 +3,7 @@ import { connectorById, connectUi } from "@abacus-ai/connectors/registry";
 import type { Transport } from "#renderer/data/transport";
 import type { AppClient } from "#renderer/data/transport/types";
 import type { ConnectTarget } from "#renderer/lib/connect-target";
+import { resetPaymentConfirmWatch } from "#renderer/lib/payment-confirming";
 export const platformSystem = (client: AppClient) => client.system;
 /** The desktop's answer: main mints platform links, and connects MCP servers itself. */
 export const connectTarget = (name: string): ConnectTarget => {
@@ -25,4 +26,8 @@ export const openPendingLink = async (
 export const signInAbacus = (
   transport: Transport,
   input: Parameters<AppClient["auth"]["abacus"]["start"]>[0]
-) => transport.client.auth.abacus.start(input);
+) => {
+  // A sign-in may bring another account: the payment watch was the last one's.
+  resetPaymentConfirmWatch();
+  return transport.client.auth.abacus.start(input);
+};

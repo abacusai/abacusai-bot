@@ -1362,6 +1362,55 @@ describe("the turn's outcome card", () => {
     ).toBeNull();
   });
 
+  it("a payment that lands while the thread is away: back on it, the card is gone and the turn is sent again once", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    const relay = failed(NO_PLAN);
+    const procedures = {
+      account: {
+        payment: os.account.payment.handler(() => verdict as never),
+      },
+    };
+    const away = await renderRelay(
+      relay,
+      "session",
+      {},
+      {},
+      host("free"),
+      procedures
+    );
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    // The user leaves the thread: its cards unmount; the watch goes on.
+    away.view.unmount();
+    verdict = null;
+    await act(async () => checkPaymentNow());
+    await waitFor(() =>
+      expect(paymentConfirmStore.state.phase).toBe("confirmed")
+    );
+    expect(relay.stats.send).toHaveLength(0);
+    // Back on the thread: its cards mount again from its history.
+    const back = await renderRelay(
+      relay,
+      "session",
+      {},
+      {},
+      host("free"),
+      procedures
+    );
+    current = back;
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    expect(
+      screen.queryByText("Choose a plan to keep using AbacusAI Bot")
+    ).toBeNull();
+    expect(screen.queryByText("Confirming your payment…")).toBeNull();
+    // A remount (the scroller) and a focus: never a second send.
+    await back.remount();
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(relay.stats.send).toHaveLength(1);
+  });
+
   it("five refused turns share one re-check, and only the latest sends again, once", async () => {
     let verdict: { reason: string } | null = { reason: "not_subscribed" };
     const payment = vi.fn(() => verdict as never);

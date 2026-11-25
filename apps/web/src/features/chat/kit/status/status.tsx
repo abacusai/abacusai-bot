@@ -42,13 +42,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import {
-  cloneElement,
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-} from "react";
+import { cloneElement, useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChatCard } from "#renderer/components/chat-card";
@@ -95,12 +89,10 @@ import {
 } from "#renderer/lib/own-key-unavailable";
 import {
   checkPaymentNow,
-  claimTurnSendAgain,
-  noteTurnPaymentVerdict,
+  claimPaymentSendAgain,
+  paymentConfirmedFor,
   startPaymentConfirmWatch,
-  turnPaymentVerdict,
   usePaymentConfirmPhase,
-  usePaymentRecheck,
 } from "#renderer/lib/payment-confirming";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { onPlanActive } from "#renderer/lib/upgrade";
@@ -766,29 +758,41 @@ const OwnKeyCard = ({
  * waiting message sent again once it lands, and after a few minutes that the
  * payment cannot be seen yet, with billing and Check again. Never a purchase.
  */
+/**
+ * A refused turn's card joins the shared payment watch (payment-confirming.ts)
+ * from its view. Once the payment the turn waited on lands, its waiting
+ * message is sent again, once per turn, whichever card (or remount) sees it.
+ */
+const useTurnPaymentWatch = (
+  from: "confirming" | "no_plan" | null,
+  runId: string,
+  onSendAgain?: () => void
+) => {
+  const { transport } = useAppContext();
+  const phase = usePaymentConfirmPhase();
+  useEffect(() => {
+    if (from != null) startPaymentConfirmWatch(transport.client, from, runId);
+  }, [transport, from, runId]);
+  const sendAgain = useEffectEvent(() => {
+    if (onSendAgain != null && claimPaymentSendAgain(runId)) onSendAgain();
+  });
+  useEffect(() => {
+    if (from != null && phase === "confirmed") sendAgain();
+  }, [from, phase]);
+  return phase;
+};
+
 const PaymentConfirmingCard = ({
+  runId,
   onSendAgain,
 }: {
+  runId: string;
   onSendAgain?: () => void;
 }) => {
   const { t } = useTranslation();
   const { runtime } = useChatView();
-  const { transport } = useAppContext();
-  const phase = usePaymentConfirmPhase();
-  // Sent once: the phase stays "confirmed" after the resend starts.
-  const sent = useRef(false);
-  useEffect(() => {
-    startPaymentConfirmWatch(transport.client);
-  }, [transport]);
-  const sendAgain = useEffectEvent(() => {
-    if (sent.current) return;
-    sent.current = true;
-    onSendAgain?.();
-  });
-  useEffect(() => {
-    if (phase === "confirmed") sendAgain();
-  }, [phase]);
-  if (phase === "confirmed") return null;
+  const phase = useTurnPaymentWatch("confirming", runId, onSendAgain);
+  if (paymentConfirmedFor(phase, runId)) return null;
   const late = phase === "late";
   return (
     <div
@@ -861,10 +865,7 @@ const PAYMENT_PLAN_COPY = {
 /**
  * Abacus's billing gate refused the turn for the plan: the subscription ended
  * (renew), or the account never had one (choose one). Not the credits card:
- * buying more would not let this account through. With no plan, the account
- * is re-checked while the card shows: once a payment lands the waiting
- * message is sent again, once, and a payment the platform holds turns the
- * card into Confirming, never a second purchase.
+ * buying more would not let this account through.
  */
 const PaymentPlanCard = ({
   cause,
@@ -872,7 +873,6 @@ const PaymentPlanCard = ({
   onSendAgain,
 }: {
   cause: "lapsed" | "no_plan";
-  /** The refused turn: its card's verdict and its one send-again outlive a remount. */
   runId: string;
   /** Offered when Retry would be: the latest outcome, a thread that can reply. */
   onSendAgain?: () => void;
@@ -881,38 +881,23 @@ const PaymentPlanCard = ({
   const { runtime, composer } = useChatView();
   const { transport } = useAppContext();
   const copy = PAYMENT_PLAN_COPY[cause];
-  const [verdict, setVerdict] = useState(() => turnPaymentVerdict(runId));
-  // The shared re-check (payment-confirming.ts): one account read for every
-  // card and the screen. Not once Confirming has taken over: its own watch
-  // then sends the message again, the one way it is sent.
-  usePaymentRecheck(
-    transport.client,
-    cause === "no_plan" && verdict == null ? `run:${runId}` : null,
-    (next) => {
-      const settled =
-        next === null
-          ? "landed"
-          : next.reason === "unconfirmed"
-            ? "held"
-            : null;
-      if (settled == null) return;
-      noteTurnPaymentVerdict(runId, settled);
-      setVerdict(settled);
-    }
+  // No plan: watched for a payment made anywhere, as the confirming card is.
+  const phase = useTurnPaymentWatch(
+    cause === "no_plan" ? "no_plan" : null,
+    runId,
+    onSendAgain
   );
-  const sendAgain = useEffectEvent(() => {
-    if (onSendAgain != null && claimTurnSendAgain(runId)) onSendAgain();
-  });
-  useEffect(() => {
-    if (verdict === "landed") sendAgain();
-  }, [verdict]);
-  if (verdict === "landed") return null;
-  if (verdict === "held")
-    return (
-      <PaymentConfirmingCard
-        {...(onSendAgain != null ? { onSendAgain } : {})}
-      />
-    );
+  if (cause === "no_plan") {
+    if (paymentConfirmedFor(phase, runId)) return null;
+    // Paid, and held: confirming, never a second purchase.
+    if (phase === "confirming" || phase === "late")
+      return (
+        <PaymentConfirmingCard
+          runId={runId}
+          {...(onSendAgain != null ? { onSendAgain } : {})}
+        />
+      );
+  }
   return (
     <div
       role="group"
@@ -928,7 +913,12 @@ const PaymentPlanCard = ({
           <Button
             size="sm"
             data-action={copy.action}
-            onClick={() => void runtime.host.openUpgrade(copy.src)}
+            onClick={() => {
+              void runtime.host.openUpgrade(copy.src);
+              // A watch past its 30 minutes reads the account again for this checkout.
+              if (cause === "no_plan")
+                startPaymentConfirmWatch(transport.client, "no_plan", runId);
+            }}
           >
             <UpgradeSeen src={copy.src} />
             {t(copy.cta)}
@@ -1439,6 +1429,7 @@ export const ErrorCard = ({
   if (payment != null)
     return payment.cause === "unconfirmed" ? (
       <PaymentConfirmingCard
+        runId={outcome.runId}
         {...(latest && canReply ? { onSendAgain: retry } : {})}
       />
     ) : (

@@ -23,17 +23,20 @@ import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BILLING_URL } from "#renderer/lib/abacus-links";
 import {
   checkPaymentNow,
-  PAYMENT_CONFIRM_LIMIT_MS,
   resetPaymentConfirmWatch,
   startPaymentConfirmWatch,
   usePaymentConfirmPhase,
-  usePaymentRecheck,
 } from "#renderer/lib/payment-confirming";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "#renderer/ui/dialog";
+
+/** How often the account is asked again while checkout is open. */
+const CHECKOUT_POLL_MS = 5_000;
+/** The checkout link lives 30 minutes; the watch stops after it. */
+const CHECKOUT_POLL_LIMIT_MS = 30 * 60 * 1000;
 
 /** The payment gate's verdict for this window, or null. */
 export const usePaymentRequired = (enabled = true) => {
@@ -75,6 +78,41 @@ const paymentCopy = (payment: AbacusPaymentRequired | null) =>
     ? COPY[payment.reason]
     : COPY.no_plan;
 
+/** An account that never paid (or a reason this build does not know): a plan, watched for a payment made anywhere. */
+const isNoPlan = (payment: AbacusPaymentRequired | null): boolean =>
+  payment != null &&
+  payment.reason !== "unconfirmed" &&
+  payment.reason !== "trial_ended" &&
+  payment.reason !== "lapsed";
+
+/**
+ * Join the shared payment watch (payment-confirming.ts) from this screen's
+ * view, and go on once it confirms the payment: the account is signed in.
+ */
+const useConfirmWatch = (
+  from: "confirming" | "no_plan" | null,
+  onSignedIn?: () => void | Promise<void>
+) => {
+  const { transport } = useAppContext();
+  const queryClient = useQueryClient();
+  const phase = usePaymentConfirmPhase();
+  useEffect(() => {
+    if (from != null) startPaymentConfirmWatch(transport.client, from);
+  }, [transport, from]);
+  const confirmed = useEffectEvent(async () => {
+    queryClient.setQueryData(
+      transport.orpc.account.payment.queryKey({ input: {} }),
+      null
+    );
+    await queryClient.invalidateQueries();
+    await onSignedIn?.();
+  });
+  useEffect(() => {
+    if (from != null && phase === "confirmed") void confirmed();
+  }, [from, phase]);
+  return phase;
+};
+
 /**
  * A payment the platform holds (payment-confirming.ts): "Confirming your
  * payment…" while the account is checked, then, after a few minutes, that it
@@ -97,21 +135,7 @@ const PaymentConfirmingPanel = ({
   const { transport } = context;
   const [busy, setBusy] = useState(false);
   const queryClient = useQueryClient();
-  const phase = usePaymentConfirmPhase();
-  useEffect(() => {
-    startPaymentConfirmWatch(transport.client);
-  }, [transport]);
-  const confirmed = useEffectEvent(async () => {
-    queryClient.setQueryData(
-      transport.orpc.account.payment.queryKey({ input: {} }),
-      null
-    );
-    await queryClient.invalidateQueries();
-    await onSignedIn?.();
-  });
-  useEffect(() => {
-    if (phase === "confirmed") void confirmed();
-  }, [phase]);
+  const phase = useConfirmWatch("confirming", onSignedIn);
   const late = phase === "late";
   return (
     <div
@@ -208,8 +232,13 @@ const PaymentConfirmingPanel = ({
 
 export const PaymentRequiredPanel = (
   props: Parameters<typeof PaymentPlanPanel>[0]
-) =>
-  isUnconfirmed(props.payment) ? (
+) => {
+  const phase = usePaymentConfirmPhase();
+  // A held payment, or one the watch found held while the plan showed.
+  const held =
+    isUnconfirmed(props.payment) ||
+    (isNoPlan(props.payment) && (phase === "confirming" || phase === "late"));
+  return held ? (
     <PaymentConfirmingPanel
       title={props.title}
       {...(props.onSignedIn != null && { onSignedIn: props.onSignedIn })}
@@ -219,6 +248,7 @@ export const PaymentRequiredPanel = (
   ) : (
     <PaymentPlanPanel {...props} />
   );
+};
 
 /** No plan yet, a free trial that ended or a plan that lapsed: the plan, and the ways out. */
 const PaymentPlanPanel = ({
@@ -244,11 +274,11 @@ const PaymentPlanPanel = ({
   const queryClient = useQueryClient();
   const copy = paymentCopy(payment);
   const lapsed = payment?.reason === "lapsed";
-  // No plan yet: a payment made anywhere may land while this shows, as on the
-  // confirming screen this replaced for it, so the account is re-checked from
-  // the start. A trial or plan that ended is re-checked once Upgrade opens checkout.
-  const noPlan =
-    payment?.reason !== "lapsed" && payment?.reason !== "trial_ended";
+  // No plan yet: the shared payment watch reads the account from the start, as
+  // the confirming screen did, so a payment made anywhere moves the user on.
+  // A trial or plan that ended is read once Upgrade opens checkout.
+  const noPlan = isNoPlan(payment);
+  useConfirmWatch(noPlan ? "no_plan" : null, onSignedIn);
   const src = noPlan ? "payment_no_plan" : "payment_lapsed";
   const [billing, setBilling] = useState<BillingPlan | null>(null);
   const [checkoutAt, setCheckoutAt] = useState<number | null>(null);
@@ -270,7 +300,12 @@ const PaymentPlanPanel = ({
     };
   }, [transport, lapsed]);
 
-  const settle = async (next: AbacusPaymentRequired | null) => {
+  const recheck = async (asked: boolean) => {
+    if (asked) setChecking(true);
+    const next = await transport.client.account
+      .payment({ refresh: true })
+      .catch(() => payment);
+    if (asked) setChecking(false);
     if (next == null) {
       await queryClient.invalidateQueries();
       await onSignedIn?.();
@@ -280,33 +315,27 @@ const PaymentPlanPanel = ({
       transport.orpc.account.payment.queryKey({ input: {} }),
       next
     );
+    if (asked) setStill(true);
   };
-  const recheck = async () => {
-    setChecking(true);
-    const next = await transport.client.account
-      .payment({ refresh: true })
-      .catch(() => payment);
-    setChecking(false);
-    await settle(next);
-    if (next != null) setStill(true);
-  };
-  // Checkout runs in the browser: the app goes on the moment it lands. One
-  // shared re-check (payment-confirming.ts), with the no-plan chat cards; a
-  // checkout opened here opens a fresh window for its link.
-  usePaymentRecheck(
-    transport.client,
-    checkoutAt != null ? `checkout:${checkoutAt}` : noPlan ? "screen" : null,
-    (next) => void settle(next)
-  );
-  // The waiting line goes with the checkout link.
+  const poll = useEffectEvent(() => void recheck(false));
+
+  // Checkout runs in the browser: the app goes on the moment it lands.
   useEffect(() => {
     if (checkoutAt == null) return;
-    const timer = setTimeout(
-      () => setCheckoutAt(null),
-      checkoutAt + PAYMENT_CONFIRM_LIMIT_MS - Date.now()
-    );
-    return () => clearTimeout(timer);
-  }, [checkoutAt]);
+    // No plan: the payment watch already reads the account; the link's life only.
+    const timer = setInterval(() => {
+      if (Date.now() - checkoutAt > CHECKOUT_POLL_LIMIT_MS) setCheckoutAt(null);
+      else if (!noPlan) poll();
+    }, CHECKOUT_POLL_MS);
+    const onFocus = () => {
+      if (!noPlan) poll();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [checkoutAt, noPlan]);
 
   const offer = lapsed ? null : wallOffer(billing);
   return (
@@ -364,6 +393,8 @@ const PaymentPlanPanel = ({
           onClick={() => {
             // Called inside the click: the web build opens its tab here.
             void openUpgrade(transport.client, src);
+            // A watch past its 30 minutes reads the account again for this link.
+            if (noPlan) startPaymentConfirmWatch(transport.client, "no_plan");
             setCheckoutAt(Date.now());
           }}
         >
@@ -375,7 +406,7 @@ const PaymentPlanPanel = ({
           className="h-10 text-sm"
           data-action="try-again"
           disabled={checking}
-          onClick={() => void recheck()}
+          onClick={() => void recheck(true)}
         >
           {checking && <Loader2 aria-hidden className="animate-spin" />}
           {t(

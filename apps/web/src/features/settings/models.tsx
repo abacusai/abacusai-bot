@@ -234,7 +234,11 @@ const useProviderConnects = () => {
       if (IS_ELECTRON) void auth.cancel({}).catch(() => undefined);
     };
     rows.start(field.provider, {
-      run: () => (IS_ELECTRON ? auth.start({}) : signInAbacus(transport, {})),
+      // Abacus goes through signInAbacus everywhere: it resets the account's state.
+      run: () =>
+        IS_ELECTRON && field.connect !== "abacus"
+          ? auth.start({})
+          : signInAbacus(transport, {}),
       cancel,
       leave: cancel,
       connected: async () => {
