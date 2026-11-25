@@ -683,6 +683,9 @@ export const SessionDock = ({
         label={t("sessions.dock.full")}
         aria-pressed={expanded}
         onClick={() => {
+          // The terminal on screen keeps the keys, as after dragging the
+          // divider: Space or Enter must not toggle full view again.
+          if (activeTerminal) focusTerminal(activeTerminal);
           if (draft) return setDraftView(expanded ? "split" : "full");
           void navigate({
             to: "/sessions/$sessionId",
