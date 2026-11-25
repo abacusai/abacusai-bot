@@ -4,3 +4,6 @@
 # Wire goldens are byte baselines, including their newlines.
 *.ndjson -text
 *.jsonl -text
+
+# Built binaries (the vendored terminal core).
+*.wasm binary
