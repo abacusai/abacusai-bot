@@ -7,6 +7,7 @@ import {
   isHiddenUserText,
   isPastedText,
   isRoutineFire,
+  pastedTextKey,
   legacyOperator,
   visibleUserText,
 } from "./user-text";
@@ -164,5 +165,17 @@ describe("pasted-text files", () => {
     ["/w/0f8fad5b-pasted-text-1.txt", false],
   ])("%s is pasted text: %s", (path, pasted) => {
     expect(isPastedText(path)).toBe(pasted);
+  });
+
+  it("names a note by its file's own name, whichever host saved it", () => {
+    expect(
+      pastedTextKey(
+        "/vm/.abacusai-bot/temp/0f8fad5b-d9cb-469f-a165-70867728950e-pasted-text-note-1a2b.txt"
+      )
+    ).toBe("pasted-text-note-1a2b.txt");
+    expect(pastedTextKey("C:\\w\\pasted-text-note-1a2b.txt")).toBe(
+      "pasted-text-note-1a2b.txt"
+    );
+    expect(pastedTextKey("/w/notes.txt")).toBeNull();
   });
 });

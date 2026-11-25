@@ -8,6 +8,8 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { MessageFeedback } from "#renderer/components/message-feedback";
+
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario } from "../testing";
@@ -165,90 +167,160 @@ describe("ChatView over scenarios", () => {
   });
 });
 
-it("a tall user message folds once; a click or the text's own focus leaves it folded, Tab to a link below the fold opens it", async () => {
+it.each([
+  ["a link", "a"],
+  ["a code block", "pre"],
+])(
+  "a tall user message folds once; a press or the text's own focus leaves it folded, keyboard focus on %s below the fold opens it",
+  async (_label, below) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("r1"),
+      ...b.text(
+        "u1",
+        "user",
+        `${"A long paragraph of the user's own words. ".repeat(80)}\n\n\`\`\`text\n${"log line\n".repeat(40)}\`\`\`\n\nSee [the spec](https://example.test/spec).`
+      ),
+      b.runFinished("r1"),
+    ]);
+    const height = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "scrollHeight"
+    );
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const bottom =
+          this.dataset.slot === "user-text"
+            ? 320
+            : this.tagName === "A" || this.tagName === "PRE"
+              ? 900
+              : 2000;
+        return {
+          top: 0,
+          bottom,
+          left: 0,
+          right: 600,
+          width: 600,
+          height: bottom,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+    const clientHeight = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "clientHeight"
+    );
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.dataset.slot === "user-text" ? 320 : 0;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.dataset.slot === "user-text" ? 2000 : 0;
+      },
+    });
+    try {
+      const rendered = await renderRelay(relay, "session");
+      cleanups.push(() => rendered.cleanup());
+      const fold = await waitFor(() => {
+        const node = document.querySelector('[data-slot="user-text"]');
+        expect(node?.hasAttribute("data-folded")).toBe(true);
+        return node as HTMLElement;
+      });
+      // A click (and the selectable text's own focus) is not a reason to open.
+      const text = fold.querySelector<HTMLElement>("[data-message-text]")!;
+      fireEvent.mouseDown(text);
+      text.focus();
+      fireEvent.click(text);
+      expect(fold.hasAttribute("data-folded")).toBe(true);
+      // A press on what reaches below the fold (a drag-select starting there) focuses it: still folded.
+      const target = fold.querySelector<HTMLElement>(below)!;
+      fireEvent.pointerDown(target);
+      target.focus();
+      fireEvent.pointerUp(target);
+      expect(fold.hasAttribute("data-folded")).toBe(true);
+      target.blur();
+      // Keyboard focus landing there opens it.
+      target.focus();
+      await waitFor(() => expect(fold.hasAttribute("data-folded")).toBe(false));
+      expect(
+        document.querySelector('[data-slot="user-text-more"]')?.textContent
+      ).toBe("Show less");
+    } finally {
+      rect.mockRestore();
+      if (clientHeight)
+        Object.defineProperty(
+          HTMLElement.prototype,
+          "clientHeight",
+          clientHeight
+        );
+      if (height)
+        Object.defineProperty(HTMLElement.prototype, "scrollHeight", height);
+      else
+        delete (HTMLElement.prototype as { scrollHeight?: number })
+          .scrollHeight;
+    }
+  }
+);
+
+it("a long thumbs note in a chat is saved where the chat's composer saves a paste", async () => {
   const relay = new FakeRelay();
   relay.emitAll([
     ...b.sessionReady(),
     b.runStarted("r1"),
-    ...b.text(
-      "u1",
-      "user",
-      `${"A long paragraph of the user's own words. ".repeat(80)}\n\nSee [the spec](https://example.test/spec).`
-    ),
+    ...b.text("u1", "user", "build the header"),
+    ...b.text("a1", "assistant", "Done: the header is in index.html."),
     b.runFinished("r1"),
   ]);
-  const height = Object.getOwnPropertyDescriptor(
-    HTMLElement.prototype,
-    "scrollHeight"
+  const send = vi.fn(
+    async (_rating: string, _comment?: string, _file?: string) => ({
+      ok: true as const,
+    })
   );
-  const rect = vi
-    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-    .mockImplementation(function (this: HTMLElement) {
-      const bottom =
-        this.dataset.slot === "user-text"
-          ? 320
-          : this.tagName === "A"
-            ? 900
-            : 2000;
-      return {
-        top: 0,
-        bottom,
-        left: 0,
-        right: 600,
-        width: 600,
-        height: bottom,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      } as DOMRect;
-    });
-  const clientHeight = Object.getOwnPropertyDescriptor(
-    HTMLElement.prototype,
-    "clientHeight"
+  const rendered = await renderRelay(
+    relay,
+    "session",
+    { attachmentsBase: "/repo" },
+    {
+      slots: {
+        decorateMessage: (message) =>
+          message.role === "assistant"
+            ? { after: <MessageFeedback send={send} reader={{}} /> }
+            : null,
+      },
+    }
   );
-  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.dataset.slot === "user-text" ? 320 : 0;
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.dataset.slot === "user-text" ? 2000 : 0;
-    },
-  });
-  try {
-    const rendered = await renderRelay(relay, "session");
-    cleanups.push(() => rendered.cleanup());
-    const fold = await waitFor(() => {
-      const node = document.querySelector('[data-slot="user-text"]');
-      expect(node?.hasAttribute("data-folded")).toBe(true);
-      return node as HTMLElement;
-    });
-    // A click (and the selectable text's own focus) is not a reason to open.
-    const text = fold.querySelector<HTMLElement>("[data-message-text]")!;
-    fireEvent.mouseDown(text);
-    text.focus();
-    fireEvent.click(text);
-    expect(fold.hasAttribute("data-folded")).toBe(true);
-    // Tab lands on a link hidden below the fold: it opens.
-    fold.querySelector<HTMLElement>("a")!.focus();
-    await waitFor(() => expect(fold.hasAttribute("data-folded")).toBe(false));
-    expect(
-      document.querySelector('[data-slot="user-text-more"]')?.textContent
-    ).toBe("Show less");
-  } finally {
-    rect.mockRestore();
-    if (clientHeight)
-      Object.defineProperty(
-        HTMLElement.prototype,
-        "clientHeight",
-        clientHeight
-      );
-    if (height)
-      Object.defineProperty(HTMLElement.prototype, "scrollHeight", height);
-    else
-      delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight;
-  }
+  cleanups.push(() => rendered.cleanup());
+  const savePasted = vi
+    .spyOn(rendered.runtime.host, "savePasted")
+    .mockImplementation(async (base, files) =>
+      files.map((file) => `${base}/.abacusai-bot/temp/${file.name}`)
+    );
+  fireEvent.click(await screen.findByRole("button", { name: "Bad response" }));
+  const box = await screen.findByRole("textbox", { name: "Tell us more" });
+  const note = "a note the user pasted ".repeat(5_000);
+  fireEvent.change(box, { target: { value: note } });
+  expect(
+    await screen.findByText(
+      "Long text goes in as a pasted-text file, read in full."
+    )
+  ).toBeTruthy();
+  // The box's own Send, not the composer's.
+  fireEvent.click(
+    within(box.closest("form")!).getByRole("button", { name: "Send" })
+  );
+  await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+  expect(savePasted).toHaveBeenCalledTimes(1);
+  expect(savePasted.mock.calls[0]![0]).toBe("/repo");
+  const [, start, file] = send.mock.calls[1]!;
+  expect(start).toBe(note.trim().slice(0, 100_000));
+  expect(file).toMatch(
+    /^\/repo\/\.abacusai-bot\/temp\/pasted-text-note-[0-9a-f]{16}\.txt$/
+  );
 });

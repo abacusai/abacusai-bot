@@ -1254,8 +1254,8 @@ export class AguiRelayService implements AguiSource {
     rating: "up" | "down";
     comment: string;
     /**
-     * The note as the user wrote it, when `comment` is the file it was
-     * saved in: a note is taken once, whichever file a re-send names.
+     * What makes the note this note, when `comment` is the file it was saved
+     * in (its content id): a note is taken once, whichever path a re-send names.
      */
     note?: string;
   }): Promise<boolean> {

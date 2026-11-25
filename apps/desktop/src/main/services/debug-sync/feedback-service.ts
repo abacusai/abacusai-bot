@@ -14,7 +14,10 @@ import {
   redactContactDetails,
 } from "@abacus-ai/contract/rating-prompt";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
-import { isPastedText } from "@abacus-ai/contract/transcript/user-text";
+import {
+  isPastedText,
+  USER_TEXT_INLINE_MAX,
+} from "@abacus-ai/contract/transcript/user-text";
 import { app } from "electron";
 
 import { readSettings } from "../config/settings";
@@ -87,7 +90,13 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
     return null;
   if (typeof rating !== "string" || !RATINGS.has(rating as FeedbackRating))
     return null;
-  const comment = typeof raw.comment === "string" ? raw.comment.trim() : "";
+  // Never more than the inline bound: the renderer sends a longer note as a
+  // file and its start; an older client that sends it all is cut here, as
+  // the 2,000-character cut it replaces did.
+  const comment =
+    typeof raw.comment === "string"
+      ? raw.comment.trim().slice(0, USER_TEXT_INLINE_MAX)
+      : "";
   const model =
     typeof raw.model === "string" && raw.model.length > 0
       ? raw.model.slice(0, MAX_MODEL_LENGTH)

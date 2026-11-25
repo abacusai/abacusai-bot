@@ -198,6 +198,15 @@ describe("what the renderer may send", () => {
         comment: "x".repeat(5000),
       })?.comment
     ).toHaveLength(5000);
+    // An older client may send a note past the inline bound: cut, not refused.
+    expect(
+      sanitizeFeedback({
+        sessionId: "s",
+        segmentId: "t",
+        rating: "up",
+        comment: "x".repeat(150_000),
+      })?.comment
+    ).toHaveLength(100_000);
   });
 
   it.each([

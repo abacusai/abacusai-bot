@@ -9,7 +9,6 @@ import type {
   TurnFeedbackOutcome,
 } from "../contracts";
 import { CHAT_RATINGS, RATING_TASK_TYPES } from "../rating-prompt";
-import { USER_TEXT_INLINE_MAX } from "../transcript/user-text";
 import { mutation, query } from "./base";
 import { AgentModeSchema, SessionId, WorkspaceId } from "./ids";
 
@@ -17,8 +16,8 @@ export const TurnFeedbackInputSchema = v.object({
   sessionId: SessionId,
   segmentId: v.pipe(v.string(), v.nonEmpty()),
   rating: v.picklist(["up", "down", "clear"]),
-  // Never more than the inline bound: a longer note travels as `commentFile`.
-  comment: v.optional(v.pipe(v.string(), v.maxLength(USER_TEXT_INLINE_MAX))),
+  // Main cuts it to the inline bound (an older client may send more).
+  comment: v.optional(v.string()),
   commentFile: v.optional(v.pipe(v.string(), v.maxLength(4096))),
   model: v.optional(v.nullable(v.string())),
 });

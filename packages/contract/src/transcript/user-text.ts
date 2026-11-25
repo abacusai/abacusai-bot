@@ -15,6 +15,7 @@ export {
   isHiddenUserText,
   isPastedText,
   legacyOperator,
+  pastedTextKey,
   pastedTextName,
   pastedTextTitle,
   USER_TEXT_INLINE_MAX,

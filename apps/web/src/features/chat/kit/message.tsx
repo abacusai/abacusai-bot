@@ -350,15 +350,17 @@ const USER_FOLD_PX = 320;
  * to spare, so a message just over it stays open) behind "Show more", as a
  * long code block folds. The one fold here: it tells markdown's code blocks
  * not to fold inside it (`FoldsWholeContext`), and once opened it stays
- * open. Keyboard focus landing below the fold (a link, a code block's copy
- * button) opens it; a click on the text or the text's own focus ring does
- * not. Measured, so it holds for any width and font.
+ * open. Keyboard focus landing below the fold (a link, a code block) opens
+ * it; a click or drag-select anywhere in it, or the text's own focus ring,
+ * does not. Measured, so it holds for any width and font.
  */
 const FoldedText = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const [tall, setTall] = useState(false);
   const [open, setOpen] = useState(false);
+  /** A pointer is down in the text: the focus it causes is not keyboard focus. */
+  const pointer = useRef(false);
   useLayoutEffect(() => {
     const node = ref.current;
     if (node == null) return;
@@ -376,7 +378,21 @@ const FoldedText = ({ children }: { children: ReactNode }) => {
         ref={ref}
         data-slot="user-text"
         data-folded={folded ? "" : undefined}
+        onPointerDownCapture={() => {
+          pointer.current = true;
+        }}
+        onPointerUpCapture={() => {
+          pointer.current = false;
+        }}
+        onPointerCancelCapture={() => {
+          pointer.current = false;
+        }}
         onFocusCapture={(event) => {
+          // A press (a click, a drag-select) focuses what it lands on: only keyboard focus opens.
+          if (pointer.current) {
+            pointer.current = false;
+            return;
+          }
           if (!folded) return;
           const fold = event.currentTarget;
           const target = event.target as HTMLElement;

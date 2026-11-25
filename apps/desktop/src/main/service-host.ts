@@ -17,7 +17,11 @@ import {
   readUserLanguage,
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
-import { ownWords, visibleUserText } from "@abacus-ai/agent/user-text";
+import {
+  ownWords,
+  pastedTextKey,
+  visibleUserText,
+} from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
@@ -5485,8 +5489,12 @@ export class ServiceHost {
           feedback.commentFile != null
             ? `@${feedback.commentFile}`
             : feedback.comment,
-        // Once per note: a re-send names its file again, so the words are the key.
-        note: feedback.comment,
+        // Once per note: a file's name is its content id, so a re-send of the
+        // same note is the same key and a corrected one a new key.
+        note:
+          feedback.commentFile != null
+            ? (pastedTextKey(feedback.commentFile) ?? feedback.commentFile)
+            : feedback.comment,
       })
       .catch((error: unknown) =>
         console.warn(
