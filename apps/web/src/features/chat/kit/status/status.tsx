@@ -65,7 +65,11 @@ import {
 } from "#renderer/components/credits-card/model-unavailable";
 import { PaidOfferButtons } from "#renderer/components/credits-card/paid-offer";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
-import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import {
+  useCreditWallStands,
+  usePrefs,
+  useUpdatePrefs,
+} from "#renderer/data/db/prefs";
 import {
   ABACUS_AGENT_URL,
   ABACUS_BILLING_URL,
@@ -1279,12 +1283,16 @@ export const ErrorCard = ({
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
   const upgrade = wantsUpgradeCard(actions);
+  // The turn stopped at the credit wall. Whether the wall still stands is the
+  // account's answer, not the turn's: once a plan, a top-up or credits back
+  // lift it, the card offers to go on and pitches nothing.
+  const wallStands = useCreditWallStands();
+  const atWall =
+    upgrade && actions.some((action) => action.type === "upgrade-abacus");
+  const wallLifted = atWall && wallStands === false;
   // A paid plan at the wall: its offer picks the card. Basic's (the next plan
   // alone) is the free plan's one line, its dialog carrying the pitch.
-  const paidAtWall =
-    upgrade &&
-    paying &&
-    actions.some((action) => action.type === "upgrade-abacus");
+  const paidAtWall = atWall && paying && wallStands === true;
   const [paidWallOffer, setPaidWallOffer] = useState<
     PaidCreditsOffer | null | undefined
   >(undefined);
@@ -1414,9 +1422,8 @@ export const ErrorCard = ({
               : "retired"
           }
           label={unavailable.label ?? unavailable.model ?? ""}
-          creditsOut={actions.some(
-            (action) => action.type === "upgrade-abacus"
-          )}
+          // Out of credits as the account stands now, not when the turn stopped.
+          creditsOut={atWall && !wallLifted}
           paid={paying}
           {...(latest &&
             canReply &&
@@ -1496,7 +1503,6 @@ export const ErrorCard = ({
         t("workspace.retryMessage")
       );
     };
-    const atWall = actions.some((action) => action.type === "upgrade-abacus");
     const continueFree = actions.find(
       (action) => action.type === "continue-free"
     );
@@ -1561,11 +1567,37 @@ export const ErrorCard = ({
           )}
         </>
       ) : undefined;
-    // Until the plan and a paid plan's offer are read, no card: they pick which
-    // one, and someone who paid must never first read the free plan's words.
+    // Until the wall, the plan and a paid plan's offer are read, no card: they
+    // pick which one, and someone who paid must never first read the free
+    // plan's words.
+    if (atWall && wallStands == null) return null;
+    const task = taskText(session.hostStore.state.messages);
+    // The wall is gone: the stopped turn goes on where it stopped, by choice.
+    if (wallLifted)
+      return (
+        <div
+          className="text-muted-foreground flex min-h-7 flex-wrap items-center gap-2 text-xs"
+          data-slot="run-marker"
+          data-kind="credits-back"
+        >
+          <CircleStop aria-hidden className="size-3.5 shrink-0" />
+          {task != null
+            ? t("outcome.wall.creditsBackTask", { task })
+            : t("outcome.wall.creditsBack")}
+          {latest && canReply ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              data-action="continue"
+              onClick={() => void resume().catch(() => {})}
+            >
+              {t("status.continue")}
+            </Button>
+          ) : null}
+        </div>
+      );
     if (atWall && providedTier == null && !tierRead) return null;
     if (paidAtWall && paidWallOffer === undefined) return null;
-    const task = taskText(session.hostStore.state.messages);
     // A wall further up the chat is history: its title alone, the offer is the latest one's.
     if (atWall && !latest)
       return (

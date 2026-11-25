@@ -2316,18 +2316,23 @@ export class ServiceHost {
     });
   });
   /** The plan decides which paid-plan capabilities are on or offered, and which models it serves. */
-  private readonly stopPlanForwarding = onAbacusPlanChange(() => {
+  private readonly stopPlanForwarding = onAbacusPlanChange(({ from }) => {
     this.toolAvailabilityChanged();
     this.moveModelPinsToTier();
     // State the old plan's credits set ends with it: the wall, a free-models
     // choice at it, and milestone marks. Every agent hears the wall move.
+    // A launch's first read knows no old plan: a wall from before it stands
+    // until an account read shows credits (wallAfterAccountRead).
     const prefs = this.prefs?.();
     const walled = prefs?.get().creditsExhaustedAt != null;
-    const wall = prefs != null ? wallAfterPlanChange(prefs.get()) : null;
+    const wall =
+      prefs != null && from !== "unknown"
+        ? wallAfterPlanChange(prefs.get())
+        : null;
     if (wall != null) prefs?.update(wall);
-    // A wall that goes refreshes the agents (prefsChanged); without one they
+    // A wall that goes refreshes the agents (prefsChanged); otherwise they
     // still take the new plan's catalog.
-    if (!walled) this.refreshAgentProviders();
+    if (!walled || wall == null) this.refreshAgentProviders();
     void this.creditThresholds.planChanged();
   });
   private readonly cronScheduler = new CronScheduler(
