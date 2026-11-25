@@ -26,6 +26,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
   lastPickedWorkspaceId: null,
   recentFolders: [],
   creditsExhaustedAt: null,
+  creditsExhaustedOn: null,
   freeLaneChosenAt: null,
   routineCreditHold: null,
   creditThresholds: {},

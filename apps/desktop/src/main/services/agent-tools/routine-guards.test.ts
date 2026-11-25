@@ -258,28 +258,36 @@ describe("the credit wall a routine meets", () => {
       ...patch,
     }) as PrefsRow;
   const WALL = { actions: [{ type: "upgrade-abacus", cause: "exhausted" }] };
+  const PAID = { from: "free", to: "basic" } as const;
   const DAY = 24 * 60 * 60_000;
 
   it("is stamped for the next launch's card whoever met it, a routine with nobody watching included", () => {
-    expect(wallAfterError(row(), WALL, 5_000)).toEqual({
+    const on = { tier: "free", remaining: 0 };
+    expect(wallAfterError(row(), WALL, 5_000, on)).toEqual({
       creditsExhaustedAt: 5_000,
+      creditsExhaustedOn: on,
       freeLaneChosenAt: null,
     });
     // The first refusal of the day stands; other failures stamp nothing.
     expect(
-      wallAfterError(row({ creditsExhaustedAt: 1_000 }), WALL, 5_000)
+      wallAfterError(row({ creditsExhaustedAt: 1_000 }), WALL, 5_000, on)
     ).toBeNull();
     expect(
-      wallAfterError(row(), { actions: [{ type: "switch-model" }] }, 5_000)
+      wallAfterError(row(), { actions: [{ type: "switch-model" }] }, 5_000, on)
     ).toBeNull();
     // A day on, it is a new wall, and the choice is asked for again.
     expect(
       wallAfterError(
         row({ creditsExhaustedAt: 1_000, freeLaneChosenAt: 1_000 }),
         WALL,
-        1_000 + DAY
+        1_000 + DAY,
+        on
       )
-    ).toEqual({ creditsExhaustedAt: 1_000 + DAY, freeLaneChosenAt: null });
+    ).toEqual({
+      creditsExhaustedAt: 1_000 + DAY,
+      creditsExhaustedOn: on,
+      freeLaneChosenAt: null,
+    });
   });
 
   it("a wall in the user's own chat is the one asked again on their return; their next words there settle it", () => {
@@ -356,19 +364,28 @@ describe("the credit wall a routine meets", () => {
     expect(wallAfterAccountRead(wall, read(500, 2_000))).toBeNull();
     expect(wallAfterAccountRead(wall, read(500, 1_000 + 10 * 60_000))).toEqual({
       creditsExhaustedAt: null,
+      creditsExhaustedOn: null,
       freeLaneChosenAt: null,
     });
+    // More left than the read the wall was met on: credits were added, at once.
+    const metOn = {
+      ...wall,
+      creditsExhaustedOn: { tier: "pro", remaining: 0 },
+    };
+    expect(wallAfterAccountRead(metOn, read(500, 2_000))).not.toBeNull();
   });
 
   it("goes the moment the plan changes, with a free-models choice and the walled chat's ask, even right after the wall", () => {
     const cleared = {
       creditsExhaustedAt: null,
+      creditsExhaustedOn: null,
       freeLaneChosenAt: null,
       dismissals: { wallReopen: null },
     };
     expect(
       wallAfterPlanChange(
-        row({ creditsExhaustedAt: 1_000, dismissals: {} as never })
+        row({ creditsExhaustedAt: 1_000, dismissals: {} as never }),
+        PAID
       )
     ).toEqual(cleared);
     expect(
@@ -377,20 +394,37 @@ describe("the credit wall a routine meets", () => {
           creditsExhaustedAt: 1_000,
           freeLaneChosenAt: 2_000,
           dismissals: {} as never,
-        })
+        }),
+        PAID
       )
     ).toEqual(cleared);
     const reopen = row({ dismissals: {} as never });
     expect(
-      wallAfterPlanChange({
-        ...reopen,
-        dismissals: {
-          ...reopen.dismissals,
-          wallReopen: { sessionId: "s1", wallAt: 1_000, askedAt: null },
+      wallAfterPlanChange(
+        {
+          ...reopen,
+          dismissals: {
+            ...reopen.dismissals,
+            wallReopen: { sessionId: "s1", wallAt: 1_000, askedAt: null },
+          },
         },
-      })
+        PAID
+      )
     ).toEqual(cleared);
-    expect(wallAfterPlanChange(row({ dismissals: {} as never }))).toBeNull();
+    expect(
+      wallAfterPlanChange(row({ dismissals: {} as never }), PAID)
+    ).toBeNull();
+    // A launch's first read: a change only against the plan the wall was met on.
+    const launch = { from: "unknown", to: "basic" } as const;
+    const metOn = (tier: string | null) =>
+      row({
+        creditsExhaustedAt: 1_000,
+        ...(tier != null && { creditsExhaustedOn: { tier, remaining: 0 } }),
+        dismissals: {} as never,
+      });
+    expect(wallAfterPlanChange(metOn("free"), launch)).toEqual(cleared);
+    expect(wallAfterPlanChange(metOn("basic"), launch)).toBeNull();
+    expect(wallAfterPlanChange(metOn(null), launch)).toBeNull();
   });
 
   it("tells every agent when it moves, and only then", () => {

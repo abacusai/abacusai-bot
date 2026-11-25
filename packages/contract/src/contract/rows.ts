@@ -32,6 +32,16 @@ import type { SiteReadyMark } from "../site-deploy";
 import type { SuccessPitchCard, SuccessPitchMark } from "../success-pitch";
 import type { TopModelHintCard } from "../top-model-hint";
 
+/**
+ * The account as main last read it when the credit wall was met: its plan
+ * tier and the credits it showed left (null when the read carried none).
+ * A later read on another plan, or with more left, is the account changed.
+ */
+export interface CreditWallMetOn {
+  tier: string;
+  remaining: number | null;
+}
+
 /** Random per main-process start; seqs compare only within one epoch. */
 export type Epoch = string;
 
@@ -214,6 +224,8 @@ export interface PrefsRow {
   /** At most 5. */
   recentFolders: string[];
   creditsExhaustedAt: number | null;
+  /** What the account read when the wall was met; see credit-wall.ts. */
+  creditsExhaustedOn?: CreditWallMetOn | null;
   /** When the user chose the free models at the credit wall; see credit-wall.ts. */
   freeLaneChosenAt?: number | null;
   /** Routines waiting for credits; see RoutineCreditHold. */
