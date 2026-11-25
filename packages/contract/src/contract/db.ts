@@ -13,7 +13,11 @@ import {
   KEEP_KINDS,
   SUCCESS_PITCH_LEADS,
   SUCCESS_PITCH_MOMENTS,
+  SUCCESS_PITCH_PLACES,
   SUCCESS_PITCH_TRIGGERS,
+  type SuccessPitchCard,
+  type SuccessPitchMark,
+  type SuccessPitchOffer,
 } from "../success-pitch";
 import { base, mutation, query, subscription } from "./base";
 import { AvatarAccessorySchema, BotWallpaperSchema } from "./bots";
@@ -129,6 +133,17 @@ export const RoutineUpdateInputSchema = v.object({
 
 const NullableTimestamp = v.nullable(v.number());
 
+/**
+ * A strict object that names every field of `T`, optional ones too: a field
+ * its type has and its schema lacks makes the write that carries it throw.
+ */
+const strictOf =
+  <T extends object>() =>
+  <const E extends Record<keyof T, v.GenericSchema>>(
+    entries: E & Record<Exclude<keyof E, keyof T>, never>
+  ) =>
+    v.strictObject(entries as E);
+
 const CreditThresholdSchema = v.picklist(CREDIT_THRESHOLDS);
 const CreditThresholdMarkSchema = v.strictObject({
   reached: CreditThresholdSchema,
@@ -141,9 +156,9 @@ const CreditThresholdMarkSchema = v.strictObject({
   plan: v.optional(v.picklist(["free", "paid"])),
 });
 
-const SuccessPitchMarkSchema = v.strictObject({
+const SuccessPitchMarkSchema = strictOf<SuccessPitchMark>()({
   offer: v.nullable(
-    v.strictObject({
+    strictOf<SuccessPitchOffer>()({
       id: v.string(),
       sessionId: v.string(),
       trigger: v.picklist(SUCCESS_PITCH_TRIGGERS),
@@ -152,6 +167,7 @@ const SuccessPitchMarkSchema = v.strictObject({
       at: v.number(),
       name: v.optional(v.nullable(v.string())),
       detail: v.optional(v.nullable(v.string())),
+      place: v.optional(v.picklist(SUCCESS_PITCH_PLACES)),
     })
   ),
   appTurns: v.number(),
@@ -161,7 +177,7 @@ const SuccessPitchMarkSchema = v.strictObject({
   keepOffered: v.optional(v.array(v.string())),
 });
 
-const PitchCardSchema = v.strictObject({
+const PitchCardSchema = strictOf<SuccessPitchCard>()({
   shown: v.number(),
   lastShownAt: NullableTimestamp,
   notNow: v.number(),

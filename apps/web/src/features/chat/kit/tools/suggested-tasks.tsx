@@ -281,7 +281,12 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
       }
       // A free account's offer after a result rides on its next step's tasks.
       plan={
-        nextStep && db != null ? <NextStepPlanRow active={running} /> : null
+        nextStep && db != null ? (
+          <NextStepPlanRow
+            active={running}
+            replyId={messages.findLast((each) => each.role === "assistant")?.id}
+          />
+        ) : null
       }
     />
   );

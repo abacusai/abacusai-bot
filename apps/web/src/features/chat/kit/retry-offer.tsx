@@ -27,6 +27,10 @@ import {
   type RetryOfferReason,
   retryOfferReason,
 } from "@abacus-ai/contract/retry-offer";
+import {
+  type SuccessPitchPlace,
+  successPitchPlace,
+} from "@abacus-ai/contract/success-pitch";
 import { EMPTY_TOP_MODEL_HINT_CARD } from "@abacus-ai/contract/top-model-hint";
 import { isWorkCall } from "@abacus-ai/contract/work-tools";
 import type { UIMessage } from "@tanstack/ai-client";
@@ -121,14 +125,16 @@ export const retryOfferTarget = (
   return reason == null ? null : { id: carrier.id, turn: turns.length, reason };
 };
 
-/** A success pitch is waiting on this chat, unanswered: it owns the space under the reply. */
+/** A success pitch is waiting on this chat, unanswered (at `place`, when given): it owns the space under the reply. */
 export const successPitchOnThread = (
   prefs: Pick<PrefsRow, "successPitch" | "dismissals">,
-  threadId: string
+  threadId: string,
+  place?: SuccessPitchPlace
 ): boolean =>
   Object.entries(prefs.successPitch ?? {}).some(
     ([each, mark]) =>
       mark.offer?.sessionId === threadId &&
+      (place == null || successPitchPlace(mark.offer) === place) &&
       prefs.dismissals.successPitchCards?.[each]?.answered !== mark.offer.id
   );
 
@@ -165,8 +171,9 @@ export const RetryOfferRow = ({
   const paying = tier === "basic" || tier === "paid";
   const target = retryOfferTarget(messages, outcome?.complained);
   const card = prefs.dismissals.retryOffer ?? null;
-  // The success pitch owns the space under a reply it is offered on.
-  const pitchHere = successPitchOnThread(prefs, session.threadId);
+  // The success pitch's card owns the space under a reply it is offered on.
+  // Its row does not: the next step's card yields to this one.
+  const pitchHere = successPitchOnThread(prefs, session.threadId, "card");
   const eligible =
     target != null &&
     !active &&

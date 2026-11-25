@@ -625,10 +625,23 @@ export const SuccessPitchRow = ({
  * the plan by name, its price, and a tap that opens the upgrade dialog with
  * the plan's whole pitch. Nothing when no such offer is owed.
  */
-export const NextStepPlanRow = ({ active }: { active: boolean }) => {
+export const NextStepPlanRow = ({
+  active,
+  replyId,
+}: {
+  active: boolean;
+  /** The reply the next step's card sits under. */
+  replyId?: string;
+}) => {
   const { t, i18n } = useTranslation();
+  const { session } = useChatView();
   const pitch = useSuccessPitch({ active, place: "next_step" });
   const offer = wallOffer(pitch.billing);
+  // One upgrade ask under a reply, as with the pitch's own card.
+  useTailCardClaim(
+    session.threadId,
+    pitch.offer != null && offer != null ? (replyId ?? pitch.offer.id) : null
+  );
   if (pitch.offer == null || offer == null) return null;
   return (
     <button
