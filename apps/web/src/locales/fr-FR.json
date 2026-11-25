@@ -5123,6 +5123,8 @@
       "taskExpiredTitle": "« {{task}} » est en pause : vos crédits gratuits ont expiré",
       "taskPaidTitle": "« {{task}} » est en pause : les crédits de ce mois sont épuisés",
       "resumes": "Passez au forfait et tout reprendra tout seul là où ça s'est arrêté.",
+      "creditsBackTask": "« {{task}} » s'est arrêté quand les crédits se sont épuisés. Vous avez de nouveau des crédits.",
+      "creditsBack": "Cette tâche s'est arrêtée quand les crédits se sont épuisés. Vous avez de nouveau des crédits.",
       "paidTitle": "Vous avez utilisé les crédits de ce mois-ci",
       "paidOffer": "Ou passez à {{plan}} — {{price}}",
       "paidMobile": "Votre forfait est facturé via l'App Store ou Google Play : ajoutez des crédits ou passez à un forfait supérieur dans l'application mobile Abacus.AI.",

@@ -218,10 +218,10 @@ it.each(["free", "basic", "pro", "unknown"])(
       await waitFor(() =>
         expect(screen.queryByText(enUS.phase5.creditsExhausted)).toBeNull()
       );
-    if (tier === "pro")
-      await waitFor(() =>
-        expect(app!.collections.prefs.get("app")?.creditsExhaustedAt).toBeNull()
-      );
+    // Only main lifts the wall, whatever the plan.
+    expect(
+      app!.collections.prefs.get("app")?.creditsExhaustedAt
+    ).not.toBeNull();
   }
 );
 it("R5-T27 critical countdown installs exactly at five minutes", async () => {
@@ -298,7 +298,7 @@ it.each([
     expect(screen.queryByRole("checkbox")).toBeNull();
   }
 });
-it("a later exhaustion mark forces fresh counters and cannot be cleared by the previous response", async () => {
+it("an exhaustion mark forces fresh counters, and a read moments after it leaves the wall to main", async () => {
   const { act } = await import("@testing-library/react");
   const fresh = {
     subscription_tier: "free",
@@ -326,9 +326,8 @@ it("a later exhaustion mark forces fresh counters and cannot be cleared by the p
   expect(fetch.mock.calls[1]![0]).toMatchObject({ input: { refresh: true } });
   expect(app.collections.prefs.get("app")?.creditsExhaustedAt).toBe(mark);
   await act(async () => release(fresh));
-  await waitFor(() =>
-    expect(app!.collections.prefs.get("app")?.creditsExhaustedAt).toBeNull()
-  );
+  await act(async () => {});
+  expect(app.collections.prefs.get("app")?.creditsExhaustedAt).toBe(mark);
 });
 it("an install retry clears historical failure and shows a new error after handoff", async () => {
   let release!: () => void;

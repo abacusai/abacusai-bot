@@ -5,7 +5,12 @@
  * env, then the `credit_wall` command), so chats, bots and routines share one
  * answer; the sidebar card reads the same row on every launch.
  */
-import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
+import type {
+  CreditWallMetOn,
+  PrefsPatch,
+  PrefsRow,
+} from "@abacus-ai/contract/contract/rows";
+import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 
 import { ranOutOfAbacusCredits } from "../agent-tools/routine-guards";
 import type { CreditSnapshot } from "./abacus";
@@ -34,19 +39,32 @@ const live = (at: number | null, now: number): boolean =>
   at != null && now - at < CREDIT_WALL_TTL_MS;
 
 /**
- * A turn, in any session, ended at the credit wall: stamp it, unless a wall
- * already stands (the first refusal of the day is the one that counts).
+ * A turn, in any session, ended at the credit wall: stamp it with what the
+ * account read then (`on`), unless a wall already stands (the first refusal
+ * of the day is the one that counts).
  */
 export const wallAfterError = (
   row: PrefsRow,
   error: { actions?: Array<{ type: string }> } | undefined,
-  now: number
+  now: number,
+  on: CreditWallMetOn | null
 ): PrefsPatch | null =>
   error != null &&
   ranOutOfAbacusCredits(error) &&
   !live(row.creditsExhaustedAt, now)
-    ? { creditsExhaustedAt: now, freeLaneChosenAt: null }
+    ? {
+        creditsExhaustedAt: now,
+        creditsExhaustedOn: on,
+        freeLaneChosenAt: null,
+      }
     : null;
+
+/** The wall gone, with what it was met on. */
+const WALL_LIFTED = {
+  creditsExhaustedAt: null,
+  creditsExhaustedOn: null,
+  freeLaneChosenAt: null,
+} as const;
 
 /** While a wall stands, the account is read this often even with no turn to read it, so credits that come back are heard. */
 export const WALL_ACCOUNT_READ_EVERY_MS = 60 * 60_000;
@@ -60,15 +78,23 @@ export const accountReadDueAtWall = (
   row.creditsExhaustedAt != null &&
   (snapshot == null || now - snapshot.at >= WALL_ACCOUNT_READ_EVERY_MS);
 
-/** An account read after the wall shows credits again: the wall is gone. */
+/**
+ * An account read after the wall shows credits again: the wall is gone. A
+ * read moments after it may carry the platform's cached balance, so it counts
+ * only once that cache has turned over, unless it shows more left than the
+ * read the wall was met on: credits were added (a top-up, a new month), and no
+ * cache shows more than the newest read did.
+ */
 export const wallAfterAccountRead = (
   row: PrefsRow,
   snapshot: CreditSnapshot
 ): PrefsPatch | null => {
   const at = row.creditsExhaustedAt;
   if (at == null || snapshot.remaining <= 0) return null;
-  if (snapshot.at - at < ACCOUNT_READ_LAG_MS) return null;
-  return { creditsExhaustedAt: null, freeLaneChosenAt: null };
+  const was = row.creditsExhaustedOn?.remaining;
+  const added = was != null && snapshot.remaining > was;
+  if (!added && snapshot.at - at < ACCOUNT_READ_LAG_MS) return null;
+  return { ...WALL_LIFTED };
 };
 
 /**
@@ -77,18 +103,32 @@ export const wallAfterAccountRead = (
  * credits, so they go at once. A new
  * payer is never held at the free plan's wall; a wall the new plan meets is
  * stamped again by its own refusal.
+ *
+ * A launch's first read (`from` unknown) changed nothing it knows of: it is a
+ * change only against the plan the wall was met on, so a plan bought while
+ * the app was closed lifts it at once and the same plan keeps it. A wall
+ * stamped without its plan waits for a read that shows credits.
  */
-export const wallAfterPlanChange = (row: PrefsRow): PrefsPatch | null =>
-  row.creditsExhaustedAt != null ||
-  row.freeLaneChosenAt != null ||
-  row.dismissals.wallReopen != null
+export const wallAfterPlanChange = (
+  row: PrefsRow,
+  change: { from: AbacusPlanTier; to: AbacusPlanTier }
+): PrefsPatch | null => {
+  const metOn = row.creditsExhaustedOn?.tier;
+  const from =
+    change.from === "unknown" && metOn != null && metOn !== "unknown"
+      ? metOn
+      : change.from;
+  if (from === "unknown" || from === change.to) return null;
+  return row.creditsExhaustedAt != null ||
+    row.freeLaneChosenAt != null ||
+    row.dismissals.wallReopen != null
     ? {
-        creditsExhaustedAt: null,
-        freeLaneChosenAt: null,
+        ...WALL_LIFTED,
         // The walled chat's "your work is waiting" ask belonged to the old wall.
         dismissals: { wallReopen: null },
       }
     : null;
+};
 
 /**
  * A routine fired now would stop at the wall: the credits are out and the

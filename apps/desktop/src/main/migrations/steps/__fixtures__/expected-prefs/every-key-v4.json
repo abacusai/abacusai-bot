@@ -17,6 +17,7 @@
       "browserHomepage": "legacy",
       "creditThresholds": "default",
       "creditsExhaustedAt": "legacy",
+      "creditsExhaustedOn": "default",
       "defaultMode": "legacy",
       "dismissals.creditThresholdCards": "legacy",
       "dismissals.deliverableOffer": "legacy",
@@ -103,6 +104,7 @@
       "browserHomepage": "https://example.com/",
       "creditThresholds": {},
       "creditsExhaustedAt": 1790000000000,
+      "creditsExhaustedOn": null,
       "defaultMode": "PLAN",
       "dismissals": {
         "creditThresholdCards": {},

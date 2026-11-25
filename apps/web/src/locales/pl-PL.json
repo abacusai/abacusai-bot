@@ -5271,6 +5271,8 @@
       "taskExpiredTitle": "Zadanie „{{task}}” jest wstrzymane: darmowe kredyty wygasły",
       "taskPaidTitle": "Zadanie „{{task}}” jest wstrzymane: wyczerpały się kredyty na ten miesiąc",
       "resumes": "Po zmianie planu zadanie samo wznowi się tam, gdzie przerwało.",
+      "creditsBackTask": "„{{task}}” zatrzymało się, gdy skończyły się kredyty. Masz znowu kredyty.",
+      "creditsBack": "To zatrzymało się, gdy skończyły się kredyty. Masz znowu kredyty.",
       "paidTitle": "Kredyty na ten miesiąc się wyczerpały",
       "paidOffer": "Albo przejdź na {{plan}} — {{price}}",
       "paidMobile": "Twój plan jest rozliczany przez App Store lub Google Play, więc dokup kredyty lub zmień plan w aplikacji mobilnej Abacus.AI.",

@@ -5123,6 +5123,8 @@
       "taskExpiredTitle": "「{{task}}」已暫停：你的免費點數已過期",
       "taskPaidTitle": "「{{task}}」已暫停：本月點數已用完",
       "resumes": "升級後，它會自動從中斷的地方繼續。",
+      "creditsBackTask": "「{{task}}」因點數用完而暫停。你現在又有點數了。",
+      "creditsBack": "因點數用完而暫停。你現在又有點數了。",
       "paidTitle": "你已用完本月點數",
       "paidOffer": "或升級到 {{plan}}：{{price}}",
       "paidMobile": "你的方案是透過 App Store 或 Google Play 計費，所以請在 Abacus.AI 行動應用程式中儲值點數或升級。",

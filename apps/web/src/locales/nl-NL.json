@@ -5123,6 +5123,8 @@
       "taskExpiredTitle": "“{{task}}” is gepauzeerd: je gratis credits zijn verlopen",
       "taskPaidTitle": "“{{task}}” is gepauzeerd: de credits van deze maand zijn op",
       "resumes": "Upgrade en het gaat vanzelf verder waar het gebleven was.",
+      "creditsBackTask": "“{{task}}” is gestopt toen de credits op waren. Je hebt weer credits.",
+      "creditsBack": "Dit is gestopt toen de credits op waren. Je hebt weer credits.",
       "paidTitle": "Je hebt de credits van deze maand opgebruikt",
       "paidOffer": "Of stap over naar {{plan}} — {{price}}",
       "paidMobile": "Je abonnement wordt gefactureerd via de App Store of Google Play, dus koop credits bij of upgrade in de mobiele app van Abacus.AI.",

@@ -5123,6 +5123,8 @@
       "taskExpiredTitle": "“{{task}}” dijeda: kredit gratis kamu sudah kedaluwarsa",
       "taskPaidTitle": "“{{task}}” dijeda: kredit bulan ini sudah habis",
       "resumes": "Upgrade, lalu pekerjaan ini lanjut sendiri dari titik berhentinya.",
+      "creditsBackTask": "“{{task}}” berhenti saat kredit habis. Kamu sudah punya kredit lagi.",
+      "creditsBack": "Ini berhenti saat kredit habis. Kamu sudah punya kredit lagi.",
       "paidTitle": "Kredit bulan ini sudah kamu pakai",
       "paidOffer": "Atau naik ke {{plan}} — {{price}}",
       "paidMobile": "Paket Anda ditagih melalui App Store atau Google Play, jadi tambahkan kredit atau upgrade di aplikasi seluler Abacus.AI.",

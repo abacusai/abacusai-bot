@@ -5123,6 +5123,8 @@
       "taskExpiredTitle": "“{{task}}” duraklatıldı: ücretsiz kredilerinin süresi doldu",
       "taskPaidTitle": "“{{task}}” duraklatıldı: bu ayın kredileri bitti",
       "resumes": "Yükselttiğinde kaldığı yerden kendiliğinden devam eder.",
+      "creditsBackTask": "“{{task}}” krediler bittiğinde durdu. Yeniden kredin var.",
+      "creditsBack": "Bu, krediler bittiğinde durdu. Yeniden kredin var.",
       "paidTitle": "Bu ayın kredilerini kullandın",
       "paidOffer": "Ya da {{plan}} planına geç — {{price}}",
       "paidMobile": "Planın App Store veya Google Play üzerinden faturalandırılıyor; kredi eklemek ya da yükseltmek için Abacus.AI mobil uygulamasını kullan.",

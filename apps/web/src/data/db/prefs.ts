@@ -26,6 +26,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
   lastPickedWorkspaceId: null,
   recentFolders: [],
   creditsExhaustedAt: null,
+  creditsExhaustedOn: null,
   freeLaneChosenAt: null,
   routineCreditHold: null,
   creditThresholds: {},
@@ -109,6 +110,17 @@ export const usePrefs = (): PrefsRow => {
   const collections = useCollections();
   const { data } = useLiveQuery(collections.prefs);
   return data?.[0] ?? DEFAULT_PREFS;
+};
+
+/**
+ * Whether the account stands at the credit wall: main's one answer
+ * (credit-wall.ts), lifted by a new plan, a top-up or credits back. Null
+ * until the row arrives, since the defaults would read as no wall.
+ */
+export const useCreditWallStands = (): boolean | null => {
+  const collections = useCollections();
+  const row = useLiveQuery(collections.prefs).data?.[0];
+  return row == null ? null : row.creditsExhaustedAt != null;
 };
 
 /** The row as it is now, outside React. */

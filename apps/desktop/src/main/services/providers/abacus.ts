@@ -516,14 +516,20 @@ export function onAbacusAccountRead(
 
 /** The tier the last account read carried: a read that changes it is a plan change. */
 let knownPlanTier = abacusPlanTier(null);
-const planListeners = new Set<() => void>();
+type PlanListener = (change: {
+  from: AbacusPlanTier;
+  to: AbacusPlanTier;
+}) => void;
+const planListeners = new Set<PlanListener>();
 
 /**
  * Hears the plan change, however it was learned: a payment landing, a
  * cancellation, an app opened on a plan changed elsewhere. The account and the
- * model catalog are already the new plan's.
+ * model catalog are already the new plan's. `from` is the plan read before:
+ * "unknown" on a launch's first read, which may have changed nothing; `to`
+ * is the plan read now.
  */
-export function onAbacusPlanChange(listener: () => void): () => void {
+export function onAbacusPlanChange(listener: PlanListener): () => void {
   planListeners.add(listener);
   return () => {
     planListeners.delete(listener);
@@ -534,10 +540,12 @@ const remember = (value: AbacusAccountInfo): void => {
   accountCache = { value, at: Date.now() };
   const tier = abacusPlanTier(value);
   if (tier !== knownPlanTier) {
+    const from = knownPlanTier;
     // The catalog is per plan; the first read of a session moved nothing.
-    if (knownPlanTier !== "unknown") cache = null;
+    if (from !== "unknown") cache = null;
     knownPlanTier = tier;
-    for (const listener of Array.from(planListeners)) listener();
+    for (const listener of Array.from(planListeners))
+      listener({ from, to: tier });
   }
   const snapshot = snapshotOf(accountCache);
   if (snapshot != null)

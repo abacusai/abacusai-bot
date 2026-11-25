@@ -5123,6 +5123,8 @@
       "taskExpiredTitle": "“{{task}}”已暂停：你的免费积分已过期",
       "taskPaidTitle": "“{{task}}”已暂停：本月积分已用完",
       "resumes": "升级后，它会自动从中断的地方继续。",
+      "creditsBackTask": "“{{task}}”因积分用完而暂停。你现在又有积分了。",
+      "creditsBack": "因积分用完而暂停。你现在又有积分了。",
       "paidTitle": "你已用完本月积分",
       "paidOffer": "或升级到 {{plan}}：{{price}}",
       "paidMobile": "你的套餐通过 App Store 或 Google Play 计费，因此请在 Abacus.AI 手机应用中充值积分或升级。",

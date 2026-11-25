@@ -1,4 +1,5 @@
 import { contract } from "@abacus-ai/contract/contract";
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { implement } from "@orpc/server";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ import type { ReactNode } from "react";
 import { DbProvider, type Db } from "#renderer/data/db";
 import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { i18n, initI18n } from "#renderer/lib/i18n";
-import { createHarness } from "#renderer/test-support/app-harness";
+import { createHarness, defaultSeed } from "#renderer/test-support/app-harness";
 
 type HarnessProcedures = NonNullable<
   NonNullable<Parameters<typeof createHarness>[1]>["procedures"]
@@ -43,12 +44,17 @@ export interface Rendered {
 export const renderWithDb = async (
   node: ReactNode,
   /** The host's procedures a test serves itself, such as the account. */
-  procedures: HarnessProcedures = {}
+  procedures: HarnessProcedures = {},
+  /** What main has already written to the prefs row. */
+  prefs: Partial<PrefsRow> = {}
 ): Promise<Rendered> => {
   await initI18n();
   await i18n.changeLanguage("en-US");
   const os = implement(contract);
+  const seed = defaultSeed();
+  seed.prefs = { ...seed.prefs!, ...prefs };
   const harness = await createHarness("/", {
+    seed,
     procedures: {
       links: { preview: os.links.preview.handler(() => null) },
       ...procedures,
@@ -174,7 +180,19 @@ export const renderRelay = async (
       />
     </div>
   );
-  const rendered = await renderWithDb(tree(), procedures);
+  // Main stamps the account's credit wall when a turn ends at it (credit-wall.ts).
+  const walled = relay.log.some(({ event }) =>
+    (
+      event as { metadata?: { abacus?: { error?: { actions?: unknown[] } } } }
+    ).metadata?.abacus?.error?.actions?.some(
+      (action) => (action as { type?: string }).type === "upgrade-abacus"
+    )
+  );
+  const rendered = await renderWithDb(
+    tree(),
+    procedures,
+    walled ? { creditsExhaustedAt: Date.now() } : {}
+  );
   return {
     ...rendered,
     runtime,

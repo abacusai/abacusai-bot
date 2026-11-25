@@ -431,6 +431,9 @@ export const PREFS_SCALAR_ENTRIES = {
   lastPickedWorkspaceId: v.nullable(v.string()),
   recentFolders: v.pipe(v.array(v.string()), v.maxLength(5)),
   creditsExhaustedAt: NullableTimestamp,
+  creditsExhaustedOn: v.nullable(
+    v.object({ tier: v.string(), remaining: v.nullable(v.number()) })
+  ),
   freeLaneChosenAt: NullableTimestamp,
   routineCreditHold: v.nullable(
     v.object({
@@ -492,6 +495,7 @@ export const PrefsPatchSchema = v.strictObject({
   lastPickedWorkspaceId: v.optional(S.lastPickedWorkspaceId),
   recentFolders: v.optional(S.recentFolders),
   creditsExhaustedAt: v.optional(S.creditsExhaustedAt),
+  creditsExhaustedOn: v.optional(S.creditsExhaustedOn),
   freeLaneChosenAt: v.optional(S.freeLaneChosenAt),
   routineCreditHold: v.optional(S.routineCreditHold),
   creditThresholds: v.optional(S.creditThresholds),
