@@ -36,36 +36,36 @@ const CAUSE_KEYS: Readonly<Record<string, string>> = {
   unknown: "outcome.cause.unknown",
 };
 
-/**
- * Providers the user holds no key for (the free pool, a local server):
- * never "your key". Abacus is the user's own Abacus key, so it is not here.
- */
-export const KEYLESS_PROVIDERS: ReadonlySet<string> = new Set([
-  "openllm",
-  "local",
-]);
-
 /** The account's own walls: the title of the card each one shows. */
 const accountLine = (
   t: TFunction,
-  error: TurnFailureView
+  error: TurnFailureView,
+  paying: boolean | undefined
 ): string | undefined => {
   const actions = error.actions ?? [];
   switch (error.cause) {
+    // The card's own paid/free choice; neither known, words true for both.
     case "credits_exhausted":
-      return t("outcome.wall.title");
+      return t(
+        paying === true
+          ? "outcome.wall.paidTitle"
+          : paying === false
+            ? "outcome.wall.title"
+            : "outcome.wall.anyTitle"
+      );
     case "credits_expired":
       return t("outcome.wall.expiredTitle");
     case "payment_required": {
       const why = actions.find(
         (action) => action.type === "payment-required"
       )?.cause;
+      // Only a payment main saw lands on "Confirming"; no reason is no plan.
       return t(
         why === "lapsed"
           ? "paymentRequired.lapsedTitle"
-          : why === "not_subscribed"
-            ? "paymentRequired.noPlanTitle"
-            : "paymentRequired.confirmingTitle"
+          : why === "unconfirmed"
+            ? "paymentRequired.confirmingTitle"
+            : "paymentRequired.noPlanTitle"
       );
     }
     case "phone_verification": {
@@ -91,7 +91,12 @@ const formatBytes = (bytes: number): string =>
  * else the line of the cause the agent decided, else the generic one. The
  * agent's message and the provider's detail are for the log.
  */
-export const failureLine = (t: TFunction, error: TurnFailureView): string => {
+export const failureLine = (
+  t: TFunction,
+  error: TurnFailureView,
+  /** The account pays, when known: the credit wall's paid or free line. */
+  paying?: boolean
+): string => {
   if (error.code === "agent_exit" || error.code === "agent_crashed")
     return t("chat.error.crashed");
   if (error.code === "network_unreachable")
@@ -106,15 +111,12 @@ export const failureLine = (t: TFunction, error: TurnFailureView): string => {
   // Only the agent's own reading of the failure (classifyAttempt) picks
   // the line: the provider's detail is never read here.
   const cause = error.cause;
-  const account = accountLine(t, error);
+  const account = accountLine(t, error, paying);
   if (account != null) return account;
-  // "Your key" only beside the card's "Check the key": the provider whose
-  // key the user holds (their own, or their Abacus key), never the pool's.
+  // "Your key" only beside the card's "Check the key": the provider of the
+  // agent's `fix-key` action, which it gives only for the user's own key.
   const ownKey = actions.find(
-    (action) =>
-      action.type === "fix-key" &&
-      action.provider != null &&
-      !KEYLESS_PROVIDERS.has(action.provider)
+    (action) => action.type === "fix-key" && action.provider != null
   )?.provider;
   const provider = providerDisplayName(ownKey ?? "");
   const key =

@@ -132,11 +132,7 @@ import {
   useCreditWallTask,
   useUpgradeResume,
 } from "../upgrade-triggers";
-import {
-  failureLine,
-  KEYLESS_PROVIDERS,
-  type TurnFailureView,
-} from "./failure-line";
+import { failureLine, type TurnFailureView } from "./failure-line";
 import { TurnCredits } from "./turn-credits";
 
 interface ErrorAction {
@@ -1753,9 +1749,6 @@ export const ErrorCard = ({
             ]
           : [];
       case "fix-key":
-        // Beside its "your key" line only: never for a key the user lacks.
-        if (action.provider != null && KEYLESS_PROVIDERS.has(action.provider))
-          return [];
         return [
           <Button
             key={index}

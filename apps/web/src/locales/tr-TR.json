@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” krediler bittiğinde durdu. Yeniden kredin var.",
       "creditsBack": "Bu, krediler bittiğinde durdu. Yeniden kredin var.",
       "paidTitle": "Bu ayın kredilerini kullandın",
+      "anyTitle": "Kredilerin bitti",
       "paidOffer": "Ya da {{plan}} planına geç — {{price}}",
       "paidMobile": "Planın App Store veya Google Play üzerinden faturalandırılıyor; kredi eklemek ya da yükseltmek için Abacus.AI mobil uygulamasını kullan.",
       "balance": "{{granted}} krediden {{remaining}} kaldı",

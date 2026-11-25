@@ -5281,6 +5281,7 @@
       "creditsBackTask": "„{{task}}” zatrzymało się, gdy skończyły się kredyty. Masz znowu kredyty.",
       "creditsBack": "To zatrzymało się, gdy skończyły się kredyty. Masz znowu kredyty.",
       "paidTitle": "Kredyty na ten miesiąc się wyczerpały",
+      "anyTitle": "Twoje kredyty się wyczerpały",
       "paidOffer": "Albo przejdź na {{plan}} — {{price}}",
       "paidMobile": "Twój plan jest rozliczany przez App Store lub Google Play, więc dokup kredyty lub zmień plan w aplikacji mobilnej Abacus.AI.",
       "balance": "Pozostało {{remaining}} z {{granted}} kredytów",

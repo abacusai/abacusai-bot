@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}”因积分用完而暂停。你现在又有积分了。",
       "creditsBack": "因积分用完而暂停。你现在又有积分了。",
       "paidTitle": "你已用完本月积分",
+      "anyTitle": "你的积分已用完",
       "paidOffer": "或升级到 {{plan}}：{{price}}",
       "paidMobile": "你的套餐通过 App Store 或 Google Play 计费，因此请在 Abacus.AI 手机应用中充值积分或升级。",
       "balance": "还剩 {{remaining}}/{{granted}} 积分",

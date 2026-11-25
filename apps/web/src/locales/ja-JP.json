@@ -5133,6 +5133,7 @@
       "creditsBackTask": "「{{task}}」はクレジットが切れたため停止しました。クレジットが利用できるようになりました。",
       "creditsBack": "クレジットが切れたため停止しました。クレジットが利用できるようになりました。",
       "paidTitle": "今月のクレジットを使い切りました",
+      "anyTitle": "クレジットを使い切りました",
       "paidOffer": "または {{plan}} にアップグレード — {{price}}",
       "paidMobile": "このプランは App Store または Google Play で請求されるため、クレジットの追加やアップグレードは Abacus.AI モバイルアプリで行ってください。",
       "balance": "残り {{remaining}} / {{granted}} クレジット",

@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” stopped when the credits ran out. You have credits again.",
       "creditsBack": "This stopped when the credits ran out. You have credits again.",
       "paidTitle": "You've used this month's credits",
+      "anyTitle": "Your credits are used up",
       "paidOffer": "Or move up to {{plan}} — {{price}}",
       "paidMobile": "Your plan is billed through the App Store or Google Play, so add credits or upgrade in the Abacus.AI mobile app.",
       "balance": "{{remaining}} of {{granted}} credits left",

@@ -5133,6 +5133,7 @@
       "creditsBackTask": "„{{task}}“ wurde angehalten, als die Credits aufgebraucht waren. Du hast wieder Credits.",
       "creditsBack": "Das wurde angehalten, als die Credits aufgebraucht waren. Du hast wieder Credits.",
       "paidTitle": "Du hast die Credits dieses Monats verbraucht",
+      "anyTitle": "Deine Credits sind aufgebraucht",
       "paidOffer": "Oder wechsle zu {{plan}} — {{price}}",
       "paidMobile": "Dein Plan wird über den App Store oder Google Play abgerechnet. Füge Credits hinzu oder upgrade in der Abacus.AI-App auf deinem Handy.",
       "balance": "Noch {{remaining}} von {{granted}} Credits",

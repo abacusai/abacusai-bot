@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” is gestopt toen de credits op waren. Je hebt weer credits.",
       "creditsBack": "Dit is gestopt toen de credits op waren. Je hebt weer credits.",
       "paidTitle": "Je hebt de credits van deze maand opgebruikt",
+      "anyTitle": "Je credits zijn op",
       "paidOffer": "Of stap over naar {{plan}} — {{price}}",
       "paidMobile": "Je abonnement wordt gefactureerd via de App Store of Google Play, dus koop credits bij of upgrade in de mobiele app van Abacus.AI.",
       "balance": "Nog {{remaining}} van {{granted}} credits over",

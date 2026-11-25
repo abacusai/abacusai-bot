@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” si è fermato quando i crediti sono finiti. Ora hai di nuovo crediti.",
       "creditsBack": "Si è fermato quando i crediti sono finiti. Ora hai di nuovo crediti.",
       "paidTitle": "Hai usato i crediti di questo mese",
+      "anyTitle": "Hai esaurito i crediti",
       "paidOffer": "Oppure passa a {{plan}} — {{price}}",
       "paidMobile": "Il tuo piano è fatturato tramite App Store o Google Play: aggiungi crediti o passa a un piano superiore nell'app mobile di Abacus.AI.",
       "balance": "Ti restano {{remaining}} crediti su {{granted}}",

@@ -5133,6 +5133,7 @@
       "creditsBackTask": "«{{task}}» se detuvo cuando se acabaron los créditos. Ya vuelves a tener créditos.",
       "creditsBack": "Esto se detuvo cuando se acabaron los créditos. Ya vuelves a tener créditos.",
       "paidTitle": "Has usado los créditos de este mes",
+      "anyTitle": "Se te acabaron los créditos",
       "paidOffer": "O pásate a {{plan}} — {{price}}",
       "paidMobile": "Tu plan se cobra a través de App Store o Google Play, así que añade créditos o mejora tu plan en la app móvil de Abacus.AI.",
       "balance": "Te quedan {{remaining}} de {{granted}} créditos",

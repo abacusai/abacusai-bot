@@ -150,7 +150,7 @@ const failureHeadline = (
  */
 const Announcer = () => {
   const { t } = useTranslation();
-  const { session } = useChatView();
+  const { session, runtime } = useChatView();
   const outcomes = useThreadStore(session, (state) => state.runs.outcomes);
   const items = useThreadStore(session, (state) => state.permissions.items);
   const messages = useHost(session, (state) => state.messages);
@@ -172,6 +172,8 @@ const Announcer = () => {
       tries?: number;
       /** The failure itself: its cause's line when no card shows in time. */
       error?: TurnFailureView;
+      /** Whether the account pays, once read: the credit wall's line. */
+      account?: { paying?: boolean };
     }>
   >([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -209,6 +211,7 @@ const Announcer = () => {
           runId: outcome.runId,
           tries: 0,
           error: (outcome.error ?? {}) as TurnFailureView,
+          account: accountFor(outcome.error),
         }),
       });
     }
@@ -245,6 +248,24 @@ const Announcer = () => {
     state.permissions = new Set(items.map((i) => i.id));
     state.lastMessageId = last;
     state.count = visibleMessages.length;
+    // The card reads the account's plan for its wall; the fallback reads the
+    // same answer, and says neither "free" nor "this month" until it has it.
+    function accountFor(error: unknown): { paying?: boolean } | undefined {
+      if (
+        (error as { cause?: unknown } | undefined)?.cause !==
+        "credits_exhausted"
+      )
+        return undefined;
+      const account: { paying?: boolean } = {};
+      void runtime.host
+        .accountTier()
+        .then((tier) => {
+          if (tier === "paid" || tier === "basic") account.paying = true;
+          else if (tier === "free") account.paying = false;
+        })
+        .catch(() => undefined);
+      return account;
+    }
     const flush = () => {
       const next = queue.current.shift();
       if (next == null) {
@@ -265,7 +286,9 @@ const Announcer = () => {
           headline?.marker === true
             ? headline.text
             : t("chat.announce.error", {
-                message: headline?.text ?? failureLine(t, next.error ?? {}),
+                message:
+                  headline?.text ??
+                  failureLine(t, next.error ?? {}, next.account?.paying),
               })
         );
       } else setText(next.text);
@@ -273,7 +296,7 @@ const Announcer = () => {
     };
     if (timer.current == null && queue.current.length > 0)
       timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
-  }, [outcomes, items, messages, awayFromEnd, t]);
+  }, [outcomes, items, messages, awayFromEnd, t, runtime]);
   useEffect(
     () => () => {
       if (timer.current != null) clearTimeout(timer.current);

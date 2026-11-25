@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” berhenti saat kredit habis. Kamu sudah punya kredit lagi.",
       "creditsBack": "Ini berhenti saat kredit habis. Kamu sudah punya kredit lagi.",
       "paidTitle": "Kredit bulan ini sudah kamu pakai",
+      "anyTitle": "Kredit kamu sudah habis",
       "paidOffer": "Atau naik ke {{plan}} — {{price}}",
       "paidMobile": "Paket Anda ditagih melalui App Store atau Google Play, jadi tambahkan kredit atau upgrade di aplikasi seluler Abacus.AI.",
       "balance": "Tersisa {{remaining}} dari {{granted}} kredit",
