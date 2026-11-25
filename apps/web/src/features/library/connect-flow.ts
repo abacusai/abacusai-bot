@@ -12,11 +12,12 @@ import { Store, useStore } from "@tanstack/react-store";
 
 import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
+import { isCancellation } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { connectTarget } from "#renderer/lib/platform-system";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 
 /** How long the app waits on a chat app's pairing before it stops waiting (main decides whether the login is turned off). */
 export const PAIRING_WAIT_MS = 180_000;
@@ -47,6 +48,35 @@ export const connectPlatform = async (
     platformId,
     enabled: true,
   });
+  deps.queryClient.setQueryData(
+    deps.transport.orpc.messaging.snapshot.queryKey({ input: {} }),
+    snapshot
+  );
+  return snapshot;
+};
+/**
+ * What a connect that threw ends as. One the app cancelled itself is not a
+ * failure; anything else is the generic `failed`, its detail in the log,
+ * never on the page.
+ */
+const thrownOutcome = (
+  connectorId: string,
+  error: unknown
+): ConnectorOutcome => {
+  if (isCancellation(error))
+    return { ok: false, cancelled: true, error: "cancelled" };
+  console.error(`[connect] ${connectorId}: connect failed`, error);
+  return { ok: false, error: "failed" };
+};
+/**
+ * Main's messaging snapshot as of now, read from main itself: a read through
+ * the query cache joins the page's fetch, which a pushed change or the page
+ * closing cancels.
+ */
+const readSnapshot = async (
+  deps: Pick<FlowDeps, "transport" | "queryClient">
+): Promise<MessagingSnapshot> => {
+  const snapshot = await deps.transport.client.messaging.snapshot({});
   deps.queryClient.setQueryData(
     deps.transport.orpc.messaging.snapshot.queryKey({ input: {} }),
     snapshot
@@ -142,10 +172,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
     a.settlement = (async () => {
       try {
         await a.ready;
-        const fresh = await deps.queryClient.fetchQuery({
-          ...deps.transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
-          staleTime: 0,
-        });
+        const fresh = await readSnapshot(deps);
         const ok = isMessagingPlatformConnected(fresh, a.platform!);
         finishRecord(
           a,
@@ -156,7 +183,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
         if (ok) await refresh();
         else await releasePlatform(deps, a.platform!);
       } catch (e) {
-        finishRecord(a, { ok: false, error: errorText(e) });
+        finishRecord(a, thrownOutcome(a.connectorId, e));
         await releasePlatform(deps, a.platform!);
       }
     })();
@@ -193,10 +220,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
       const deferred =
         deps.db.collections.prefs.get("app")?.onboardingPairing ?? [];
       if (!deferred.some((id) => id === platform)) return;
-      const fresh = await deps.queryClient.fetchQuery({
-        ...deps.transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
-        staleTime: 0,
-      });
+      const fresh = await readSnapshot(deps);
       if (isMessagingPlatformConnected(fresh, platform))
         await deps.db.updatePrefs({
           onboardingPairing: deferred.filter((id) => id !== platform),
@@ -291,7 +315,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
           await complete(id, entry, await connecting.result);
         }
       } catch (e) {
-        finish(id, { ok: false, error: errorText(e) });
+        finish(id, thrownOutcome(connectorId, e));
       }
     })();
     return outcome;
@@ -307,7 +331,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
       const entry = connectorById(a.connectorId);
       if (entry) await complete(a.id, entry, result);
     } catch (e) {
-      finish(a.id, { ok: false, error: errorText(e) });
+      finish(a.id, thrownOutcome(a.connectorId, e));
     }
   };
   return { store, start, cancel, submit, settlePairing, registerPairing };

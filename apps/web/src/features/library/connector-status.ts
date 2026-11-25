@@ -42,14 +42,19 @@ export const useConnectorStatuses = (
     },
   });
   const { stale, unchecked } = unconfirmed(statuses.data);
-  // Abacus answers again: a Connect that could not reach it is no longer the news.
+  // A connect error is the news only while its cause stands: not once Abacus
+  // answers again (unreachable), nor once its connector reads connected.
   const reachable = statuses.data != null && !stale && !unchecked;
   useEffect(() => {
-    if (reachable)
-      flow.store.setState((state) =>
-        state.error === "unreachable" ? { ...state, error: undefined } : state
-      );
-  }, [reachable, flow.store]);
+    flow.store.setState((state) =>
+      state.error != null &&
+      ((reachable && state.error === "unreachable") ||
+        (state.connectorId != null &&
+          statuses.data?.[state.connectorId]?.state === "connected"))
+        ? { ...state, error: undefined }
+        : state
+    );
+  }, [reachable, statuses.data, flow.store]);
   return { statuses, stale, unchecked };
 };
 /**
