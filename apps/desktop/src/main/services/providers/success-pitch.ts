@@ -13,8 +13,8 @@
  *
  * On an install with the next step (next-step.ts), a result that ends on
  * it offers the plan as a row in the next step's card instead of a card of
- * its own (`place: "next_step"`); one that does not end on it offers
- * nothing, and the card comes only with praise.
+ * its own (`place: "next_step"`), a failed tool along the way or not; one
+ * that does not end on it offers nothing, and the card comes only with praise.
  *
  * Two more offers come from the same clean turn, in the app only, ahead of
  * the others: a turn that left something meant to stay on (a server or bot
@@ -456,11 +456,11 @@ export class SuccessPitchWatch {
           once: { list: "bigTaskChats", item: record.sessionId },
         });
     }
-    // With the next step on, a result's offer rides in its card, or waits.
+    // With the next step on, a result's offer rides in its card, or waits. As
+    // a row there it needs no spotless turn: many builds have a tool fail.
     if (
-      clean &&
       facts.delivered != null &&
-      (!nextStep || facts.endedOnNextStep)
+      (nextStep ? settled && facts.endedOnNextStep : clean)
     )
       signals.push({
         trigger: "deliverable",
