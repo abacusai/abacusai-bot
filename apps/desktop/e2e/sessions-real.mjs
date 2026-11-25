@@ -328,7 +328,7 @@ try {
     data: 'node -e \'process.stdout.write("x".repeat(5*1024*1024)+"\\nHIDDEN_DONE\\n");setInterval(()=>{},1000)\'\r',
   });
   await wait(
-    `window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(s=>s.received>${before.received}+5*1024*1024&&s.text.includes('HIDDEN_DONE'))`
+    `window.__sessionsTerminalTest.snapshot(${JSON.stringify(viewKey)}).then(s=>s.offset>${before.offset ?? 0}+5*1024*1024&&s.text.includes('HIDDEN_DONE'))`
   );
   await sleep(1000);
   const after = await evaluate(
