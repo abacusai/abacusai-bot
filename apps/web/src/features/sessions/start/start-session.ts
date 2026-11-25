@@ -19,7 +19,7 @@ import { persistedStore } from "#renderer/lib/continuity/registry";
 import type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
-import { promoteTabs } from "../dock/panel-tabs-store";
+import { draftViewStore, promoteTabs } from "../dock/panel-tabs-store";
 import {
   hasDraftContent,
   saveSessionDraft,
@@ -90,6 +90,7 @@ export const openStartDraft = (id?: string, workspaceId?: string): string => {
     }));
   else if (workspaceId)
     startDraftStore.setState((d) => ({ ...d, workspaceId }));
+  draftViewStore.setState(() => "split");
   requestAnimationFrame(() =>
     document
       .querySelector<HTMLTextAreaElement>("[data-slot=composer] textarea")

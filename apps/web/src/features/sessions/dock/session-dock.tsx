@@ -95,6 +95,7 @@ import {
 import { afterMenusClose } from "./after-menus-close";
 import {
   panelTabsStore,
+  draftViewStore,
   EMPTY_TABS,
   openTab,
   openTerminalTab,
@@ -231,7 +232,14 @@ export const SessionDock = ({
     tab?: string;
     view?: "full" | "split";
   };
-  const [draftView, setDraftView] = useState<"full" | "split">("split");
+  const draftView = useSelector(draftViewStore, (s) => s);
+  const setDraftView = (view: "full" | "split") =>
+    draftViewStore.setState(() => view);
+  // As when it lived in this dock: a new chat shown again starts split.
+  useEffect(
+    () => (draft ? () => draftViewStore.setState(() => "split") : undefined),
+    [draft]
+  );
   const search = draft ? { tab: undefined, view: draftView } : routeSearch;
   const entries = useSelector(panelTabsStore, (s) => s[key] ?? EMPTY_TABS);
   const [terminalSnapshot, setTerminalSnapshot] = useState<string | null>(null);
