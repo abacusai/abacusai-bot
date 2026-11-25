@@ -32,6 +32,10 @@
  *   fails the run. Elsewhere it is recorded as "skipped: not linux", which
  *   fails when the probe is required (`--require-native-frame` or
  *   ABACUSBOT_REQUIRE_NATIVE_FRAME=1, set by the Linux CI job);
+ * - overlay containment: on every overlay capture, and on the overlays filled
+ *   with long names, paths and three actions (`stress=content`, the quit
+ *   question), nothing inside a dialog, sheet, drawer or popup reaches past
+ *   its edge, and the overlay stays inside the window;
  * - axe: any serious or critical violation fails the run.
  *
  * This is the visual run: the build reads the dev fixture tables
@@ -152,6 +156,166 @@ const OVERLAYS = [
   "command",
   "select",
 ];
+
+/**
+ * The containers filled with long content (an overflow there is a layout
+ * bug); popups keep their own long-label stress (`stress=top-left` etc.).
+ */
+const CONTENT_OVERLAYS = ["dialog", "alert-dialog", "sheet", "drawer"];
+/** Real dialogs whose footers mix a hint, a group or three actions. */
+const CONTENT_FIXTURES = [
+  "/__ui?fixture=quit-guard-3",
+  "/__ui?fixture=routines-repo-watch-sheet",
+  "/__ui?fixture=bots-channel-details",
+];
+/** The content overlays are measured again at a phone's width. */
+const PHONE_WIDTH = 390;
+
+/**
+ * Each open overlay's box and the parts of its content that show past it:
+ * an element's shown extent is cut by every clipping ancestor inside the
+ * overlay, and only the outermost element that reaches past an edge counts.
+ */
+export const overlayGeometry = () => {
+  // A dialog opened from a dialog has no backdrop: Base UI marks it nested.
+  const selector = [
+    '[data-slot="dialog-content"]',
+    '[data-slot="alert-dialog-content"]',
+    '[data-slot="dialog-overlay"] ~ [role="dialog"]',
+    '[role="alertdialog"]',
+    '[role="dialog"][data-nested]:not(.ui-popup)',
+    '[data-slot="sheet-overlay"] ~ [role="dialog"]',
+    '[data-slot="drawer-popup"]',
+    ".ui-popup",
+  ].join(",");
+  const footerSelector = [
+    '[data-slot="dialog-footer"]',
+    '[data-slot="alert-dialog-footer"]',
+    '[data-slot="sheet-footer"]',
+    '[data-slot="drawer-footer"]',
+  ].join(",");
+  const round = (value) => Math.round(value * 10) / 10;
+  return [...document.querySelectorAll(selector)]
+    .filter((box) => box.checkVisibility())
+    .map((box) => {
+      const outer = box.getBoundingClientRect();
+      const shown = (element) => {
+        const rect = element.getBoundingClientRect();
+        // Text that overflows its own box shows past it unless the box clips.
+        const overflows =
+          getComputedStyle(element).overflowX === "visible" &&
+          element.scrollWidth > element.clientWidth;
+        let { left } = rect;
+        let right = overflows
+          ? Math.max(rect.right, rect.left + element.scrollWidth)
+          : rect.right;
+        for (
+          let up = element.parentElement;
+          up && up !== box;
+          up = up.parentElement
+        )
+          if (getComputedStyle(up).overflowX !== "visible") {
+            const clip = up.getBoundingClientRect();
+            left = Math.max(left, clip.left);
+            right = Math.min(right, clip.right);
+          }
+        return { left, right, width: rect.width };
+      };
+      const past = (extent) =>
+        extent.width > 0 &&
+        extent.right > extent.left &&
+        (extent.right > outer.right + 1 || extent.left < outer.left - 1);
+      // A popup's arrow sits outside it by design.
+      const decorative = (element) =>
+        element.getAttribute("aria-hidden") === "true" &&
+        element.getBoundingClientRect().width <= 16 &&
+        element.getBoundingClientRect().height <= 16;
+      const spills = [...box.querySelectorAll("*")]
+        .filter(
+          (element) =>
+            element.checkVisibility() &&
+            !decorative(element) &&
+            past(shown(element))
+        )
+        .filter(
+          (element) =>
+            element.parentElement === box || !past(shown(element.parentElement))
+        )
+        .map((element) => {
+          const extent = shown(element);
+          return {
+            slot: element.dataset.slot ?? element.tagName.toLowerCase(),
+            by: round(
+              Math.max(extent.right - outer.right, outer.left - extent.left)
+            ),
+          };
+        });
+      // The main action is the footer's last; where it sits depends on the direction.
+      const footers = [...box.querySelectorAll(footerSelector)]
+        .filter(
+          (footer) =>
+            footer.checkVisibility() && footer.closest(selector) === box
+        )
+        .map((footer) => {
+          const actions = [...footer.querySelectorAll("button")].filter(
+            (button) => button.checkVisibility()
+          );
+          if (actions.length === 0) return null;
+          const rects = actions.map((button) => button.getBoundingClientRect());
+          const main = rects.at(-1);
+          const style = getComputedStyle(footer);
+          const frame = footer.getBoundingClientRect();
+          return {
+            slot: footer.dataset.slot,
+            direction: style.flexDirection,
+            main: (actions.at(-1).textContent ?? "").trim().slice(0, 40),
+            mainRight: round(main.right),
+            mainTop: round(main.top),
+            contentRight: round(frame.right - parseFloat(style.paddingRight)),
+            rightmost: round(Math.max(...rects.map((rect) => rect.right))),
+            topmost: round(Math.min(...rects.map((rect) => rect.top))),
+          };
+        })
+        .filter((footer) => footer != null);
+      return {
+        slot: box.dataset.slot ?? box.getAttribute("role"),
+        left: round(outer.left),
+        right: round(outer.right),
+        innerWidth,
+        spills,
+        footers,
+      };
+    });
+};
+
+/** Nothing shows past an overlay's edge; the overlay stays in the window. */
+export const overlayProblems = (name, overlays) =>
+  overlays.flatMap((overlay) => [
+    ...(overlay.left < -0.5 || overlay.right > overlay.innerWidth + 0.5
+      ? [
+          `${name}: ${overlay.slot} spans ${overlay.left}–${overlay.right}, outside the ${overlay.innerWidth} px window`,
+        ]
+      : []),
+    ...overlay.spills.map(
+      (spill) =>
+        `${name}: ${spill.slot} shows ${spill.by} px past the edge of ${overlay.slot}`
+    ),
+    // A row ends with the main action; a stack (column-reverse) puts it on top.
+    ...(overlay.footers ?? []).flatMap((footer) =>
+      footer.direction === "row" &&
+      (Math.abs(footer.mainRight - footer.contentRight) > 1 ||
+        footer.mainRight < footer.rightmost - 1)
+        ? [
+            `${name}: ${footer.slot}'s main action "${footer.main}" ends at ${footer.mainRight}, not at the end (${footer.contentRight})`,
+          ]
+        : footer.direction === "column-reverse" &&
+            footer.mainTop > footer.topmost + 1
+          ? [
+              `${name}: ${footer.slot}'s main action "${footer.main}" is not on top of the stack`,
+            ]
+          : []
+    ),
+  ]);
 
 /** Which axe impacts fail the run (Claude impl r1 #9/#10). */
 export const FAILING_IMPACTS = new Set(["serious", "critical"]);
@@ -598,7 +762,13 @@ const main = async () => {
         ...ROUTES,
         ...(flag("--no-overlays") || width !== WIDTHS[0]
           ? []
-          : OVERLAYS.map((id) => `/__ui?section=${id}&open=${id}`)),
+          : [
+              ...OVERLAYS.map((id) => `/__ui?section=${id}&open=${id}`),
+              ...CONTENT_OVERLAYS.map(
+                (id) => `/__ui?section=${id}&open=${id}&stress=content`
+              ),
+              ...CONTENT_FIXTURES,
+            ]),
       ];
       for (const theme of THEMES) {
         await cdp.send("Emulation.setEmulatedMedia", {
@@ -706,7 +876,72 @@ const main = async () => {
             failures.push(...panelSplitProblems(name, split));
             geometry.split = split;
           }
+          const measured =
+            route.includes("open=") || CONTENT_FIXTURES.includes(route);
+          if (measured) {
+            geometry.overlays = await cdp.evaluate(
+              `(${overlayGeometry.toString()})()`
+            );
+            if (geometry.overlays.length === 0)
+              failures.push(`${name}: no overlay open`);
+            failures.push(...overlayProblems(name, geometry.overlays));
+          }
           await capture(cdp, name, { route, width, theme, geometry });
+          if (
+            measured &&
+            (route.includes("stress=content") ||
+              CONTENT_FIXTURES.includes(route))
+          ) {
+            // The same overlay on a phone: the stacked footer, the narrow box.
+            await cdp.send("Emulation.setDeviceMetricsOverride", {
+              width: PHONE_WIDTH,
+              height: HEIGHT,
+              deviceScaleFactor: 0,
+              mobile: false,
+            });
+            await settle(cdp, route);
+            await animationsDone(cdp);
+            const phone = `${slug(route)}@${PHONE_WIDTH}-${theme}.png`;
+            const overlays = await cdp.evaluate(
+              `(${overlayGeometry.toString()})()`
+            );
+            if (overlays.length === 0)
+              failures.push(`${phone}: no overlay open`);
+            failures.push(...overlayProblems(phone, overlays));
+            await capture(cdp, phone, {
+              route,
+              width: PHONE_WIDTH,
+              theme,
+              geometry: { overlays },
+            });
+            await cdp.send("Emulation.clearDeviceMetricsOverride");
+            await sleep(150);
+          }
+          if (CONTENT_FIXTURES.includes(route)) {
+            // French and German run longest: the footers wrap here, if anywhere.
+            for (const language of ["fr-FR", "de-DE"]) {
+              await cdp.evaluate(
+                `window.__abacusDev.setLanguage(${JSON.stringify(language)})`
+              );
+              await settle(cdp, route);
+              await animationsDone(cdp);
+              const localized = `${slug(route)}@${width}-${theme}-${language}.png`;
+              const overlays = await cdp.evaluate(
+                `(${overlayGeometry.toString()})()`
+              );
+              if (overlays.length === 0)
+                failures.push(`${localized}: no overlay open`);
+              failures.push(...overlayProblems(localized, overlays));
+              await capture(cdp, localized, {
+                route,
+                width,
+                theme,
+                geometry: { overlays },
+              });
+            }
+            await cdp.evaluate(`window.__abacusDev.setLanguage("en-US")`);
+            await settle(cdp, route);
+          }
         }
 
         if (flag("--phase6")) continue;

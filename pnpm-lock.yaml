@@ -942,6 +942,9 @@ importers:
       ghostty-web:
         specifier: 0.4.0
         version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
+      marked:
+        specifier: 18.0.5
+        version: 18.0.5
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@7.0.2)

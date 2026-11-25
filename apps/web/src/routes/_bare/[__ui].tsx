@@ -72,6 +72,9 @@ import {
   CREDITS_SIDEBAR_GALLERY_LEVELS,
   CreditsSidebarGallery,
   type CreditsSidebarGalleryLevel,
+  QUIT_GUARD_GALLERY_COUNTS,
+  QuitGuardGallery,
+  type QuitGuardGalleryCount,
 } from "#renderer/features/shell";
 import { TourGallery } from "#renderer/features/tour/gallery";
 import { NewLookCard } from "#renderer/features/tour/new-look";
@@ -149,6 +152,7 @@ const extension = {
         ...CREDITS_SIDEBAR_GALLERY_LEVELS.map(
           (level) => `credits-sidebar-${level}`
         ),
+        ...QUIT_GUARD_GALLERY_COUNTS.map((count) => `quit-guard-${count}`),
         "credit-card-50",
         "credit-card-80",
         "credit-card-80-project",
@@ -213,6 +217,10 @@ const extension = {
     ) : props.fixture.startsWith("credits-sidebar-") ? (
       <CreditsSidebarGallery
         level={props.fixture.slice(16) as CreditsSidebarGalleryLevel}
+      />
+    ) : props.fixture.startsWith("quit-guard-") ? (
+      <QuitGuardGallery
+        count={props.fixture.slice(11) as QuitGuardGalleryCount}
       />
     ) : props.fixture.startsWith("coder-") ? (
       <CoderGallery fixture={props.fixture} />

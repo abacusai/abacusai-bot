@@ -8,6 +8,7 @@ import {
 import { DEFAULT_CHECK_IN } from "#renderer/lib/bots/check-in";
 import { Button } from "#renderer/ui/button";
 
+import { ChannelDetailsDialog } from "../channels/pages";
 import { CheckInFields } from "../check-in/fields";
 import { useBots } from "../data/queries";
 import { BotSetupForm } from "../form/bot-form";
@@ -29,6 +30,7 @@ const ids = [
   "bots-memory",
   "bots-files",
   "bots-check-in",
+  "bots-channel-details",
   "bots-chat",
 ] as const;
 const Nav = ({ fixture }: { fixture: string | undefined }) => {
@@ -137,7 +139,25 @@ const View = ({
       </div>
     );
   if (fixture === "bots-check-in") return <CheckGallery />;
+  if (fixture === "bots-channel-details") return <ChannelDetailsGallery />;
   return <PanelGallery kind={fixture} />;
+};
+/** A channel's details dialog with its three actions (Delete, Cancel, Save). */
+const ChannelDetailsGallery = () => {
+  const { bots } = useBots();
+  return (
+    <ChannelDetailsDialog
+      bots={bots}
+      channel={{
+        name: "Launch planning",
+        memberBotIds: bots.slice(0, 2).map((bot) => bot.id),
+      }}
+      placeholder=""
+      onClose={() => undefined}
+      onSave={() => undefined}
+      onDelete={() => undefined}
+    />
+  );
 };
 export const botsGallerySections = { Nav, View };
 export const isBotsGalleryFixture = (fixture: string) =>

@@ -505,7 +505,7 @@ export const GroupPage = ({
         </SidePanel>
       )}
       {editing === "details" && (
-        <DetailsDialog
+        <ChannelDetailsDialog
           bots={bots}
           channel={channel}
           placeholder={groupTitle(
@@ -554,7 +554,7 @@ export const GroupPage = ({
 };
 
 /** A channel's details: its name, purpose and members, and Delete. */
-const DetailsDialog = ({
+export const ChannelDetailsDialog = ({
   bots,
   channel,
   placeholder,

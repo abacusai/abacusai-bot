@@ -180,7 +180,7 @@ export const CreditThresholdCard = ({
         showCloseButton={false}
         data-slot="credit-threshold-card"
         data-threshold={threshold}
-        className="gap-5 p-6 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
+        className="gap-5 p-6 pb-5 text-sm sm:max-w-[440px]"
       >
         <div className="flex flex-col items-start gap-3">
           <span

@@ -6,7 +6,8 @@ import { cn } from "#renderer/lib/cn";
  * A card in the chat (a failed turn, the credit wall, a payment or phone
  * step): an icon tile, a bold title and its line, then the card's own
  * sections and buttons. One calm frame for all of them, never an alarm's
- * colours. Sections stack without rules or padding of their own.
+ * colours. Sections stack without rules or padding of their own. A name or
+ * path with no spaces in the title or its line wraps inside the card.
  */
 export const ChatCard = ({
   icon,
@@ -35,9 +36,11 @@ export const ChatCard = ({
     </span>
     <div className="flex min-w-0 flex-1 flex-col gap-3 *:empty:hidden">
       <div className="flex min-h-8 flex-col justify-center gap-0.5">
-        <h2 className="font-semibold">{title}</h2>
+        <h2 className="font-semibold [overflow-wrap:anywhere]">{title}</h2>
         {description != null && description !== "" && (
-          <p className="text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground [overflow-wrap:anywhere]">
+            {description}
+          </p>
         )}
       </div>
       {children != null && (

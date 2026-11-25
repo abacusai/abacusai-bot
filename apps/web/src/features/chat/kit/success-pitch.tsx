@@ -148,8 +148,10 @@ export const OfferCardFrame = ({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
-          <p className="font-semibold">{title}</p>
-          <p className="text-muted-foreground">{line}</p>
+          <p className="font-semibold [overflow-wrap:anywhere]">{title}</p>
+          <p className="text-muted-foreground [overflow-wrap:anywhere]">
+            {line}
+          </p>
         </div>
         {children}
         {action != null && (notNow != null || secondary != null) && (
