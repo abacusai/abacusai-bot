@@ -20,6 +20,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     mode: "workspace-write",
     enforcement: "auto",
     workspaceRoot: "/work/repo",
+    workspaceFolders: [],
     writableTemp: ["/private/tmp", "/private/var/folders/x/T"],
     toolHomes: [],
     secrets: {
@@ -94,6 +95,20 @@ describe("the per-command config", () => {
   it("keeps the workspace read-only in read-only mode, temp still writable", () => {
     expect(
       commandConfig(policy({ mode: "read-only" })).filesystem?.allowWrite
+    ).toEqual(["/private/tmp", "/private/var/folders/x/T"]);
+  });
+
+  it("writes the chat's added folders beside the workspace, never in read-only mode", () => {
+    const added = { workspaceFolders: ["/Users/dev/Drive/site"] };
+    expect(commandConfig(policy(added)).filesystem?.allowWrite).toEqual([
+      "/work/repo",
+      "/Users/dev/Drive/site",
+      "/private/tmp",
+      "/private/var/folders/x/T",
+    ]);
+    expect(
+      commandConfig(policy({ ...added, mode: "read-only" })).filesystem
+        ?.allowWrite
     ).toEqual(["/private/tmp", "/private/var/folders/x/T"]);
   });
 });

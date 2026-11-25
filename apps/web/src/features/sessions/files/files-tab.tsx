@@ -1,6 +1,10 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { FileTreeNode } from "@abacus-ai/contract/contracts";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import {
+  conversationRefFromKey,
+  sessionConversationKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
@@ -43,8 +47,13 @@ import {
 } from "../data/queries";
 import { isRelativePath } from "../data/search";
 import { panelTabsStore, updateTab } from "../dock/panel-tabs-store";
+import { OutsideFoldersCard } from "../folders/outside-folders-card";
 import { useLazyChildren } from "./lazy-children";
 import { isAbsolutePreviewPath } from "./preview-target";
+const sessionIdOf = (scope: ConversationKey | undefined): string | null => {
+  const ref = scope == null ? null : conversationRefFromKey(scope);
+  return ref?.kind === "session" ? ref.sessionId : null;
+};
 export const flattenFiles = (nodes: FileTreeNode[]): string[] =>
   nodes.flatMap((n) => [
     n.relativePath + (n.kind === "directory" ? "/" : ""),
@@ -53,12 +62,15 @@ export const flattenFiles = (nodes: FileTreeNode[]): string[] =>
 export const SessionFilePreview = ({
   root,
   path,
+  scope,
   renderLocal,
   preview = false,
   inTab = preview,
   visible = true,
   onShown,
 }: {
+  /** The conversation whose folders the file is judged against (main's previewRoot). */
+  scope?: ConversationKey;
   preview?: boolean;
   visible?: boolean;
   /** The in-page viewer (not a native view) is on screen: it counts as drawn. */
@@ -71,23 +83,49 @@ export const SessionFilePreview = ({
 }) => {
   const transport = useSessionsTransport();
   const outside = isAbsolutePreviewPath(path);
-  const native =
-    IS_ELECTRON &&
-    ["pdf", "html"].includes(previewKind(outside ? path : `${root}/${path}`));
+  const valid = outside || isRelativePath(path);
+  const absolute = outside ? path : `${root}/${path}`;
+  // Main says which of the chat's folders a file previews under, the same
+  // answer for every kind; asked once per file, again after a folder change.
+  const judged = IS_ELECTRON && scope != null && valid;
+  const answer = useQuery({
+    ...transport.orpc.browser.runtime.previewRoot.queryOptions({
+      input: { conversationKey: scope!, filePath: absolute },
+    }),
+    enabled: judged,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const refused = judged && answer.data?.ok === false;
+  const native = IS_ELECTRON && ["pdf", "html"].includes(previewKind(absolute));
   const shown = useEffectEvent(() => onShown?.());
-  const viewer = !native && (outside || isRelativePath(path));
+  const viewer = !native && valid && !refused;
   useEffect(() => {
     if (viewer && visible) shown();
   }, [viewer, visible, path]);
-  if (!outside && !isRelativePath(path))
+  if (!valid || (judged && answer.isError))
     return (
       <p role="alert" className="p-4">
         {i18n.t("bots.chat.preview.failed")}
       </p>
     );
-  // A file outside the checkout is read under its own directory.
-  const absolute = outside ? path : `${root}/${path}`;
-  const hostRoot = outside ? containmentRootFor(path, root) : root;
+  if (judged && answer.data == null) return null;
+  if (answer.data?.ok === false)
+    return (
+      <OutsideFoldersCard
+        file={absolute}
+        folder={answer.data.folder}
+        sessionId={sessionIdOf(scope)}
+      />
+    );
+  // Without main's answer (the web host), a file outside the checkout is
+  // read under its own directory.
+  const hostRoot =
+    answer.data?.ok === true
+      ? answer.data.root
+      : outside
+        ? containmentRootFor(path, root)
+        : root;
   const kind = previewKind(absolute);
   if (IS_ELECTRON && (kind === "pdf" || kind === "html"))
     return <>{renderLocal(absolute)}</>;
@@ -377,6 +415,7 @@ export const FilesTab = ({
               <SessionFilePreview
                 root={root}
                 path={selected}
+                scope={sessionConversationKey(row.workspaceId, row.id)}
                 renderLocal={renderLocal}
               />
             ) : (

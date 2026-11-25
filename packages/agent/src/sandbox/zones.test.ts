@@ -42,6 +42,12 @@ describe.skipIf(!onPosix)("where a path lands", () => {
     expect(zoneOf(target, context)).toBe(zone);
   });
 
+  it("a folder the user added to the chat is workspace, beside it is not", () => {
+    const added = { ...context, workspaceFolders: ["/Users/dev/Drive/site"] };
+    expect(zoneOf("/Users/dev/Drive/site/index.html", added)).toBe("workspace");
+    expect(zoneOf("/Users/dev/Drive/other.txt", added)).toBe("user");
+  });
+
   it("a directory made straight under home is a project of the user's", () => {
     expect(zoneOf("/Users/dev/app", context)).toBe("sensitive");
     expect(zoneOf("/Users/dev/app", context, true)).toBe("user");

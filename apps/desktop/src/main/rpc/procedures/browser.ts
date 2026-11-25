@@ -2,7 +2,10 @@ import type { BrowserEvent } from "@abacus-ai/contract/contract";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
-import { checkLocalPreviewFile } from "../../services/browser/local-preview-file";
+import {
+  checkLocalPreviewFile,
+  previewRootFor,
+} from "../../services/browser/local-preview-file";
 import { forbidden } from "../errors";
 import { hostFileError } from "./files";
 import { impl, isType, onIpcEvents, requireMainRenderer, stream } from "./impl";
@@ -107,16 +110,14 @@ export const browserRouter = impl.browser.router({
         requireMainRenderer(context);
         const checked = await checkLocalPreviewFile(
           input.filePath,
-          input.hostRoot,
-          context.deps.serviceHost.localPreviewRoots(input.conversationKey)
+          context.deps.serviceHost.previewSources(input.conversationKey)
         );
-        // A root that is not the conversation's checkout or an artifact
-        // folder: FORBIDDEN {root-not-allowed}; outside the root: FORBIDDEN
-        // {outside-root}, as `files.readText`; a type the view does not
-        // show: FORBIDDEN {unsupported-type}.
+        // In none of the chat's folders, made by it or attached to it:
+        // FORBIDDEN {outside-folders}; a type the view does not show:
+        // FORBIDDEN {unsupported-type}; the rest as `files.readText`.
         if (checked.ok === false)
           throw checked.error === "unsupported-type" ||
-            checked.error === "root-not-allowed"
+            checked.error === "outside-folders"
             ? forbidden(checked.error)
             : hostFileError(input.filePath)(checked.error);
         return context.deps.browserRuntime.materializeFile({
@@ -126,6 +127,15 @@ export const browserRouter = impl.browser.router({
           root: checked.root,
           ...(input.holder == null ? {} : { holder: input.holder }),
         });
+      }
+    ),
+    previewRoot: impl.browser.runtime.previewRoot.handler(
+      ({ input, context }) => {
+        requireMainRenderer(context);
+        return previewRootFor(
+          input.filePath,
+          context.deps.serviceHost.previewSources(input.conversationKey)
+        );
       }
     ),
     present: impl.browser.runtime.present.handler(({ input, context }) => {

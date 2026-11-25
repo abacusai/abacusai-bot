@@ -2308,6 +2308,21 @@
       "label": "Deine Aufgabe von der Website",
       "stop": "Stoppen",
       "edit": "Bearbeiten"
+    },
+    "folders": {
+      "add": "Ordner hinzufügen",
+      "addFailed": "Der Ordner konnte nicht hinzugefügt werden. Versuche es erneut.",
+      "addOther": "Ordner hinzufügen…",
+      "chatFolder": "Ordner dieses Chats",
+      "chip": "Ordner",
+      "chipCount": "Ordner · {{count}}",
+      "help": "Der Bot arbeitet und speichert in diesen Ordnern, und der Chat zeigt, was darin liegt.",
+      "label": "Ordner dieses Chats",
+      "notAllowed": "{{name}} kann nicht hinzugefügt werden: Er enthält deinen Benutzerordner, System- oder App-Dateien.",
+      "outsideBody": "Sie kann hier nicht angezeigt werden. Füge den Ordner {{name}} zu diesem Chat hinzu, um sie anzuzeigen, oder öffne sie mit der Standard-App.",
+      "outsideTitle": "Diese Datei liegt außerhalb der Ordner dieses Chats",
+      "remove": "{{name}} entfernen",
+      "removeFailed": "Der Ordner konnte nicht entfernt werden. Versuche es erneut."
     }
   },
   "terminalShells": {

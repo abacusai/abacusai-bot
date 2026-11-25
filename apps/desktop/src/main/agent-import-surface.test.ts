@@ -92,6 +92,9 @@ const ALLOWED = new Set([
   // What a turn or a routine run may spend (the routine runner's pause after
   // budget stops): a 4 kB chunk with no imports at all.
   "@abacus-ai/agent/spend-policy",
+  // Which folders may join a chat, and their env name: the zone map and the
+  // path leaves (child-env, model-path, secret-paths), node's fs, os and path.
+  "@abacus-ai/agent/workspace-folders",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

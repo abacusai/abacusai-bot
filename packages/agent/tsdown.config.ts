@@ -66,6 +66,8 @@ export default defineConfig({
     "src/user-language.ts",
     // The language a text is in, read on the device: main reads a first-run goal's before the bot speaks.
     "src/language-id.ts",
+    // A chat's added folders: main validates a folder and spawns the agent with them.
+    "src/workspace-folders.ts",
     // The phone reply's bubble split, for the hosted app's WhatsApp lane.
     "src/phone/phone-bubbles.ts",
     // The phone loop's zone, check-in language and due loops, for its agenda.

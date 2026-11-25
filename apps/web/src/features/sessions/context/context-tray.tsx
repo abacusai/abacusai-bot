@@ -24,6 +24,7 @@ import {
   useWorkspace,
   useGithubIntegration,
 } from "../data/queries";
+import { FoldersChip } from "../folders/folders-chip";
 import { PrChip } from "../pr/pr-chip";
 import type { StartDraft } from "../start/start-session";
 import { ProjectRulesChip } from "./project-rules-chip";
@@ -208,6 +209,9 @@ export const SessionContextTray = ({
             workspaceId={workspaceId}
             sessionId={sessionId}
           />
+        ) : null}
+        {sessionId && IS_ELECTRON ? (
+          <FoldersChip workspaceId={workspaceId} sessionId={sessionId} />
         ) : null}
         <ProjectRulesChip files={projectRules} onOpen={onOpenRules} />
       </div>

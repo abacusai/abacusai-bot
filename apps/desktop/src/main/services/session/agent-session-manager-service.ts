@@ -1,3 +1,5 @@
+import path from "path";
+
 import { isDiskFull } from "@abacus-ai/agent/atomic-file";
 import {
   parseUnattendedPolicy,
@@ -77,6 +79,10 @@ type SessionRecord = {
   continuedFrom?: string;
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
+  /** Folders the user added to this chat beyond its own, real paths. See addFolder. */
+  folders?: string[];
+  /** Single files the user attached, real paths: each previews alone. */
+  attachedFiles?: string[];
   /**
    * Someone other than the user, writing from a chat app with no bot: never
    * the user's own conversation. Stamped once at mint.
@@ -86,6 +92,17 @@ type SessionRecord = {
 
 // Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
+
+/** Attached files a chat remembers for preview; the oldest go first. */
+const ATTACHED_FILES_KEPT = 50;
+
+const isWithinFolder = (child: string, parent: string): boolean => {
+  const relative = path.relative(parent, child);
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
+};
 
 /** How often a session list a full disk refused tries to save again. */
 const SESSIONS_DISK_FULL_RETRY_MS = 30_000;
@@ -113,6 +130,9 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   ...(record.report != null ? { report: record.report } : {}),
   ...(record.continuedFrom != null
     ? { continuedFrom: record.continuedFrom }
+    : {}),
+  ...(record.folders != null && record.folders.length > 0
+    ? { folders: [...record.folders] }
     : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
@@ -255,7 +275,10 @@ export class AgentSessionManagerService {
     routineId: string | null,
     owner: SessionOwner | null,
     initial: { continuedFrom?: { sessionId: string; summary: string } }
-  ): Pick<SessionRecord, "continuedFrom" | "continuationSeed"> {
+  ): Pick<
+    SessionRecord,
+    "continuedFrom" | "continuationSeed" | "folders" | "attachedFiles"
+  > {
     const from = initial.continuedFrom;
     if (from == null || routineId != null || owner != null) return {};
     const source = this.sessions.get(from.sessionId);
@@ -269,7 +292,64 @@ export class AgentSessionManagerService {
       source.lane != null
     )
       return {};
-    return { continuedFrom: source.id, continuationSeed: from.summary };
+    // The work goes on in the same folders.
+    return {
+      continuedFrom: source.id,
+      continuationSeed: from.summary,
+      ...(source.folders != null ? { folders: [...source.folders] } : {}),
+      ...(source.attachedFiles != null
+        ? { attachedFiles: [...source.attachedFiles] }
+        : {}),
+    };
+  }
+
+  /** The folders added to the chat, beyond its own; empty for an unknown one. */
+  folders(sessionId: string): string[] {
+    return [...(this.sessions.get(sessionId)?.folders ?? [])];
+  }
+
+  /** The files the user attached to the chat. */
+  attachedFiles(sessionId: string): string[] {
+    return [...(this.sessions.get(sessionId)?.attachedFiles ?? [])];
+  }
+
+  /**
+   * Adds a checked, real folder; one inside a folder already there adds
+   * nothing, and one holding folders already there replaces them. True when
+   * the list changed.
+   */
+  addFolder(sessionId: string, folder: string): boolean {
+    const record = this.sessions.get(sessionId);
+    if (record == null) return false;
+    const current = record.folders ?? [];
+    if (current.some((entry) => isWithinFolder(folder, entry))) return false;
+    record.folders = [
+      ...current.filter((entry) => !isWithinFolder(entry, folder)),
+      folder,
+    ];
+    this.persist();
+    return true;
+  }
+
+  /** True when the folder was in the list. */
+  removeFolder(sessionId: string, folder: string): boolean {
+    const record = this.sessions.get(sessionId);
+    if (record?.folders == null || !record.folders.includes(folder))
+      return false;
+    record.folders = record.folders.filter((entry) => entry !== folder);
+    this.persist();
+    return true;
+  }
+
+  /** Remembers an attached file, newest last, up to ATTACHED_FILES_KEPT. */
+  addAttachedFile(sessionId: string, file: string): void {
+    const record = this.sessions.get(sessionId);
+    if (record == null || record.attachedFiles?.at(-1) === file) return;
+    record.attachedFiles = [
+      ...(record.attachedFiles ?? []).filter((entry) => entry !== file),
+      file,
+    ].slice(-ATTACHED_FILES_KEPT);
+    this.persist();
   }
 
   /** The summary owed to the chat's first message, until it is taken. */

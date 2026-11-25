@@ -326,7 +326,6 @@ it.each(["pdf", "html"])(
     expect(materializeFile).toHaveBeenCalledWith(
       expect.objectContaining({
         filePath: `/workspace/report.${extension}`,
-        hostRoot: "/Users/you/code/abacusai-bot",
       })
     );
   }

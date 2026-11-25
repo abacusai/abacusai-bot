@@ -45,6 +45,9 @@ export const WEB_HOST_DENIED = [
   // "Try another look" reprints a document with the desktop's print engine.
   "files.relook",
   "files.designs",
+  // A chat's added folders are picked with the desktop's folder dialog and
+  // previewed in its native views.
+  "sessions.folders",
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [

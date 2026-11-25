@@ -2308,6 +2308,21 @@
       "label": "Je taak van de website",
       "stop": "Stoppen",
       "edit": "Bewerken"
+    },
+    "folders": {
+      "add": "Map toevoegen",
+      "addFailed": "De map kon niet worden toegevoegd. Probeer het opnieuw.",
+      "addOther": "Map toevoegen…",
+      "chatFolder": "Map van deze chat",
+      "chip": "Mappen",
+      "chipCount": "Mappen · {{count}}",
+      "help": "De bot werkt en bewaart in deze mappen, en de chat toont wat erin staat.",
+      "label": "Mappen van deze chat",
+      "notAllowed": "{{name}} kan niet worden toegevoegd: de map bevat je thuismap of systeem- of appbestanden.",
+      "outsideBody": "Het kan hier niet worden getoond. Voeg de map {{name}} toe aan deze chat om het te bekijken, of open het met de standaardapp.",
+      "outsideTitle": "Dit bestand staat buiten de mappen van deze chat",
+      "remove": "{{name}} verwijderen",
+      "removeFailed": "De map kon niet worden verwijderd. Probeer het opnieuw."
     }
   },
   "terminalShells": {

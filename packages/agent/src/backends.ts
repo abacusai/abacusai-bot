@@ -47,6 +47,7 @@ import {
 } from "./sandbox/shell.js";
 import { zoneContext } from "./sandbox/zones.js";
 import { trashShimEnv, withTrashGuard, type TrashScope } from "./trash.js";
+import { hostWorkspaceFolders } from "./workspace-folders.js";
 
 export type BackendId =
   | "local"
@@ -246,7 +247,7 @@ function localSandboxedOperations(
       sandboxEnforcement(mode) === "off"
         ? null
         : classifyCommand(command, cwd, {
-            context: zoneContext(cwd),
+            context: zoneContext(cwd, hostWorkspaceFolders()),
             ledger: approvals?.created,
           });
     const policy = resolvePolicy(mode, cwd, {
@@ -256,6 +257,7 @@ function localSandboxedOperations(
         ...(intent?.grants ?? []),
       ],
       filteredNetwork: networkConfinable(),
+      workspaceFolders: hostWorkspaceFolders(),
     });
 
     // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
@@ -288,7 +290,11 @@ function localSandboxedOperations(
           ? null
           : [
               ...(policy.mode === "workspace-write"
-                ? [policy.workspaceRoot, ...policy.toolHomes]
+                ? [
+                    policy.workspaceRoot,
+                    ...policy.workspaceFolders,
+                    ...policy.toolHomes,
+                  ]
                 : []),
               ...policy.writableTemp,
               ...policy.approvedWrites,

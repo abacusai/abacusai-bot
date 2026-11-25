@@ -2308,6 +2308,21 @@
       "label": "你在网站上提交的任务",
       "stop": "停止",
       "edit": "编辑"
+    },
+    "folders": {
+      "add": "添加文件夹",
+      "addFailed": "无法添加文件夹。请重试。",
+      "addOther": "添加文件夹…",
+      "chatFolder": "此聊天的文件夹",
+      "chip": "文件夹",
+      "chipCount": "文件夹 · {{count}}",
+      "help": "机器人在这些文件夹中工作和保存文件，聊天中可以显示其中的内容。",
+      "label": "此聊天的文件夹",
+      "notAllowed": "无法添加 {{name}}：它包含你的主文件夹、系统文件或应用文件。",
+      "outsideBody": "无法在这里显示。将文件夹 {{name}} 添加到此聊天即可预览，或用默认应用打开。",
+      "outsideTitle": "此文件不在此聊天的文件夹中",
+      "remove": "移除 {{name}}",
+      "removeFailed": "无法移除文件夹。请重试。"
     }
   },
   "terminalShells": {

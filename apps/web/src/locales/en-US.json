@@ -2308,6 +2308,21 @@
       "label": "Your task from the website",
       "stop": "Stop",
       "edit": "Edit"
+    },
+    "folders": {
+      "add": "Add folder",
+      "addFailed": "The folder couldn't be added. Try again.",
+      "addOther": "Add folder…",
+      "chatFolder": "This chat's folder",
+      "chip": "Folders",
+      "chipCount": "Folders · {{count}}",
+      "help": "The bot works and saves in these folders, and the chat shows what is in them.",
+      "label": "This chat's folders",
+      "notAllowed": "{{name}} can't be added: it holds your home, system or app files.",
+      "outsideBody": "It can't be shown here. Add the folder {{name}} to this chat to preview it, or open it with its default app.",
+      "outsideTitle": "This file is outside this chat's folders",
+      "remove": "Remove {{name}}",
+      "removeFailed": "The folder couldn't be removed. Try again."
     }
   },
   "terminalShells": {

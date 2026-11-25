@@ -58,7 +58,6 @@ export const BrowserTab = ({
   id,
   url,
   file,
-  root,
   visible,
   presenter,
   blocked,
@@ -71,6 +70,7 @@ export const BrowserTab = ({
   id: string;
   url?: string;
   file?: string;
+  /** The web host's in-page viewer reads under it; a native view takes main's root. */
   root: string;
   visible: boolean;
   presenter: ComponentProps<typeof BrowserSurface>["presenter"];
@@ -109,7 +109,6 @@ export const BrowserTab = ({
           conversationKey: key,
           resourceId: id,
           filePath: file,
-          hostRoot: root,
         })
       : null;
     const promise = local
@@ -135,7 +134,7 @@ export const BrowserTab = ({
       live = false;
       local?.release();
     };
-  }, [transport, key, id, url, home, file, root, retry]);
+  }, [transport, key, id, url, home, file, retry]);
   useEffect(() => {
     const abort = new AbortController();
     void followNotices(

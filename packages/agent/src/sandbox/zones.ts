@@ -15,7 +15,7 @@ import { canonicalize } from "./policy.js";
 import { isWithin } from "./secrets.js";
 
 export type Zone =
-  /** Inside the workspace: the kernel allows it already. */
+  /** Inside the workspace or a folder the user added to the chat: the kernel allows it already. */
   | "workspace"
   /** /tmp and the platform temp dir: the kernel allows it already. */
   | "scratch"
@@ -104,13 +104,18 @@ export function existingToolHomes(
 
 export interface ZoneContext {
   workspaceRoot: string;
+  /** The folders the user added to the chat, canonical (workspace-folders.ts). */
+  workspaceFolders?: readonly string[];
   writableTemp: readonly string[];
   toolHomes: readonly string[];
   home?: string;
 }
 
 /** The context for a workspace, with the machine's temp dirs and tool homes. */
-export function zoneContext(cwd: string): ZoneContext {
+export function zoneContext(
+  cwd: string,
+  workspaceFolders: readonly string[] = []
+): ZoneContext {
   const temps = new Set<string>();
   for (const candidate of ["/tmp", os.tmpdir()]) {
     if (candidate) temps.add(canonicalize(candidate));
@@ -118,6 +123,7 @@ export function zoneContext(cwd: string): ZoneContext {
 
   return {
     workspaceRoot: canonicalize(cwd),
+    workspaceFolders: workspaceFolders.map(canonicalize),
     writableTemp: [...temps],
     toolHomes: existingToolHomes(),
   };
@@ -137,11 +143,28 @@ export function zoneOf(
   const target = canonicalize(absolute);
   const home = canonicalize(context.home ?? os.homedir());
 
-  if (isWithin(target, context.workspaceRoot)) return "workspace";
+  if (
+    isWithin(target, context.workspaceRoot) ||
+    (context.workspaceFolders ?? []).some((folder) => isWithin(target, folder))
+  )
+    return "workspace";
   if (context.writableTemp.some((temp) => isWithin(target, temp)))
     return "scratch";
   if (context.toolHomes.some((dir) => isWithin(target, dir))) return "toolhome";
 
+  return ownerZone(target, home, directory);
+}
+
+/**
+ * Whose a canonical path is when it is none of the app's own areas: the
+ * user's folders, sensitive ground (dotfiles, ~/Library, the system), or
+ * anywhere else.
+ */
+export function ownerZone(
+  target: string,
+  home: string,
+  directory: boolean
+): "user" | "sensitive" | "other" {
   if (isWithin(target, home)) {
     const parts = path.relative(home, target).split(path.sep);
     const [first] = parts;

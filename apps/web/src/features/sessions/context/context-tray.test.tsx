@@ -30,7 +30,9 @@ vi.mock("../data/queries", () => {
     usePickableWorkspaces: () => [],
     useGithubIntegration: () => true,
     useWorkspace: () => ({ label: "Workspace" }),
+    useSession: () => undefined,
     useCheckoutQueries: () => ({
+      checkoutStatus: option("status", null),
       branch: option("branch", null),
       pr: option("pr", null),
       worktrees: option("trees", null),

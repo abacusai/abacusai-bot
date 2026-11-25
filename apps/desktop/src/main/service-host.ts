@@ -22,6 +22,7 @@ import {
   pastedTextKey,
   visibleUserText,
 } from "@abacus-ai/agent/user-text";
+import { WORKSPACE_FOLDERS_ENV } from "@abacus-ai/agent/workspace-folders";
 import {
   connectorById,
   connectorForService,
@@ -457,6 +458,10 @@ import {
   importedPartitionForTab,
 } from "./services/browser/connected-sites";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
+import {
+  isInsideRoot,
+  type PreviewSources,
+} from "./services/browser/local-preview-file";
 import { channelTitle } from "./services/channels/channel-logic";
 import {
   CHANNEL_PLATFORM,
@@ -674,6 +679,12 @@ import { deliverMessage } from "./services/session/message-delivery";
 import { ModelSwitchWaiters } from "./services/session/model-switch";
 import { PreviewTargets } from "./services/session/preview-targets";
 import { SessionArtifactsService } from "./services/session/session-artifacts-service";
+import {
+  attachedKind,
+  attachedPathsOf,
+  resolveSessionFolder,
+  type ResolvedFolder,
+} from "./services/session/session-folders";
 import {
   INACTIVITY_TIMEOUT_MINUTES,
   SessionTurnStateService,
@@ -1179,6 +1190,7 @@ export class ServiceHost {
         this.agentManagerService.sendCommandToSession(threadId, command),
       userMessageNotes: (threadId, tags) =>
         this.userMessageNotes(threadId, tags),
+      attachedPaths: (threadId, text) => this.noteAttachedPaths(threadId, text),
       acceptedMessage: (threadId, message, tags) => {
         this.successPitch.userSaid(threadId, message, tags);
         this.noteTurnOpener(threadId, message, tags);
@@ -3429,29 +3441,111 @@ export class ServiceHost {
   });
 
   /**
-   * The folders a conversation may preview local files from (spec 04
-   * §12.8): its checkout (the session's worktree when it has one) and the
-   * folders of its workspace's recorded file artifacts. Derived here, never
-   * from the renderer: `materializeFile`'s `hostRoot` must lie inside one.
+   * What a conversation may preview local files from (spec 04 §12.8): its
+   * folders (the checkout, then the ones the user added), the files this
+   * chat made and the files the user attached. Derived here, never from the
+   * renderer; a draft has only its checkout.
    */
-  localPreviewRoots(key: ConversationKey): string[] {
+  previewSources(key: ConversationKey): PreviewSources {
     const ref = conversationRefFromKey(key);
-    if (ref == null) return [];
-    const roots: string[] = [];
+    const sessionId = ref?.kind === "session" ? ref.sessionId : null;
+    const none: PreviewSources = {
+      chatFolder: null,
+      folders: [],
+      made: [],
+      attached: [],
+    };
+    if (ref == null) return none;
+    let chatFolder: string | null = null;
     try {
-      roots.push(
-        this.checkouts.resolve({
-          workspaceId: ref.workspaceId,
-          ...(ref.kind === "session" && { sessionId: ref.sessionId }),
-        }).path
-      );
+      chatFolder = this.checkouts.resolve({
+        workspaceId: ref.workspaceId,
+        ...(sessionId != null && { sessionId }),
+      }).path;
     } catch {
-      // No local checkout: artifact folders only.
+      // No local checkout: what the chat made and was given only.
     }
-    for (const artifact of this.sessionArtifactsService.list())
-      if (artifact.workspaceId === ref.workspaceId && artifact.kind !== "link")
-        roots.push(path.dirname(artifact.location));
-    return [...new Set(roots)];
+    if (sessionId == null) return { ...none, chatFolder };
+    return {
+      chatFolder,
+      folders: this.agentSessionManagerService.folders(sessionId),
+      made: this.sessionArtifactsService
+        .list()
+        .filter(
+          (artifact) =>
+            artifact.sessionId === sessionId && artifact.kind !== "link"
+        )
+        .map((artifact) => artifact.location),
+      attached: this.agentSessionManagerService.attachedFiles(sessionId),
+    };
+  }
+
+  /**
+   * Adds a folder to a chat (the Folders control, a preview's "Add folder",
+   * an attached folder): checked and real, and the chat's agent hears the
+   * new list at once. A folder inside the chat's own adds nothing.
+   */
+  async addSessionFolder(
+    sessionId: string,
+    input: string
+  ): Promise<ResolvedFolder> {
+    const resolved = await resolveSessionFolder(input);
+    if (resolved.ok === false) return resolved;
+    const own = this.previewSources(this.sessionKey(sessionId)).chatFolder;
+    const ownReal =
+      own == null ? null : await fs.promises.realpath(own).catch(() => null);
+    if (ownReal != null && isInsideRoot(ownReal, resolved.folder))
+      return resolved;
+    if (this.agentSessionManagerService.addFolder(sessionId, resolved.folder))
+      this.sessionFoldersChanged(sessionId);
+    return resolved;
+  }
+
+  /** The folders added to a chat; null for a chat main does not know. */
+  sessionFolders(sessionId: string): string[] | null {
+    return this.agentSessionManagerService.get(sessionId) == null
+      ? null
+      : this.agentSessionManagerService.folders(sessionId);
+  }
+
+  removeSessionFolder(sessionId: string, folder: string): void {
+    if (this.agentSessionManagerService.removeFolder(sessionId, folder))
+      this.sessionFoldersChanged(sessionId);
+  }
+
+  /**
+   * The paths a user message attached: a folder joins the chat's folders, a
+   * single file is remembered so it previews (its folder is added only when
+   * the user asks). Before the message reaches the agent, so its turn
+   * already works in the new folder.
+   */
+  async noteAttachedPaths(sessionId: string, text: string): Promise<void> {
+    for (const target of attachedPathsOf(text)) {
+      const found = await attachedKind(target);
+      if (found?.kind === "file")
+        this.agentSessionManagerService.addAttachedFile(sessionId, found.real);
+      else if (found?.kind === "folder") {
+        const added = await this.addSessionFolder(sessionId, found.real);
+        if (added.ok === false)
+          console.warn(
+            `[sessions] ${sessionId}: attached folder not added (${added.error})`
+          );
+      }
+    }
+  }
+
+  private sessionKey(sessionId: string): ConversationKey {
+    const workspaceId =
+      this.agentSessionManagerService.get(sessionId)?.workspaceId ?? "";
+    return sessionConversationKey(workspaceId, sessionId);
+  }
+
+  /** A running agent works in the new list from its next turn; a later spawn reads the env. */
+  private sessionFoldersChanged(sessionId: string): void {
+    this.agentManagerService.sendCommandToSession(sessionId, {
+      type: "workspace_folders",
+      folders: this.agentSessionManagerService.folders(sessionId),
+    });
   }
 
   /** The active workspace's primary checkout key (legacy tree events). */
@@ -3821,6 +3915,9 @@ export class ServiceHost {
     resolveAdditionalConfigEnv: async (sessionId: string) => ({
       ...(await agentProxyEnv(abacusAppHost())),
       ...(await this.buildAdditionalConfigEnv("code", sessionId)),
+      [WORKSPACE_FOLDERS_ENV]: JSON.stringify(
+        this.agentSessionManagerService.folders(sessionId)
+      ),
     }),
     resolveUnattended: (sessionId: string) => this.heldPolicy(sessionId),
     resolveManagedPython: () => managedPythonEnv(),

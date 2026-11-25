@@ -524,12 +524,12 @@ export const ArtifactsPage = ({
                       hostRoot={dirname(selected.location)}
                       read={{
                         localUrl: IS_ELECTRON
-                          ? async (filePath, hostRoot) => {
+                          ? async (filePath) => {
+                              // Under the chat that made it: main picks the root.
                               const state =
                                 await transport.client.browser.runtime.materializeFile(
                                   {
                                     filePath,
-                                    hostRoot,
                                     conversationKey: sessionConversationKey(
                                       selected.workspaceId,
                                       selected.sessionId

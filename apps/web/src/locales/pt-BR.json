@@ -2308,6 +2308,21 @@
       "label": "Sua tarefa do site",
       "stop": "Parar",
       "edit": "Editar"
+    },
+    "folders": {
+      "add": "Adicionar pasta",
+      "addFailed": "Não foi possível adicionar a pasta. Tente de novo.",
+      "addOther": "Adicionar pasta…",
+      "chatFolder": "Pasta deste chat",
+      "chip": "Pastas",
+      "chipCount": "Pastas · {{count}}",
+      "help": "O bot trabalha e salva nestas pastas, e o chat mostra o que há nelas.",
+      "label": "Pastas deste chat",
+      "notAllowed": "Não é possível adicionar {{name}}: ela contém sua pasta pessoal ou arquivos do sistema ou de apps.",
+      "outsideBody": "Ele não pode ser exibido aqui. Adicione a pasta {{name}} a este chat para visualizá-lo, ou abra-o com o app padrão.",
+      "outsideTitle": "Este arquivo está fora das pastas deste chat",
+      "remove": "Remover {{name}}",
+      "removeFailed": "Não foi possível remover a pasta. Tente de novo."
     }
   },
   "terminalShells": {

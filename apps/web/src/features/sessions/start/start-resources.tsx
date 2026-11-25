@@ -121,11 +121,12 @@ export const SessionStartResources = ({
                 <SessionFilePreview
                   inTab
                   root={workspace.path}
+                  scope={key ?? undefined}
                   path={active.path}
                   renderLocal={(file) => (
                     <BrowserTab
                       row={{ workspaceId: workspace.id, id: draft.id }}
-                      scope={key}
+                      scope={key ?? undefined}
                       id={active.ref.slice(active.ref.indexOf(":") + 1)}
                       root={workspace.path!}
                       file={file}
@@ -138,7 +139,7 @@ export const SessionStartResources = ({
               ) : (
                 <BrowserTab
                   row={{ workspaceId: workspace.id, id: draft.id }}
-                  scope={key}
+                  scope={key ?? undefined}
                   id={active.ref.slice(active.ref.indexOf(":") + 1)}
                   root={workspace.path}
                   url={active.url}

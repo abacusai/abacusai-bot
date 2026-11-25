@@ -2308,6 +2308,21 @@
       "label": "Tu tarea del sitio web",
       "stop": "Detener",
       "edit": "Editar"
+    },
+    "folders": {
+      "add": "Agregar carpeta",
+      "addFailed": "No se pudo agregar la carpeta. Inténtalo de nuevo.",
+      "addOther": "Agregar carpeta…",
+      "chatFolder": "Carpeta de este chat",
+      "chip": "Carpetas",
+      "chipCount": "Carpetas · {{count}}",
+      "help": "El bot trabaja y guarda en estas carpetas, y el chat muestra lo que hay en ellas.",
+      "label": "Carpetas de este chat",
+      "notAllowed": "No se puede agregar {{name}}: contiene tu carpeta personal o archivos del sistema o de apps.",
+      "outsideBody": "No se puede mostrar aquí. Agrega la carpeta {{name}} a este chat para verlo, o ábrelo con la app predeterminada.",
+      "outsideTitle": "Este archivo está fuera de las carpetas de este chat",
+      "remove": "Quitar {{name}}",
+      "removeFailed": "No se pudo quitar la carpeta. Inténtalo de nuevo."
     }
   },
   "terminalShells": {
