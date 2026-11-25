@@ -275,7 +275,8 @@ export const TerminalTab = ({
         startingShown = true;
         setStarting(startingLabel);
         void getTerminalView(viewKey).then((view) => {
-          if (printed.has(viewKey) || cursorHidden) return;
+          if (abort.signal.aborted || printed.has(viewKey) || cursorHidden)
+            return;
           cursorHidden = true;
           view.term.write("\x1b[?25l");
         });
