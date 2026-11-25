@@ -4,7 +4,11 @@
  * The extension rule is today's (`chat-panel.tsx:1403-1410`).
  */
 import { UPLOAD_LIMITS } from "@abacus-ai/contract/contract/files";
-import { USER_TEXT_INLINE_MAX } from "@abacus-ai/contract/transcript/user-text";
+import {
+  isPastedText,
+  pastedTextName,
+  USER_TEXT_INLINE_MAX,
+} from "@abacus-ai/contract/transcript/user-text";
 
 import {
   draftStore,
@@ -95,20 +99,8 @@ export const addPaths = (
  */
 export const longPasteFile = (text: string): File | null =>
   text.length > USER_TEXT_INLINE_MAX
-    ? new File([text], `pasted-text-${nextId()}.txt`, { type: "text/plain" })
+    ? new File([text], pastedTextName(nextId()), { type: "text/plain" })
     : null;
-
-/** A file the composer saved from pasted text, by its name or path. */
-export const isPastedText = (pathOrName: string): boolean =>
-  /^pasted-text-[\w-]+\.txt$/.test(pathOrName.split(/[\\/]/).at(-1) ?? "");
-
-/** A paste's chip title: its first line with text, whitespace folded. */
-export const pastedTextTitle = (head: string): string =>
-  head
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .find((line) => line !== "")
-    ?.slice(0, 120) ?? "";
 
 /** Dropped or pasted `File`s: real paths directly, blobs saved first. */
 export const addFiles = async (

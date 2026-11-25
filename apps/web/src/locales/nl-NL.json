@@ -429,7 +429,7 @@
         "placeholderDownAgent": "Vertel de agent wat er anders moet…",
         "readerNamed": "{{name}} leest dit en antwoordt in de chat. Ons team ziet het ook.",
         "readerAgent": "De agent leest dit en antwoordt in de chat. Ons team ziet het ook.",
-        "tooLong": "Te lang om hier te versturen. Plak het in de chat, waar lange tekst als bestand wordt bijgevoegd.",
+        "longAsFile": "Lange tekst gaat mee als bestand met geplakte tekst en wordt volledig gelezen.",
         "send": "Versturen",
         "sent": "Bedankt voor je feedback",
         "notSynced": "Feedback nog niet verstuurd",
@@ -3303,7 +3303,9 @@
       "discard": "Verwerpen",
       "notSent": "Niet verstuurd",
       "retry": "Opnieuw proberen",
-      "sending": "Wordt verstuurd"
+      "sending": "Wordt verstuurd",
+      "showLess": "Minder tonen",
+      "showMore": "Meer tonen"
     },
     "mode": {
       "ACCEPTEDITS": "Bewerkingen automatisch accepteren",

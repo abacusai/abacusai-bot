@@ -429,7 +429,7 @@
         "placeholderDownAgent": "告诉智能体要改什么…",
         "readerNamed": "{{name}} 会读到这条内容并在聊天中回复。我们的团队也会看到。",
         "readerAgent": "智能体会读到这条内容并在聊天中回复。我们的团队也会看到。",
-        "tooLong": "内容太长，无法在此发送。请粘贴到聊天中，长文本会作为文件附加。",
+        "longAsFile": "长文本会作为粘贴文本文件附加，并完整读取。",
         "send": "发送",
         "sent": "感谢你的反馈",
         "notSynced": "反馈暂未发送",
@@ -3303,7 +3303,9 @@
       "discard": "放弃",
       "notSent": "未发送",
       "retry": "重试",
-      "sending": "正在发送"
+      "sending": "正在发送",
+      "showLess": "收起",
+      "showMore": "显示更多"
     },
     "mode": {
       "ACCEPTEDITS": "自动接受编辑",

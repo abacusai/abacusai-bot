@@ -429,7 +429,7 @@
         "placeholderDownAgent": "Dites à l’agent ce qu’il faut changer…",
         "readerNamed": "{{name}} lit ce message et répond dans le chat. Notre équipe le voit aussi.",
         "readerAgent": "L’agent lit ce message et répond dans le chat. Notre équipe le voit aussi.",
-        "tooLong": "Trop long pour être envoyé ici. Collez-le plutôt dans le chat, où un long texte est joint en fichier.",
+        "longAsFile": "Un long texte est joint en fichier de texte collé et lu en entier.",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",
@@ -3303,7 +3303,9 @@
       "discard": "Discard",
       "notSent": "Not sent",
       "retry": "Réessayer",
-      "sending": "Sending"
+      "sending": "Sending",
+      "showLess": "Afficher moins",
+      "showMore": "Afficher plus"
     },
     "mode": {
       "ACCEPTEDITS": "Auto-accept edits",

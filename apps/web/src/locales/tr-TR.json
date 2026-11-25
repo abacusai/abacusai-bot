@@ -429,7 +429,7 @@
         "placeholderDownAgent": "Agente neyi değiştirmesi gerektiğini söyle…",
         "readerNamed": "{{name}} bunu okur ve sohbette yanıt verir. Ekibimiz de görür.",
         "readerAgent": "Agent bunu okur ve sohbette yanıt verir. Ekibimiz de görür.",
-        "tooLong": "Buradan göndermek için çok uzun. Bunun yerine sohbete yapıştırın; uzun metin dosya olarak eklenir.",
+        "longAsFile": "Uzun metin, yapıştırılmış metin dosyası olarak eklenir ve tamamı okunur.",
         "send": "Gönder",
         "sent": "Geri bildirimin için teşekkürler",
         "notSynced": "Geri bildirim henüz gönderilemedi",
@@ -3303,7 +3303,9 @@
       "discard": "Vazgeç",
       "notSent": "Gönderilmedi",
       "retry": "Yeniden dene",
-      "sending": "Gönderiliyor"
+      "sending": "Gönderiliyor",
+      "showLess": "Daha az göster",
+      "showMore": "Daha fazla göster"
     },
     "mode": {
       "ACCEPTEDITS": "Düzenlemeleri otomatik kabul et",

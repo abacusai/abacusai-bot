@@ -429,7 +429,7 @@
         "placeholderDownAgent": "에이전트에게 바꿀 점을 알려 주세요…",
         "readerNamed": "{{name}}이(가) 이 내용을 읽고 채팅에서 답합니다. 저희 팀도 함께 봅니다.",
         "readerAgent": "에이전트가 이 내용을 읽고 채팅에서 답합니다. 저희 팀도 함께 봅니다.",
-        "tooLong": "여기서 보내기에는 너무 깁니다. 대신 채팅에 붙여 넣으세요. 긴 텍스트는 파일로 첨부됩니다.",
+        "longAsFile": "긴 텍스트는 붙여 넣은 텍스트 파일로 첨부되어 전체가 읽힙니다.",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",
@@ -3303,7 +3303,9 @@
       "discard": "Discard",
       "notSent": "Not sent",
       "retry": "재시도",
-      "sending": "Sending"
+      "sending": "Sending",
+      "showLess": "접기",
+      "showMore": "더 보기"
     },
     "mode": {
       "ACCEPTEDITS": "Auto-accept edits",

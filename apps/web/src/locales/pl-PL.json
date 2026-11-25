@@ -435,7 +435,7 @@
         "placeholderDownAgent": "Powiedz agentowi, co zmienić…",
         "readerNamed": "{{name}} przeczyta to i odpowie na czacie. Nasz zespół też to zobaczy.",
         "readerAgent": "Agent przeczyta to i odpowie na czacie. Nasz zespół też to zobaczy.",
-        "tooLong": "Za długie, by wysłać tutaj. Wklej to na czacie, gdzie długi tekst zostanie dołączony jako plik.",
+        "longAsFile": "Długi tekst trafia jako plik z wklejonym tekstem i jest czytany w całości.",
         "send": "Wyślij",
         "sent": "Dzięki za opinię",
         "notSynced": "Nie udało się jeszcze wysłać opinii",
@@ -3347,7 +3347,9 @@
       "discard": "Odrzuć",
       "notSent": "Nie wysłano",
       "retry": "Ponów",
-      "sending": "Wysyłanie"
+      "sending": "Wysyłanie",
+      "showLess": "Pokaż mniej",
+      "showMore": "Pokaż więcej"
     },
     "mode": {
       "ACCEPTEDITS": "Auto-akceptacja zmian",

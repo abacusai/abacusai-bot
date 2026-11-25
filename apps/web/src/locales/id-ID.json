@@ -429,7 +429,7 @@
         "placeholderDownAgent": "Beri tahu agen apa yang perlu diubah…",
         "readerNamed": "{{name}} membaca ini dan membalas di chat. Tim kami juga melihatnya.",
         "readerAgent": "Agen membaca ini dan membalas di chat. Tim kami juga melihatnya.",
-        "tooLong": "Terlalu panjang untuk dikirim di sini. Tempel di chat saja, teks panjang akan dilampirkan sebagai file.",
+        "longAsFile": "Teks panjang dilampirkan sebagai file teks tempelan dan dibaca seluruhnya.",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",
@@ -3303,7 +3303,9 @@
       "discard": "Discard",
       "notSent": "Not sent",
       "retry": "Coba lagi",
-      "sending": "Sending"
+      "sending": "Sending",
+      "showLess": "Tampilkan lebih sedikit",
+      "showMore": "Tampilkan lebih banyak"
     },
     "mode": {
       "ACCEPTEDITS": "Auto-accept edits",

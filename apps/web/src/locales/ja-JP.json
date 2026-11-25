@@ -429,7 +429,7 @@
         "placeholderDownAgent": "エージェントに変えてほしい点を伝える…",
         "readerNamed": "{{name}}がこれを読んでチャットで返信します。私たちのチームも確認します。",
         "readerAgent": "エージェントがこれを読んでチャットで返信します。私たちのチームも確認します。",
-        "tooLong": "長すぎるためここからは送信できません。チャットに貼り付けてください。長いテキストはファイルとして添付されます。",
+        "longAsFile": "長いテキストは貼り付けテキストのファイルとして添付され、全文が読まれます。",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",
@@ -3303,7 +3303,9 @@
       "discard": "Discard",
       "notSent": "Not sent",
       "retry": "再試行",
-      "sending": "Sending"
+      "sending": "Sending",
+      "showLess": "折りたたむ",
+      "showMore": "もっと見る"
     },
     "mode": {
       "ACCEPTEDITS": "Auto-accept edits",

@@ -942,7 +942,7 @@ it("turns a thumbs comment into the user's reply to that message: a note for the
     );
     const prompt = s.session.sent.at(-1)!;
     expect(prompt).toMatch(
-      /^\[feedback\] The user rated your message "Shall I restart the home server now\?" 👍 \(good\) and wrote what follows in the feedback box under it\. It is their reply to that message: act on it here/
+      /^\[feedback\] The user rated your message "Shall I restart the home server now\?" 👍 \(good\) and wrote what follows in the feedback box under it, as their reply to that message\. If they ask for something, do it now/
     );
     expect(prompt.endsWith("\n\nyes please")).toBe(true);
     const processor = new StreamProcessor();

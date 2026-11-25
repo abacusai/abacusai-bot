@@ -18,8 +18,8 @@ import { USER_TEXT_INLINE_MAX } from "@abacus-ai/contract/transcript/user-text";
  * to the chat's agent as their reply to that message (service-host
  * `deliverFeedbackComment`), so the box says who reads it. Without it (a
  * bot's chat with someone else, a routine run) the copy is the team's. The
- * agent gets the comment whole, so a box it reads refuses one past
- * `USER_TEXT_INLINE_MAX` and points to the chat rather than sending part.
+ * agent gets the comment whole; past `USER_TEXT_INLINE_MAX` main hands it
+ * over as a pasted-text file, as the composer does with a long paste.
  */
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useId, useSyncExternalStore } from "react";
@@ -148,13 +148,13 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
 
   const unsent = status === "failed" || status === "not-synced";
   const typed = comment.trim() || undefined;
-  const tooLong = reader != null && (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
+  const asFile = reader != null && (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
 
   const rate = (next: Rating): void => {
     if (status === "sending") return;
     if (rating === next && held === next) submit("clear");
     else if (rating === next)
-      submit(next, tooLong ? undefined : typed); // retry the failed send
+      submit(next, typed); // retry the failed send
     else submit(next);
   };
 
@@ -200,7 +200,7 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
               className="flex flex-col gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (!tooLong) submit(rating, typed);
+                submit(rating, typed);
               }}
             >
               <Textarea
@@ -229,15 +229,14 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
                 onChange={(event) =>
                   writeState(key, { comment: event.target.value })
                 }
-                className="min-h-16 text-xs"
+                className="max-h-48 min-h-16 text-xs"
               />
-              {tooLong && (
+              {asFile && (
                 <p
-                  data-slot="feedback-too-long"
-                  role="alert"
-                  className="text-destructive text-xs"
+                  data-slot="feedback-as-file"
+                  className="text-muted-foreground text-xs"
                 >
-                  {t("bots.chat.feedback.tooLong")}
+                  {t("bots.chat.feedback.longAsFile")}
                 </p>
               )}
               {reader != null && (
@@ -255,9 +254,7 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
                 size="sm"
                 className="self-end"
                 // After a failed send, an empty comment still retries the rating.
-                disabled={
-                  status === "sending" || tooLong || (typed == null && !unsent)
-                }
+                disabled={status === "sending" || (typed == null && !unsent)}
               >
                 {t("bots.chat.feedback.send")}
               </Button>

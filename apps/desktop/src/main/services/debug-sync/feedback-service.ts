@@ -47,6 +47,14 @@ const DEFAULT_TIMEOUT_MS = 10_000;
  * Only that copy: the chat's agent gets the user's words whole.
  */
 const PLATFORM_COMMENT_MAX = 2000;
+/** Ends a team copy that was cut, so a short copy never reads as a lost note. */
+const PLATFORM_CUT_MARK = "… (cut; full text in the chat transcript)";
+
+/** The team's copy of a comment: whole when it fits, else cut with a mark. */
+const platformComment = (comment: string): string =>
+  comment.length <= PLATFORM_COMMENT_MAX
+    ? comment
+    : `${comment.slice(0, PLATFORM_COMMENT_MAX - PLATFORM_CUT_MARK.length)}${PLATFORM_CUT_MARK}`;
 const MAX_MODEL_LENGTH = 200;
 /** Same shape the transcript sync uses for session ids. */
 const SESSION_ID = /^[A-Za-z0-9._-]{1,128}$/;
@@ -174,7 +182,7 @@ export class FeedbackService {
     if (feedback == null) return { ok: false, reason: "invalid" };
     return this.post(feedback.sessionId, feedback.segmentId, {
       rating: feedback.rating,
-      comment: (feedback.comment ?? "").slice(0, PLATFORM_COMMENT_MAX),
+      comment: platformComment(feedback.comment ?? ""),
       model: feedback.model ?? null,
     });
   }

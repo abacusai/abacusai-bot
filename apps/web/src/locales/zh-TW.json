@@ -429,7 +429,7 @@
         "placeholderDownAgent": "告訴智慧代理要改什麼…",
         "readerNamed": "{{name}} 會讀到這則內容並在聊天中回覆。我們的團隊也會看到。",
         "readerAgent": "智慧代理會讀到這則內容並在聊天中回覆。我們的團隊也會看到。",
-        "tooLong": "內容太長，無法在此傳送。請貼到聊天中，長文字會以檔案形式附加。",
+        "longAsFile": "長文字會以貼上文字檔案附加，並完整讀取。",
         "send": "傳送",
         "sent": "感謝你的意見回饋",
         "notSynced": "意見回饋尚未送出",
@@ -3303,7 +3303,9 @@
       "discard": "捨棄",
       "notSent": "未傳送",
       "retry": "重試",
-      "sending": "傳送中"
+      "sending": "傳送中",
+      "showLess": "收合",
+      "showMore": "顯示更多"
     },
     "mode": {
       "ACCEPTEDITS": "自動接受編輯",

@@ -194,12 +194,21 @@ function feedbackTurn(
     typeof comment !== "string"
   )
     return null;
-  // Their words go in whole or not at all (the box refuses longer ones).
+  // Whole or not at all: main hands a longer note over as a pasted-text file.
   const words = comment.trim();
   if (words.length === 0 || words.length > USER_TEXT_INLINE_MAX) return null;
   // One line: the note owns one paragraph, and the user's words start after it.
   const quoted = excerpt.replace(/\s+/g, " ").trim().slice(0, 80);
-  const note = `${appNoteTag("feedback")} The user rated your message "${quoted}" ${rating === "up" ? "👍 (good)" : "👎 (bad)"} and wrote what follows in the feedback box under it. It is their reply to that message: act on it here (answer it, do what it asks, or fix what it points out); for praise alone, a short thanks.`;
+  // A thumbs-down is a correction to act on, not a verdict to answer.
+  const ask =
+    rating === "up"
+      ? "If they ask for something, do it now; for praise alone, a short thanks."
+      : "If they ask for something or correct you, do it now, or ask one short question if what they want is unclear; do not explain or defend the earlier reply. If they only say it was bad, acknowledge that in one short sentence, without excuses, and offer one concrete fix.";
+  // A note past the inline bound arrives as one pasted-text file (main saves it).
+  const inFile = /^@(?:[A-Za-z]:[\\/]|\/)[^\n]*$/.test(words)
+    ? " Their note was long, so it is in the attached file: read all of it (search it if it is large) before you act."
+    : "";
+  const note = `${appNoteTag("feedback")} The user rated your message "${quoted}" ${rating === "up" ? "👍 (good)" : "👎 (bad)"} and wrote what follows in the feedback box under it, as their reply to that message.${inFile} ${ask} Say only what you have actually read or done.`;
   return {
     message: `${note}\n\n${words}`,
     userText: {
