@@ -5,7 +5,11 @@ import type {
   StartTerminalSessionResult,
   TerminalSessionSnapshot,
 } from "../contracts";
-import type { TerminalShellId, TerminalShellState } from "../terminal-shells";
+import {
+  TERMINAL_SHELLS,
+  type TerminalShellId,
+  type TerminalShellState,
+} from "../terminal-shells";
 import { mutation, query, subscription } from "./base";
 import {
   ConversationKeySchema,
@@ -16,13 +20,10 @@ import {
   TerminalId,
 } from "./ids";
 
-export const TerminalShellIdSchema = v.picklist([
-  "system",
-  "cmd",
-  "powershell",
-  "pwsh",
-  "busybox",
-] as TerminalShellId[]);
+// Every shell the menus can offer, from the shell table.
+export const TerminalShellIdSchema = v.picklist(
+  TERMINAL_SHELLS.map((shell) => shell.id) as TerminalShellId[]
+);
 
 const Dimension = v.pipe(v.number(), v.integer(), v.minValue(1));
 const Generation = v.pipe(v.number(), v.integer(), v.minValue(0));
@@ -86,9 +87,10 @@ export type TerminalOutputChunk =
    * This generation ended without an exit of its own: `closed` (the terminal
    * was closed, or its scope or workspace disposed), or `superseded` (a
    * scope promotion moved the shell to a new key and generation; the
-   * terminal state events name the new one).
+   * terminal state events name the new one), or `quit` (the app is
+   * quitting; the tab is kept and reopens with a fresh shell).
    */
-  | { type: "retired"; reason: "closed" | "superseded" };
+  | { type: "retired"; reason: "closed" | "superseded" | "quit" };
 
 export type TerminalEvent =
   /** First yield on (re)open: every terminal's state in scope. */

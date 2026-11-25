@@ -2381,6 +2381,12 @@
       "label": "Domyślna powłoka",
       "description": "Powłoka ustawiona jako domyślna na tym komputerze."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} jest teraz niedostępna, więc nowe terminale otwierają się w {{effective}}.",
     "inUse": "W użyciu",
     "notInstalled": "Nie znaleziono na tym komputerze.",

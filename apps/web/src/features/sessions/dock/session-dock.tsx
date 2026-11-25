@@ -4,6 +4,7 @@ import {
   sessionConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import {
+  terminalShellListed,
   terminalShellsForPlatform,
   type TerminalShellId,
 } from "@abacus-ai/contract/terminal-shells";
@@ -79,6 +80,9 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "#renderer/ui/dropdown-menu";
 import { Skeleton } from "#renderer/ui/skeleton";
 
@@ -450,7 +454,14 @@ export const SessionDock = ({
       ref,
       title:
         kind === "terminal"
-          ? terminalTitle(key, t("sessions.dock.terminal"))
+          ? terminalTitle(
+              key,
+              // Another shell than the default is named after it, so mixed
+              // tabs tell Command Prompt from PowerShell.
+              shell && shell !== shells.data?.effective
+                ? t(`terminalShells.${shell}.label`)
+                : t("sessions.dock.terminal")
+            )
           : t(`sessions.dock.${kind}`),
       ...(shell ? { shell } : {}),
     });
@@ -502,15 +513,15 @@ export const SessionDock = ({
     // terminal the keys again, or typing next would open that menu.
     if (ref.startsWith("terminal:") && ref === active) focusTerminal(ref);
   };
-  const shellItems = terminalShellsForPlatform(
-    (document.documentElement.dataset.platform ?? "darwin") as NodeJS.Platform
-  ).map((shell) => (
+  const platform = document.documentElement.dataset.platform ?? "darwin";
+  const listedShells = terminalShellsForPlatform(
+    platform as NodeJS.Platform
+  ).filter((shell) =>
+    terminalShellListed(shell.id, shells.data?.statuses, platform)
+  );
+  const shellItems = listedShells.map((shell) => (
     <DropdownMenuItem
       key={shell.id}
-      disabled={
-        shells.data?.statuses.find((s) => s.id === shell.id)?.available ===
-        false
-      }
       // Opens that shell; the default in Settings stays as the user set it.
       onClick={() => add("terminal", shell.id as TerminalShellId)}
     >
@@ -524,6 +535,32 @@ export const SessionDock = ({
   ));
   const kindItem = (kind: string) => {
     const Icon = KIND_ICONS[kind] ?? Terminal;
+    // Where there is a choice of shell (Windows), one Terminal entry with
+    // the shells under it.
+    if (kind === "terminal" && pickShell)
+      return (
+        <DropdownMenuSub key={kind}>
+          <DropdownMenuSubTrigger>
+            <Icon />
+            <span className="min-w-0 truncate">
+              {t("sessions.dock.terminal")}
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {listedShells.map((shell) => (
+              <DropdownMenuItem
+                key={shell.id}
+                onClick={() => add("terminal", shell.id as TerminalShellId)}
+              >
+                <Terminal />
+                <span className="min-w-0 truncate">
+                  {t(`terminalShells.${shell.labelKey}.label`)}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      );
     return (
       <DropdownMenuItem key={kind} onClick={() => add(kind)}>
         <Icon />
@@ -637,18 +674,12 @@ export const SessionDock = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="titlebar-nodrag w-56">
             {codeProject ? (
-              <DropdownMenuGroup>
-                {pickShell ? shellItems : null}
-                {kinds.map(kindItem)}
-              </DropdownMenuGroup>
+              <DropdownMenuGroup>{kinds.map(kindItem)}</DropdownMenuGroup>
             ) : (
               <>
                 <DropdownMenuGroup>{forward.map(kindItem)}</DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  {pickShell ? shellItems : null}
-                  {aside.map(kindItem)}
-                </DropdownMenuGroup>
+                <DropdownMenuGroup>{aside.map(kindItem)}</DropdownMenuGroup>
               </>
             )}
           </DropdownMenuContent>

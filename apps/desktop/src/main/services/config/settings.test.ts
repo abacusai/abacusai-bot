@@ -267,7 +267,18 @@ describe("the terminal panel's shell", () => {
   it("is the platform default until one is picked", async () => {
     const { readTerminalShell } = await load();
 
-    expect(readTerminalShell()).toBe("system");
+    expect(readTerminalShell("linux")).toBe("system");
+    expect(readTerminalShell("darwin")).toBe("system");
+  });
+
+  it("is PowerShell on Windows until one is picked, and the pick after", async () => {
+    const { readTerminalShell, setTerminalShell } = await load();
+
+    expect(readTerminalShell("win32")).toBe("powershell");
+    // The machine's default (pwsh when installed) applies only while unpicked.
+    expect(readTerminalShell("win32", () => "pwsh")).toBe("pwsh");
+    setTerminalShell("system");
+    expect(readTerminalShell("win32", () => "pwsh")).toBe("system");
   });
 
   it.each([["cmd"], ["powershell"], ["pwsh"], ["busybox"]])(
@@ -290,7 +301,7 @@ describe("the terminal panel's shell", () => {
     writeConfig({ terminalShell: stored });
     const { readTerminalShell } = await load();
 
-    expect(readTerminalShell()).toBe("system");
+    expect(readTerminalShell("linux")).toBe("system");
   });
 });
 

@@ -2359,6 +2359,12 @@
       "label": "기본 쉘",
       "description": "이 기계가 기본 쉘이라고 부르는 것은 무엇이든 상관없습니다."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}}는 현재 사용할 수 없으므로 {{effective}}에 새 터미널이 열립니다.",
     "inUse": "사용 중",
     "notInstalled": "이 컴퓨터에서는 찾을 수 없습니다.",
@@ -4199,7 +4205,7 @@
       "sound-done": "완료",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "터미널 셸",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "답변에 링크 미리보기 표시",
@@ -4382,7 +4388,7 @@
     "removeEmail": "{{email}} 삭제",
     "loadingGmailContacts": "친구의 이메일 주소를 불러오는 중…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "이 컴퓨터에 없음",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4392,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "선택한 셸을 사용할 수 없어 새 터미널은 {{shell}}을(를) 사용합니다.",
+    "terminalShell": "터미널 셸",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

@@ -28,7 +28,7 @@ export interface BusChannels {
     terminalId: string;
     conversationKey: ConversationKey;
     generation: number;
-    reason: "closed" | "superseded";
+    reason: "closed" | "superseded" | "quit";
   };
 }
 

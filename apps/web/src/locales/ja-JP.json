@@ -2359,6 +2359,12 @@
       "label": "デフォルトのシェル",
       "description": "このマシンがデフォルトのシェルと呼ぶもの。"
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} は現在使用できないため、新しい端末は {{effective}} で開きます。",
     "inUse": "使用中",
     "notInstalled": "このマシンでは見つかりません。",
@@ -4199,7 +4205,7 @@
       "sound-done": "完了",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "ターミナルのシェル",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "返信にリンクのプレビューを表示",
@@ -4382,7 +4388,7 @@
     "removeEmail": "{{email}} を削除",
     "loadingGmailContacts": "友達のメールアドレスを読み込み中…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "このコンピューターにはありません",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4392,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "選択したシェルが使えないため、新しいターミナルは {{shell}} を使います。",
+    "terminalShell": "ターミナルのシェル",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

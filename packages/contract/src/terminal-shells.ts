@@ -15,7 +15,9 @@ export type TerminalShellId =
   | "cmd"
   | "powershell"
   | "pwsh"
-  | "busybox";
+  | "busybox"
+  | "wsl"
+  | "gitbash";
 
 export interface TerminalShell {
   id: TerminalShellId;
@@ -23,6 +25,8 @@ export interface TerminalShell {
   labelKey: string;
   /** Platforms the entry is offered on; `"all"` means every one. */
   platforms: readonly string[] | "all";
+  /** Listed only on a machine that has it (an optional install), not greyed out. */
+  whenPresent?: boolean;
 }
 
 /**
@@ -41,6 +45,13 @@ export const TERMINAL_SHELLS: readonly TerminalShell[] = [
   { id: "powershell", labelKey: "powershell", platforms: ["win32"] },
   { id: "pwsh", labelKey: "pwsh", platforms: ["win32"] },
   { id: "busybox", labelKey: "busybox", platforms: ["win32"] },
+  { id: "wsl", labelKey: "wsl", platforms: ["win32"], whenPresent: true },
+  {
+    id: "gitbash",
+    labelKey: "gitbash",
+    platforms: ["win32"],
+    whenPresent: true,
+  },
 ];
 
 export const DEFAULT_TERMINAL_SHELL: TerminalShellId = "system";
@@ -53,7 +64,25 @@ export const terminalShellsForPlatform = (platform: string): TerminalShell[] =>
     (shell) => shell.platforms === "all" || shell.platforms.includes(platform)
   );
 
-/** The i18n key under `terminalShells` for a shell, or the id if it is new. */
+/**
+ * Whether a menu offers the shell: only one this machine can start. On
+ * Windows "Default shell" is left out: it is the Command Prompt again under
+ * another name, and PowerShell is the default there.
+ */
+export const terminalShellListed = (
+  id: TerminalShellId,
+  statuses: readonly TerminalShellStatus[] | undefined,
+  platform: string
+): boolean =>
+  !(platform === "win32" && id === "system") &&
+  statuses?.find((status) => status.id === id)?.available === true &&
+  // BusyBox sh is the agent's own shell, unknown to people and its prompt
+  // reads `\w $`: offered only when nothing else starts.
+  (id !== "busybox" ||
+    !statuses?.some(
+      (status) =>
+        status.available && status.id !== "busybox" && status.id !== "system"
+    ));
 
 export interface TerminalShellStatus {
   id: TerminalShellId;

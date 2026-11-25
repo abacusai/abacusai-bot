@@ -1007,7 +1007,9 @@
       "cmd.label",
       "powershell.label",
       "pwsh.label",
-      "system.label"
+      "system.label",
+      "wsl.label",
+      "gitbash.label"
     ],
     "sources": ["features/settings/environment.tsx"]
   },

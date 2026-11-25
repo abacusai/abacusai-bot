@@ -2359,6 +2359,12 @@
       "label": "Varsayılan kabuk",
       "description": "Bu makinenin varsayılan kabuğu ne ise o."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} şu anda kullanılamıyor, bu yüzden yeni terminaller {{effective}} ile açılıyor.",
     "inUse": "Kullanımda",
     "notInstalled": "Bu makinede bulunamadı.",
