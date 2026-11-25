@@ -12,6 +12,7 @@ import {
   DELIVERABLE_QUALITY_PROMPT,
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
+  USER_DATA_AND_FACTS_PROMPT,
   basePrompt,
   subAgentBasePrompt,
 } from "./base-prompt.js";
@@ -98,7 +99,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${USER_DATA_AND_FACTS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -119,6 +120,17 @@ describe("questions about the app itself", () => {
       /done only when it opens and nothing is left broken/
     );
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/it is sample data/);
+    // One owner for facts: a file's data points at the facts rule, not a copy of it.
+    expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/follow the facts rule above/);
+    expect(DELIVERABLE_QUALITY_PROMPT).not.toMatch(/invented data/i);
+    // What the user gave is kept whole; facts are sourced; a remark is weighed.
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/owns every line of that list/);
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/keep both and ask in one line/);
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/re-read every input/);
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
+      /Never present invented data as real/
+    );
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/not with agreement/);
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/count done against total/);
     // A file said to be attached but missing is asked for again, never stood in for.
     expect(ATTACHMENTS_PROMPT).toMatch(/`@<path>` lines/);
