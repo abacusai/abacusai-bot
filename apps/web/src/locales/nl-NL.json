@@ -2988,6 +2988,7 @@
     "genericTitle": "Er ging iets mis",
     "genericDescription": "Dit scherm kreeg een fout waarvan het niet kon herstellen.",
     "diskFull": "De schijf is vol, dus dit kon niet worden opgeslagen. Maak ruimte vrij en probeer het opnieuw.",
+    "tryAgain": "Er ging iets mis. Probeer het opnieuw.",
     "reload": "Opnieuw laden",
     "notFoundTitle": "Niet gevonden",
     "notFoundDescription": "Deze pagina bestaat niet.",
@@ -4265,7 +4266,6 @@
     "cantCheck": "Kan niet controleren",
     "appMissing": "Niet geïnstalleerd",
     "appNotReady": "Niet klaar",
-    "connectChatAppOnDesktop": "Deze chatapp koppel je via de desktopapp van AbacusAI Bot.",
     "connectorsDescription": "Koppel de diensten die je agent kan gebruiken om taken uit te voeren.",
     "credentialsLocal": "Inloggegevens worden op deze computer opgeslagen.",
     "defaultWorkspace": "Automatisch",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” is gestopt toen de credits op waren. Je hebt weer credits.",
       "creditsBack": "Dit is gestopt toen de credits op waren. Je hebt weer credits.",
       "paidTitle": "Je hebt de credits van deze maand opgebruikt",
+      "anyTitle": "Je credits zijn op",
       "paidOffer": "Of stap over naar {{plan}} — {{price}}",
       "paidMobile": "Je abonnement wordt gefactureerd via de App Store of Google Play, dus koop credits bij of upgrade in de mobiele app van Abacus.AI.",
       "balance": "Nog {{remaining}} van {{granted}} credits over",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "Alle gratis bronnen zijn voorlopig op. Koppel een andere gratis bron of kies een ander model.",
       "rate_limited": "De gratis modellen zijn nu druk bezet. Probeer het over een paar minuten opnieuw of kies een ander model.",
       "empty": "Het model gaf een leeg antwoord. Probeer het opnieuw of kies een ander model.",
+      "stalled": "Het model is gestopt met antwoorden. Probeer het opnieuw of kies een ander model.",
+      "stream_cut": "Het antwoord werd halverwege afgebroken, ook na opnieuw vragen. Probeer het opnieuw of kies een ander model.",
       "disk_full": "De schijf is vol ({{free}} over), dus deze chat kan niet worden opgeslagen en de agent kan geen bestanden schrijven. Maak wat ruimte vrij en probeer het opnieuw.",
       "disk_fullUnmeasured": "De schijf is vol, dus deze chat kan niet worden opgeslagen en de agent kan geen bestanden schrijven. Maak wat ruimte vrij en probeer het opnieuw.",
       "unknown": "Het model kon dit niet afronden. Probeer het opnieuw of kies een ander model."
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "Nieuwe chat",
       "fixKey": "Sleutel controleren",
-      "viewDetails": "Details bekijken",
       "tryAgain": "Opnieuw proberen"
     },
     "channel": {

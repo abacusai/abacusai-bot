@@ -32,6 +32,7 @@ import { TemplatesStarter } from "#renderer/features/templates";
 import { useTourState } from "#renderer/features/tour";
 import { useChatCommands } from "#renderer/lib/chat-commands";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
+import { UserFacingError } from "#renderer/lib/error-text";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 /** Offers already turned into a draft: a reload or a revisit never starts another. */
@@ -116,7 +117,7 @@ const SessionsNewRoute = () => {
             });
             if (ack.status === "rejected" || ack.original === "rejected") {
               rejectStartSubmission(id);
-              throw new Error(t("chat.composer.rejected"));
+              throw new UserFacingError(t("chat.composer.rejected"));
             }
           }}
           prefill={(id, text) => updateDraft(id, (d) => ({ ...d, text }))}

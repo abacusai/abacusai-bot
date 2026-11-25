@@ -494,7 +494,7 @@ const WorkCard = ({ work, bot }: { work: ChannelWork; bot: BotRow }) => {
       data-channel-work={work.status}
       className={cn(
         "flex max-w-[min(620px,90%)] flex-col gap-1 rounded-xl border px-3 py-2 text-xs",
-        work.status === "failed" && "border-destructive/40"
+        work.status === "failed" && "border-failed/40"
       )}
     >
       <div className="flex items-center gap-1.5 font-medium">
@@ -504,7 +504,7 @@ const WorkCard = ({ work, bot }: { work: ChannelWork; bot: BotRow }) => {
             work.status === "running" && "animate-spin text-(--bots-running)",
             work.status === "waiting" && "text-muted-foreground",
             work.status === "done" && "text-(--bot-accent,var(--primary))",
-            work.status === "failed" && "text-destructive"
+            work.status === "failed" && "text-failed"
           )}
         />
         {t(`channels.work.${work.status}`, { name: bot.name })}
@@ -521,7 +521,8 @@ const WorkCard = ({ work, bot }: { work: ChannelWork; bot: BotRow }) => {
         )}
       </div>
       <p className="text-muted-foreground">{work.task}</p>
-      {work.error != null && work.status !== "done" && (
+      {/* A stop says how far it got; a failure's own words are for the log. */}
+      {work.error != null && work.status === "stopped" && (
         <p className="text-muted-foreground italic">{work.error}</p>
       )}
       <AppLink

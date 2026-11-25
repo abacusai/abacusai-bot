@@ -73,6 +73,7 @@ import {
 import { latestPresented } from "#renderer/lib/bot-turns/deliverables";
 import { cn } from "#renderer/lib/cn";
 import { CREDITS_EXHAUSTED_TTL_MS } from "#renderer/lib/credits";
+import { errorText, logFailure } from "#renderer/lib/error-text";
 import {
   freeCreditsHeld,
   freeCreditsUnlocked,
@@ -131,19 +132,8 @@ import {
   useCreditWallTask,
   useUpgradeResume,
 } from "../upgrade-triggers";
+import { failureLine, type TurnFailureView } from "./failure-line";
 import { TurnCredits } from "./turn-credits";
-
-export const providerMessage = (raw = ""): string => {
-  const start = raw.indexOf("{");
-  if (start < 0) return raw.replace(/^\d{3}\s+/, "");
-  try {
-    const value = JSON.parse(raw.slice(start));
-    const message = value?.error?.message ?? value?.message ?? value?.error;
-    return typeof message === "string" ? message : "";
-  } catch {
-    return "";
-  }
-};
 
 interface ErrorAction {
   type: string;
@@ -165,19 +155,6 @@ interface ErrorAction {
   /** `switch-model` at the credit wall: the model is on the user's own key. */
   ownKey?: boolean;
 }
-
-/** Why the turn did not finish, as the agent named it (turn-outcome.ts). */
-const OUTCOME_CAUSES = new Set([
-  "context_too_long",
-  "key_invalid",
-  "own_key_quota",
-  "model_unavailable",
-  "content_refused",
-  "free_pool_spent",
-  "rate_limited",
-  "empty",
-  "unknown",
-]);
 
 /** `labelled`: the agent named what it does, so its title is already plain words. */
 type RunningCall = {
@@ -1303,6 +1280,10 @@ export const ErrorCard = ({
   tier: providedTier,
 }: ErrorCardProps) => {
   const { t, i18n } = useTranslation();
+  // What failed, in the provider's or the system's words, is for the log.
+  useEffect(() => {
+    if (outcome.error != null) logFailure(outcome.error);
+  }, [outcome.error]);
   const { session, composer, runtime, skin, slots } = useChatView();
   const { transport } = useAppContext();
   const resume = useUpgradeResume();
@@ -1337,7 +1318,6 @@ export const ErrorCard = ({
   const error = outcome.error ?? { message: "" };
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
-  const detail = (error as { detail?: string }).detail;
   const upgrade = wantsUpgradeCard(actions);
   // The turn stopped at the credit wall. Whether the wall still stands is the
   // account's answer, not the turn's: once a plan, a top-up or credits back
@@ -1865,29 +1845,10 @@ export const ErrorCard = ({
           (button) => button.props["data-action"] === "switch-to-abacus"
         )
       );
-  const line = crashed
-    ? t("chat.error.crashed")
-    : connection
-      ? t("outcome.connection.title")
-      : cause === "disk_full"
-        ? diskFullLine(actions, t)
-        : cause != null && OUTCOME_CAUSES.has(cause)
-          ? t(`outcome.cause.${cause}`, {
-              provider: providerDisplayName(
-                actions.find((action) => action.provider != null)?.provider ??
-                  ""
-              ),
-            })
-          : providerMessage(error.message) || t("errors.genericDescription");
+  const line = failureLine(t, error as TurnFailureView);
   const { title, body } = connection
     ? { title: line, body: t("outcome.connection.body") }
     : splitLine(line, i18n.language);
-  const raw = [
-    detail,
-    providerMessage(error.message) !== error.message ? error.message : null,
-  ]
-    .filter((part): part is string => part != null && part !== "")
-    .join("\n\n");
   const Icon = connection
     ? WifiOff
     : (CAUSE_ICON[cause as keyof typeof CAUSE_ICON] ?? CircleAlert);
@@ -1900,7 +1861,7 @@ export const ErrorCard = ({
       data-cause={cause}
     >
       <ChatCard icon={<Icon />} title={title} description={body}>
-        {buttons.length > 0 || raw !== "" ? (
+        {buttons.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5">
             {buttons.map((button, index) =>
               cloneElement(button, {
@@ -1910,19 +1871,6 @@ export const ErrorCard = ({
             )}
           </div>
         ) : null}
-        {raw !== "" && (
-          <details
-            className="group/details text-xs"
-            data-slot={connection ? "connection-details" : "error-details"}
-          >
-            <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden">
-              {t(connection ? "outcome.action.viewDetails" : "phase5.details")}
-            </summary>
-            <pre className="bg-muted/60 text-muted-foreground mt-1.5 max-h-40 overflow-auto rounded-md p-2 font-mono text-[11px] break-all whitespace-pre-wrap">
-              {raw}
-            </pre>
-          </details>
-        )}
         {planOffered && (
           <div className="border-t pt-3">
             <PlanOffer
@@ -1988,17 +1936,6 @@ const formatBytes = (bytes: number): string =>
   bytes >= 1024 ** 3
     ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
     : `${Math.round(bytes / 1024 ** 2)} MB`;
-
-/** The full-disk card's line, with what is left when the agent measured it. */
-const diskFullLine = (
-  actions: ErrorAction[],
-  t: (key: string, values?: Record<string, string>) => string
-): string => {
-  const free = actions.find((action) => action.type === "retry")?.bytesFree;
-  return free != null
-    ? t("outcome.cause.disk_full", { free: formatBytes(free) })
-    : t("outcome.cause.disk_fullUnmeasured");
-};
 
 /** The action on a job that finished with no turn running. */
 const BACKGROUND_JOB_ACTION = "background-job";
@@ -2116,6 +2053,13 @@ export const NoticeRow = ({
 }) => {
   const { t } = useTranslation();
   const { runtime, session, composer, skin } = useChatView();
+  // The agent's own error shows only when it was worded for the user; any
+  // other is for the log, and the row says it in the app's words.
+  const agentInternal =
+    notice.name === "agent.error" && notice.value.userFacing !== true;
+  useEffect(() => {
+    if (agentInternal) logFailure(notice.value);
+  }, [agentInternal, notice.value]);
   const severity = (
     notice.name === "agent.error"
       ? "error"
@@ -2171,7 +2115,9 @@ export const NoticeRow = ({
                 ? ownKeyMovedLine(moved, t)
                 : backgroundJob != null
                   ? backgroundJobLine(backgroundJob, t)
-                  : String(notice.value.message ?? "");
+                  : agentInternal
+                    ? (errorText(notice.value) ?? "")
+                    : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"

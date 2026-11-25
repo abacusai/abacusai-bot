@@ -13,6 +13,7 @@ import { ChevronDown, Pin, X } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { failureText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
@@ -37,9 +38,6 @@ import { GroupComposer, GroupMessages } from "./parts";
 import { markChannelSeen } from "./seen";
 
 export { ChannelMarkdown, type ChannelMarkdownView } from "./parts";
-
-const errorText = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** Pick 2–6 bots, as checkboxes. */
 const BotPicker = ({
@@ -127,7 +125,7 @@ export const NewGroupPage = ({ TopBar }: { TopBar: TopBarView }) => {
           params: { channelId: channel.id },
         })
       )
-      .catch((reason: unknown) => setError(errorText(reason)))
+      .catch((reason: unknown) => setError(failureText(reason)))
       .finally(() => setBusy(false));
   };
   return (
@@ -232,7 +230,7 @@ export const NewGroupPage = ({ TopBar }: { TopBar: TopBarView }) => {
       </div>
       <div className="mx-auto w-full max-w-3xl px-4 pb-4">
         {error != null && (
-          <p role="alert" className="text-destructive pb-2 text-sm">
+          <p role="alert" className="text-failed pb-2 text-sm">
             {error}
           </p>
         )}
@@ -305,7 +303,7 @@ export const GroupPage = ({
   const act = (call: Promise<unknown>): void =>
     void call
       .then(() => setError(null))
-      .catch((reason: unknown) => setError(errorText(reason)));
+      .catch((reason: unknown) => setError(failureText(reason)));
   const send = (text: string): void => {
     act(
       transport.client.channels.post({
@@ -447,7 +445,7 @@ export const GroupPage = ({
       </div>
       <div className="mx-auto w-full max-w-3xl px-4 pb-4">
         {error != null && (
-          <p role="alert" className="text-destructive pb-2 text-sm">
+          <p role="alert" className="text-failed pb-2 text-sm">
             {error}
           </p>
         )}
@@ -543,7 +541,7 @@ export const GroupPage = ({
                 void transport.client.channels
                   .remove({ channelId })
                   .then(() => navigate({ to: "/bots" }))
-                  .catch((reason: unknown) => setError(errorText(reason)));
+                  .catch((reason: unknown) => setError(failureText(reason)));
               }}
             >
               {t("channels.delete.confirm")}

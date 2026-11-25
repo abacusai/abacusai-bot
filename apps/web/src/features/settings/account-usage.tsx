@@ -16,6 +16,7 @@ import {
 } from "#renderer/components/form-kit/page";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { accountIdentity } from "#renderer/lib/account-identity";
+import { errorText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -99,7 +100,9 @@ export const AccountPage = () => {
             {t("phase5.ownKeys")}
           </Button>
         </div>
-        {error && <PageNote error>{error}</PageNote>}
+        {error && (
+          <PageNote error>{errorText(error, "phase5.connectFailed")}</PageNote>
+        )}
         <LocalDataReset />
       </AreaPage>
     );

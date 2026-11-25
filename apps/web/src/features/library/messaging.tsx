@@ -48,8 +48,9 @@ import {
   useMutation,
   useMutationState,
 } from "#renderer/data/query-client";
+import { errorText, failureText } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { showError } from "#renderer/lib/toast";
+import { showFailure } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
@@ -321,7 +322,7 @@ export const MessagingPlatformDialog = ({
       await flow.settlePairing(platform);
       await onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("phase5.failed"));
+      setError(failureText(e));
     }
   };
   useEffect(() => {
@@ -343,7 +344,7 @@ export const MessagingPlatformDialog = ({
     });
     void ready
       .catch((e) => {
-        if (live) setError(e instanceof Error ? e.message : t("phase5.failed"));
+        if (live) setError(failureText(e));
       })
       .finally(() => {
         if (live) setPreparing(false);
@@ -351,8 +352,7 @@ export const MessagingPlatformDialog = ({
     return () => {
       live = false;
       void flowRef.current.settlePairing(platform).catch((e) => {
-        if (transport.state !== "closed")
-          showError(e instanceof Error ? e.message : t("phase5.failed"));
+        if (transport.state !== "closed") showFailure(e);
       });
     };
   }, [platform, transport, cache, sharedId, t]);
@@ -465,11 +465,7 @@ export const MessagingPlatformDialog = ({
                   void pairSharedLane(
                     { transport, queryClient: cache },
                     shared.id
-                  ).catch((e) =>
-                    setError(
-                      e instanceof Error ? e.message : t("phase5.failed")
-                    )
-                  )
+                  ).catch((e) => setError(failureText(e)))
                 }
               />
             )}
@@ -725,7 +721,11 @@ const SharedLinkSteps = ({
           <ExternalLinkIcon data-icon="inline-start" />
           {t("messaging.sharedLink.authorize")}
         </Button>
-        {link.error && <ConnectNote error>{link.error}</ConnectNote>}
+        {link.error && (
+          <ConnectNote error>
+            {errorText(link.error, "phase5.connectFailed")}
+          </ConnectNote>
+        )}
         <ConnectWaiting>
           {t("messaging.sharedLink.waitingAuthorize")}
         </ConnectWaiting>
@@ -800,7 +800,9 @@ const SharedLinkSteps = ({
   return (
     <Step index={first} title={title}>
       <ConnectNote error={!!link.error}>
-        {link.error ??
+        {(link.error != null
+          ? errorText(link.error, "phase5.connectFailed")
+          : null) ??
           t(
             required
               ? "messaging.sharedLink.requiredIntro"

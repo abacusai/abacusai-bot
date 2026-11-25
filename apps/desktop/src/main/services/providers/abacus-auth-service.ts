@@ -395,9 +395,9 @@ const responsePage = (): string => {
         document.getElementById("badge-ok").setAttribute("hidden", "");
         document.getElementById("badge-warn").removeAttribute("hidden");
         document.getElementById("title").textContent = "Sign-in didn't finish";
+        // The reason is in the app's log and the report below, never on the page.
         document.getElementById("body").textContent =
-          "Abacus.AI signed you in, but the app could not complete the connection (" + reason + "). " +
-          "Go back to the app and try again. If you are running the app from source, the terminal has the full error on a line starting with [abacus-auth].";
+          "Abacus.AI signed you in, but the app could not complete the connection. Go back to the app and try again.";
         report("failed", reason);
       }).catch(function () { setTimeout(poll, 500); });
     }

@@ -22,6 +22,7 @@ import {
   useMutation,
 } from "#renderer/data/query-client";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
+import { errorText } from "#renderer/lib/error-text";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -134,7 +135,7 @@ export const SkillsPage = () => {
   const openFile = useMutation(
     succeeding(
       transport.orpc.skills.openFile.mutationOptions({
-        meta: { errorToast: { reasonOr: "phase5.failed" } },
+        meta: { errorToast: "phase5.failed" },
       })
     )
   );
@@ -322,7 +323,9 @@ export const MarketplaceDialog = ({ onInstalled }: { onInstalled(): void }) => {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        {result.data?.error && <p role="alert">{result.data.error}</p>}
+        {result.data?.error && (
+          <p role="alert">{errorText(result.data.error)}</p>
+        )}
         {result.data?.skills.map((s) => (
           <SettingRow
             key={s.id}

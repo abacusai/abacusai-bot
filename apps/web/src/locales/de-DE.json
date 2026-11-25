@@ -2988,6 +2988,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "Der Speicher ist voll, daher konnte das nicht gespeichert werden. Gib etwas Speicherplatz frei und versuche es erneut.",
+    "tryAgain": "Etwas ist schiefgelaufen. Versuche es erneut.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4266,6 @@
     "cantCheck": "Nicht prüfbar",
     "appMissing": "Nicht installiert",
     "appNotReady": "Nicht bereit",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Verbinde Dienste, die dein Agent für Aufgaben nutzen kann.",
     "credentialsLocal": "Zugangsdaten werden auf diesem Computer gespeichert.",
     "defaultWorkspace": "Automatic",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "„{{task}}“ wurde angehalten, als die Credits aufgebraucht waren. Du hast wieder Credits.",
       "creditsBack": "Das wurde angehalten, als die Credits aufgebraucht waren. Du hast wieder Credits.",
       "paidTitle": "Du hast die Credits dieses Monats verbraucht",
+      "anyTitle": "Deine Credits sind aufgebraucht",
       "paidOffer": "Oder wechsle zu {{plan}} — {{price}}",
       "paidMobile": "Dein Plan wird über den App Store oder Google Play abgerechnet. Füge Credits hinzu oder upgrade in der Abacus.AI-App auf deinem Handy.",
       "balance": "Noch {{remaining}} von {{granted}} Credits",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "Alle kostenlosen Quellen sind vorerst aufgebraucht. Verbinde eine weitere kostenlose Quelle oder wähle ein anderes Modell.",
       "rate_limited": "Die kostenlosen Modelle sind gerade ausgelastet. Versuche es in ein paar Minuten erneut oder wechsle zu einem anderen Modell.",
       "empty": "Das Modell hat eine leere Antwort geliefert. Versuche es erneut oder wechsle zu einem anderen Modell.",
+      "stalled": "Das Modell hat aufgehört zu antworten. Versuche es erneut oder wechsle zu einem anderen Modell.",
+      "stream_cut": "Die Antwort wurde mittendrin abgebrochen, auch nach einem erneuten Versuch. Versuche es erneut oder wechsle zu einem anderen Modell.",
       "disk_full": "Der Speicher ist voll ({{free}} frei), daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
       "disk_fullUnmeasured": "Der Speicher ist voll, daher kann dieser Chat nicht gespeichert werden und der Agent kann keine Dateien schreiben. Gib etwas Speicherplatz frei und versuche es dann erneut.",
       "unknown": "Das Modell konnte das nicht abschließen. Versuche es erneut oder wechsle zu einem anderen Modell."
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "Neuer Chat",
       "fixKey": "Schlüssel prüfen",
-      "viewDetails": "Details anzeigen",
       "tryAgain": "Erneut versuchen"
     },
     "channel": {

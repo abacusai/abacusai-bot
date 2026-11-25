@@ -2988,6 +2988,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "Disk penuh, jadi itu tidak bisa disimpan. Kosongkan sebagian ruang dan coba lagi.",
+    "tryAgain": "Terjadi kesalahan. Coba lagi.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4266,6 @@
     "cantCheck": "Tidak dapat diperiksa",
     "appMissing": "Belum terpasang",
     "appNotReady": "Belum siap",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Hubungkan layanan yang dapat digunakan agen untuk menyelesaikan tugas.",
     "credentialsLocal": "Kredensial disimpan di komputer ini.",
     "defaultWorkspace": "Automatic",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” berhenti saat kredit habis. Kamu sudah punya kredit lagi.",
       "creditsBack": "Ini berhenti saat kredit habis. Kamu sudah punya kredit lagi.",
       "paidTitle": "Kredit bulan ini sudah kamu pakai",
+      "anyTitle": "Kredit kamu sudah habis",
       "paidOffer": "Atau naik ke {{plan}} — {{price}}",
       "paidMobile": "Paket Anda ditagih melalui App Store atau Google Play, jadi tambahkan kredit atau upgrade di aplikasi seluler Abacus.AI.",
       "balance": "Tersisa {{remaining}} dari {{granted}} kredit",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "Semua sumber gratis sudah habis untuk saat ini. Hubungkan sumber gratis lain, atau pilih model lain.",
       "rate_limited": "Model gratis sedang sibuk. Coba lagi dalam beberapa menit, atau beralih ke model lain.",
       "empty": "Model mengembalikan balasan kosong. Coba lagi, atau beralih ke model lain.",
+      "stalled": "Model berhenti menjawab. Coba lagi, atau beralih ke model lain.",
+      "stream_cut": "Balasan terpotong di tengah jalan, bahkan setelah diminta lagi. Coba lagi, atau beralih ke model lain.",
       "disk_full": "Disk penuh (tersisa {{free}}), jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "disk_fullUnmeasured": "Disk penuh, jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "unknown": "Model tidak bisa menyelesaikan ini. Coba lagi, atau beralih ke model lain."
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "Chat baru",
       "fixKey": "Periksa kunci",
-      "viewDetails": "Lihat detail",
       "tryAgain": "Coba lagi"
     },
     "channel": {

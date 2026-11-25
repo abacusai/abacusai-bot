@@ -136,7 +136,7 @@ export const ConnectNote = ({
     {...props}
     className={cn(
       "text-[13px] leading-[18px]",
-      error ? "text-destructive" : "text-muted-foreground",
+      error ? "text-failed" : "text-muted-foreground",
       className
     )}
   />

@@ -4,7 +4,7 @@ import type { Ref } from "react";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { connectErrorText } from "#renderer/lib/connect-page";
+import { errorText, failureCode } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
@@ -70,12 +70,15 @@ export const ConnectorsStep = ({
           // Backing out of the sign-in is not a failure: the tile goes back to Connect.
           if (error instanceof ConnectFailed && error.message === "timeout")
             return { ok: false, cancelled: true, error: error.message };
+          // A code the tile words (`errorText`); an internal one is logged.
           return {
             ok: false,
             error:
               error instanceof ConnectFailed
-                ? connectErrorText(t, error.message)
-                : t("onboarding.frame.failed"),
+                ? error.message
+                : failureCode(error),
+            ...(error instanceof ConnectFailed &&
+              error.userFacing && { userFacing: true }),
           };
         }
       },
@@ -173,17 +176,17 @@ export const ConnectorsStep = ({
                     {state === "loading" && t("common.loading")}
                     {state === "error" && (
                       <>
-                        <TriangleAlertIcon className="text-destructive size-3.5" />
+                        <TriangleAlertIcon className="text-failed size-3.5" />
                         <span>{t("onboarding.pages.retry")}</span>
                       </>
                     )}
                   </span>
                   {state === "error" && reason != null && (
                     <span
-                      className="text-destructive text-xs leading-4 font-normal"
+                      className="text-failed text-xs leading-4 font-normal"
                       role="alert"
                     >
-                      {reason}
+                      {errorText(reason, "phase5.connectFailed")}
                     </span>
                   )}
                 </span>

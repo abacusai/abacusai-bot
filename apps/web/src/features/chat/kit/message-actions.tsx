@@ -839,7 +839,7 @@ export const MessageMenu = ({
             </>
           ) : null}
           {failed ? (
-            <p role="alert" className="text-destructive px-2 py-1 text-xs">
+            <p role="alert" className="text-failed px-2 py-1 text-xs">
               {t("chat.actions.failed")}
             </p>
           ) : null}
@@ -959,7 +959,7 @@ const SessionActions = ({
         </div>
       ) : null}
       {failed ? (
-        <p role="alert" className="text-destructive mt-7 text-end text-xs">
+        <p role="alert" className="text-failed mt-7 text-end text-xs">
           <FailedCopy />
         </p>
       ) : null}
@@ -1000,7 +1000,7 @@ export const TurnActions = ({
         {rateable ? feedback : null}
       </div>
       {failed ? (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="text-failed text-xs">
           <FailedCopy />
         </p>
       ) : null}
@@ -1139,7 +1139,7 @@ const ChatMessageActions = ({
           ) : null}
 
           {error ? (
-            <p role="alert" className="text-destructive text-xs">
+            <p role="alert" className="text-failed text-xs">
               {t("chat.actions.failed")}
             </p>
           ) : null}
@@ -1271,7 +1271,7 @@ export const MessageReactionPills = ({
         ) : null}
       </AnimatePresence>
       {failed ? (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="text-failed text-xs">
           {t("chat.actions.failed")}
         </p>
       ) : null}

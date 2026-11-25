@@ -1,5 +1,6 @@
 import type { WorkspaceGitContext } from "@abacus-ai/contract/contracts";
 
+import { plainGhSentence } from "../../services/workspace/github-cli";
 import {
   DISABLED_STATUS,
   GithubRequestError,
@@ -37,9 +38,15 @@ const mapped = async <T>(work: () => Promise<T>): Promise<T> => {
     return await work();
   } catch (error) {
     if (!(error instanceof GithubRequestError)) throw error;
-    throw error.reason === "empty-body"
-      ? badRequest(error.message)
-      : conflict(error.reason, error.message);
+    if (error.reason === "empty-body") throw badRequest(error.message, true);
+    // The app's own sentences are for the user; gh's only when plain.
+    const plain =
+      error.reason === "gh-error" ? plainGhSentence(error.message) : null;
+    throw error.reason !== "gh-error"
+      ? conflict(error.reason, error.message, true)
+      : plain != null
+        ? conflict(error.reason, plain, true)
+        : conflict(error.reason, error.message);
   }
 };
 

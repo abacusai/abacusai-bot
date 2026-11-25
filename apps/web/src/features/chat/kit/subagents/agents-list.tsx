@@ -80,7 +80,7 @@ const AgentRow = ({
           className={cn(
             "size-3.5 shrink-0",
             running && "text-primary animate-spin",
-            failed && "text-destructive",
+            failed && "text-failed",
             unfinished && !failed && "text-amber-400",
             !running &&
               !failed &&

@@ -1384,7 +1384,12 @@ export class AbacusBotSession {
       this.emitAgentEvent(
         {
           type: "error",
-          error: { message: startupError, code: "model_unavailable" },
+          // Only NO_MODEL_CONFIGURED: the app's own words for the user.
+          error: {
+            message: startupError,
+            code: "model_unavailable",
+            userFacing: true,
+          },
         },
         { origin: "startup" }
       );

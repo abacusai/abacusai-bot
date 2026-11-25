@@ -16,6 +16,7 @@ import type { BrowserSurface } from "#renderer/components/browser-surface";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import type { TerminalAction } from "#renderer/components/terminal/keys";
 import { useConnectorRequests } from "#renderer/lib/connector-requests";
+import { errorText } from "#renderer/lib/error-text";
 import { whenIdle } from "#renderer/lib/idle";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
@@ -207,7 +208,7 @@ export const SessionWorkspace = ({
       ) : null}
       {error ? (
         <div role="alert" className="p-3">
-          <p>{String(error)}</p>
+          <p>{errorText(error)}</p>
           <Button onClick={() => controller.retry(row)}>
             {t("sessions.common.retry")}
           </Button>

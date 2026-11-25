@@ -5061,7 +5061,7 @@ export class ServiceHost {
     const lane = selfLaneOf(platformId);
     if (lane == null)
       throw new InvalidInputError(
-        `${platformId} has no chat of the user's own.`
+        "This chat app has no chat of your own to send to."
       );
     this.botService.setHomeBot(APP_OF_SELF_LANE[lane], botId);
     return this.messagingGatewayService.getSnapshot();
@@ -10273,6 +10273,7 @@ export class ServiceHost {
     if (this.connectedSites.add(site) == null)
       throw new ORPCError("BAD_REQUEST", {
         message: `"${site}" is not a website address.`,
+        data: { userFacing: true },
       });
     return this.connectedSites.list();
   }

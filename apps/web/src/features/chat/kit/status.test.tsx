@@ -282,9 +282,9 @@ describe("R2-T15 status", () => {
     ]);
     current = await renderRelay(relay, "session");
     expect(await screen.findByText("Stopped")).toBeTruthy();
-    expect(
-      screen.getByText("The model provider had a problem (400)")
-    ).toBeTruthy();
+    // The provider's words and status are for the log, never the card.
+    expect(screen.getByText(/The model couldn.t finish this/)).toBeTruthy();
+    expect(screen.queryByText(/\(400\)/)).toBeNull();
     const log = screen.getByRole("log");
     const order = [
       ...log.querySelectorAll(
@@ -500,7 +500,7 @@ it("read-only bot chats hide retry and named model switches", async () => {
     readOnly: { reason: "Read only" },
     model: { value: "a", label: "A", onChange: vi.fn(), groups: [] },
   });
-  await screen.findByText("Turn failed");
+  await screen.findByText(/The model couldn.t finish this/);
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Continue on/ })).toBeNull();
   expect(relay.stats.send).toHaveLength(0);
@@ -1501,7 +1501,7 @@ describe("the turn's outcome card", () => {
     expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
   });
 
-  it("a dropped connection is the connection card, with its details and a retry", async () => {
+  it("a dropped connection is the connection card and a retry, with no details", async () => {
     current = await renderRelay(
       failed({
         message:
@@ -1519,7 +1519,9 @@ describe("the turn's outcome card", () => {
         "Check your internet connection, VPN, or proxy and try again."
       )
     ).toBeTruthy();
-    expect(screen.getByText("View details")).toBeTruthy();
+    // What failed underneath is for the log: no details on the card.
+    expect(screen.queryByText("View details")).toBeNull();
+    expect(screen.queryByText("Connection error.")).toBeNull();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
     expect(screen.queryByText(/busy/)).toBeNull();
   });
@@ -1687,7 +1689,8 @@ describe("the turn's outcome card", () => {
     return screen.findByText(
       error.cause === "model_unavailable"
         ? "Kimi K3 on NVIDIA NIM isn't available anymore"
-        : String(error.message).replace(/\.$/, "")
+        : // A plain error's own words stay in the log: the card's are the app's.
+          /The model couldn.t finish this/
     );
   };
   const notice = () =>

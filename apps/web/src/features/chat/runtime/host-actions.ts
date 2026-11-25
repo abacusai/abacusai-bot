@@ -14,6 +14,7 @@ import type { CreditActions } from "#renderer/components/credits-card";
 import { creditActionsFor } from "#renderer/components/credits-card/actions";
 import type { Transport } from "#renderer/data/transport";
 import { creditsTier } from "#renderer/lib/credits";
+import { UserFacingError } from "#renderer/lib/error-text";
 import { i18n } from "#renderer/lib/i18n";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -117,7 +118,7 @@ export const hostActionsFor = (
           },
           validateUpload: (file: File) => {
             if (file.size > 256 * 1024 * 1024)
-              throw new Error(i18n.t("web.files.tooLarge"));
+              throw new UserFacingError(i18n.t("web.files.tooLarge"));
           },
         }),
     // Native File objects expose metadata without reading file contents. The

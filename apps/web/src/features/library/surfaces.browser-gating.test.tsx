@@ -585,7 +585,7 @@ it("allows retrying WhatsApp connection after a failed request", async () => {
   });
   await act(async () => connect.click());
   expect((await screen.findByRole("alert")).textContent).toBe(
-    "Service unavailable"
+    "Something went wrong. Try again."
   );
   expect((connect as HTMLButtonElement).disabled).toBe(false);
   expect(onLinked).not.toHaveBeenCalled();
@@ -612,7 +612,7 @@ it("keeps the linked phone and allows retrying after unlinking fails", async () 
   });
   await act(async () => change.click());
   expect((await screen.findByRole("alert")).textContent).toBe(
-    "Service unavailable"
+    "Something went wrong. Try again."
   );
   expect((change as HTMLButtonElement).disabled).toBe(false);
   expect(

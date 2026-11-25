@@ -2988,6 +2988,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "El disco está lleno, así que no se pudo guardar. Libera algo de espacio y vuelve a intentarlo.",
+    "tryAgain": "Algo salió mal. Inténtalo de nuevo.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4266,6 @@
     "cantCheck": "No se puede comprobar",
     "appMissing": "No instalado",
     "appNotReady": "No está listo",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Conecta los servicios que tu agente puede usar para completar tareas.",
     "credentialsLocal": "Las credenciales se guardan en este equipo.",
     "defaultWorkspace": "Automatic",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” se detuvo cuando se acabaron los créditos. Ya tienes créditos otra vez.",
       "creditsBack": "Esto se detuvo cuando se acabaron los créditos. Ya tienes créditos otra vez.",
       "paidTitle": "Usaste los créditos de este mes",
+      "anyTitle": "Se te acabaron los créditos",
       "paidOffer": "O pásate a {{plan}} — {{price}}",
       "paidMobile": "Tu plan se cobra a través de App Store o Google Play, así que agrega créditos o mejora tu plan en la app móvil de Abacus.AI.",
       "balance": "Te quedan {{remaining}} de {{granted}} créditos",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "Todas las fuentes gratuitas están agotadas por ahora. Conecta otra fuente gratuita o elige otro modelo.",
       "rate_limited": "Los modelos gratuitos están ocupados ahora mismo. Vuelve a intentarlo en unos minutos o cambia a otro modelo.",
       "empty": "El modelo devolvió una respuesta vacía. Vuelve a intentarlo o cambia a otro modelo.",
+      "stalled": "El modelo dejó de responder. Vuelve a intentarlo o cambia a otro modelo.",
+      "stream_cut": "La respuesta se cortó a la mitad, incluso después de volver a pedirla. Vuelve a intentarlo o cambia a otro modelo.",
       "disk_full": "El disco está lleno (quedan {{free}}), así que este chat no se puede guardar y el agente no puede escribir archivos. Libera algo de espacio y vuelve a intentarlo.",
       "disk_fullUnmeasured": "El disco está lleno, así que este chat no se puede guardar y el agente no puede escribir archivos. Libera algo de espacio y vuelve a intentarlo.",
       "unknown": "El modelo no pudo terminar esto. Vuelve a intentarlo o cambia a otro modelo."
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "Chat nuevo",
       "fixKey": "Revisar la clave",
-      "viewDetails": "Ver detalles",
       "tryAgain": "Reintentar"
     },
     "channel": {

@@ -25,7 +25,7 @@ import {
 } from "#renderer/components/form-kit/connect-dialog";
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
-import { connectErrorText } from "#renderer/lib/connect-page";
+import { errorText } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
@@ -427,7 +427,10 @@ export const CreditsCard = ({
                   </div>
                   {signIns.error(source) != null && (
                     <ConnectNote error className="mt-1">
-                      {connectErrorText(t, signIns.error(source)!)}
+                      {errorText(
+                        signIns.error(source)!,
+                        "phase5.connectFailed"
+                      )}
                     </ConnectNote>
                   )}
                 </div>

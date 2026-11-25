@@ -34,11 +34,12 @@ import {
   useMutationState,
 } from "#renderer/data/query-client";
 import { openTab } from "#renderer/lib/connect-target";
+import { failureText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { connectTarget } from "#renderer/lib/platform-system";
-import { showError, showInfo } from "#renderer/lib/toast";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { showError, showFailure, showInfo } from "#renderer/lib/toast";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogFooter } from "#renderer/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "#renderer/ui/field";
@@ -123,7 +124,7 @@ export const McpPage = () => {
         if (event.type === "log" && event.entry.serverId === search.logs)
           setLogs((rows) => [...rows, event.entry.line].slice(-200));
         if (event.type === "refresh-failed" || event.type === "restart-failed")
-          showError(event.error);
+          showFailure(event.error);
       },
       abort.signal
     );
@@ -190,14 +191,14 @@ export const McpPage = () => {
   const refresh = useMutation(
     succeeding(
       transport.orpc.mcp.refresh.mutationOptions({
-        meta: { errorToast: { reasonOr: "phase5.failed" } },
+        meta: { errorToast: "phase5.failed" },
       })
     )
   );
   const restart = useMutation(
     succeeding(
       transport.orpc.mcp.restart.mutationOptions({
-        meta: { errorToast: { reasonOr: "phase5.failed" } },
+        meta: { errorToast: "phase5.failed" },
       })
     )
   );
@@ -208,7 +209,7 @@ export const McpPage = () => {
         onSuccess: (result) => {
           if (!result.cancelled && scope) refresh.mutate(scope);
         },
-        meta: { errorToast: { reasonOr: "phase5.failed" } },
+        meta: { errorToast: "phase5.failed" },
       })
     )
   );
@@ -609,7 +610,7 @@ export const McpServerDialog = ({
         });
         close();
       } catch (e) {
-        setError(errorText(e));
+        setError(failureText(e));
       }
     },
   });

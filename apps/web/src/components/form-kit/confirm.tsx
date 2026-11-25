@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { failureText } from "#renderer/lib/error-text";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -74,11 +75,7 @@ export const ConfirmAction = ({
                 setError(null);
                 void onConfirm()
                   .then(() => setOpen(false))
-                  .catch((e) =>
-                    setError(
-                      e instanceof Error ? e.message : t("phase5.failed")
-                    )
-                  )
+                  .catch((e) => setError(failureText(e)))
                   .finally(() => setBusy(false));
               }}
             >

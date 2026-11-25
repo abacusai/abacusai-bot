@@ -15,6 +15,7 @@ import {
   updateDraft,
   type DraftAttachment,
 } from "#renderer/lib/continuity/composer-drafts";
+import { UserFacingError } from "#renderer/lib/error-text";
 import { i18n } from "#renderer/lib/i18n";
 
 import type { ChatHostActions } from "../runtime/host-actions";
@@ -455,7 +456,8 @@ const addUploads = async (
           progress: 0,
         });
         try {
-          if (!context) throw new Error(i18n.t("web.files.selectSession"));
+          if (!context)
+            throw new UserFacingError(i18n.t("web.files.selectSession"));
           const resolved = await (resolvedContext ??= context());
           if (job.controller.signal.aborted) return;
           let path: string | undefined;

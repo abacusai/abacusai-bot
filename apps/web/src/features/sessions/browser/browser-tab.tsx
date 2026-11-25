@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import { BrowserSurface } from "#renderer/components/browser-surface";
 import { useOptionalDb } from "#renderer/data/db";
 import { followNotices } from "#renderer/data/queries/notices";
+import { failureText } from "#renderer/lib/error-text";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {
@@ -127,7 +128,7 @@ export const BrowserTab = ({
       })
       .catch((e) => {
         if (!live) return;
-        setError(String(e));
+        setError(failureText(e));
         draw("failed");
       });
     return () => {
@@ -166,7 +167,7 @@ export const BrowserTab = ({
       apply(s);
       setError(null);
     } catch (e) {
-      setError(String(e));
+      setError(failureText(e));
     }
   };
   return (
@@ -294,7 +295,7 @@ export const BrowserTab = ({
           }}
           onError={(e) => {
             setState(null);
-            setError(String(e));
+            setError(failureText(e));
             onDraw?.("failed");
           }}
         />

@@ -69,6 +69,8 @@ export interface RpcErrorData {
    * parse, spec 05 §31.5 e); `detail` is the user-facing reason.
    */
   BAD_REQUEST: {
+    /** The message was written for the user: the app shows it as it is. */
+    userFacing?: boolean;
     issues?: readonly unknown[];
     field?: string;
     detail?: string;
@@ -76,7 +78,8 @@ export interface RpcErrorData {
     refusal?: RoutineRefusal;
   };
   NOT_FOUND: { entity: NotFoundEntity; id: string };
-  CONFLICT: { reason: string };
+  /** `userFacing`: the message was written for the user, shown as it is. */
+  CONFLICT: { reason: string; userFacing?: boolean };
   PRECONDITION_FAILED: { reason: PreconditionReason; detail?: string };
   FORBIDDEN: { reason: string };
   UNSUPPORTED: { procedure: string };

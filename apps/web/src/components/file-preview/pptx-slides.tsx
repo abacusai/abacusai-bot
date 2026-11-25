@@ -351,7 +351,7 @@ const Slide = ({
         // Drawn in the scaled box so the label stays readable in the rail too.
         <div
           data-id={`pptx-slide-failed-${slide.number}`}
-          className="border-destructive/50 bg-background/95 text-destructive border-2 border-dashed"
+          className="border-failed/50 bg-background/95 text-failed border-2 border-dashed"
           style={{
             position: "absolute",
             inset: 0,

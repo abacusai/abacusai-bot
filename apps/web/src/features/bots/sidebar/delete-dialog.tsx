@@ -99,7 +99,7 @@ export const DeleteBotDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error && (
-          <p role="alert" className="text-destructive text-xs">
+          <p role="alert" className="text-failed text-xs">
             {t("bots.deleteDialog.error")}
           </p>
         )}

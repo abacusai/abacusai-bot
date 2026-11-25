@@ -231,7 +231,11 @@ export const disconnectAbacusConnector = async (
     ? snapshot.connected[serviceKey]
     : undefined;
   if (connectorId == null) {
-    return { ok: false, error: "This service is not connected." };
+    return {
+      ok: false,
+      error: "This service is not connected.",
+      userFacing: true,
+    };
   }
 
   const deleted = await abacusApiCall("_deleteUserConnector", "DELETE", {
@@ -243,11 +247,13 @@ export const disconnectAbacusConnector = async (
   const after = await listAbacusConnectors();
   if (after.ok) {
     return Object.hasOwn(after.connected, serviceKey)
-      ? { ok: false, error: DISCONNECT_FAILED }
+      ? { ok: false, error: DISCONNECT_FAILED, userFacing: true }
       : { ok: true };
   }
 
-  return deleted.ok ? { ok: true } : { ok: false, error: DISCONNECT_FAILED };
+  return deleted.ok
+    ? { ok: true }
+    : { ok: false, error: DISCONNECT_FAILED, userFacing: true };
 };
 
 /** One Google consent attaches all of these; a link for any of them asks for the bundle. */

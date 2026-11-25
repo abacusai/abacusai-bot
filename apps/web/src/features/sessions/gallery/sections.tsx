@@ -7,6 +7,7 @@ import { FilePreview } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
 import { Spinner } from "#renderer/components/spinner";
 import { repaint } from "#renderer/components/terminal/ghostty";
+import { failureText } from "#renderer/lib/error-text";
 import { Button } from "#renderer/ui/button";
 
 import { SessionContextTray } from "../context/context-tray";
@@ -70,7 +71,7 @@ const TerminalGallery = () => {
         repaint(view.term);
       })
       .catch((e) => {
-        if (live) setError(String(e));
+        if (live) setError(failureText(e));
       });
     return () => {
       live = false;

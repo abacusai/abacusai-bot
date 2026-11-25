@@ -13,7 +13,7 @@ import {
   ConnectPending,
 } from "#renderer/components/form-kit/connect-dialog";
 import { Spinner } from "#renderer/components/spinner";
-import { connectErrorText } from "#renderer/lib/connect-page";
+import { errorText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { foldSearch } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -134,7 +134,7 @@ const ConnectorsPanel = () => {
                       )}
                       {error && (
                         <ConnectNote error className="px-2 pb-1.5">
-                          {connectErrorText(t, error)}
+                          {errorText(error, "phase5.connectFailed")}
                         </ConnectNote>
                       )}
                     </div>

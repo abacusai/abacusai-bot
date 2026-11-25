@@ -114,10 +114,11 @@ it("a full disk is said as such, whatever copy the site chose", async () => {
   ]);
 });
 
-it("toasts by the site's policy: a copy key, the error's message, main's reason or nothing", async () => {
+it("toasts the app's words, never an internal error's own: words written for the user, a known reason's copy, else the site's copy or the generic one", async () => {
   const client = createClient();
-  const fail = () => Promise.reject(new Error("disk full"));
+  const fail = () => Promise.reject(new Error("EACCES: permission denied"));
   const refuse = (error?: string) => async () => ({ success: false, error });
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
   await run(
     client,
     { mutationFn: fail, meta: { errorToast: "phase5.saveFailed" } },
@@ -132,38 +133,58 @@ it("toasts by the site's policy: a copy key, the error's message, main's reason 
   await tick();
   await run(client, { mutationFn: fail }, undefined);
   await tick();
-  // A copy key stays the copy even when main gave a reason.
+  // Main's own words are never the toast: the site's copy is.
   await run(
     client,
     succeeding({
-      mutationFn: refuse("taken"),
+      mutationFn: refuse("taken by another process (code 409)"),
       meta: { errorToast: "phase5.saveFailed" as const },
     }),
     undefined
   );
   await tick();
-  const reason = { errorToast: { reasonOr: "phase5.failed" } };
+  // A reason code the app knows shows its copy, whatever the site's.
   await run(
     client,
-    succeeding({ mutationFn: refuse("locked"), meta: reason }),
+    succeeding({
+      mutationFn: refuse("timeout"),
+      meta: { errorToast: "phase5.failed" as const },
+    }),
     undefined
   );
   await tick();
   await run(
     client,
-    succeeding({ mutationFn: refuse(), meta: reason }),
+    succeeding({ mutationFn: refuse(), meta: { errorToast: true as const } }),
     undefined
   );
   await tick();
-  await run(client, { mutationFn: fail, meta: reason }, undefined);
+  // Words main wrote for the user are shown as they are.
+  await run(
+    client,
+    succeeding({
+      mutationFn: async () => ({
+        success: false,
+        error: "The app is busy",
+        userFacing: true,
+      }),
+      meta: { errorToast: true as const },
+    }),
+    undefined
+  );
   expect(showError.mock.calls).toEqual([
     [enUS.phase5.saveFailed],
-    ["disk full"],
+    [enUS.errors.tryAgain],
     [enUS.phase5.saveFailed],
-    ["locked"],
-    [enUS.phase5.failed],
-    [enUS.phase5.failed],
+    [enUS.phase5.connectTimedOut],
+    [enUS.errors.tryAgain],
+    ["The app is busy"],
   ]);
+  // The detail is in the log.
+  expect(errors.mock.calls.flat().map(String).join("\n")).toContain(
+    "EACCES: permission denied"
+  );
+  errors.mockRestore();
 });
 
 it("does not toast an aborted or cancelled mutation, and toasts a write that was never sent as not sent", async () => {

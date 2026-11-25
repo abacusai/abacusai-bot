@@ -217,6 +217,7 @@ export class HostCore {
                 message:
                   "A message could not be read by the agent and was not sent. Try sending it again.",
                 code: "malformed_command",
+                userFacing: true,
               },
             },
             { origin: "host" }

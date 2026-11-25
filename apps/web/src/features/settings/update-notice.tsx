@@ -6,6 +6,7 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
 
 import {
+  installNote,
   ManualInstallSteps,
   UpdatePillButton,
   updateVisible,
@@ -74,15 +75,11 @@ export const UpdateNotice = ({
                 <ManualInstallSteps manual={manual} />
               </div>
             )}
-            {manual == null &&
-              (update.installError || update.status?.error) && (
-                <p
-                  className="text-muted-foreground text-xs break-words"
-                  role="alert"
-                >
-                  {update.installError ?? update.status?.error}
-                </p>
-              )}
+            {manual == null && installNote(update.installError, t) && (
+              <p className="text-failed text-xs break-words" role="alert">
+                {installNote(update.installError, t)}
+              </p>
+            )}
           </div>
           {placement === "page" && ready && (
             <Button

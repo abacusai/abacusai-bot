@@ -99,7 +99,7 @@ const QueueRow = ({
         <div className="min-w-0 flex-1 truncate">{visible}</div>
       )}
       {problem != null ? (
-        <span role="status" className="text-destructive shrink-0">
+        <span role="status" className="text-failed shrink-0">
           {t(problem)}
         </span>
       ) : (

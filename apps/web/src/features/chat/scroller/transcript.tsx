@@ -147,6 +147,8 @@ const OutcomeRow = ({
       // A run marker closes its turn (chat.css: 4 px under the actions row);
       // an error card is a block of its own and keeps the row gap.
       data-outcome={outcome.kind === "error" ? undefined : ""}
+      // The announcer reads a failure's card by its run.
+      data-run-id={outcome.runId}
     >
       <Outcome outcome={outcome} latest={latest} />
     </MessageScrollerItem>

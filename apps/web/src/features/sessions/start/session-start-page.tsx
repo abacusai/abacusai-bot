@@ -29,7 +29,6 @@ import { StreakChip } from "#renderer/components/streak/streak-chip";
 import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { isDiskFullError } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import {
@@ -41,6 +40,7 @@ import {
   draftStore,
   updateDraft,
 } from "#renderer/lib/continuity/composer-drafts";
+import { failureText } from "#renderer/lib/error-text";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -210,7 +210,7 @@ export const SessionStartPage = ({
       envelope
     )
       .catch((e) => {
-        setError(isDiskFullError(e) ? t("errors.diskFull") : String(e));
+        setError(failureText(e));
         throw e;
       })
       .finally(() => {

@@ -194,7 +194,8 @@ describe("R2-T11 parts", () => {
     expect(
       document.querySelector('[data-message-id="a1"] [data-role]')
     ).toBeNull();
-    expect(screen.getByText("Boom")).toBeTruthy();
+    expect(screen.getByText(/The model couldn.t finish this/)).toBeTruthy();
+    expect(screen.queryByText("Boom")).toBeNull();
   });
 });
 

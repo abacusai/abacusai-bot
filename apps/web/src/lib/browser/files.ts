@@ -1,4 +1,5 @@
 import type { AppClient } from "#renderer/data/transport/types";
+import { UserFacingError } from "#renderer/lib/error-text";
 import { i18n } from "#renderer/lib/i18n";
 export interface UploadContext {
   workspaceId: string;
@@ -9,9 +10,9 @@ export const uploadFiles = async (
   context?: UploadContext
 ): Promise<string[]> => {
   if (!context?.workspaceId || !context.sessionId)
-    throw new Error(i18n.t("web.files.selectSession"));
+    throw new UserFacingError(i18n.t("web.files.selectSession"));
   if (files.reduce((size, file) => size + file.size, 0) > 255 * 1024 * 1024)
-    throw new Error(i18n.t("web.files.tooLarge"));
+    throw new UserFacingError(i18n.t("web.files.tooLarge"));
   const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
   let host = await refreshUploadToken();

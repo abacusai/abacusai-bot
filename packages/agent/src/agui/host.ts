@@ -577,6 +577,7 @@ export class AguiHost {
         custom("agent.error", {
           message: "A run could not be read by the agent.",
           code: "malformed_command",
+          userFacing: true,
         })
       );
 

@@ -23,10 +23,11 @@ import { EmptyState } from "#renderer/components/empty-state";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { isRpcError } from "#renderer/data/query-client";
 import { persistedStore } from "#renderer/lib/continuity/registry";
+import { failureText } from "#renderer/lib/error-text";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { showInfo, showError } from "#renderer/lib/toast";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { showError, showFailure, showInfo } from "#renderer/lib/toast";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import {
@@ -120,7 +121,7 @@ const RunsRail = ({
                   {a.outcome === "running" ? (
                     <Loader2 className="text-primary size-3.5 shrink-0 animate-spin" />
                   ) : a.outcome === "failed" ? (
-                    <CircleAlert className="text-destructive size-3.5 shrink-0" />
+                    <CircleAlert className="text-failed size-3.5 shrink-0" />
                   ) : a.outcome === "offline" ||
                     a.outcome === "skipped-offline" ||
                     a.outcome === "skipped-link" ? (
@@ -577,7 +578,7 @@ export const ReplyToRun = ({
           params: { sessionId: chat.sessionId },
         });
     } catch (e) {
-      showError(`${t("routines.reply.failed")} ${errorText(e)}`);
+      showFailure(e, "routines.reply.failed");
     }
     setBusy(false);
   };
@@ -653,8 +654,9 @@ export const EditorChat = ({
       const reply =
         code === "TIMEOUT"
           ? t("phase5.editTimeout")
-          : `${t("phase5.editFailed")} ${errorText(e)}`;
-      store.setState((log) => [...log, { user, reply }].slice(-10));
+          : failureText(e, "phase5.editFailed");
+      if (reply != null)
+        store.setState((log) => [...log, { user, reply }].slice(-10));
     }
     setBusy(false);
   };

@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { errorText } from "#renderer/lib/use-app-context";
+import { errorText } from "#renderer/lib/error-text";
 import { Skeleton } from "#renderer/ui/skeleton";
 
 import { GithubWatchPrLine } from "../../routines/github-watch";
@@ -66,7 +66,12 @@ const PrTabContent = ({
   if (result.isError)
     return (
       <PrUnavailable
-        status={{ state: "error", message: errorText(result.error) }}
+        status={{
+          state: "error",
+          message: errorText(result.error),
+          // Already the app's words.
+          userFacing: true,
+        }}
         onRetry={retry}
         retrying={retrying}
       />

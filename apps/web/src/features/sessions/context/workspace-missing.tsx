@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { failureText } from "#renderer/lib/error-text";
 import { platformSystem } from "#renderer/lib/platform-system";
 import {
   AlertDialog,
@@ -48,7 +49,7 @@ export const WorkspaceMissing = ({
         await db.collections.workspaces.delete(workspaceId).isPersisted.promise;
         removed();
       } catch (e) {
-        setError(String(e));
+        setError(failureText(e));
       }
     })().finally(() => {
       setBusy(false);
@@ -56,7 +57,9 @@ export const WorkspaceMissing = ({
   };
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button onClick={() => void relocate().catch((e) => setError(String(e)))}>
+      <Button
+        onClick={() => void relocate().catch((e) => setError(failureText(e)))}
+      >
         {t("sessions.missing.choose")}
       </Button>
       <Button variant="ghost" onClick={() => setConfirm(true)}>

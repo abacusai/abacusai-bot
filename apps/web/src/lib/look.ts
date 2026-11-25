@@ -205,6 +205,7 @@ const PAIRS: ReadonlyArray<readonly [string, readonly string[], Kind]> = [
     [
       "chat-status-running",
       "chat-status-attention",
+      "status-failed",
       "chat-status-done",
       "chat-status-muted",
       "bots-attention",
@@ -339,7 +340,7 @@ const table = (keys: string, values: string): Record<string, string> => {
   return Object.fromEntries(keys.split(" ").map((key, i) => [key, v[i]!]));
 };
 const STOCK_KEYS =
-  "background foreground card card-foreground popover popover-foreground primary primary-foreground secondary secondary-foreground muted muted-foreground accent accent-foreground destructive border input ring chart-1 chart-2 chart-3 chart-4 chart-5 sidebar sidebar-foreground sidebar-primary sidebar-primary-foreground sidebar-accent sidebar-accent-foreground sidebar-border sidebar-ring control-border selected-surface selected-text chat-surface chat-surface-2 chat-inset chat-status-running chat-status-attention chat-status-done chat-status-muted chat-diff-add-bg chat-diff-add-fg chat-diff-del-bg chat-diff-del-fg chat-user-bubble bots-attention bots-attention-foreground bots-running bots-done";
+  "background foreground card card-foreground popover popover-foreground primary primary-foreground secondary secondary-foreground muted muted-foreground accent accent-foreground destructive border input ring chart-1 chart-2 chart-3 chart-4 chart-5 sidebar sidebar-foreground sidebar-primary sidebar-primary-foreground sidebar-accent sidebar-accent-foreground sidebar-border sidebar-ring control-border selected-surface selected-text chat-surface chat-surface-2 chat-inset chat-status-running chat-status-attention status-failed chat-status-done chat-status-muted chat-diff-add-bg chat-diff-add-fg chat-diff-del-bg chat-diff-del-fg chat-user-bubble bots-attention bots-attention-foreground bots-running bots-done";
 /** Ghostty's own ANSI palette: the stock terminal. */
 export const STOCK_ANSI =
   "#000000 #cd3131 #0dbc79 #e5e510 #2472c8 #bc3fbc #11a8cd #e5e5e5 #666666 #f14c4c #23d18b #f5f543 #3b8eea #d670d6 #29b8db #ffffff".split(
@@ -371,11 +372,11 @@ const stock = (values: string, syntax: string): Record<string, string> => {
  */
 export const STOCK: Readonly<Record<ResolvedTheme, ThemeColors>> = {
   light: stock(
-    "#ffffff #0a0a0a #f7f7f7 #0a0a0a #ffffff #0a0a0a #171717 #fafafa #f5f5f5 #171717 #f5f5f5 #636363 #f5f5f5 #171717 #e7000b #e5e5e5 #bebebe #a1a1a1 #d4d4d4 #737373 #525252 #404040 #262626 #fafafa #0a0a0a #171717 #fafafa #f5f5f5 #171717 #e5e5e5 #a1a1a1 #8f8f8f #171717 #fafafa #f5f5f5 #ededed #fafafa #a94700 #a94700 #146d34 #636363 #d8f9dd #00521f #ffe5e3 #9b1e22 #e8e8e8 #a94700 #fafafa #a94700 #146d34",
+    "#ffffff #0a0a0a #f7f7f7 #0a0a0a #ffffff #0a0a0a #171717 #fafafa #f5f5f5 #171717 #f5f5f5 #636363 #f5f5f5 #171717 #e7000b #e5e5e5 #bebebe #a1a1a1 #d4d4d4 #737373 #525252 #404040 #262626 #fafafa #0a0a0a #171717 #fafafa #f5f5f5 #171717 #e5e5e5 #a1a1a1 #8f8f8f #171717 #fafafa #f5f5f5 #ededed #fafafa #a94700 #a94700 #a0388f #146d34 #636363 #d8f9dd #00521f #ffe5e3 #9b1e22 #e8e8e8 #a94700 #fafafa #a94700 #146d34",
     "#cf222e #0a7f64 #6e7781 #8250df #953800 #0550ae #116329 #0550ae #0550ae #0550ae #953800 #8250df #1a7f37 #cf222e #57606a #0550ae #0969da #953800 #116329 #8250df"
   ),
   dark: stock(
-    "#0a0a0a #fafafa #171717 #fafafa #171717 #fafafa #e5e5e5 #171717 #262626 #fafafa #262626 #a1a1a1 #262626 #fafafa #ff6467 #232323 #2f2f2f #737373 #d4d4d4 #737373 #525252 #404040 #262626 #171717 #fafafa #e5e5e5 #171717 #262626 #fafafa #232323 #737373 #808080 #dedede #121212 #232325 #1b1b1e #111113 #fbbb87 #fbbb87 #99ebaa #9e9e9e #132717 #9ceead #2e1818 #fda1a0 #232325 #fbbb87 #171717 #fbbb87 #99ebaa",
+    "#0a0a0a #fafafa #171717 #fafafa #171717 #fafafa #e5e5e5 #171717 #262626 #fafafa #262626 #a1a1a1 #262626 #fafafa #ff6467 #232323 #2f2f2f #737373 #d4d4d4 #737373 #525252 #404040 #262626 #171717 #fafafa #e5e5e5 #171717 #262626 #fafafa #232323 #737373 #808080 #dedede #121212 #232325 #1b1b1e #111113 #fbbb87 #fbbb87 #eea0dc #99ebaa #9e9e9e #132717 #9ceead #2e1818 #fda1a0 #232325 #fbbb87 #171717 #fbbb87 #99ebaa",
     "#ff7b72 #a5d6ff #8b949e #d2a8ff #ffa657 #79c0ff #7ee787 #79c0ff #79c0ff #79c0ff #ffa657 #d2a8ff #7ee787 #ff7b72 #8b949e #79c0ff #58a6ff #ffa657 #7ee787 #d2a8ff"
   ),
 };
@@ -532,6 +533,8 @@ const baseTokens = (
     "chat-user-bubble": mix(tint(0.08), accent, 0.08),
     "chat-status-running": hue("yellow"),
     "chat-status-attention": hue("yellow"),
+    // A failure: its own hue, apart from running and needs-you, never red.
+    "status-failed": hue("magenta"),
     "chat-status-done": hue("green"),
     "chat-status-muted": muted,
     "bots-attention": hue("yellow"),

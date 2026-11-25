@@ -3,9 +3,18 @@
  * title on screen and says why (spec 09 D7).
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
+
+import enUS from "#locales/en-US.json";
+import { i18n } from "#renderer/lib/i18n";
 
 import { SessionIdentity } from "./sessions-pages";
+
+// The page's words come from the app's copy: load it, without the React
+// binding, so this test's keys still read as keys.
+beforeAll(() =>
+  i18n.init({ resources: { "en-US": { translation: enUS } }, lng: "en-US" })
+);
 
 const refused = Promise.reject(new Error("Name taken"));
 refused.catch(() => undefined);
@@ -32,8 +41,8 @@ it("closes the editor before the write settles and keeps the old title on a refu
   fireEvent.submit(input.closest("form")!);
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(update).toHaveBeenCalledTimes(1);
-  expect((await screen.findByRole("alert")).textContent).toContain(
-    "Name taken"
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "Something went wrong. Try again."
   );
   await waitFor(() =>
     expect(

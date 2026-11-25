@@ -90,7 +90,9 @@ describe("ChatView over scenarios", () => {
       "running",
       "error",
     ]);
-    expect(screen.getByText("Stopped at its limit")).toBeTruthy();
+    // A sub-agent's own error is for the log: its card says it failed.
+    expect(within(rows[2] as HTMLElement).getByText("Failed")).toBeTruthy();
+    expect(screen.queryByText("Stopped at its limit")).toBeNull();
     // A finished sub-agent's report shows under its collapsed card.
     expect(
       within(rows[0] as HTMLElement).getByText("No issues.", {
@@ -115,9 +117,11 @@ describe("ChatView over scenarios", () => {
       },
     });
     const card = await screen.findByRole("group", { name: "Error" });
+    // No cause the app has copy for: its generic line, never the provider's.
     expect(
-      within(card).getByText("Claude is rate limited right now")
+      within(card).getByText(/The model couldn.t finish this/)
     ).toBeTruthy();
+    expect(within(card).queryByText(/429|rate limited/)).toBeNull();
     expect(within(card).getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(
       within(card).getByRole("button", { name: /Continue on Abacus\.AI/ })

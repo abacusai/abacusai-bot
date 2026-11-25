@@ -2988,6 +2988,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "Le disque est plein : impossible d'enregistrer. Libérez de l'espace et réessayez.",
+    "tryAgain": "Une erreur est survenue. Réessayez.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4266,6 @@
     "cantCheck": "Vérification impossible",
     "appMissing": "Non installé",
     "appNotReady": "Pas prêt",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Connectez les services que votre agent peut utiliser pour accomplir ses tâches.",
     "credentialsLocal": "Les identifiants sont enregistrés sur cet ordinateur.",
     "defaultWorkspace": "Automatic",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "« {{task}} » s'est arrêté quand les crédits se sont épuisés. Vous avez de nouveau des crédits.",
       "creditsBack": "Cette tâche s'est arrêtée quand les crédits se sont épuisés. Vous avez de nouveau des crédits.",
       "paidTitle": "Vous avez utilisé les crédits de ce mois-ci",
+      "anyTitle": "Vos crédits sont épuisés",
       "paidOffer": "Ou passez à {{plan}} — {{price}}",
       "paidMobile": "Votre forfait est facturé via l'App Store ou Google Play : ajoutez des crédits ou passez à un forfait supérieur dans l'application mobile Abacus.AI.",
       "balance": "Il vous reste {{remaining}} crédits sur {{granted}}",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "Toutes les sources gratuites sont épuisées pour le moment. Connectez une autre source gratuite ou choisissez un autre modèle.",
       "rate_limited": "Les modèles gratuits sont occupés en ce moment. Réessayez dans quelques minutes ou passez à un autre modèle.",
       "empty": "Le modèle a renvoyé une réponse vide. Réessayez ou passez à un autre modèle.",
+      "stalled": "Le modèle a cessé de répondre. Réessayez ou passez à un autre modèle.",
+      "stream_cut": "La réponse a été coupée en cours de route, même après une nouvelle demande. Réessayez ou passez à un autre modèle.",
       "disk_full": "Le disque est plein (il reste {{free}}) : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "disk_fullUnmeasured": "Le disque est plein : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "unknown": "Le modèle n'a pas pu terminer. Réessayez ou passez à un autre modèle."
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "Nouvelle discussion",
       "fixKey": "Vérifier la clé",
-      "viewDetails": "Voir les détails",
       "tryAgain": "Réessayer"
     },
     "channel": {

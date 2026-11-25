@@ -2988,6 +2988,7 @@
     "genericTitle": "Bir şeyler ters gitti",
     "genericDescription": "Bu ekranda düzeltilemeyen bir hata oluştu.",
     "diskFull": "Disk dolu, bu yüzden kaydedilemedi. Biraz yer açın ve tekrar deneyin.",
+    "tryAgain": "Bir şeyler ters gitti. Yeniden dene.",
     "reload": "Yeniden yükle",
     "notFoundTitle": "Bulunamadı",
     "notFoundDescription": "Bu sayfa yok.",
@@ -4265,7 +4266,6 @@
     "cantCheck": "Kontrol edilemiyor",
     "appMissing": "Yüklü değil",
     "appNotReady": "Hazır değil",
-    "connectChatAppOnDesktop": "Bu sohbet uygulaması AbacusAI Bot masaüstü uygulamasından bağlanır.",
     "connectorsDescription": "Ajanının görevleri tamamlamak için kullanabileceği hizmetleri bağla.",
     "credentialsLocal": "Kimlik bilgileri bu bilgisayarda saklanır.",
     "defaultWorkspace": "Otomatik",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}” krediler bittiğinde durdu. Yeniden kredin var.",
       "creditsBack": "Bu, krediler bittiğinde durdu. Yeniden kredin var.",
       "paidTitle": "Bu ayın kredilerini kullandın",
+      "anyTitle": "Kredilerin bitti",
       "paidOffer": "Ya da {{plan}} planına geç — {{price}}",
       "paidMobile": "Planın App Store veya Google Play üzerinden faturalandırılıyor; kredi eklemek ya da yükseltmek için Abacus.AI mobil uygulamasını kullan.",
       "balance": "{{granted}} krediden {{remaining}} kaldı",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "Şimdilik tüm ücretsiz kaynaklar tükendi. Başka bir ücretsiz kaynak bağla veya başka bir model seç.",
       "rate_limited": "Ücretsiz modeller şu anda yoğun. Birkaç dakika sonra tekrar dene veya başka bir modele geç.",
       "empty": "Model boş bir yanıt döndürdü. Tekrar dene veya başka bir modele geç.",
+      "stalled": "Model yanıt vermeyi bıraktı. Tekrar dene veya başka bir modele geç.",
+      "stream_cut": "Yanıt, yeniden istense de yarıda kesildi. Tekrar dene veya başka bir modele geç.",
       "disk_full": "Disk dolu ({{free}} kaldı), bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "disk_fullUnmeasured": "Disk dolu, bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "unknown": "Model bunu tamamlayamadı. Tekrar dene veya başka bir modele geç."
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "Yeni sohbet",
       "fixKey": "Anahtarı kontrol et",
-      "viewDetails": "Ayrıntıları göster",
       "tryAgain": "Tekrar dene"
     },
     "channel": {

@@ -54,6 +54,7 @@ import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
 import { QueueSlot } from "./queue-slot";
 import { RunningStrip } from "./running-strip";
+import { failureLine, type TurnFailureView } from "./status/failure-line";
 import { NoticeRow } from "./status/status";
 
 /** The skin's message widget, for the transcript's rows. */
@@ -96,6 +97,48 @@ const isLive = (outcome: RunOutcomeRecord): boolean =>
   (outcome as RunOutcomeRecord & { live?: boolean }).live === true;
 
 const ANNOUNCE_GAP_MS = 500;
+/** How long a failure's announcement waits for its card: 6 × 500 ms. */
+const CARD_WAIT_TRIES = 6;
+
+/**
+ * What a failed run's card says, read from the card itself: its title, else
+ * its text (a one-line card, or the marker it gives way to). The card is the
+ * one owner of what a failure says (credit wall, payment, phone, model or
+ * the generic line), so the screen reader hears exactly what is on screen.
+ * `marker`: a run marker ("You have credits again"), not a failure.
+ *
+ * This reads the run's row from the DOM, so it relies on the transcript
+ * keeping every row mounted. TODO(windowing): if the transcript windows its
+ * rows again (see the "re-enable with windowing" tests), the latest run's
+ * row must stay mounted, or this falls back to `failureLine` for every
+ * failure.
+ */
+const failureHeadline = (
+  runId: string
+): { text: string; marker: boolean } | null => {
+  const row = [...document.querySelectorAll<HTMLElement>("[data-run-id]")].find(
+    (node) => node.dataset.runId === runId
+  );
+  // The card, or the marker a card gives way to (credits already back).
+  const card = row?.querySelector<HTMLElement>(
+    '[data-slot="error-card"], [data-slot="run-marker"]'
+  );
+  if (card == null) return null;
+  const marker = card.dataset.slot === "run-marker";
+  const title = card.querySelector("h2");
+  if (title != null) {
+    const text = title.textContent?.trim() ?? "";
+    return text === "" ? null : { text, marker };
+  }
+  // A one-line card or a marker: its words, not its buttons' labels.
+  const words: string[] = [];
+  const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node != null; node = walker.nextNode())
+    if (node.parentElement?.closest("button") == null)
+      words.push(node.textContent ?? "");
+  const text = words.join("").trim();
+  return text === "" ? null : { text, marker };
+};
 
 /**
  * One status line per milestone, each announced once, at most one per
@@ -107,7 +150,7 @@ const ANNOUNCE_GAP_MS = 500;
  */
 const Announcer = () => {
   const { t } = useTranslation();
-  const { session } = useChatView();
+  const { session, runtime } = useChatView();
   const outcomes = useThreadStore(session, (state) => state.runs.outcomes);
   const items = useThreadStore(session, (state) => state.permissions.items);
   const messages = useHost(session, (state) => state.messages);
@@ -120,7 +163,19 @@ const Announcer = () => {
     count: number;
     unread: number;
   } | null>(null);
-  const queue = useRef<Array<{ kind: "milestone" | "new"; text: string }>>([]);
+  const queue = useRef<
+    Array<{
+      kind: "milestone" | "new";
+      text: string;
+      /** A failed run: its text is its card's title, once the card shows. */
+      runId?: string;
+      tries?: number;
+      /** The failure itself: its cause's line when no card shows in time. */
+      error?: TurnFailureView;
+      /** Whether the account pays, once read: the credit wall's line. */
+      account?: { paying?: boolean };
+    }>
+  >([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awayFromEnd = scrollable.end;
   useEffect(() => {
@@ -150,9 +205,14 @@ const Announcer = () => {
             ? t("chat.announce.finished")
             : outcome.kind === "cancelled"
               ? t("chat.announce.stopped")
-              : t("chat.announce.error", {
-                  message: outcome.error?.message ?? "",
-                }),
+              : "",
+        // A failure says what its card says: read from the card itself.
+        ...(outcome.kind === "error" && {
+          runId: outcome.runId,
+          tries: 0,
+          error: (outcome.error ?? {}) as TurnFailureView,
+          account: accountFor(outcome.error),
+        }),
       });
     }
     for (const item of items) {
@@ -188,18 +248,55 @@ const Announcer = () => {
     state.permissions = new Set(items.map((i) => i.id));
     state.lastMessageId = last;
     state.count = visibleMessages.length;
+    // The card reads the account's plan for its wall; the fallback reads the
+    // same answer, and says neither "free" nor "this month" until it has it.
+    function accountFor(error: unknown): { paying?: boolean } | undefined {
+      if (
+        (error as { cause?: unknown } | undefined)?.cause !==
+        "credits_exhausted"
+      )
+        return undefined;
+      const account: { paying?: boolean } = {};
+      void runtime.host
+        .accountTier()
+        .then((tier) => {
+          if (tier === "paid" || tier === "basic") account.paying = true;
+          else if (tier === "free") account.paying = false;
+        })
+        .catch(() => undefined);
+      return account;
+    }
     const flush = () => {
       const next = queue.current.shift();
       if (next == null) {
         timer.current = null;
         return;
       }
-      setText(next.text);
+      if (next.runId != null) {
+        const headline = failureHeadline(next.runId);
+        // A card can wait on the account's plan before it shows: try again.
+        if (headline == null && (next.tries ?? 0) < CARD_WAIT_TRIES) {
+          queue.current.unshift({ ...next, tries: (next.tries ?? 0) + 1 });
+          timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
+          return;
+        }
+        // A marker is not a failure; a card still not shown is announced
+        // by its cause's line, so a failure is never silent.
+        setText(
+          headline?.marker === true
+            ? headline.text
+            : t("chat.announce.error", {
+                message:
+                  headline?.text ??
+                  failureLine(t, next.error ?? {}, next.account?.paying),
+              })
+        );
+      } else setText(next.text);
       timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
     };
     if (timer.current == null && queue.current.length > 0)
       timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
-  }, [outcomes, items, messages, awayFromEnd, t]);
+  }, [outcomes, items, messages, awayFromEnd, t, runtime]);
   useEffect(
     () => () => {
       if (timer.current != null) clearTimeout(timer.current);

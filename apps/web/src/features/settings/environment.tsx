@@ -18,8 +18,8 @@ import {
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { optimistic, useMutation } from "#renderer/data/query-client";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { showError, showInfo } from "#renderer/lib/toast";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { showError, showFailure, showInfo } from "#renderer/lib/toast";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
@@ -386,7 +386,7 @@ const ElectronBrowserPage = () => {
               try {
                 void update({ browserHomepage: normalizeHomepage(home) })
                   .then(() => showInfo(t("phase5.saved")))
-                  .catch((e) => showError(errorText(e)));
+                  .catch((e) => showFailure(e));
               } catch {
                 showError(t("phase5.invalidUrl"));
               }

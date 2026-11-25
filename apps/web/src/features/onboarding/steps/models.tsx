@@ -8,7 +8,7 @@ import type { Ref } from "react";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { ConnectPending } from "#renderer/components/form-kit/connect-dialog";
-import { connectErrorText } from "#renderer/lib/connect-page";
+import { errorText } from "#renderer/lib/error-text";
 import { useRowConnects } from "#renderer/lib/use-row-connects";
 
 import { onboardingStore } from "../store";
@@ -65,7 +65,7 @@ export const ModelsStep = ({
   const failure = (id: string): string | null => {
     if (id !== "abacus") {
       const error = rows.error(id);
-      return error != null ? connectErrorText(t, error) : null;
+      return error != null ? errorText(error, "phase5.connectFailed") : null;
     }
     if (signIn?.status !== "failed") return null;
     const copy = failureCopy(signIn);
@@ -116,7 +116,7 @@ export const ModelsStep = ({
                 {error != null && (
                   <span
                     role="alert"
-                    className="text-destructive mt-1 block text-[13px] font-normal"
+                    className="text-failed mt-1 block text-[13px] font-normal"
                   >
                     {error}
                   </span>

@@ -7,12 +7,16 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { errorText } from "#renderer/lib/use-app-context";
+import {
+  failureCode,
+  outcomeFailure,
+  type ShownFailure,
+} from "#renderer/lib/error-text";
 
 /** How a row's wait ended. A cancelled one is not a failure. */
 export type RowConnectOutcome =
   | { ok: true }
-  | { ok: false; error: string; cancelled?: boolean };
+  | { ok: false; error: string; cancelled?: boolean; userFacing?: boolean };
 
 export interface RowConnect {
   /** The wait itself, started inside the click. A rejection is a failure. */
@@ -25,7 +29,7 @@ export interface RowConnect {
   connected?(): Promise<unknown>;
 }
 
-type RowState = { waiting: true } | { waiting: false; error: string };
+type RowState = { waiting: true } | { waiting: false; error: ShownFailure };
 
 export const useRowConnects = () => {
   const [rows, setRows] = useState<Readonly<Record<string, RowState>>>({});
@@ -55,10 +59,13 @@ export const useRowConnects = () => {
     put(key, { waiting: true });
     // Run in the click itself (a tab may open there); a throw is a failure.
     void new Promise<RowConnectOutcome>((resolve) => resolve(row.run()))
-      .catch((error: unknown): RowConnectOutcome => ({
-        ok: false,
-        error: errorText(error),
-      }))
+      .catch((error: unknown): RowConnectOutcome => {
+        // A code the row words (`errorText`); an internal failure is logged.
+        const code = failureCode(error);
+        return code === "cancelled"
+          ? { ok: false, cancelled: true, error: code }
+          : { ok: false, error: code };
+      })
       .then(async (outcome) => {
         // A failed re-read leaves the row to the next one; the connect stands.
         if (outcome.ok && current(key, token))
@@ -69,7 +76,7 @@ export const useRowConnects = () => {
           key,
           outcome.ok || outcome.cancelled === true
             ? null
-            : { waiting: false, error: outcome.error }
+            : { waiting: false, error: outcomeFailure(outcome) }
         );
       });
   };
@@ -84,8 +91,8 @@ export const useRowConnects = () => {
     start,
     cancel,
     waiting: (key: string): boolean => rows[key]?.waiting === true,
-    /** The row's last failure, the host's code or text (see `connectErrorText`). */
-    error: (key: string): string | null => {
+    /** The row's last failure, for `errorText`: a code, main's text or its sentence. */
+    error: (key: string): ShownFailure | null => {
       const row = rows[key];
       return row != null && !row.waiting ? row.error : null;
     },

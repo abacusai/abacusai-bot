@@ -2988,6 +2988,7 @@
     "genericTitle": "出了点问题",
     "genericDescription": "此页面遇到了无法恢复的错误。",
     "diskFull": "磁盘已满，无法保存。请释放一些空间后重试。",
+    "tryAgain": "出了点问题。请重试。",
     "reload": "重新加载",
     "notFoundTitle": "未找到",
     "notFoundDescription": "此页面不存在。",
@@ -4265,7 +4266,6 @@
     "cantCheck": "无法检查",
     "appMissing": "未安装",
     "appNotReady": "未就绪",
-    "connectChatAppOnDesktop": "此聊天应用需要在 AbacusAI Bot 桌面应用中连接。",
     "connectorsDescription": "连接你的智能体可用来完成任务的服务。",
     "credentialsLocal": "凭据存储在这台电脑上。",
     "defaultWorkspace": "自动",
@@ -5133,6 +5133,7 @@
       "creditsBackTask": "“{{task}}”因积分用完而暂停。你现在又有积分了。",
       "creditsBack": "因积分用完而暂停。你现在又有积分了。",
       "paidTitle": "你已用完本月积分",
+      "anyTitle": "你的积分已用完",
       "paidOffer": "或升级到 {{plan}}：{{price}}",
       "paidMobile": "你的套餐通过 App Store 或 Google Play 计费，因此请在 Abacus.AI 手机应用中充值积分或升级。",
       "balance": "还剩 {{remaining}}/{{granted}} 积分",
@@ -5177,6 +5178,8 @@
       "free_pool_spent": "目前所有免费来源都已用完。请连接其他免费来源，或选择其他模型。",
       "rate_limited": "免费模型现在很忙。请过几分钟再试，或切换到其他模型。",
       "empty": "模型返回了空回复。请重试，或切换到其他模型。",
+      "stalled": "模型停止了响应。请重试，或切换到其他模型。",
+      "stream_cut": "回复在中途被截断，重试后仍然如此。请重试，或切换到其他模型。",
       "disk_full": "磁盘已满（剩余 {{free}}），因此无法保存此聊天，智能体也无法写入文件。请释放一些空间，然后重试。",
       "disk_fullUnmeasured": "磁盘已满，因此无法保存此聊天，智能体也无法写入文件。请释放一些空间，然后重试。",
       "unknown": "模型无法完成此操作。请重试，或切换到其他模型。"
@@ -5184,7 +5187,6 @@
     "action": {
       "newChat": "新聊天",
       "fixKey": "检查密钥",
-      "viewDetails": "查看详情",
       "tryAgain": "重试"
     },
     "channel": {

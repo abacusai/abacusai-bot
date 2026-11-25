@@ -153,7 +153,12 @@ it.each([true, false])(
         startReady.resolve();
       });
       if (success) await waitFor(() => expect(output).toHaveBeenCalledOnce());
-      else expect(await screen.findByText(/start failed/)).toBeTruthy();
+      else {
+        expect(
+          await screen.findByText("Something went wrong. Try again.")
+        ).toBeTruthy();
+        expect(screen.queryByText(/start failed/)).toBeNull();
+      }
       expect(harness.router.state.location.search.tab).toBe(ref);
       expect(termView.element.isConnected).toBe(success);
       await act(async () => {

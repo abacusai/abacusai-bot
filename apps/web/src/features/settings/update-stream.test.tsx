@@ -10,11 +10,15 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "#renderer/data/query-client";
+import { initI18n } from "#renderer/lib/i18n";
 
 import { useUpdateStatus } from "./updates";
+
+// An install failure reads in the app's copy.
+beforeAll(() => initI18n());
 
 const app = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("#renderer/lib/use-app-context", async (original) => ({

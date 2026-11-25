@@ -25,6 +25,7 @@ import { ConnectDialog } from "#renderer/components/form-kit/connect-dialog";
 import { FlowPage } from "#renderer/components/form-kit/flow-page";
 import { Spinner } from "#renderer/components/spinner";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
+import { failureText } from "#renderer/lib/error-text";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { isPhone } from "#renderer/lib/phone";
 import { showInfo } from "#renderer/lib/toast";
@@ -269,7 +270,7 @@ export const WhatsAppConnect = ({
     };
     await request()
       .catch((e) => {
-        setError(e instanceof Error ? e.message : t("phase5.failed"));
+        setError(failureText(e));
       })
       .finally(() => setBusy(false));
   };
@@ -314,7 +315,7 @@ export const WhatsAppConnect = ({
       {expired ? (
         <div className="flex w-full flex-col gap-3">
           {error && (
-            <p role="alert" className="text-destructive text-sm">
+            <p role="alert" className="text-failed text-sm">
               {error}
             </p>
           )}
@@ -414,7 +415,7 @@ export const WhatsAppConnect = ({
             />
           </Field>
           {error && (
-            <p role="alert" className="text-destructive text-sm">
+            <p role="alert" className="text-failed text-sm">
               {error}
             </p>
           )}
@@ -501,7 +502,7 @@ export const PhoneErrorScreen = ({
         <p className="text-muted-foreground text-xs break-words">{detail}</p>
       )}
       {failed && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-failed text-sm">
           {t("web.connect.signOutFailed")}
         </p>
       )}
@@ -673,7 +674,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
     setError(null);
     await unlinkWhatsAppChat(cache, callApps)
       .catch((e) => {
-        setError(e instanceof Error ? e.message : t("phase5.failed"));
+        setError(failureText(e));
       })
       .finally(() => setBusy(false));
   };
@@ -692,7 +693,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
             {t("web.whatsappBot.doneBody")}
           </p>
           {error && (
-            <p role="alert" className="text-destructive text-sm">
+            <p role="alert" className="text-failed text-sm">
               {error}
             </p>
           )}
@@ -766,7 +767,7 @@ export const DesktopWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
     try {
       await unlinkWhatsAppChat(cache, callApps);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("phase5.failed"));
+      setError(failureText(e));
     } finally {
       setBusy(false);
     }
@@ -795,7 +796,7 @@ export const DesktopWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           {t("web.whatsappBot.desktopDoneBody")}
         </p>
         {error && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-failed text-sm">
             {error}
           </p>
         )}

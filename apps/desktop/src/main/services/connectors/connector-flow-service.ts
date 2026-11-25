@@ -76,10 +76,18 @@ export const APP_MISSING = "app-missing";
 export const APP_NOT_READY = "app-not-ready";
 export const OTHER_OS = "other-os";
 
-const failure = (error: string): ConnectorOutcome => ({ ok: false, error });
+/** A failure in the app's own words, for the user as it is. */
+const failure = (error: string): ConnectorOutcome => ({
+  ok: false,
+  error,
+  userFacing: true,
+});
 
-const unknown = (id: string): ConnectorOutcome =>
-  failure(`There is no connector "${id}".`);
+/** An id the renderer sent that main does not know: for the log only. */
+const unknown = (id: string): ConnectorOutcome => ({
+  ok: false,
+  error: `There is no connector "${id}".`,
+});
 
 /**
  * The MCP entry a server connector installs as, with the user's fields in
@@ -126,7 +134,14 @@ export const mcpEntryFor = (
  */
 export type McpConnectResult =
   | { kind: "connected"; label: string }
-  | { kind: "failed"; label: string; error: string; cancelled?: boolean }
+  | {
+      kind: "failed";
+      label: string;
+      error: string;
+      cancelled?: boolean;
+      /** `error` is the app's own sentence for the user. */
+      userFacing?: boolean;
+    }
   | { kind: "missing" };
 
 /**
@@ -172,7 +187,7 @@ const failedConnect = (
   detail: string | undefined
 ): Extract<McpConnectResult, { kind: "failed" }> => {
   if (detail != null) console.warn(`[connectors] ${label}: ${detail}`);
-  return { kind: "failed", label, error: message };
+  return { kind: "failed", label, error: message, userFacing: true };
 };
 
 export class ConnectorFlowService {
@@ -222,8 +237,12 @@ export class ConnectorFlowService {
         this.sources.os ?? process.platform
       )
     );
-    if (!added.success)
-      return failure(added.error ?? `Could not add ${connector.name}.`);
+    if (!added.success) {
+      // The admin's own reason is for the log; the user reads the app's.
+      if (added.error != null)
+        console.warn(`[connectors] ${connector.name}: ${added.error}`);
+      return failure(`Could not add ${connector.name}.`);
+    }
     return outcomeOf(await this.connectMcp(connector.id), connector.id);
   }
 
@@ -297,6 +316,7 @@ export class ConnectorFlowService {
         kind: "failed",
         label,
         error: `${label} needs its fields first.`,
+        userFacing: true,
       };
     // The code, not a sentence: the renderer says what to install, in the user's language.
     if (plan.kind === "app")
@@ -348,7 +368,11 @@ export class ConnectorFlowService {
         const result = this.sources.mcp.remove(connector.id);
         return result.success
           ? { ok: true }
-          : failure(result.error ?? `Could not remove ${connector.name}.`);
+          : (() => {
+              if (result.error != null)
+                console.warn(`[connectors] ${connector.name}: ${result.error}`);
+              return failure(`Could not remove ${connector.name}.`);
+            })();
       }
       case "messaging":
         // The gateway owns a platform's lifecycle; its card and the
@@ -372,6 +396,7 @@ const outcomeOf = (
         ok: false,
         error: result.error,
         ...(result.cancelled === true ? { cancelled: true } : {}),
+        ...(result.userFacing === true ? { userFacing: true } : {}),
       };
     case "missing":
       return unknown(connectorId);

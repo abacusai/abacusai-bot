@@ -128,7 +128,9 @@ describe("ModelsStep", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("Timed out");
+    expect(alert.textContent).toBe(
+      "Connecting didn't finish. Please try again."
+    );
     // On the row it came from.
     expect(
       document.querySelector('[data-provider="openrouter"]')!.contains(alert)

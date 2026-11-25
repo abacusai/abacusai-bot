@@ -1,7 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Store } from "@tanstack/react-store";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
+
+import enUS from "#locales/en-US.json";
+import { i18n } from "#renderer/lib/i18n";
 const mock = vi.hoisted(() => ({ transport: {} as any }));
 vi.mock("../data/queries", () => ({
   useSessionsTransport: () => mock.transport,
@@ -9,6 +12,12 @@ vi.mock("../data/queries", () => ({
 import type { BrowserRuntimeState } from "@abacus-ai/contract/contracts";
 
 import { BrowserTab } from "./browser-tab";
+
+// The page's words come from the app's copy: load it, without the React
+// binding, so this test's keys still read as keys.
+beforeAll(() =>
+  i18n.init({ resources: { "en-US": { translation: enUS } }, lng: "en-US" })
+);
 const profiles = {
   browser: {
     profiles: {
@@ -187,7 +196,8 @@ it("a present that fails shows the tab's error with Retry, which acquires again"
   );
   const alert = await view.findByRole("alert");
   expect(onDraw).toHaveBeenLastCalledWith("failed");
-  expect(alert.textContent).toContain("is closed");
+  expect(alert.textContent).toContain("Something went wrong. Try again.");
+  expect(alert.textContent).not.toContain("is closed");
   expect(
     view.queryByRole("region", { name: "sessions.browser.title" })
   ).toBeNull();

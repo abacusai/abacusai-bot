@@ -192,6 +192,7 @@ describe("disconnecting a connector", () => {
     expect(await disconnectAbacusConnector("slack")).toEqual({
       ok: false,
       error: "Could not disconnect. Please try again.",
+      userFacing: true,
     });
   });
 
@@ -203,6 +204,7 @@ describe("disconnecting a connector", () => {
     expect(await disconnectAbacusConnector("slack")).toEqual({
       ok: false,
       error: "Could not disconnect. Please try again.",
+      userFacing: true,
     });
   });
 
@@ -229,6 +231,7 @@ describe("disconnecting a connector", () => {
     expect(await disconnectAbacusConnector("constructor")).toEqual({
       ok: false,
       error: "This service is not connected.",
+      userFacing: true,
     });
     expect(calls).not.toContain("_deleteUserConnector");
   });
@@ -240,6 +243,7 @@ describe("disconnecting a connector", () => {
     expect(await disconnectAbacusConnector("slack")).toEqual({
       ok: false,
       error: "This service is not connected.",
+      userFacing: true,
     });
     expect(calls).not.toContain("_deleteUserConnector");
   });

@@ -374,7 +374,7 @@ export const PermissionCard = ({
         </div>
       ) : null}
       {problem != null ? (
-        <p role="status" className="text-destructive text-xs">
+        <p role="status" className="text-failed text-xs">
           {t(problem)}
         </p>
       ) : null}
@@ -532,7 +532,7 @@ const QuestionCard = ({
         </QuestionnaireActions>
       </Questionnaire>
       {problem != null ? (
-        <p role="status" className="text-destructive text-xs">
+        <p role="status" className="text-failed text-xs">
           {t(problem)}
         </p>
       ) : null}

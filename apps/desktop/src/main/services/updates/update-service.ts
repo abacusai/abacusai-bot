@@ -25,6 +25,12 @@ import {
   settleInstallRecord,
 } from "./install-record";
 import { markRelaunchHidden, clearRelaunchHidden } from "./relaunch-hidden";
+import {
+  BUSY_ERROR,
+  CHANGED_ERROR,
+  MANUAL_INSTALL_ERROR,
+  TEST_BUILD_ERROR,
+} from "./update-messages";
 
 // Static CDN feed: one YAML naming immutable per-version artifacts. The feed
 // flip is the last, atomic step of a release.
@@ -131,8 +137,6 @@ const shellQuote = (value: string): string =>
 /** What the user runs in a terminal when the app cannot install the .deb. */
 const manualInstallCommand = (packagePath: string): string =>
   `sudo apt install ${shellQuote(packagePath)}`;
-
-const MANUAL_INSTALL_ERROR = "Install this update from a terminal";
 
 /**
  * Host knowledge: an agent turn or live PTY makes a restart destructive.
@@ -681,7 +685,7 @@ export class UpdateService {
     // over the test build, password prompt and all.
     if (isTestBuild()) {
       console.log("[UpdateService] test build, not checking for updates");
-      return { success: false, error: "Test builds do not update." };
+      return { success: false, error: TEST_BUILD_ERROR };
     }
     if (
       app.isPackaged &&
@@ -816,7 +820,7 @@ export class UpdateService {
         this.status.preparing = false;
         if (!this.status.downloaded || this.downloadedVersion !== version) {
           this.emitStatusUpdate();
-          return { success: false, error: "The update changed meanwhile" };
+          return { success: false, error: CHANGED_ERROR };
         }
         if (failure != null)
           throw new Error(`Couldn't prepare the update: ${failure}`);
@@ -826,7 +830,7 @@ export class UpdateService {
             `[UpdateService] ${version} staged but the app is busy again, installing on the next quit`
           );
           this.emitStatusUpdate();
-          return { success: false, error: "The app is busy" };
+          return { success: false, error: BUSY_ERROR };
         }
       }
       this.status.installing = true;

@@ -16,6 +16,7 @@ import {
   previewKind,
 } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
+import { failureText } from "#renderer/lib/error-text";
 import { i18n } from "#renderer/lib/i18n";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -206,7 +207,7 @@ export const FilesTab = ({
   };
   const requestTrash = (path: string) => {
     if (!IS_ELECTRON || path.endsWith("/")) setTrash(path);
-    else void doTrash(path).catch((e) => setError(String(e)));
+    else void doTrash(path).catch((e) => setError(failureText(e)));
   };
   const paths = useMemo(
     () => flattenFiles([...(tree.data?.fileTree ?? []), ...children]),
@@ -343,7 +344,7 @@ export const FilesTab = ({
                 .rename({ checkout, fromPath, toPath })
                 .then(() => tree.refetch())
                 .catch((e) => {
-                  setError(String(e));
+                  setError(failureText(e));
                   void tree.refetch();
                 })
             }
@@ -417,7 +418,8 @@ export const FilesTab = ({
             <AlertDialogCancel>{t("sessions.common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
-                trash && void doTrash(trash).catch((e) => setError(String(e)))
+                trash &&
+                void doTrash(trash).catch((e) => setError(failureText(e)))
               }
             >
               {t("sessions.files.trash")}

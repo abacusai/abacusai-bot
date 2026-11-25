@@ -8,6 +8,7 @@ import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 const notices = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn() }));
 vi.mock("#renderer/lib/toast", () => ({
   showError: notices.error,
+  showFailure: notices.error,
   showInfo: notices.info,
 }));
 const os = implement(contract);
@@ -110,8 +111,11 @@ it.each(["refresh", "restart", "oauth", "cancel"])(
       });
       expect(notices.error).not.toHaveBeenCalled();
     } else
+      // Main's own words are for the log: the toast is the app's.
       await waitFor(() =>
-        expect(notices.error).toHaveBeenCalledWith(`${operation} rejected`)
+        expect(notices.error).toHaveBeenCalledWith(
+          "Couldn't complete that action."
+        )
       );
     expect(notices.info).not.toHaveBeenCalled();
     if (operation === "oauth" || operation === "cancel")

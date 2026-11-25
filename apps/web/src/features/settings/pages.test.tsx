@@ -378,12 +378,16 @@ it("an install retry clears historical failure and shows a new error after hando
         .hasAttribute("disabled")
     ).toBe(true)
   );
-  expect(within(dialog).queryByText("old install failure")).toBeNull();
+  expect(within(dialog).queryByText("Couldn't install the update")).toBeNull();
   expect(
     within(dialog).queryByRole("button", { name: "Try again" })
   ).toBeNull();
   await act(async () => failHandoff());
-  expect(await within(dialog).findByText("old install failure")).not.toBeNull();
+  // What failed, in the app's words: main's own never reach the dialog.
+  expect(
+    await within(dialog).findByText("Couldn't install the update")
+  ).not.toBeNull();
+  expect(within(dialog).queryByText("old install failure")).toBeNull();
   expect(
     within(dialog)
       .getByRole("button", { name: "Restarting…" })

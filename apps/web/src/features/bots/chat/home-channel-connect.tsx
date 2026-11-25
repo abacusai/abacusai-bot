@@ -19,6 +19,11 @@ import { useTranslation } from "react-i18next";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
+import {
+  failureCode,
+  outcomeFailure,
+  type ShownFailure,
+} from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 /** How often the snapshot is read again while the card is up. */
@@ -77,7 +82,7 @@ export const HomeChannelConnect = ({
         : false,
   });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ShownFailure | null>(null);
   const [notNow, setNotNow] = useState(false);
   const attempt = useRef<ConnectAttempt | null>(null);
   if (
@@ -113,13 +118,15 @@ export const HomeChannelConnect = ({
         if (attempt.current !== current) return;
         attempt.current = null;
         setBusy(false);
-        if (!result.ok && result.cancelled !== true) setError(result.error);
+        if (!result.ok && result.cancelled !== true)
+          setError(outcomeFailure(result));
         refresh();
       })
       .catch((reason: unknown) => {
         attempt.current = null;
         setBusy(false);
-        setError(reason instanceof Error ? reason.message : String(reason));
+        // A code: the card puts it in the app's words.
+        setError(failureCode(reason));
       });
   };
   return (

@@ -32,9 +32,9 @@ export const SendError = ({
               ease: easings.standard,
             }}
           >
-            <Alert variant="destructive" aria-live="assertive" aria-atomic>
+            <Alert className="text-failed" aria-live="assertive" aria-atomic>
               <AlertCircle aria-hidden />
-              <AlertDescription className="col-start-2 row-start-1 truncate">
+              <AlertDescription className="text-failed col-start-2 row-start-1 truncate">
                 {error}
               </AlertDescription>
             </Alert>
