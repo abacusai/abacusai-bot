@@ -212,3 +212,19 @@ it("saves long text once as pasted text where the composer saves a paste, and le
   await expect(saveLongText("short", host, "/repo")).resolves.toBeNull();
   await expect(saveLongText(note, host, null)).resolves.toBeNull();
 });
+
+it("keeps only the last few long-text saves", async () => {
+  const savePasted = vi.fn(
+    async (_base: string, files: Array<{ name: string }>, _context?: unknown) =>
+      files.map((file) => `/repo/.abacusai-bot/temp/${file.name}`)
+  );
+  const host = { ...inertHostActions, savePasted };
+  const notes = Array.from({ length: 10 }, (_, i) => `${i}`.repeat(100_001));
+  for (const note of notes) await saveLongText(note, host, "/lru");
+  expect(savePasted).toHaveBeenCalledTimes(10);
+  // The newest are kept; the oldest was let go and is saved again.
+  await saveLongText(notes[9]!, host, "/lru");
+  expect(savePasted).toHaveBeenCalledTimes(10);
+  await saveLongText(notes[0]!, host, "/lru");
+  expect(savePasted).toHaveBeenCalledTimes(11);
+});

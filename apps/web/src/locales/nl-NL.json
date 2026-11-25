@@ -430,6 +430,8 @@
         "readerNamed": "{{name}} leest dit en antwoordt in de chat. Ons team ziet het ook.",
         "readerAgent": "De agent leest dit en antwoordt in de chat. Ons team ziet het ook.",
         "longAsFile": "Lange tekst gaat mee als bestand met geplakte tekst en wordt volledig gelezen.",
+        "tooLong": "Te lang om hier te versturen. Plak het in de chat, waar lange tekst als bestand wordt bijgevoegd.",
+        "longNotSaved": "Deze lange notitie kon niet als bestand worden bijgevoegd, dus er is niets verstuurd. Probeer het opnieuw of plak hem in de chat.",
         "send": "Versturen",
         "sent": "Bedankt voor je feedback",
         "notSynced": "Feedback nog niet verstuurd",

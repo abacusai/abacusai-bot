@@ -19,9 +19,14 @@ export const USER_TEXT_INLINE_MAX = 100_000;
  */
 export const pastedTextName = (id: string): string => `pasted-text-${id}.txt`;
 
-/** A file saved from pasted text, by its name or path. */
+/**
+ * A file saved from pasted text, by its name or path: as the desktop saves
+ * it, or as the hosted app's upload names it (`<uuid>-<name>`).
+ */
 export const isPastedText = (pathOrName: string): boolean =>
-  /^pasted-text-[\w-]+\.txt$/.test(pathOrName.split(/[\\/]/).at(-1) ?? "");
+  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-)?pasted-text-[\w-]+\.txt$/.test(
+    pathOrName.split(/[\\/]/).at(-1) ?? ""
+  );
 
 /** A paste's chip title: its first line with text, whitespace folded. */
 export const pastedTextTitle = (head: string): string =>

@@ -23,7 +23,7 @@ import { USER_TEXT_INLINE_MAX } from "@abacus-ai/contract/transcript/user-text";
  * agent reads that file while the team gets the words.
  */
 import { ThumbsUp, ThumbsDown } from "lucide-react";
-import { useId, useSyncExternalStore } from "react";
+import { createContext, use, useId, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
@@ -33,6 +33,15 @@ import { Textarea } from "#renderer/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 type Rating = "up" | "down";
+
+/**
+ * Saves a note past `USER_TEXT_INLINE_MAX` as pasted text where the chat's
+ * composer saves a long paste (its path, or null where it could not). A chat
+ * provides it where it can save a file; elsewhere such a note is refused.
+ */
+export const LongNoteSaverContext = createContext<
+  ((text: string) => Promise<string | null>) | null
+>(null);
 
 /** Shared look of the turn/message action buttons (Copy, thumbs): 28px, muted. */
 export const ACTION_BUTTON_CLASS =
@@ -57,7 +66,14 @@ export interface MessageFeedbackProps {
   ): Promise<TurnFeedbackOutcome>;
 }
 
-type Status = "idle" | "sending" | "sent" | "not-synced" | "failed";
+type Status =
+  | "idle"
+  | "sending"
+  | "sent"
+  | "not-synced"
+  | "failed"
+  /** A note past the inline bound could not be saved as a file: nothing was sent. */
+  | "not-saved";
 
 interface FeedbackState {
   /** The rating shown pressed: the one sent, being sent or failed to send. */
@@ -121,9 +137,11 @@ export const clearFeedbackStates = (): void => {
 export const MessageFeedback = ({
   id,
   reader,
-  saveLong,
+  saveLong: ownSaveLong,
   send,
 }: MessageFeedbackProps) => {
+  const chatSaveLong = use(LongNoteSaverContext);
+  const saveLong = ownSaveLong ?? chatSaveLong ?? undefined;
   const { t } = useTranslation();
   // Who reads the comment besides the team: the chat's agent, by name when it has one.
   const name = reader?.name;
@@ -140,27 +158,32 @@ export const MessageFeedback = ({
       rating: next === "clear" ? null : next,
       status: "sending",
     });
-    const fail = (failure: "not-synced" | "failed"): void =>
+    const fail = (failure: "not-synced" | "failed" | "not-saved"): void =>
       writeState(key, {
         status: failure,
         // The server still holds what a failed clear meant to withdraw.
         ...(next === "clear" && { rating: readState(key).held }),
       });
-    // The agent reads a long note from its file; one that cannot be saved goes as text, whole.
-    const deliver = (
-      commentFile: string | null
-    ): Promise<TurnFeedbackOutcome> =>
-      commentFile != null ? send(next, text, commentFile) : send(next, text);
-    (text != null &&
-    reader != null &&
-    saveLong != null &&
-    text.length > USER_TEXT_INLINE_MAX
-      ? saveLong(text)
-          .catch(() => null)
-          .then(deliver)
-      : deliver(null)
-    )
+    // Past the inline bound the agent reads the note from its file and the
+    // team gets its start; it is never sent inline. No file, nothing sent.
+    const over = text != null && text.length > USER_TEXT_INLINE_MAX;
+    const words = over ? text.slice(0, USER_TEXT_INLINE_MAX) : text;
+    const sent: Promise<TurnFeedbackOutcome | "not-saved"> =
+      over && reader != null
+        ? (saveLong?.(text) ?? Promise.resolve(null))
+            .catch(() => null)
+            .then((commentFile): Promise<TurnFeedbackOutcome | "not-saved"> =>
+              commentFile == null
+                ? Promise.resolve("not-saved")
+                : send(next, words, commentFile)
+            )
+        : send(next, words);
+    sent
       .then((outcome) => {
+        if (outcome === "not-saved") {
+          fail("not-saved");
+          return;
+        }
         if (outcome.ok)
           writeState(key, {
             status: "sent",
@@ -171,12 +194,13 @@ export const MessageFeedback = ({
       .catch(() => fail("failed"));
   };
 
-  const unsent = status === "failed" || status === "not-synced";
+  const unsent =
+    status === "failed" || status === "not-synced" || status === "not-saved";
   const typed = comment.trim() || undefined;
-  const asFile =
-    reader != null &&
-    saveLong != null &&
-    (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
+  const over = reader != null && (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
+  // A file is made only where this chat can save one; elsewhere the box refuses.
+  const asFile = over && saveLong != null;
+  const tooLong = over && saveLong == null;
 
   const rate = (next: Rating): void => {
     if (status === "sending") return;
@@ -228,7 +252,7 @@ export const MessageFeedback = ({
               className="flex flex-col gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                submit(rating, typed);
+                if (!tooLong) submit(rating, typed);
               }}
             >
               <Textarea
@@ -267,6 +291,15 @@ export const MessageFeedback = ({
                   {t("bots.chat.feedback.longAsFile")}
                 </p>
               )}
+              {tooLong && (
+                <p
+                  data-slot="feedback-too-long"
+                  role="alert"
+                  className="text-destructive text-xs"
+                >
+                  {t("bots.chat.feedback.tooLong")}
+                </p>
+              )}
               {reader != null && (
                 <p
                   data-slot="feedback-reader"
@@ -282,7 +315,9 @@ export const MessageFeedback = ({
                 size="sm"
                 className="self-end"
                 // After a failed send, an empty comment still retries the rating.
-                disabled={status === "sending" || (typed == null && !unsent)}
+                disabled={
+                  status === "sending" || tooLong || (typed == null && !unsent)
+                }
               >
                 {t("bots.chat.feedback.send")}
               </Button>
@@ -292,7 +327,9 @@ export const MessageFeedback = ({
             role="status"
             className={cn(
               "text-xs",
-              status === "failed" || status === "not-synced"
+              status === "failed" ||
+                status === "not-synced" ||
+                status === "not-saved"
                 ? "text-destructive"
                 : "text-muted-foreground",
               (status === "idle" || status === "sending") && "sr-only"
@@ -304,7 +341,9 @@ export const MessageFeedback = ({
                 ? t("bots.chat.feedback.notSynced")
                 : status === "failed"
                   ? t("bots.chat.feedback.failed")
-                  : ""}
+                  : status === "not-saved"
+                    ? t("bots.chat.feedback.longNotSaved")
+                    : ""}
           </p>
         </PopoverContent>
       </Popover>

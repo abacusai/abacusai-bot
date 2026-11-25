@@ -5,6 +5,7 @@ import { MigratedThreadFileV2Schema } from "./thread-file";
 import {
   hasSystemReminder,
   isHiddenUserText,
+  isPastedText,
   isRoutineFire,
   legacyOperator,
   visibleUserText,
@@ -147,4 +148,21 @@ it("migrates legacy operator tags without changing transcript text", () => {
     operator: { kind: "auto-reply-intro", visibleFrom: 20 },
   });
   expect(messages[0]?.parts[0]).toMatchObject({ type: "text", content });
+});
+
+describe("pasted-text files", () => {
+  it.each([
+    ["/w/.abacusai-bot/temp/pasted-text-att-1.txt", true],
+    ["C:\\w\\.abacusai-bot\\temp\\pasted-text-note-0a1b2c3d4e5f6a7b.txt", true],
+    // The hosted app's upload keeps the name behind a uuid.
+    [
+      "/vm/.abacusai-bot/temp/0f8fad5b-d9cb-469f-a165-70867728950e-pasted-text-note-1.txt",
+      true,
+    ],
+    ["/w/notes.txt", false],
+    ["/w/my-pasted-text-1.txt", false],
+    ["/w/0f8fad5b-pasted-text-1.txt", false],
+  ])("%s is pasted text: %s", (path, pasted) => {
+    expect(isPastedText(path)).toBe(pasted);
+  });
 });

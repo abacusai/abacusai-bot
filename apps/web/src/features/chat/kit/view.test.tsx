@@ -8,12 +8,16 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { renderScenario } from "../testing";
+import * as b from "../fixtures/builders";
+import { FakeRelay } from "../fixtures/relay";
+import { renderRelay, renderScenario } from "../testing";
 
 let current: Awaited<ReturnType<typeof renderScenario>> | null = null;
+const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
   await current?.cleanup();
   current = null;
+  for (const cleanup of cleanups.splice(0)) await cleanup();
 });
 
 /** Tool runs start closed; open every one that is mounted. */
@@ -159,4 +163,92 @@ describe("ChatView over scenarios", () => {
     // The list above the composer does not repeat an inline card.
     expect(document.querySelector('[data-slot="permission-list"]')).toBeNull();
   });
+});
+
+it("a tall user message folds once; a click or the text's own focus leaves it folded, Tab to a link below the fold opens it", async () => {
+  const relay = new FakeRelay();
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("r1"),
+    ...b.text(
+      "u1",
+      "user",
+      `${"A long paragraph of the user's own words. ".repeat(80)}\n\nSee [the spec](https://example.test/spec).`
+    ),
+    b.runFinished("r1"),
+  ]);
+  const height = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "scrollHeight"
+  );
+  const rect = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      const bottom =
+        this.dataset.slot === "user-text"
+          ? 320
+          : this.tagName === "A"
+            ? 900
+            : 2000;
+      return {
+        top: 0,
+        bottom,
+        left: 0,
+        right: 600,
+        width: 600,
+        height: bottom,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    });
+  const clientHeight = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "clientHeight"
+  );
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.dataset.slot === "user-text" ? 320 : 0;
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.dataset.slot === "user-text" ? 2000 : 0;
+    },
+  });
+  try {
+    const rendered = await renderRelay(relay, "session");
+    cleanups.push(() => rendered.cleanup());
+    const fold = await waitFor(() => {
+      const node = document.querySelector('[data-slot="user-text"]');
+      expect(node?.hasAttribute("data-folded")).toBe(true);
+      return node as HTMLElement;
+    });
+    // A click (and the selectable text's own focus) is not a reason to open.
+    const text = fold.querySelector<HTMLElement>("[data-message-text]")!;
+    fireEvent.mouseDown(text);
+    text.focus();
+    fireEvent.click(text);
+    expect(fold.hasAttribute("data-folded")).toBe(true);
+    // Tab lands on a link hidden below the fold: it opens.
+    fold.querySelector<HTMLElement>("a")!.focus();
+    await waitFor(() => expect(fold.hasAttribute("data-folded")).toBe(false));
+    expect(
+      document.querySelector('[data-slot="user-text-more"]')?.textContent
+    ).toBe("Show less");
+  } finally {
+    rect.mockRestore();
+    if (clientHeight)
+      Object.defineProperty(
+        HTMLElement.prototype,
+        "clientHeight",
+        clientHeight
+      );
+    if (height)
+      Object.defineProperty(HTMLElement.prototype, "scrollHeight", height);
+    else
+      delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight;
+  }
 });

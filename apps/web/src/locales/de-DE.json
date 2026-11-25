@@ -430,6 +430,8 @@
         "readerNamed": "{{name}} liest das und antwortet im Chat. Unser Team sieht es auch.",
         "readerAgent": "Der Agent liest das und antwortet im Chat. Unser Team sieht es auch.",
         "longAsFile": "Langer Text wird als eingefügte Textdatei angehängt und vollständig gelesen.",
+        "tooLong": "Zu lang zum Senden hier. Füge es stattdessen im Chat ein, dort wird langer Text als Datei angehängt.",
+        "longNotSaved": "Diese lange Notiz konnte nicht als Datei angehängt werden, daher wurde nichts gesendet. Versuche es erneut oder füge sie im Chat ein.",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",

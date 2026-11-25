@@ -203,6 +203,10 @@ describe("what the renderer may send", () => {
   it.each([
     ["/w/.abacusai-bot/temp/pasted-text-note-1a2b.txt", true],
     ["C:\\w\\.abacusai-bot\\temp\\pasted-text-note-1a2b.txt", true],
+    [
+      "/vm/.abacusai-bot/temp/0f8fad5b-d9cb-469f-a165-70867728950e-pasted-text-note-1a2b.txt",
+      true,
+    ],
     ["/w/notes.txt", false],
     ["relative/pasted-text-note-1a2b.txt", false],
     ["/w/pasted-text-note-1a2b.txt\n/etc/passwd", false],

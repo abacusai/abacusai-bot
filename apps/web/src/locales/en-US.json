@@ -430,6 +430,8 @@
         "readerNamed": "{{name}} reads this and replies in the chat. Our team sees it too.",
         "readerAgent": "The agent reads this and replies in the chat. Our team sees it too.",
         "longAsFile": "Long text goes in as a pasted-text file, read in full.",
+        "tooLong": "Too long to send here. Paste it in the chat instead, where long text goes in as a file.",
+        "longNotSaved": "Couldn't attach this long note as a file, so nothing was sent. Try again, or paste it in the chat.",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",

@@ -71,7 +71,7 @@ import {
 } from "#renderer/ui/collapsible";
 import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
-import { Markdown } from "../markdown/markdown";
+import { FoldsWholeContext, Markdown } from "../markdown/markdown";
 import { coalescedIds, isBlankText, isThinking } from "../scroller/coalesce";
 import { useToolWindow } from "../scroller/row-context";
 import {
@@ -348,10 +348,11 @@ const USER_FOLD_PX = 320;
 /**
  * The user's words in their bubble, folded past `USER_FOLD_PX` (with room
  * to spare, so a message just over it stays open) behind "Show more", as a
- * long code block folds. The one fold here: its code blocks do not fold
- * inside it (markdown's `FoldsWholeContext`), and once opened it stays open.
- * Focus moving into the hidden part (a link, a tab) opens it. Measured, so
- * it holds for any width and font.
+ * long code block folds. The one fold here: it tells markdown's code blocks
+ * not to fold inside it (`FoldsWholeContext`), and once opened it stays
+ * open. Keyboard focus landing below the fold (a link, a code block's copy
+ * button) opens it; a click on the text or the text's own focus ring does
+ * not. Measured, so it holds for any width and font.
  */
 const FoldedText = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
@@ -370,13 +371,26 @@ const FoldedText = ({ children }: { children: ReactNode }) => {
   }, []);
   const folded = tall && !open;
   return (
-    <>
+    <FoldsWholeContext value>
       <div
         ref={ref}
         data-slot="user-text"
         data-folded={folded ? "" : undefined}
-        onFocusCapture={() => {
-          if (folded) setOpen(true);
+        onFocusCapture={(event) => {
+          if (!folded) return;
+          const fold = event.currentTarget;
+          const target = event.target as HTMLElement;
+          // The text's own wrapper (selection, focus ring) holds everything: not a reason to open.
+          if (target.contains(fold.firstElementChild)) return;
+          // Where the target sits in the text, whatever focus scrolled the clip by.
+          const bottom =
+            target.getBoundingClientRect().bottom -
+            fold.getBoundingClientRect().top +
+            fold.scrollTop;
+          if (bottom > fold.clientHeight) {
+            fold.scrollTop = 0;
+            setOpen(true);
+          }
         }}
         className={cn(
           folded &&
@@ -396,7 +410,7 @@ const FoldedText = ({ children }: { children: ReactNode }) => {
           {open ? t("chat.message.showLess") : t("chat.message.showMore")}
         </button>
       ) : null}
-    </>
+    </FoldsWholeContext>
   );
 };
 

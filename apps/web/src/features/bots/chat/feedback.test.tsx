@@ -2,7 +2,10 @@ import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { MessageFeedback as BaseFeedback } from "#renderer/components/message-feedback";
+import {
+  LongNoteSaverContext,
+  MessageFeedback as BaseFeedback,
+} from "#renderer/components/message-feedback";
 import { renderWithDb } from "#renderer/features/chat/testing";
 
 import { MessageFeedback } from "./feedback";
@@ -175,7 +178,7 @@ it("puts the held rating back when clearing it fails", async () => {
   expect(send).toHaveBeenLastCalledWith("clear", undefined);
 });
 
-it("a note past the inline bound is saved as pasted text: the agent gets its file, the team its words, the box says so", async () => {
+it("a note past the inline bound is saved as pasted text: the agent gets its file, the team its start, the box says so", async () => {
   const send = vi.fn(async () => ({ ok: true as const }));
   const saveLong = vi.fn(
     async () => "/repo/.abacusai-bot/temp/pasted-text-note-1.txt"
@@ -195,9 +198,90 @@ it("a note past the inline bound is saved as pasted text: the agent gets its fil
   await waitFor(() =>
     expect(send).toHaveBeenLastCalledWith(
       "down",
-      note,
+      note.slice(0, 100_000),
       "/repo/.abacusai-bot/temp/pasted-text-note-1.txt"
     )
   );
   expect(saveLong).toHaveBeenCalledWith(note);
+});
+
+it.each([
+  [
+    "the save fails",
+    async () => {
+      throw new Error("disk full");
+    },
+  ],
+  ["there was nothing saved", async () => null],
+])(
+  "a note past the bound is never sent inline: when %s, nothing goes and the box says so",
+  async (_label, saveLong) => {
+    const send = vi.fn(async () => ({ ok: true as const }));
+    current = await renderWithDb(
+      <BaseFeedback send={send} saveLong={saveLong} reader={{ name: "Ada" }} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const box = await screen.findByRole("textbox", { name: "Tell us more" });
+    fireEvent.change(box, { target: { value: "x".repeat(100_001) } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Couldn't attach this long note as a file, so nothing was sent. Try again, or paste it in the chat."
+      )
+    );
+    expect(send).toHaveBeenCalledTimes(1);
+  }
+);
+
+it("with nowhere to save a file, a note past the bound is refused; the team-only box sends the team its start", async () => {
+  const send = vi.fn(async () => ({ ok: true as const }));
+  current = await renderWithDb(<BaseFeedback send={send} reader={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  const box = await screen.findByRole("textbox", { name: "Tell us more" });
+  fireEvent.change(box, { target: { value: "x".repeat(100_001) } });
+  await act(async () => {});
+  expect(screen.getByRole("alert").textContent).toBe(
+    "Too long to send here. Paste it in the chat instead, where long text goes in as a file."
+  );
+  expect(
+    (screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled
+  ).toBe(true);
+  expect(document.querySelector('[data-slot="feedback-as-file"]')).toBeNull();
+  await current.cleanup();
+  current = null;
+  const team = vi.fn(async (_rating: string, _comment?: string) => ({
+    ok: true as const,
+  }));
+  current = await renderWithDb(<BaseFeedback send={team} />);
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  const teamBox = await screen.findByRole("textbox", { name: "Tell us more" });
+  fireEvent.change(teamBox, { target: { value: "y".repeat(150_000) } });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() => expect(team).toHaveBeenCalledTimes(2));
+  expect(team.mock.calls[1]![1]).toHaveLength(100_000);
+});
+
+it("in a chat, a long note is saved through the chat's own saver", async () => {
+  const send = vi.fn(async () => ({ ok: true as const }));
+  const saveLong = vi.fn(
+    async () => "/w/.abacusai-bot/temp/pasted-text-note-2.txt"
+  );
+  current = await renderWithDb(
+    <LongNoteSaverContext.Provider value={saveLong}>
+      <MessageFeedback send={send} reader={{}} />
+    </LongNoteSaverContext.Provider>
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  const box = await screen.findByRole("textbox", { name: "Tell us more" });
+  fireEvent.change(box, { target: { value: "x".repeat(100_001) } });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() => expect(saveLong).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(send).toHaveBeenLastCalledWith(
+      "down",
+      "x".repeat(100_000),
+      "/w/.abacusai-bot/temp/pasted-text-note-2.txt"
+    )
+  );
 });

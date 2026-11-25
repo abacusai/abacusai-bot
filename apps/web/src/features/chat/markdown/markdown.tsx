@@ -60,10 +60,10 @@ const InLinkContext = createContext(false);
  */
 const UntrustedContext = createContext(false);
 /**
- * A user's message, which folds as a whole in its bubble: one fold, so its
- * code blocks show every line rather than folding inside it.
+ * Inside a message that folds as a whole (the user's bubble, `FoldedText`):
+ * one fold, so its code blocks show every line rather than folding inside it.
  */
-const FoldsWholeContext = createContext(false);
+export const FoldsWholeContext = createContext(false);
 
 const COLLAPSE_LINES = 30;
 
@@ -368,29 +368,25 @@ export const Markdown = ({
       );
   const rendered = (
     <UntrustedContext value={untrusted}>
-      <FoldsWholeContext value={role === "user"}>
-        <ReplyContext value={reply && role === "assistant"}>
-          <StreamingContext value={streaming}>
-            <TextPart
-              key={mathVersion}
-              content={source}
-              role={role}
-              extensions={
-                reply && role === "assistant" ? replyLinks : undefined
-              }
-              highlighter={highlight}
-              components={COMPONENTS}
-              className={cn(
-                "chat-prose",
-                streaming && "chat-prose-streaming",
-                // A line break the user typed stays one: markdown joins lines.
-                role === "user" && "[&_p]:whitespace-pre-line",
-                className
-              )}
-            />
-          </StreamingContext>
-        </ReplyContext>
-      </FoldsWholeContext>
+      <ReplyContext value={reply && role === "assistant"}>
+        <StreamingContext value={streaming}>
+          <TextPart
+            key={mathVersion}
+            content={source}
+            role={role}
+            extensions={reply && role === "assistant" ? replyLinks : undefined}
+            highlighter={highlight}
+            components={COMPONENTS}
+            className={cn(
+              "chat-prose",
+              streaming && "chat-prose-streaming",
+              // A line break the user typed stays one: markdown joins lines.
+              role === "user" && "[&_p]:whitespace-pre-line",
+              className
+            )}
+          />
+        </StreamingContext>
+      </ReplyContext>
     </UntrustedContext>
   );
   return selectable ? (

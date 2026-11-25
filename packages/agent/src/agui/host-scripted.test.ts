@@ -1014,6 +1014,27 @@ it("turns a thumbs comment into the user's reply to that message: a note for the
       "Their note was long, so it is in the attached file: read all of it"
     );
     expect(s.session.sent.at(-2)).not.toContain("attached file");
+    // Words past the inline bound never go in inline.
+    const before = s.session.sent.length;
+    s.send({
+      type: "message.feedback",
+      messageId: "b",
+      rating: "down",
+      excerpt: "Here is the header",
+      comment: "z".repeat(100_001),
+    });
+    s.send({
+      type: "message.feedback",
+      messageId: "b",
+      rating: "down",
+      excerpt: "Here is the header",
+      comment: "after the long one",
+    });
+    await s.waitFor(
+      () => s.session.sent.some((text) => text.endsWith("after the long one")),
+      "next feedback turn"
+    );
+    expect(s.session.sent.length).toBe(before + 1);
   } finally {
     await s.close();
   }
