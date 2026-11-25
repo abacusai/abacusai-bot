@@ -1249,9 +1249,9 @@ export class MessagingGatewayService {
       at: new Date().toISOString(),
     });
 
-    // The own-account Discord lane also sees the DM with the shared Abacus AI
-    // bot: its answers are this app's own words coming back, never a sender
-    // to pair or answer. Logged above, routed nowhere.
+    // The own-account Discord and Telegram lanes also see the DM with the
+    // shared Abacus AI bot: its answers are this app's own words coming back,
+    // never a sender to pair or answer. Logged above, routed nowhere.
     if (this.isSharedBotChat(platformId, message.userName)) return;
 
     const settings = readGatewaySettings();
