@@ -2359,6 +2359,12 @@
       "label": "Standaardshell",
       "description": "De shell die op deze computer als standaard is ingesteld."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} is nu niet bruikbaar, dus nieuwe terminals openen in {{effective}}.",
     "inUse": "In gebruik",
     "notInstalled": "Niet gevonden op deze computer.",

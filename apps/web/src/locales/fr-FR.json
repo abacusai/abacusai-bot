@@ -2359,6 +2359,12 @@
       "label": "Shell par défaut",
       "description": "Quel que soit le nom que cette machine donne à son shell par défaut."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} n'est pas utilisable pour le moment, donc de nouveaux terminaux s'ouvrent dans {{effective}}.",
     "inUse": "En cours d'utilisation",
     "notInstalled": "Introuvable sur cette machine.",
@@ -4199,7 +4205,7 @@
       "sound-done": "Terminé",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "Shell du terminal",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Afficher les aperçus des liens dans les réponses",
@@ -4382,7 +4388,7 @@
     "removeEmail": "Retirer {{email}}",
     "loadingGmailContacts": "Chargement des adresses e-mail de vos amis…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "Introuvable sur cet ordinateur",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4392,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "Les nouveaux terminaux utilisent {{shell}}, car le shell choisi n'est pas disponible.",
+    "terminalShell": "Shell du terminal",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

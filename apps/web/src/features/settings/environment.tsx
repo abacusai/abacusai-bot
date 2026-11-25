@@ -1,4 +1,5 @@
 import { EXEC_BACKENDS } from "@abacus-ai/contract/exec-backends";
+import { terminalShellListed } from "@abacus-ai/contract/terminal-shells";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -126,19 +127,33 @@ export const EnvironmentPage = () => {
             title={t("phase5.terminalShell")}
             detail={
               shell.data.effective !== shell.data.selected
-                ? t("phase5.shellFallback", { shell: shell.data.effective })
+                ? t("phase5.shellFallback", {
+                    shell: t(`terminalShells.${shell.data.effective}.label`),
+                  })
                 : undefined
             }
           >
             <Choice
               id="terminalShell"
               value={shell.data.selected}
-              options={shell.data.statuses.map((x) => ({
-                value: x.id,
-                label:
-                  t(`terminalShells.${x.id}.label`) +
-                  (x.available ? "" : ` · ${t("phase5.notFoundMachine")}`),
-              }))}
+              options={shell.data.statuses
+                // What this machine can start, and the stored pick even
+                // when it can't any more (the note above says what opens).
+                .filter(
+                  (x) =>
+                    x.id === shell.data?.selected ||
+                    terminalShellListed(
+                      x.id,
+                      shell.data?.statuses,
+                      document.documentElement.dataset.platform ?? "darwin"
+                    )
+                )
+                .map((x) => ({
+                  value: x.id,
+                  label:
+                    t(`terminalShells.${x.id}.label`) +
+                    (x.available ? "" : ` · ${t("phase5.notFoundMachine")}`),
+                }))}
               onChange={(selected) =>
                 setShell.mutate({
                   shell:

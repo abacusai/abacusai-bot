@@ -2359,6 +2359,12 @@
       "label": "Cangkang bawaan",
       "description": "Apa pun nama mesin ini sebagai shell defaultnya."
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} tidak dapat digunakan saat ini, jadi terminal baru dibuka di {{effective}}.",
     "inUse": "Sedang digunakan",
     "notInstalled": "Tidak ditemukan pada mesin ini.",
@@ -4199,7 +4205,7 @@
       "sound-done": "Selesai",
       "sound-failed": "Failed",
       "sound-routine-fired": "Routine fired",
-      "terminalShell": "Terminal shell",
+      "terminalShell": "Shell terminal",
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Tampilkan pratinjau tautan dalam balasan",
@@ -4382,7 +4388,7 @@
     "removeEmail": "Hapus {{email}}",
     "loadingGmailContacts": "Memuat alamat email teman Anda…",
     "noSettings": "No settings match",
-    "notFoundMachine": "Not found on this machine",
+    "notFoundMachine": "Tidak ditemukan di komputer ini",
     "open": {
       "directory": "This item is a folder. It was revealed in your file manager.",
       "revealed": "Revealed in your file manager.",
@@ -4392,8 +4398,8 @@
     "routineFailed": "The routine failed. Open its report for details.",
     "searchSettings": "Search settings",
     "sendInvites": "Send invites",
-    "shellFallback": "New terminals use {{shell}} because the selected shell is unavailable.",
-    "terminalShell": "Terminal shell",
+    "shellFallback": "Terminal baru memakai {{shell}} karena shell yang dipilih tidak tersedia.",
+    "terminalShell": "Shell terminal",
     "thisVersion": "This version",
     "whatsNew": "What's new",
     "inviteChannels": {

@@ -44,10 +44,14 @@ vi.mock("../../services/providers/exec-backend-service", () => ({
   resolveBackend: () => "local",
   backendStatuses: () => [],
 }));
-vi.mock("../../services/workspace/terminal-shells", () => ({
-  effectiveTerminalShell: () => "system",
-  terminalShellStatuses: () => [],
-}));
+vi.mock("../../services/workspace/terminal-shells", async () => {
+  const settings = await import("../../services/config/settings");
+  return {
+    effectiveTerminalShell: () => "system",
+    terminalShellStatuses: () => [],
+    preferredTerminalShell: () => settings.readTerminalShell(),
+  };
+});
 
 const { ServiceHost } = await import("../../service-host");
 const previousHome = process.env.ABACUSAI_BOT_HOME;

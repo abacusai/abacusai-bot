@@ -2359,6 +2359,12 @@
       "label": "默认 shell",
       "description": "这台电脑设定的默认 shell。"
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} 目前无法使用，新终端将在 {{effective}} 中打开。",
     "inUse": "使用中",
     "notInstalled": "在这台电脑上未找到。",

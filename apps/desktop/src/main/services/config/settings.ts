@@ -167,10 +167,15 @@ export const setExecBackend = (backend: BackendId): AbacusBotSettings =>
  * shell that stopped existing must still read back so the settings row can
  * show what was chosen.
  */
-export const readTerminalShell = (): TerminalShellId => {
+export const readTerminalShell = (
+  platform: NodeJS.Platform = process.platform,
+  windowsDefault: () => TerminalShellId = () => "powershell"
+): TerminalShellId => {
   const stored = readSettings().terminalShell;
-
-  return isTerminalShellId(stored) ? stored : DEFAULT_TERMINAL_SHELL;
+  if (isTerminalShellId(stored)) return stored;
+  // Never picked: Windows opens PowerShell, as Windows Terminal and VS Code
+  // do (which one is the machine's question: `windowsDefault`).
+  return platform === "win32" ? windowsDefault() : DEFAULT_TERMINAL_SHELL;
 };
 
 export const setTerminalShell = (shell: TerminalShellId): AbacusBotSettings =>

@@ -2359,6 +2359,12 @@
       "label": "預設 Shell",
       "description": "這台電腦設定的預設 Shell。"
     },
+    "wsl": {
+      "label": "WSL"
+    },
+    "gitbash": {
+      "label": "Git Bash"
+    },
     "fellBack": "{{selected}} 目前無法使用，新的終端機會在 {{effective}} 中開啟。",
     "inUse": "使用中",
     "notInstalled": "在這台電腦上找不到。",

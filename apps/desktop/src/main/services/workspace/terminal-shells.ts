@@ -7,6 +7,7 @@
  * materialised per user by the agent package, which hands back the `sh`
  * launcher plus the applet directory its children need on PATH.
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -24,6 +25,8 @@ import {
 } from "@abacus-ai/contract/terminal-shells";
 
 import { agentVendorDir } from "#main/resources";
+
+import { readTerminalShell } from "../config/settings";
 
 export interface ResolvedTerminalShell {
   /** What was resolved, which is `system` when the request could not be. */
@@ -152,6 +155,51 @@ const windowsPowerShell = (env: NodeJS.ProcessEnv): string | undefined => {
   return onPath("powershell", env, "win32");
 };
 
+/**
+ * Git for Windows' bash: the usual install folders, then beside the `git` on
+ * PATH (Git\cmd\git.exe → Git\bin\bash.exe). Never `bash` on PATH, which
+ * on Windows is often System32's bash.exe, the WSL launcher.
+ */
+const gitBash = (env: NodeJS.ProcessEnv): string | undefined => {
+  const git = onPath("git", env, "win32");
+  const roots = [
+    env.ProgramW6432,
+    env.ProgramFiles,
+    env["ProgramFiles(x86)"],
+    env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, "Programs"),
+  ].filter((root): root is string => !!root);
+  const candidates = [
+    ...roots.map((root) => path.join(root, "Git", "bin", "bash.exe")),
+    ...(git ? [path.join(path.dirname(git), "..", "bin", "bash.exe")] : []),
+  ];
+  return candidates.find(isFile);
+};
+
+let wslDistros: { found: boolean; at: number } | null = null;
+
+/**
+ * Whether WSL has a Linux installed. wsl.exe ships with Windows whether or
+ * not one is, so its presence says nothing: the installed distributions are
+ * the subkeys of HKCU\...\Lxss. Asked of reg.exe at most every 30 s.
+ */
+const wslInstalled = (): boolean => {
+  if (wslDistros != null && Date.now() - wslDistros.at < 30_000)
+    return wslDistros.found;
+  let found = false;
+  try {
+    const out = execFileSync(
+      "reg",
+      ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss"],
+      { encoding: "utf8", timeout: 3000, windowsHide: true }
+    );
+    found = /\\Lxss\\\{/i.test(out);
+  } catch {
+    // No key: WSL was never set up.
+  }
+  wslDistros = { found, at: Date.now() };
+  return found;
+};
+
 const systemShell = (
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform
@@ -171,9 +219,28 @@ const systemShell = (
         args: ["-l"],
       };
 
+/**
+ * The shell a Windows user who never picked one gets: PowerShell 7 (pwsh)
+ * when it is on PATH, else the Windows PowerShell that ships with Windows
+ * (which falls back to the system shell if even that is missing).
+ */
+export const defaultWindowsShell = (
+  env: NodeJS.ProcessEnv = process.env
+): TerminalShellId =>
+  onPath("pwsh", env, "win32") != null ? "pwsh" : "powershell";
+
+/** The stored pick, or this machine's default when there is none. */
+export const preferredTerminalShell = (
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
+): TerminalShellId =>
+  readTerminalShell(platform, () => defaultWindowsShell(env));
+
 export interface ResolveTerminalShellOptions {
   platform?: NodeJS.Platform;
   env?: NodeJS.ProcessEnv;
+  /** Test seam: whether WSL has a distribution (the registry, by default). */
+  wslInstalled?: () => boolean;
 }
 
 /**
@@ -184,7 +251,8 @@ export interface ResolveTerminalShellOptions {
 const locate = (
   id: TerminalShellId,
   env: NodeJS.ProcessEnv,
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
+  hasWsl: () => boolean = wslInstalled
 ): ResolvedTerminalShell | null => {
   switch (id) {
     case "system":
@@ -207,6 +275,19 @@ const locate = (
       const file = onPath("pwsh", env, platform);
 
       return file == null ? null : { id, file, args: ["-NoLogo"] };
+    }
+
+    case "wsl": {
+      const root = env.SystemRoot ?? env.windir;
+      const file = root && path.join(root, "System32", "wsl.exe");
+      // The default distribution, starting in the panel's folder (/mnt/c/...).
+      return file && isFile(file) && hasWsl() ? { id, file, args: [] } : null;
+    }
+
+    case "gitbash": {
+      const file = gitBash(env);
+
+      return file == null ? null : { id, file, args: ["--login", "-i"] };
     }
 
     case "busybox": {
@@ -257,7 +338,9 @@ export const resolveTerminalShell = (
   );
 
   try {
-    const located = offered ? locate(id, env, platform) : null;
+    const located = offered
+      ? locate(id, env, platform, options.wslInstalled)
+      : null;
     if (located != null) return located;
   } catch {
     // A busybox install that could not verify, a PATH entry that threw:
@@ -284,7 +367,7 @@ export const terminalShellStatuses = (
 
     let located: ResolvedTerminalShell | null = null;
     try {
-      located = locate(id, env, platform);
+      located = locate(id, env, platform, options.wslInstalled);
     } catch {
       located = null;
     }

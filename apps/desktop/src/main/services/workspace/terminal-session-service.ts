@@ -20,7 +20,6 @@ import {
 } from "@abacus-ai/contract/conversation-scope";
 import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
 
-import { readTerminalShell } from "../config/settings";
 import {
   ConversationTerminalRuntimeRegistry,
   type ConversationTerminalAttachment,
@@ -29,7 +28,10 @@ import {
   type TerminalRetireReason,
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
-import { resolveTerminalShell } from "./terminal-shells";
+import {
+  preferredTerminalShell,
+  resolveTerminalShell,
+} from "./terminal-shells";
 
 type PtySpawn = (
   file: string,
@@ -94,7 +96,7 @@ const loadSpawn = async (): Promise<PtySpawn> => {
  * whatever was last picked from the panel's `+` menu.
  */
 const requestedShell = (shell: TerminalShellId | undefined): TerminalShellId =>
-  shell ?? readTerminalShell();
+  shell ?? preferredTerminalShell();
 
 type TerminalSessionServiceOptions = {
   resolveWorkspacePath: (

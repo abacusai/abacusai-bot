@@ -5,7 +5,11 @@ import type {
   StartTerminalSessionResult,
   TerminalSessionSnapshot,
 } from "../contracts";
-import type { TerminalShellId, TerminalShellState } from "../terminal-shells";
+import {
+  TERMINAL_SHELLS,
+  type TerminalShellId,
+  type TerminalShellState,
+} from "../terminal-shells";
 import { mutation, query, subscription } from "./base";
 import {
   ConversationKeySchema,
@@ -16,13 +20,10 @@ import {
   TerminalId,
 } from "./ids";
 
-export const TerminalShellIdSchema = v.picklist([
-  "system",
-  "cmd",
-  "powershell",
-  "pwsh",
-  "busybox",
-] as TerminalShellId[]);
+// Every shell the menus can offer, from the shell table.
+export const TerminalShellIdSchema = v.picklist(
+  TERMINAL_SHELLS.map((shell) => shell.id) as TerminalShellId[]
+);
 
 const Dimension = v.pipe(v.number(), v.integer(), v.minValue(1));
 const Generation = v.pipe(v.number(), v.integer(), v.minValue(0));
