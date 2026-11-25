@@ -6,3 +6,8 @@ export {
   CreditsSidebarGallery,
   type CreditsSidebarGalleryLevel,
 } from "./credits-card-gallery";
+export {
+  QUIT_GUARD_GALLERY_COUNTS,
+  QuitGuardGallery,
+  type QuitGuardGalleryCount,
+} from "./quit-guard-gallery";

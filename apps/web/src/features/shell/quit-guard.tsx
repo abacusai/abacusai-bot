@@ -73,7 +73,7 @@ const WorkList = ({ work }: { work: QuitGuardWork[] }) => {
       {named.map((item) => (
         <li key={item.sessionId} className="flex min-w-0 items-center gap-2">
           <Spinner className="size-3 shrink-0" />
-          <span className="truncate font-medium">
+          <span className="truncate font-medium" title={item.label}>
             {item.label || t("quitGuard.unnamed")}
           </span>
         </li>
@@ -84,6 +84,50 @@ const WorkList = ({ work }: { work: QuitGuardWork[] }) => {
         </li>
       )}
     </ul>
+  );
+};
+
+/** The question itself, open while main asks; `onAnswer` sends the choice. */
+export const QuitGuardQuestion = ({
+  open,
+  work,
+  onAnswer,
+}: {
+  open: boolean;
+  work: QuitGuardWork[];
+  onAnswer(answer: Exclude<QuitGuardAnswer, "shown">): void;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && open) onAnswer("cancel");
+      }}
+    >
+      <AlertDialogContent data-testid="quit-guard-dialog">
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t("quitGuard.title", { count: work.length })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("quitGuard.body", { count: work.length })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <WorkList work={work} />
+        <AlertDialogFooter>
+          <Button variant="ghost" onClick={() => onAnswer("cancel")}>
+            {t("quitGuard.cancel")}
+          </Button>
+          <Button variant="destructive" onClick={() => onAnswer("quit")}>
+            {t("quitGuard.quitAnyway")}
+          </Button>
+          <Button autoFocus onClick={() => onAnswer("wait")}>
+            {t("quitGuard.wait", { count: work.length })}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 
@@ -103,44 +147,11 @@ export const QuitGuard = ({ transport }: { transport: Transport }) => {
 
   return (
     <>
-      <AlertDialog
+      <QuitGuardQuestion
         open={asking}
-        onOpenChange={(open) => {
-          if (!open && asking) answerQuitGuard(transport, "cancel");
-        }}
-      >
-        <AlertDialogContent data-testid="quit-guard-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("quitGuard.title", { count: work.length })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("quitGuard.body", { count: work.length })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <WorkList work={work} />
-          <AlertDialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => answerQuitGuard(transport, "cancel")}
-            >
-              {t("quitGuard.cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => answerQuitGuard(transport, "quit")}
-            >
-              {t("quitGuard.quitAnyway")}
-            </Button>
-            <Button
-              autoFocus
-              onClick={() => answerQuitGuard(transport, "wait")}
-            >
-              {t("quitGuard.wait", { count: work.length })}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        work={work}
+        onAnswer={(answer) => answerQuitGuard(transport, answer)}
+      />
       {state.phase === "waiting" && (
         <div
           role="status"

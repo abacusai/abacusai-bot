@@ -106,6 +106,7 @@ export const GallerySearch = v.object({
       "top-right",
       "bottom-left",
       "bottom-right",
+      "content",
     ])
   ),
   /** A chat scenario (spec 02 §11.2), shown at full size instead of sections. */

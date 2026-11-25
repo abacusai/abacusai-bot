@@ -65,6 +65,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -106,6 +107,7 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -148,8 +150,38 @@ const POPUP_STRESS_LABELS = Array.from(
   (_, index) =>
     `Connection ${index + 1}: a very long workspace and branch label that needs to fit inside a narrow window`
 );
-const useLabels = () =>
-  use(OverlayContext).stress ? POPUP_STRESS_LABELS : FRUITS;
+/**
+ * `?stress=content`: what people put in overlays. A name with no spaces to
+ * break at, a long path, a row that must truncate, and three actions with
+ * long labels.
+ */
+const UNBROKEN_NAME =
+  "Quarterly_planning_workspace_for_the_north_america_sales_team_final_v3";
+const LONG_PATH =
+  "C:\\Users\\someone\\Documents\\Projects\\invoice-app\\src\\components\\InvoiceTableWithFilters.tsx";
+const LONG_ROW =
+  "Build a modern, full-stack web application called TaskFlow Pro with a dashboard";
+const CONTENT_STRESS_LABELS = [UNBROKEN_NAME, LONG_PATH, LONG_ROW, ...FRUITS];
+const useContentStress = () => use(OverlayContext).stress === "content";
+const useLabels = () => {
+  const { stress } = use(OverlayContext);
+  return stress === "content"
+    ? CONTENT_STRESS_LABELS
+    : stress
+      ? POPUP_STRESS_LABELS
+      : FRUITS;
+};
+
+/** A row the way overlays list running work or files: an icon and a truncated name. */
+const TruncatedRow = ({ label }: { label: string }) => (
+  <div className="bg-muted/50 flex min-w-0 items-center gap-2 rounded-md px-3 py-2">
+    <span aria-hidden className="bg-primary size-2 shrink-0 rounded-full" />
+    <span className="truncate font-medium" title={label}>
+      {label}
+    </span>
+  </div>
+);
+
 export const OverlayExample = ({ id }: { id: GalleryOverlayId }) => {
   const { stress } = use(OverlayContext);
   const Example = OVERLAY_EXAMPLES[id];
@@ -157,7 +189,7 @@ export const OverlayExample = ({ id }: { id: GalleryOverlayId }) => {
     <div
       data-popup-fixture={id}
       style={
-        stress
+        stress && stress !== "content"
           ? {
               position: "fixed",
               zIndex: 1,
@@ -215,6 +247,7 @@ export const RowStatesExample = () => {
 
 const DialogExample = () => {
   const state = useOverlay("dialog");
+  const content = useContentStress();
   const [name, setName] = useState("Morning brief");
   return (
     <Dialog {...state}>
@@ -223,11 +256,16 @@ const DialogExample = () => {
       </DialogTrigger>
       <DialogContent data-example="dialog">
         <DialogHeader>
-          <DialogTitle>Rename session</DialogTitle>
+          <DialogTitle>
+            {content ? `Rename ${UNBROKEN_NAME}` : "Rename session"}
+          </DialogTitle>
           <DialogDescription>
-            Give the session a name you will recognise.
+            {content
+              ? `It lives in ${LONG_PATH}.`
+              : "Give the session a name you will recognise."}
           </DialogDescription>
         </DialogHeader>
+        {content && <TruncatedRow label={LONG_ROW} />}
         <label className="grid gap-2 text-sm">
           Session name
           <Input
@@ -239,7 +277,12 @@ const DialogExample = () => {
           <Button variant="outline" onClick={() => state.onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => state.onOpenChange(false)}>Save</Button>
+          {content && (
+            <Button variant="secondary">Save as a new session instead</Button>
+          )}
+          <Button onClick={() => state.onOpenChange(false)}>
+            {content ? "Save and keep the old name as an alias" : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -248,6 +291,7 @@ const DialogExample = () => {
 
 const AlertDialogExample = () => {
   const state = useOverlay("alert-dialog");
+  const content = useContentStress();
   return (
     <AlertDialog {...state}>
       <AlertDialogTrigger render={<Button variant="destructive" />}>
@@ -255,14 +299,31 @@ const AlertDialogExample = () => {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Morning Brief?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {content ? `Delete ${UNBROKEN_NAME}?` : "Delete Morning Brief?"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Its chat and memory go with it.
+            {content
+              ? `Its chat, its memory and ${LONG_PATH} go with it.`
+              : "Its chat and memory go with it."}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {content && (
+          <div className="flex flex-col gap-1">
+            <TruncatedRow label={LONG_ROW} />
+            <TruncatedRow label={LONG_PATH} />
+          </div>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive">Delete</AlertDialogAction>
+          {content && (
+            <AlertDialogAction variant="destructive">
+              Delete anyway
+            </AlertDialogAction>
+          )}
+          <AlertDialogAction variant={content ? "default" : "destructive"}>
+            {content ? "Wait for it to finish" : "Delete"}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -271,6 +332,7 @@ const AlertDialogExample = () => {
 
 const SheetExample = () => {
   const state = useOverlay("sheet");
+  const content = useContentStress();
   return (
     <Sheet {...state}>
       <SheetTrigger render={<Button variant="outline" />}>
@@ -285,9 +347,23 @@ const SheetExample = () => {
         }}
       >
         <SheetHeader>
-          <SheetTitle>Bot details</SheetTitle>
-          <SheetDescription>Mission, persona and model.</SheetDescription>
+          <SheetTitle>{content ? UNBROKEN_NAME : "Bot details"}</SheetTitle>
+          <SheetDescription>
+            {content ? LONG_PATH : "Mission, persona and model."}
+          </SheetDescription>
         </SheetHeader>
+        {content && (
+          <>
+            <div className="px-6">
+              <TruncatedRow label={LONG_ROW} />
+            </div>
+            <SheetFooter>
+              <Button variant="outline">Cancel</Button>
+              <Button variant="secondary">Duplicate this bot</Button>
+              <Button>Save the bot and restart it</Button>
+            </SheetFooter>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -295,6 +371,7 @@ const SheetExample = () => {
 
 const DrawerExample = () => {
   const state = useOverlay("drawer");
+  const content = useContentStress();
   return (
     <Drawer {...state} swipeDirection="right" modal={false}>
       <DrawerTrigger render={<Button variant="outline" />}>
@@ -302,11 +379,18 @@ const DrawerExample = () => {
       </DrawerTrigger>
       <DrawerContent data-side-panel="">
         <DrawerHeader>
-          <DrawerTitle>Side panel</DrawerTitle>
+          <DrawerTitle>{content ? UNBROKEN_NAME : "Side panel"}</DrawerTitle>
           <DrawerDescription>
-            The drawer the shell uses below 1100 px.
+            {content ? LONG_PATH : "The drawer the shell uses below 1100 px."}
           </DrawerDescription>
         </DrawerHeader>
+        {content && (
+          <DrawerFooter>
+            <Button variant="outline">Cancel</Button>
+            <Button variant="secondary">Open in a new window</Button>
+            <Button>Keep the panel open beside the chat</Button>
+          </DrawerFooter>
+        )}
       </DrawerContent>
     </Drawer>
   );
@@ -321,7 +405,7 @@ const DropdownMenuExample = () => {
         Actions
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {stress && stress !== "sidebar" && (
+        {stress && stress !== "sidebar" && stress !== "content" && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               More actions with a very long submenu label
@@ -336,9 +420,11 @@ const DropdownMenuExample = () => {
         <DropdownMenuGroup>
           {(stress === "sidebar"
             ? SESSION_MENU_LABELS
-            : stress
-              ? POPUP_STRESS_LABELS
-              : ["Rename", "Pin", "Delete"]
+            : stress === "content"
+              ? CONTENT_STRESS_LABELS
+              : stress
+                ? POPUP_STRESS_LABELS
+                : ["Rename", "Pin", "Delete"]
           ).map((label) => (
             <DropdownMenuItem key={label}>{label}</DropdownMenuItem>
           ))}
@@ -399,6 +485,7 @@ const ContextMenuExample = () => {
 const PopoverExample = () => {
   const state = useOverlay("popover");
   const labels = useLabels();
+  const content = useContentStress();
   return (
     <Popover {...state}>
       <PopoverTrigger render={<Button variant="outline" />}>
@@ -406,9 +493,10 @@ const PopoverExample = () => {
       </PopoverTrigger>
       <PopoverContent>
         <PopoverHeader>
-          <PopoverTitle>Model</PopoverTitle>
+          <PopoverTitle>{content ? UNBROKEN_NAME : "Model"}</PopoverTitle>
           <PopoverDescription>Pick the model this bot uses.</PopoverDescription>
         </PopoverHeader>
+        {content && <TruncatedRow label={LONG_ROW} />}
         {labels.map((label) => (
           <p key={label}>{label}</p>
         ))}
@@ -426,7 +514,11 @@ const TooltipExample = () => {
         Hover me
       </TooltipTrigger>
       <TooltipContent>
-        {stress ? POPUP_STRESS_LABELS[0] : "New session"}
+        {stress === "content"
+          ? LONG_PATH
+          : stress
+            ? POPUP_STRESS_LABELS[0]
+            : "New session"}
       </TooltipContent>
     </Tooltip>
   );
