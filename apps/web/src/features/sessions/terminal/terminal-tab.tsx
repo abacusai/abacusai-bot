@@ -145,6 +145,21 @@ const resizeTerminal = (
     : "";
   if (rewrap) term.write(rewrap);
 };
+/**
+ * Input with a character's two UTF-16 halves in separate events (Windows
+ * SendInput with KEYEVENTF_UNICODE, some IMEs and on-screen keyboards: a
+ * key event per half) is joined into the character. Sent alone, each half
+ * reaches the shell as U+FFFD.
+ */
+const joinSurrogates = () => {
+  let high = "";
+  return (data: string): string => {
+    const joined = high + data;
+    const last = joined.charCodeAt(joined.length - 1);
+    high = last >= 0xd800 && last <= 0xdbff ? joined.slice(-1) : "";
+    return high ? joined.slice(0, -1) : joined;
+  };
+};
 // Outside the component: the React Compiler skips try/finally.
 const writeMuted = (write: () => void, mute: (on: boolean) => void) => {
   mute(true);
@@ -316,8 +331,11 @@ export const TerminalTab = ({
             fit();
           }
         };
-        const input = view.term.onData((data) => {
+        const joined = joinSurrogates();
+        const input = view.term.onData((typed) => {
           if (replaying) return;
+          const data = joined(typed);
+          if (!data) return;
           // The terminal's answers (cursor position, device attributes) are
           // made at the right point of the output, so they go at once.
           const answer =
