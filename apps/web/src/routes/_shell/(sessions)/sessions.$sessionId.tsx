@@ -74,8 +74,8 @@ import { feedbackSegmentId } from "@abacus-ai/contract/transcript/feedback-targe
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { hasInAppViewer, isUrl } from "#renderer/components/file-preview";
-import { MessageFeedback } from "#renderer/components/message-feedback";
 import { useRunReports, withRunReports } from "#renderer/components/run-report";
+import { ChatMessageFeedback } from "#renderer/features/chat/kit/message-feedback";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { COMPOSER_CONNECTORS } from "#renderer/features/library/composer-connectors";
@@ -638,18 +638,19 @@ const SessionRoute = () => {
                     return {
                       ...(after != null ? { after } : {}),
                       actions: (
-                        <MessageFeedback
+                        <ChatMessageFeedback
                           id={`${sessionId}:${segmentId}`}
                           // Main hands a comment to the agent where the user can write.
                           {...(!row.routineId &&
                             workspace?.status !== "deleted" &&
                             !model.missing && { reader: {} })}
-                          send={(rating, comment) =>
+                          send={(rating, comment, commentFile) =>
                             transport.client.agent.feedback({
                               sessionId,
                               segmentId,
                               rating,
                               ...(comment ? { comment } : {}),
+                              ...(commentFile ? { commentFile } : {}),
                             })
                           }
                         />

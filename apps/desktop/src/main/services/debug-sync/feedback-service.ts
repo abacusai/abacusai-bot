@@ -14,6 +14,7 @@ import {
   redactContactDetails,
 } from "@abacus-ai/contract/rating-prompt";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
+import { isPastedText } from "@abacus-ai/contract/transcript/user-text";
 import { app } from "electron";
 
 import { readSettings } from "../config/settings";
@@ -29,6 +30,8 @@ export interface TurnFeedback {
   segmentId: string;
   rating: FeedbackRating;
   comment?: string;
+  /** The pasted-text file `comment` was saved in, for the chat's agent. */
+  commentFile?: string;
   /** The model the turn ran on, for the alert. */
   model?: string | null;
 }
@@ -47,8 +50,8 @@ const DEFAULT_TIMEOUT_MS = 10_000;
  * Only that copy: the chat's agent gets the user's words whole.
  */
 const PLATFORM_COMMENT_MAX = 2000;
-/** Ends a team copy that was cut, so a short copy never reads as a lost note. */
-const PLATFORM_CUT_MARK = "… (cut; full text in the chat transcript)";
+/** Ends a team copy that was cut, so a short copy never reads as the whole note. */
+const PLATFORM_CUT_MARK = "… (cut here: the note was longer)";
 
 /** The team's copy of a comment: whole when it fits, else cut with a mark. */
 const platformComment = (comment: string): string =>
@@ -56,6 +59,9 @@ const platformComment = (comment: string): string =>
     ? comment
     : `${comment.slice(0, PLATFORM_COMMENT_MAX - PLATFORM_CUT_MARK.length)}${PLATFORM_CUT_MARK}`;
 const MAX_MODEL_LENGTH = 200;
+const MAX_COMMENT_FILE_LENGTH = 4096;
+/** POSIX or Windows absolute, as the composer's `@` references are. */
+const ABSOLUTE_PATH = /^(?:[A-Za-z]:[\\/]|\/)/;
 /** Same shape the transcript sync uses for session ids. */
 const SESSION_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const MAX_SEGMENT_ID_LENGTH = 256;
@@ -86,11 +92,22 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
     typeof raw.model === "string" && raw.model.length > 0
       ? raw.model.slice(0, MAX_MODEL_LENGTH)
       : null;
+  // Only an absolute path to a pasted-text file, as the composer names one.
+  const commentFile =
+    comment.length > 0 &&
+    typeof raw.commentFile === "string" &&
+    raw.commentFile.length <= MAX_COMMENT_FILE_LENGTH &&
+    !raw.commentFile.includes("\n") &&
+    ABSOLUTE_PATH.test(raw.commentFile) &&
+    isPastedText(raw.commentFile)
+      ? raw.commentFile
+      : null;
   return {
     sessionId,
     segmentId,
     rating: rating as FeedbackRating,
     ...(comment.length > 0 ? { comment } : {}),
+    ...(commentFile != null ? { commentFile } : {}),
     model,
   };
 };

@@ -106,9 +106,35 @@ it("sends the team its copy first, then hands the comment to the chat's agent, s
       segmentId: "a#1",
       rating: "down",
       comment: "no logo image there",
+      note: "no logo image there",
     });
     vi.restoreAllMocks();
   }
+});
+
+it("hands a long note to the agent as the pasted-text file it was saved in, keyed by its words", async () => {
+  const { host, relay } = wired({ team: true, owner: true });
+  const file = "/w/.abacusai-bot/temp/pasted-text-note-1a2b.txt";
+  const words = "x".repeat(120_000);
+  // Sent four times: Send pressed again, and a retry.
+  for (let send = 0; send < 4; send += 1)
+    await host.submitTurnFeedback({
+      sessionId: "s1",
+      segmentId: "a#1",
+      rating: "down",
+      comment: words,
+      commentFile: file,
+    });
+  // Each goes to the relay with the same file and words: the relay keeps one.
+  expect(relay.mock.calls.map(([input]) => input)).toEqual(
+    Array.from({ length: 4 }, () => ({
+      threadId: "s1",
+      segmentId: "a#1",
+      rating: "down",
+      comment: `@${file}`,
+      note: words,
+    }))
+  );
 });
 
 it.each([

@@ -1150,6 +1150,12 @@ export interface TurnFeedbackInput {
   segmentId: string;
   rating: "up" | "down" | "clear";
   comment?: string;
+  /**
+   * `comment` saved as a pasted-text file where the composer saves a paste,
+   * when it is past `USER_TEXT_INLINE_MAX`: the bot reads this file, the
+   * team gets `comment`.
+   */
+  commentFile?: string;
   model?: string | null;
 }
 

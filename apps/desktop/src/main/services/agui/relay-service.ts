@@ -1253,6 +1253,11 @@ export class AguiRelayService implements AguiSource {
     segmentId: string;
     rating: "up" | "down";
     comment: string;
+    /**
+     * The note as the user wrote it, when `comment` is the file it was
+     * saved in: a note is taken once, whichever file a re-send names.
+     */
+    note?: string;
   }): Promise<boolean> {
     const { threadId } = input;
     const comment = input.comment.trim();
@@ -1265,7 +1270,7 @@ export class AguiRelayService implements AguiSource {
         feedbackSegmentId(message as never) === input.segmentId
     );
     if (target == null) return false;
-    const key = feedbackKey(threadId, target.id, comment);
+    const key = feedbackKey(threadId, target.id, input.note?.trim() || comment);
     if (
       this.#feedbackTaken.has(key) ||
       holdsReply(messages, target.id, comment)

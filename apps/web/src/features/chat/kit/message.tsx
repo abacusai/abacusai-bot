@@ -348,7 +348,10 @@ const USER_FOLD_PX = 320;
 /**
  * The user's words in their bubble, folded past `USER_FOLD_PX` (with room
  * to spare, so a message just over it stays open) behind "Show more", as a
- * long code block folds. Measured, so it holds for any width and font.
+ * long code block folds. The one fold here: its code blocks do not fold
+ * inside it (markdown's `FoldsWholeContext`), and once opened it stays open.
+ * Focus moving into the hidden part (a link, a tab) opens it. Measured, so
+ * it holds for any width and font.
  */
 const FoldedText = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
@@ -372,6 +375,9 @@ const FoldedText = ({ children }: { children: ReactNode }) => {
         ref={ref}
         data-slot="user-text"
         data-folded={folded ? "" : undefined}
+        onFocusCapture={() => {
+          if (folded) setOpen(true);
+        }}
         className={cn(
           folded &&
             "max-h-80 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"

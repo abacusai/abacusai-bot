@@ -102,6 +102,52 @@ export const longPasteFile = (text: string): File | null =>
     ? new File([text], pastedTextName(nextId()), { type: "text/plain" })
     : null;
 
+/** A content id for a long text: the same text saved again is the same file. */
+const textId = async (text: string): Promise<string> =>
+  Array.from(
+    new Uint8Array(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+    ).slice(0, 8),
+    (byte) => byte.toString(16).padStart(2, "0")
+  ).join("");
+
+const savedTexts = new Map<string, Promise<string | null>>();
+
+/**
+ * Text past `USER_TEXT_INLINE_MAX` that is not typed into the composer (a
+ * long feedback note) saved as pasted text the way the composer saves a long
+ * paste: the same host call, folder and upload context. Named by its content
+ * and kept once per folder, so a re-send names the same file. Null for text
+ * under the bound, or where there is nowhere to save one (then it goes as
+ * text, as a composer paste does).
+ */
+export const saveLongText = (
+  text: string,
+  host: ChatHostActions,
+  attachmentsBase: string | null,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext
+): Promise<string | null> => {
+  if (text.length <= USER_TEXT_INLINE_MAX) return Promise.resolve(null);
+  if (host.uploadFile == null && attachmentsBase == null)
+    return Promise.resolve(null);
+  const key = `${attachmentsBase ?? ""}\u0000${text}`;
+  const known = savedTexts.get(key);
+  if (known != null) return known;
+  const saved = (async () => {
+    const name = pastedTextName(`note-${await textId(text)}`);
+    const [path] = await host.savePasted(
+      attachmentsBase ?? "",
+      [{ name, data: new TextEncoder().encode(text) }],
+      context
+    );
+    return path ?? null;
+  })();
+  savedTexts.set(key, saved);
+  // A failed save is tried again on the next send.
+  saved.catch(() => savedTexts.delete(key));
+  return saved;
+};
+
 /** Dropped or pasted `File`s: real paths directly, blobs saved first. */
 export const addFiles = async (
   threadId: string,

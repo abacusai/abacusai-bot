@@ -2,6 +2,7 @@ import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { MessageFeedback as BaseFeedback } from "#renderer/components/message-feedback";
 import { renderWithDb } from "#renderer/features/chat/testing";
 
 import { MessageFeedback } from "./feedback";
@@ -172,4 +173,31 @@ it("puts the held rating back when clearing it fails", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
   await waitFor(() => expect(pressed("Bad response")).toBe("false"));
   expect(send).toHaveBeenLastCalledWith("clear", undefined);
+});
+
+it("a note past the inline bound is saved as pasted text: the agent gets its file, the team its words, the box says so", async () => {
+  const send = vi.fn(async () => ({ ok: true as const }));
+  const saveLong = vi.fn(
+    async () => "/repo/.abacusai-bot/temp/pasted-text-note-1.txt"
+  );
+  current = await renderWithDb(
+    <BaseFeedback send={send} saveLong={saveLong} reader={{ name: "Ada" }} />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+  const box = await screen.findByRole("textbox", { name: "Tell us more" });
+  const note = "x".repeat(100_001);
+  fireEvent.change(box, { target: { value: note } });
+  await act(async () => {});
+  expect(
+    document.querySelector('[data-slot="feedback-as-file"]')?.textContent
+  ).toBe("Long text goes in as a pasted-text file, read in full.");
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() =>
+    expect(send).toHaveBeenLastCalledWith(
+      "down",
+      note,
+      "/repo/.abacusai-bot/temp/pasted-text-note-1.txt"
+    )
+  );
+  expect(saveLong).toHaveBeenCalledWith(note);
 });

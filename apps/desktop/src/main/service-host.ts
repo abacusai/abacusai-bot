@@ -17,11 +17,7 @@ import {
   readUserLanguage,
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
-import {
-  ownWords,
-  USER_TEXT_INLINE_MAX,
-  visibleUserText,
-} from "@abacus-ai/agent/user-text";
+import { ownWords, visibleUserText } from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
@@ -259,12 +255,10 @@ import {
   TOOLSETS,
   TOOLSETS_BY_ID,
 } from "@abacus-ai/contract/toolsets";
-import { pastedTextName } from "@abacus-ai/contract/transcript/user-text";
 import type { DictationLanguage } from "@abacus-ai/contract/voice";
 import { ORPCError } from "@orpc/server";
 import { app, net, session as electronSession } from "electron";
 
-import { nodeFileOperations } from "./app-operations/node";
 import {
   abacusBotHome,
   botDefaultWorkspace,
@@ -5470,9 +5464,9 @@ export class ServiceHost {
    * reply: it goes to the chat's agent (the relay keeps it to once per
    * comment), whatever became of the team's copy. Only in the user's own
    * conversation; a bot's chat with someone else or a routine run is not
-   * theirs to steer, and its thumbs stay with the team. Never cut: past
-   * `USER_TEXT_INLINE_MAX` it goes in as a pasted-text file, as a composer
-   * paste does, saved where the composer saves one.
+   * theirs to steer, and its thumbs stay with the team. A note past
+   * `USER_TEXT_INLINE_MAX` comes with the pasted-text file the renderer saved
+   * it in, as the composer saves a long paste; the agent reads that file.
    */
   private deliverFeedbackComment(input: TurnFeedbackInput): void {
     const feedback = sanitizeFeedback(input);
@@ -5482,41 +5476,23 @@ export class ServiceHost {
       !this.isOwnerSession(feedback.sessionId)
     )
       return;
-    const { sessionId, segmentId, rating, comment } = feedback;
-    void this.longTextAsFile(sessionId, comment)
-      .then((words) =>
-        this.aguiRelay.feedback({
-          threadId: sessionId,
-          segmentId,
-          rating,
-          comment: words,
-        })
-      )
+    this.aguiRelay
+      .feedback({
+        threadId: feedback.sessionId,
+        segmentId: feedback.segmentId,
+        rating: feedback.rating,
+        comment:
+          feedback.commentFile != null
+            ? `@${feedback.commentFile}`
+            : feedback.comment,
+        // Once per note: a re-send names its file again, so the words are the key.
+        note: feedback.comment,
+      })
       .catch((error: unknown) =>
         console.warn(
-          `[feedback] ${sessionId}: the comment did not reach the agent: ${String(error)}`
+          `[feedback] ${feedback.sessionId}: the comment did not reach the agent: ${String(error)}`
         )
       );
-  }
-
-  /** The user's words, or past the inline bound a reference to them saved as pasted text. */
-  private async longTextAsFile(
-    sessionId: string,
-    text: string
-  ): Promise<string> {
-    if (text.length <= USER_TEXT_INLINE_MAX) return text;
-    const folder = this.sessionDirectory(sessionId);
-    if (folder == null) throw new Error("no folder to save a long note in");
-    const saved = await nodeFileOperations.savePastedTempFiles(folder, [
-      {
-        name: pastedTextName(`fb-${randomUUID()}`),
-        data: new TextEncoder().encode(text),
-      },
-    ]);
-    const path = saved.success ? saved.paths?.[0] : undefined;
-    if (path == null)
-      throw new Error(saved.error ?? "the long note was not saved");
-    return `@${path}`;
   }
 
   /** The chat's rating line, sent with the model the chat runs on. */

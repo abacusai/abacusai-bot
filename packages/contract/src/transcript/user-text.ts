@@ -4,36 +4,22 @@
  * `renderer/conversation/{user-file-refs,temp-image-refs}.ts`), as pure
  * functions both the v1 mapper (which tags migrated messages with the result)
  * and the chat kit (which renders them) can share. The stored text is never
- * changed: these are display derivations.
+ * changed: these are display derivations. Re-exported beside them, the
+ * agent's rules for the user's own text: the inline bound and how a text
+ * past it is named as a pasted-text file.
  */
 
 export {
   hasSystemReminder,
   isRoutineFire,
   isHiddenUserText,
+  isPastedText,
   legacyOperator,
+  pastedTextName,
+  pastedTextTitle,
   USER_TEXT_INLINE_MAX,
   visibleUserText,
 } from "@abacus-ai/agent/user-text";
-
-/**
- * The name a long text gets when it goes in as a file (a composer paste, a
- * long feedback note): the chat draws such a file as "Pasted text" titled
- * by its first line, and the model reads it.
- */
-export const pastedTextName = (id: string): string => `pasted-text-${id}.txt`;
-
-/** A file saved from pasted text, by its name or path. */
-export const isPastedText = (pathOrName: string): boolean =>
-  /^pasted-text-[\w-]+\.txt$/.test(pathOrName.split(/[\\/]/).at(-1) ?? "");
-
-/** A paste's chip title: its first line with text, whitespace folded. */
-export const pastedTextTitle = (head: string): string =>
-  head
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .find((line) => line !== "")
-    ?.slice(0, 120) ?? "";
 
 /** Absolute `@`-mentions the composer appends per attachment (non-image). */
 const FILE_REF = /(^|\s)@(\/[^\s]*\/([^\s/]+))/g;

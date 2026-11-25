@@ -17,6 +17,7 @@ export const TurnFeedbackInputSchema = v.object({
   segmentId: v.pipe(v.string(), v.nonEmpty()),
   rating: v.picklist(["up", "down", "clear"]),
   comment: v.optional(v.string()),
+  commentFile: v.optional(v.pipe(v.string(), v.maxLength(4096))),
   model: v.optional(v.nullable(v.string())),
 });
 

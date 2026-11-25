@@ -18,8 +18,9 @@ import { USER_TEXT_INLINE_MAX } from "@abacus-ai/contract/transcript/user-text";
  * to the chat's agent as their reply to that message (service-host
  * `deliverFeedbackComment`), so the box says who reads it. Without it (a
  * bot's chat with someone else, a routine run) the copy is the team's. The
- * agent gets the comment whole; past `USER_TEXT_INLINE_MAX` main hands it
- * over as a pasted-text file, as the composer does with a long paste.
+ * agent gets the comment whole; past `USER_TEXT_INLINE_MAX` it is saved as a
+ * pasted-text file (`saveLong`), as the composer saves a long paste, and the
+ * agent reads that file while the team gets the words.
  */
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useId, useSyncExternalStore } from "react";
@@ -44,9 +45,15 @@ export interface MessageFeedbackProps {
   id?: string;
   /** The chat's agent, which reads the comment too; `name` absent: "the agent". */
   reader?: { name?: string };
+  /**
+   * Saves a note past `USER_TEXT_INLINE_MAX` as pasted text where the chat's
+   * composer saves a long paste; its path, or null where there is no place.
+   */
+  saveLong?(text: string): Promise<string | null>;
   send(
     rating: Rating | "clear",
-    comment?: string
+    comment?: string,
+    commentFile?: string
   ): Promise<TurnFeedbackOutcome>;
 }
 
@@ -111,7 +118,12 @@ export const clearFeedbackStates = (): void => {
   states.clear();
 };
 
-export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
+export const MessageFeedback = ({
+  id,
+  reader,
+  saveLong,
+  send,
+}: MessageFeedbackProps) => {
   const { t } = useTranslation();
   // Who reads the comment besides the team: the chat's agent, by name when it has one.
   const name = reader?.name;
@@ -134,7 +146,20 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
         // The server still holds what a failed clear meant to withdraw.
         ...(next === "clear" && { rating: readState(key).held }),
       });
-    send(next, text)
+    // The agent reads a long note from its file; one that cannot be saved goes as text, whole.
+    const deliver = (
+      commentFile: string | null
+    ): Promise<TurnFeedbackOutcome> =>
+      commentFile != null ? send(next, text, commentFile) : send(next, text);
+    (text != null &&
+    reader != null &&
+    saveLong != null &&
+    text.length > USER_TEXT_INLINE_MAX
+      ? saveLong(text)
+          .catch(() => null)
+          .then(deliver)
+      : deliver(null)
+    )
       .then((outcome) => {
         if (outcome.ok)
           writeState(key, {
@@ -148,7 +173,10 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
 
   const unsent = status === "failed" || status === "not-synced";
   const typed = comment.trim() || undefined;
-  const asFile = reader != null && (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
+  const asFile =
+    reader != null &&
+    saveLong != null &&
+    (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
 
   const rate = (next: Rating): void => {
     if (status === "sending") return;

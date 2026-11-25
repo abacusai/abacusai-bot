@@ -90,6 +90,22 @@ describe("reporting a turn's thumbs", () => {
     });
   });
 
+  it("sends the team a long note cut to the platform's cap, marked as cut", async () => {
+    const fetchImpl = vi.fn(async () => reply(200)) as unknown as typeof fetch;
+    const { service: feedback } = service(fetchImpl);
+    await feedback.submit({
+      sessionId: "sess-1",
+      segmentId: "text:0:2",
+      rating: "down",
+      comment: "x".repeat(5000),
+    });
+    const sent = JSON.parse(
+      String(vi.mocked(fetchImpl).mock.calls[0]?.[1]?.body)
+    ).comment as string;
+    expect(sent).toHaveLength(2000);
+    expect(sent.endsWith("… (cut here: the note was longer)")).toBe(true);
+  });
+
   it("returns the platform's reason when it refuses", async () => {
     const fetchImpl = vi.fn(async () =>
       reply(404, { error: "that turn has not been synced yet" })
@@ -183,6 +199,27 @@ describe("what the renderer may send", () => {
       })?.comment
     ).toHaveLength(5000);
   });
+
+  it.each([
+    ["/w/.abacusai-bot/temp/pasted-text-note-1a2b.txt", true],
+    ["C:\\w\\.abacusai-bot\\temp\\pasted-text-note-1a2b.txt", true],
+    ["/w/notes.txt", false],
+    ["relative/pasted-text-note-1a2b.txt", false],
+    ["/w/pasted-text-note-1a2b.txt\n/etc/passwd", false],
+  ])(
+    "keeps a comment's file %j only as a pasted-text path: %s",
+    (file, kept) => {
+      expect(
+        sanitizeFeedback({
+          sessionId: "s",
+          segmentId: "t",
+          rating: "down",
+          comment: "a long note",
+          commentFile: file,
+        })?.commentFile
+      ).toBe(kept ? file : undefined);
+    }
+  );
 
   it.each([
     ["no object", "up"],

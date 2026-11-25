@@ -59,6 +59,11 @@ const InLinkContext = createContext(false);
  * math, no file links; only http(s) and mailto links open, on a click.
  */
 const UntrustedContext = createContext(false);
+/**
+ * A user's message, which folds as a whole in its bubble: one fold, so its
+ * code blocks show every line rather than folding inside it.
+ */
+const FoldsWholeContext = createContext(false);
 
 const COLLAPSE_LINES = 30;
 
@@ -219,7 +224,7 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
   if (lang === "visualizer" && !untrusted)
     return <VisualizerBlock html={html ?? ""} streaming={streaming} />;
   const lines = (html ?? "").split("\n").length;
-  const collapsible = lines > COLLAPSE_LINES + 1;
+  const collapsible = !use(FoldsWholeContext) && lines > COLLAPSE_LINES + 1;
   const copy = () => {
     const text = ref.current?.textContent ?? "";
     void navigator.clipboard?.writeText(text);
@@ -363,25 +368,29 @@ export const Markdown = ({
       );
   const rendered = (
     <UntrustedContext value={untrusted}>
-      <ReplyContext value={reply && role === "assistant"}>
-        <StreamingContext value={streaming}>
-          <TextPart
-            key={mathVersion}
-            content={source}
-            role={role}
-            extensions={reply && role === "assistant" ? replyLinks : undefined}
-            highlighter={highlight}
-            components={COMPONENTS}
-            className={cn(
-              "chat-prose",
-              streaming && "chat-prose-streaming",
-              // A line break the user typed stays one: markdown joins lines.
-              role === "user" && "[&_p]:whitespace-pre-line",
-              className
-            )}
-          />
-        </StreamingContext>
-      </ReplyContext>
+      <FoldsWholeContext value={role === "user"}>
+        <ReplyContext value={reply && role === "assistant"}>
+          <StreamingContext value={streaming}>
+            <TextPart
+              key={mathVersion}
+              content={source}
+              role={role}
+              extensions={
+                reply && role === "assistant" ? replyLinks : undefined
+              }
+              highlighter={highlight}
+              components={COMPONENTS}
+              className={cn(
+                "chat-prose",
+                streaming && "chat-prose-streaming",
+                // A line break the user typed stays one: markdown joins lines.
+                role === "user" && "[&_p]:whitespace-pre-line",
+                className
+              )}
+            />
+          </StreamingContext>
+        </ReplyContext>
+      </FoldsWholeContext>
     </UntrustedContext>
   );
   return selectable ? (

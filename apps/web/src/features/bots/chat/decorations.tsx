@@ -720,12 +720,13 @@ export const botMessageDecorations = (
           {...(options.feedbackReader != null && {
             reader: { name: options.feedbackReader },
           })}
-          send={(rating, comment) =>
+          send={(rating, comment, commentFile) =>
             options.sendFeedback({
               sessionId: options.sessionId,
               segmentId,
               rating,
               ...(comment != null ? { comment } : {}),
+              ...(commentFile != null ? { commentFile } : {}),
               ...(options.model !== undefined ? { model: options.model } : {}),
             })
           }
