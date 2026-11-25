@@ -32,6 +32,10 @@
  *   fails the run. Elsewhere it is recorded as "skipped: not linux", which
  *   fails when the probe is required (`--require-native-frame` or
  *   ABACUSBOT_REQUIRE_NATIVE_FRAME=1, set by the Linux CI job);
+ * - overlay containment: on every overlay capture, and on the overlays filled
+ *   with long names, paths and three actions (`stress=content`, the quit
+ *   question), nothing inside a dialog, sheet, drawer or popup reaches past
+ *   its edge, and the overlay stays inside the window;
  * - axe: any serious or critical violation fails the run.
  *
  * This is the visual run: the build reads the dev fixture tables
@@ -152,6 +156,106 @@ const OVERLAYS = [
   "command",
   "select",
 ];
+
+/**
+ * The containers filled with long content (an overflow there is a layout
+ * bug); popups keep their own long-label stress (`stress=top-left` etc.).
+ */
+const CONTENT_OVERLAYS = ["dialog", "alert-dialog", "sheet", "drawer"];
+const CONTENT_FIXTURES = ["/__ui?fixture=quit-guard-3"];
+
+/**
+ * Each open overlay's box and the parts of its content that show past it:
+ * an element's shown extent is cut by every clipping ancestor inside the
+ * overlay, and only the outermost element that reaches past an edge counts.
+ */
+export const overlayGeometry = () => {
+  const selector = [
+    '[data-slot="dialog-overlay"] ~ [role="dialog"]',
+    '[data-slot="alert-dialog-overlay"] ~ [role="alertdialog"]',
+    '[data-slot="sheet-overlay"] ~ [role="dialog"]',
+    '[data-slot="drawer-popup"]',
+    ".ui-popup",
+  ].join(",");
+  const round = (value) => Math.round(value * 10) / 10;
+  return [...document.querySelectorAll(selector)]
+    .filter((box) => box.checkVisibility())
+    .map((box) => {
+      const outer = box.getBoundingClientRect();
+      const shown = (element) => {
+        const rect = element.getBoundingClientRect();
+        // Text that overflows its own box shows past it unless the box clips.
+        const overflows =
+          getComputedStyle(element).overflowX === "visible" &&
+          element.scrollWidth > element.clientWidth;
+        let { left } = rect;
+        let right = overflows
+          ? Math.max(rect.right, rect.left + element.scrollWidth)
+          : rect.right;
+        for (
+          let up = element.parentElement;
+          up && up !== box;
+          up = up.parentElement
+        )
+          if (getComputedStyle(up).overflowX !== "visible") {
+            const clip = up.getBoundingClientRect();
+            left = Math.max(left, clip.left);
+            right = Math.min(right, clip.right);
+          }
+        return { left, right, width: rect.width };
+      };
+      const past = (extent) =>
+        extent.width > 0 &&
+        extent.right > extent.left &&
+        (extent.right > outer.right + 1 || extent.left < outer.left - 1);
+      // A popup's arrow sits outside it by design.
+      const decorative = (element) =>
+        element.getAttribute("aria-hidden") === "true" &&
+        element.getBoundingClientRect().width <= 16 &&
+        element.getBoundingClientRect().height <= 16;
+      const spills = [...box.querySelectorAll("*")]
+        .filter(
+          (element) =>
+            element.checkVisibility() &&
+            !decorative(element) &&
+            past(shown(element))
+        )
+        .filter(
+          (element) =>
+            element.parentElement === box || !past(shown(element.parentElement))
+        )
+        .map((element) => {
+          const extent = shown(element);
+          return {
+            slot: element.dataset.slot ?? element.tagName.toLowerCase(),
+            by: round(
+              Math.max(extent.right - outer.right, outer.left - extent.left)
+            ),
+          };
+        });
+      return {
+        slot: box.dataset.slot ?? box.getAttribute("role"),
+        left: round(outer.left),
+        right: round(outer.right),
+        innerWidth,
+        spills,
+      };
+    });
+};
+
+/** Nothing shows past an overlay's edge; the overlay stays in the window. */
+export const overlayProblems = (name, overlays) =>
+  overlays.flatMap((overlay) => [
+    ...(overlay.left < -0.5 || overlay.right > overlay.innerWidth + 0.5
+      ? [
+          `${name}: ${overlay.slot} spans ${overlay.left}–${overlay.right}, outside the ${overlay.innerWidth} px window`,
+        ]
+      : []),
+    ...overlay.spills.map(
+      (spill) =>
+        `${name}: ${spill.slot} shows ${spill.by} px past the edge of ${overlay.slot}`
+    ),
+  ]);
 
 /** Which axe impacts fail the run (Claude impl r1 #9/#10). */
 export const FAILING_IMPACTS = new Set(["serious", "critical"]);
@@ -598,7 +702,13 @@ const main = async () => {
         ...ROUTES,
         ...(flag("--no-overlays") || width !== WIDTHS[0]
           ? []
-          : OVERLAYS.map((id) => `/__ui?section=${id}&open=${id}`)),
+          : [
+              ...OVERLAYS.map((id) => `/__ui?section=${id}&open=${id}`),
+              ...CONTENT_OVERLAYS.map(
+                (id) => `/__ui?section=${id}&open=${id}&stress=content`
+              ),
+              ...CONTENT_FIXTURES,
+            ]),
       ];
       for (const theme of THEMES) {
         await cdp.send("Emulation.setEmulatedMedia", {
@@ -705,6 +815,14 @@ const main = async () => {
             })`);
             failures.push(...panelSplitProblems(name, split));
             geometry.split = split;
+          }
+          if (route.includes("open=") || CONTENT_FIXTURES.includes(route)) {
+            geometry.overlays = await cdp.evaluate(
+              `(${overlayGeometry.toString()})()`
+            );
+            if (geometry.overlays.length === 0)
+              failures.push(`${name}: no overlay open`);
+            failures.push(...overlayProblems(name, geometry.overlays));
           }
           await capture(cdp, name, { route, width, theme, geometry });
         }

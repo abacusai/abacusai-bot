@@ -304,7 +304,7 @@ export const PaidWelcomeDialog = ({
           data-lead={lead}
           data-deploy={deploy != null ? "" : undefined}
           className={cn(
-            "max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-7 pb-5 text-sm [&>*]:min-w-0",
+            "max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-7 pb-5 text-sm",
             deploy != null ? "sm:max-w-[480px]" : "sm:max-w-[440px]"
           )}
         >

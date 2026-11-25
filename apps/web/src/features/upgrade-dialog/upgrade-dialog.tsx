@@ -666,7 +666,7 @@ export const UpgradeDialogHost = () => {
           showCloseButton={false}
           data-slot="upgrade-dialog"
           data-kind={request.kind}
-          className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
+          className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px]"
         >
           {confirmed?.body === "paid" ? (
             <PaidBody

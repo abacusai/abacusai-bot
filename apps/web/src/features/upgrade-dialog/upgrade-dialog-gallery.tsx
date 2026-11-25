@@ -57,7 +57,7 @@ export const UpgradeDialogGallery = ({ variant }: { variant: Variant }) => {
         showCloseButton={false}
         data-slot="upgrade-dialog"
         data-kind="credits"
-        className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px] [&>*]:min-w-0"
+        className="gap-5 p-7 pb-5 text-sm sm:max-w-[440px]"
       >
         <DialogBody
           request={{

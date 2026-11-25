@@ -132,7 +132,7 @@ export const OfferCardFrame = ({
       data-slot={slot}
       data-moment={moment}
       className={cn(
-        "relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border p-3.5 text-sm",
+        "relative my-2 flex w-full max-w-[520px] gap-3 rounded-xl border p-3.5 text-sm [overflow-wrap:anywhere]",
         onClose != null && "pr-9",
         colors.card
       )}

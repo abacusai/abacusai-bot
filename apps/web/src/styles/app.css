@@ -401,6 +401,48 @@ html:not([data-palette="default"]):is([data-palette]) :is(:is([data-slot="alert-
 .popup-tooltip-label { min-width: 0; max-height: calc(min(var(--available-height, calc(100dvh - 16px)), 24rem) - 12px); overflow-x: hidden; overflow-y: auto; overflow-wrap: anywhere; }
 [data-slot="dialog-content"] { max-height: calc(100dvh - 16px); overflow-y: auto; }
 
+/* Dialogs, alert dialogs, sheets and drawers stay their own width whatever
+   they hold. Their column has no content minimum, so a truncated row
+   truncates instead of widening the box; a name or path with no spaces wraps
+   at any character; actions that do not fit on one line wrap to the next,
+   the last (main) one staying at the end, and a label too long for its line
+   wraps inside its button. The popups are matched after their backdrop, so a
+   dialog that renames its data-slot keeps all of this. A component's own
+   classes still win. */
+@layer components {
+  :is([data-slot="dialog-overlay"] ~ [role="dialog"],
+      [data-slot="alert-dialog-overlay"] ~ [role="alertdialog"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is([data-slot="dialog-overlay"] ~ [role="dialog"],
+      [data-slot="alert-dialog-overlay"] ~ [role="alertdialog"],
+      [data-slot="sheet-overlay"] ~ [role="dialog"], [data-slot="drawer-content"]) {
+    overflow-wrap: anywhere;
+  }
+  :is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"],
+      [data-slot="sheet-footer"], [data-slot="drawer-footer"]) {
+    flex-wrap: wrap;
+  }
+}
+:is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"],
+    [data-slot="sheet-footer"], [data-slot="drawer-footer"])
+  > :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]) {
+  max-width: 100%;
+  height: auto;
+  min-height: calc(var(--spacing) * 7);
+  white-space: normal;
+  text-wrap: balance;
+}
+/* A long title wraps before the corner close button instead of running under it. */
+:is([data-slot="dialog-overlay"] ~ [role="dialog"]):has(> [data-slot="dialog-close"]) > [data-slot="dialog-header"] {
+  padding-inline-end: 1.25rem;
+}
+:is([data-slot="sheet-overlay"] ~ [role="dialog"]):has(> [data-slot="sheet-close"]) > [data-slot="sheet-header"] {
+  padding-inline-end: 3rem;
+}
+/* The registry's alert dialog is full width below 640 px: keep the dialog's margin on a phone. */
+[data-slot="alert-dialog-overlay"] ~ [role="alertdialog"] { width: calc(100% - 2rem); }
+
 .ui-list, [data-slot="nav-list-rows"], [cmdk-group-items],
 [data-slot="select-list"], [data-slot="dropdown-menu-radio-group"], [data-slot="context-menu-radio-group"] {
   display: flex;
