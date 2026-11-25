@@ -738,15 +738,30 @@ const OWN_PEER_SCRIPT = pageScript`
   } catch (e) { return null; }
 `;
 
+/**
+ * A chat row's name alone, null when it has no title. The row's title line (.dialog-title) also holds
+ * the last message's time, and a selector list returns whichever match comes
+ * first in the page, that line: the shared bot's chat read "Abacus AI01:46",
+ * never its name, so its answers were taken for a person's message.
+ */
+const TITLE_OF_SCRIPT = pageScript`
+  const titleOf = (el) => {
+    const titleEl = ['.user-title .peer-title', '.user-title', '.peer-title', '.dialog-title']
+      .map((selector) => el.querySelector(selector))
+      .find((found) => found != null);
+    return titleEl ? (titleEl.textContent || '').trim() : null;
+  };
+`;
+
 /** The dialog list as contacts: chat id (peer id) and title. */
 const CONTACTS_SCRIPT = pageScript`
+  ${TITLE_OF_SCRIPT}
   const rows = [];
   const seen = new Set();
   for (const el of document.querySelectorAll('#chatlist-container a.chatlist-chat, ul.chatlist a.chatlist-chat, a.chatlist-chat')) {
     const id = el.getAttribute('data-peer-id');
     if (id == null || seen.has(id)) continue;
-    const titleEl = el.querySelector('.user-title, .peer-title, .dialog-title');
-    const name = (titleEl ? titleEl.textContent : el.textContent || '').trim();
+    const name = titleOf(el) ?? (el.textContent || '').trim();
     if (name.length === 0) continue;
     seen.add(id);
     rows.push({ chatId: id, name });
@@ -868,15 +883,15 @@ const BOT_START_SCRIPT = pageScript`
 
 /** Unread dialog previews, as best-effort inbound signal. */
 const INBOUND_SCRIPT = pageScript`
+  ${TITLE_OF_SCRIPT}
   const rows = [];
   for (const el of document.querySelectorAll('a.chatlist-chat')) {
     const badge = el.querySelector('.dialog-subtitle-badge-unread, .badge-unread, .unread');
     if (badge == null) continue;
     const id = el.getAttribute('data-peer-id');
     if (id == null) continue;
-    const titleEl = el.querySelector('.user-title, .peer-title, .dialog-title');
     const previewEl = el.querySelector('.dialog-subtitle, .row-subtitle, .peer-subtitle');
-    const name = (titleEl ? titleEl.textContent : '').trim();
+    const name = titleOf(el) ?? '';
     const text = (previewEl ? previewEl.textContent : '').trim();
     if (text.length === 0) continue;
     rows.push({ chatId: id, name, text, messageId: id + ':' + text });
