@@ -5064,6 +5064,8 @@
     "trialEndedBody": "Przejdź na wyższy plan, aby dalej korzystać z AbacusAI Bot na tym koncie.",
     "lapsedTitle": "Twoja subskrypcja wygasła",
     "lapsedBody": "Odnów plan, aby dalej korzystać z AbacusAI Bot na tym koncie.",
+    "noPlanTitle": "Wybierz plan, aby dalej korzystać z AbacusAI Bot",
+    "noPlanBody": "Jesteś zalogowany, ale Twoje konto potrzebuje planu, aby AbacusAI Bot mógł działać.",
     "upgrade": "Ulepsz plan",
     "renew": "Odnów",
     "webAgent": "Przejdź do Abacus AI Agent w sieci →",

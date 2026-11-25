@@ -1297,6 +1297,37 @@ describe("the turn's outcome card", () => {
     expect(screen.queryByRole("button", { name: /Upgrade/ })).toBeNull();
   });
 
+  it("an account with no plan gets the plan card, never Confirming", async () => {
+    const openUpgrade = vi.fn(async () => {});
+    const os = implement(contract);
+    current = await renderRelay(
+      failed({
+        message: "Your Abacus.AI account doesn't have a plan yet.",
+        cause: "payment_required",
+        actions: [
+          { type: "payment-required", cause: "not_subscribed" },
+          { type: "switch-model" },
+        ],
+      }),
+      "session",
+      {},
+      {},
+      host("free", { openUpgrade }),
+      {
+        account: {
+          payment: os.account.payment.handler(
+            () => ({ reason: "not_subscribed" }) as never
+          ),
+        },
+      }
+    );
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    expect(screen.queryByText("Confirming your payment…")).toBeNull();
+    expect(screen.queryByText(/couldn't confirm|purchase again/i)).toBeNull();
+    screen.getByRole("button", { name: "Upgrade" }).click();
+    expect(openUpgrade).toHaveBeenCalledWith("payment_lapsed");
+  });
+
   it("a dropped connection is the connection card, with its details and a retry", async () => {
     current = await renderRelay(
       failed({

@@ -134,7 +134,7 @@ const REFUSAL_BY_CODE: Record<string, AbacusRefusal> = {
 
 /** The billing gate's 402 sentences, for a server that sends no code. */
 const PAYMENT_REFUSAL =
-  /could not confirm the last payment|subscription has ended|payment method is required|PaymentMethodRequired/i;
+  /could not confirm the last payment|subscription has ended|choose a plan to continue|payment method is required|PaymentMethodRequired/i;
 /** The same gate's 402 for a free tier past its end, without a code. */
 const TRIAL_ENDED = /free trial has ended/i;
 
@@ -190,11 +190,22 @@ export function phoneVerification(raw: string): {
   return { link, credits };
 }
 
-/** A billing refusal's reason: a lapsed subscription, else an unconfirmed payment. */
-export const paymentRefusalReason = (raw: string): "lapsed" | "unconfirmed" =>
+/**
+ * A billing refusal's reason: a lapsed subscription, a payment the platform
+ * holds (only when it says so), else an account with a plan to choose (one
+ * that never paid, or a refusal this build cannot place). Never "unconfirmed"
+ * by default: that card waits for a payment that may never have been made.
+ */
+export const paymentRefusalReason = (
+  raw: string
+): "lapsed" | "unconfirmed" | "not_subscribed" =>
   /subscription has ended|"reason"\s*:\s*"lapsed"/i.test(raw)
     ? "lapsed"
-    : "unconfirmed";
+    : /could not confirm the last payment|"reason"\s*:\s*"unconfirmed"/i.test(
+          raw
+        )
+      ? "unconfirmed"
+      : "not_subscribed";
 
 /**
  * Balance and billing sentences that never mean a rate limit, whoever relays

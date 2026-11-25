@@ -48,6 +48,11 @@ export const usePaymentRequired = (enabled = true) => {
 };
 
 const COPY = {
+  no_plan: {
+    title: "paymentRequired.noPlanTitle",
+    body: "paymentRequired.noPlanBody",
+    cta: "paymentRequired.upgrade",
+  },
   trial_ended: {
     title: "paymentRequired.trialEndedTitle",
     body: "paymentRequired.trialEndedBody",
@@ -60,15 +65,21 @@ const COPY = {
   },
 } as const;
 
-/** An unconfirmed payment (a server that sends no reason too) is confirming, never a plan to buy. */
+/**
+ * Only a payment the server says it holds is confirming. Anything else, an
+ * account that never paid or a reason this build does not know, gets a plan:
+ * a confirming screen would wait for a payment that was never made.
+ */
 const isUnconfirmed = (payment: AbacusPaymentRequired | null): boolean =>
-  payment?.reason == null || payment.reason === "unconfirmed";
+  payment?.reason === "unconfirmed";
 
 const paymentCopy = (payment: AbacusPaymentRequired | null) =>
-  COPY[payment?.reason === "lapsed" ? "lapsed" : "trial_ended"];
+  payment?.reason === "lapsed" || payment?.reason === "trial_ended"
+    ? COPY[payment.reason]
+    : COPY.no_plan;
 
 /**
- * A first payment not recorded yet (payment-confirming.ts): "Confirming your
+ * A payment the platform holds (payment-confirming.ts): "Confirming your
  * payment…" while the account is checked, then, after a few minutes, that it
  * cannot see the payment yet, with billing and Check again. Never a plan to
  * buy: the account already has one. Goes on by itself once it lands.
@@ -212,7 +223,7 @@ export const PaymentRequiredPanel = (
     <PaymentPlanPanel {...props} />
   );
 
-/** A free trial that ended or a plan that lapsed: the plan, and the ways out. */
+/** No plan yet, a free trial that ended or a plan that lapsed: the plan, and the ways out. */
 const PaymentPlanPanel = ({
   payment,
   title,

@@ -757,8 +757,8 @@ const OwnKeyCard = ({
 };
 
 /**
- * Abacus's billing gate refused the turn because a first payment is not
- * recorded yet (payment-confirming.ts): "Confirming your payment…", the
+ * Abacus's billing gate refused the turn because it holds a payment it has
+ * not confirmed (payment-confirming.ts): "Confirming your payment…", the
  * waiting message sent again once it lands, and after a few minutes that the
  * payment cannot be seen yet, with billing and Check again. Never a purchase.
  */
@@ -837,14 +837,30 @@ const PaymentConfirmingCard = ({
   );
 };
 
+const PAYMENT_PLAN_COPY = {
+  lapsed: {
+    title: "paymentRequired.lapsedTitle",
+    body: "paymentRequired.lapsedBody",
+    cta: "paymentRequired.renew",
+    action: "renew",
+  },
+  no_plan: {
+    title: "paymentRequired.noPlanTitle",
+    body: "paymentRequired.noPlanBody",
+    cta: "paymentRequired.upgrade",
+    action: "upgrade",
+  },
+} as const;
+
 /**
- * Abacus's billing gate refused the turn because the subscription ended
- * (renew). Not the credits card: buying more would not let this account
- * through.
+ * Abacus's billing gate refused the turn for the plan: the subscription ended
+ * (renew), or the account never had one (choose one). Not the credits card:
+ * buying more would not let this account through.
  */
-const PaymentLapsedCard = () => {
+const PaymentPlanCard = ({ cause }: { cause: "lapsed" | "no_plan" }) => {
   const { t } = useTranslation();
   const { runtime, composer } = useChatView();
+  const copy = PAYMENT_PLAN_COPY[cause];
   return (
     <div
       role="group"
@@ -852,20 +868,18 @@ const PaymentLapsedCard = () => {
       className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
       data-slot="error-card"
       data-variant="payment-required"
-      data-cause="lapsed"
+      data-cause={cause}
     >
-      <ChatCard icon={<CreditCard />} title={t("paymentRequired.lapsedTitle")}>
-        <p className="text-muted-foreground p-3 text-sm">
-          {t("paymentRequired.lapsedBody")}
-        </p>
+      <ChatCard icon={<CreditCard />} title={t(copy.title)}>
+        <p className="text-muted-foreground p-3 text-sm">{t(copy.body)}</p>
         <div className="flex flex-wrap gap-2 p-3">
           <Button
             size="sm"
-            data-action="renew"
+            data-action={copy.action}
             onClick={() => void runtime.host.openUpgrade("payment_lapsed")}
           >
             <UpgradeSeen src="payment_lapsed" />
-            {t("paymentRequired.renew")}
+            {t(copy.cta)}
           </Button>
           {composer.model != null && composer.readOnly == null && (
             <Button
@@ -1371,11 +1385,13 @@ export const ErrorCard = ({
     );
   const payment = actions.find((action) => action.type === "payment-required");
   if (payment != null)
-    return payment.cause === "lapsed" ? (
-      <PaymentLapsedCard />
-    ) : (
+    return payment.cause === "unconfirmed" ? (
       <PaymentConfirmingCard
         {...(latest && canReply ? { onSendAgain: retry } : {})}
+      />
+    ) : (
+      <PaymentPlanCard
+        cause={payment.cause === "lapsed" ? "lapsed" : "no_plan"}
       />
     );
   const cutOff = actions.find((action) => action.type === "cut-off");

@@ -362,7 +362,7 @@ describe("an account the payment gate refuses", () => {
       { status: 402 }
     );
 
-  it.each(["unconfirmed", "trial_ended", "lapsed"] as const)(
+  it.each(["unconfirmed", "not_subscribed", "trial_ended", "lapsed"] as const)(
     "is signed in but must pay (%s), and the key is not refused",
     async (reason) => {
       fetchMock.mockResolvedValueOnce(refusal(reason));
@@ -376,6 +376,14 @@ describe("an account the payment gate refuses", () => {
 
   it("has no reason from a server that sends none", async () => {
     fetchMock.mockResolvedValueOnce(refusal());
+
+    await fetchAbacusAccount(true);
+
+    expect(abacusPaymentRequired()).toEqual({ reason: null });
+  });
+
+  it("has no reason for one this build does not know", async () => {
+    fetchMock.mockResolvedValueOnce(refusal("a_future_reason"));
 
     await fetchAbacusAccount(true);
 

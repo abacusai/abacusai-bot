@@ -1726,15 +1726,20 @@ export interface AbacusStreak {
   day_ends_at: string;
 }
 
-/** Why the platform's payment gate refuses a signed-in account: the 402's `reason`. */
+/**
+ * Why the platform's payment gate refuses a signed-in account: the 402's
+ * `reason`. `unconfirmed` is a payment made and held (a failed charge, a
+ * hold); `not_subscribed` is an account that never paid, with a plan to choose.
+ */
 export const ABACUS_PAYMENT_REASONS = [
   "unconfirmed",
+  "not_subscribed",
   "trial_ended",
   "lapsed",
 ] as const;
 export type AbacusPaymentReason = (typeof ABACUS_PAYMENT_REASONS)[number];
 
-/** A signed-in account the platform will not serve until it pays; null reason from a server that sends none. */
+/** A signed-in account the platform will not serve until it pays; null reason from a server that sends none or one this build does not know. */
 export interface AbacusPaymentRequired {
   reason: AbacusPaymentReason | null;
 }

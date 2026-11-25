@@ -480,20 +480,28 @@ const phoneWords = (raw: string): { summary: string; remedy: string } => {
 /**
  * Abacus's billing refusal in the app's words: what happened and the way on,
  * support for a payment it could not confirm (never a second purchase), a
- * renewal for a subscription that ended. The card shows its own translation.
+ * renewal for a subscription that ended, a plan for an account that has none.
+ * The card shows its own translation.
  */
-const paymentWords = (raw: string): { summary: string; remedy: string } =>
-  paymentRefusalReason(raw) === "lapsed"
-    ? {
-        summary: "Your Abacus.AI subscription has ended",
-        remedy:
-          "Renew it to keep going, or switch to a model with its own key.",
-      }
-    : {
-        summary: "We couldn't confirm your last payment",
-        remedy:
-          "If your subscription is active, contact support@abacus.ai. Please don't purchase again.",
-      };
+const paymentWords = (raw: string): { summary: string; remedy: string } => {
+  const reason = paymentRefusalReason(raw);
+  if (reason === "lapsed")
+    return {
+      summary: "Your Abacus.AI subscription has ended",
+      remedy: "Renew it to keep going, or switch to a model with its own key.",
+    };
+  if (reason === "unconfirmed")
+    return {
+      summary: "We couldn't confirm your last payment",
+      remedy:
+        "If your subscription is active, contact support@abacus.ai. Please don't purchase again.",
+    };
+  return {
+    summary: "Your Abacus.AI account doesn't have a plan yet",
+    remedy:
+      "Choose a plan to keep going, or switch to a model with its own key.",
+  };
+};
 
 /** The English line for the model-unavailable card; the app shows its own. */
 const unavailableMessage = (action: NotificationAction): string => {

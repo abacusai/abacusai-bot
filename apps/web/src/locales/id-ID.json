@@ -4916,6 +4916,8 @@
     "trialEndedBody": "Upgrade untuk terus menggunakan AbacusAI Bot dengan akun ini.",
     "lapsedTitle": "Langganan Anda telah berakhir",
     "lapsedBody": "Perpanjang paket Anda untuk terus menggunakan AbacusAI Bot dengan akun ini.",
+    "noPlanTitle": "Pilih paket untuk terus menggunakan AbacusAI Bot",
+    "noPlanBody": "Anda sudah masuk, tetapi akun Anda memerlukan paket agar AbacusAI Bot dapat bekerja.",
     "upgrade": "Upgrade",
     "renew": "Perpanjang",
     "webAgent": "Buka Abacus AI Agent di web →",

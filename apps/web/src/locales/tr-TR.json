@@ -4916,6 +4916,8 @@
     "trialEndedBody": "AbacusAI Bot'u bu hesapla kullanmaya devam etmek için yükseltin.",
     "lapsedTitle": "Aboneliğiniz sona erdi",
     "lapsedBody": "AbacusAI Bot'u bu hesapla kullanmaya devam etmek için planınızı yenileyin.",
+    "noPlanTitle": "AbacusAI Bot'u kullanmaya devam etmek için bir plan seçin",
+    "noPlanBody": "Oturum açtınız, ancak AbacusAI Bot'un çalışması için hesabınızın bir plana ihtiyacı var.",
     "upgrade": "Yükselt",
     "renew": "Yenile",
     "webAgent": "Web'deki Abacus AI Agent'a git →",

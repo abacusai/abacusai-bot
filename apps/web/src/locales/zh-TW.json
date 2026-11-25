@@ -4916,6 +4916,8 @@
     "trialEndedBody": "升級後就能繼續用這個帳號使用 AbacusAI Bot。",
     "lapsedTitle": "你的訂閱已結束",
     "lapsedBody": "續訂方案後就能繼續用這個帳號使用 AbacusAI Bot。",
+    "noPlanTitle": "選擇一個方案以繼續使用 AbacusAI Bot",
+    "noPlanBody": "你已登入，但這個帳號需要一個方案才能使用 AbacusAI Bot。",
     "upgrade": "升級",
     "renew": "續訂",
     "webAgent": "前往網頁版 Abacus AI Agent →",

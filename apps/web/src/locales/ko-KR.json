@@ -4916,6 +4916,8 @@
     "trialEndedBody": "이 계정으로 AbacusAI Bot을 계속 사용하려면 업그레이드하세요.",
     "lapsedTitle": "구독이 종료되었습니다",
     "lapsedBody": "이 계정으로 AbacusAI Bot을 계속 사용하려면 요금제를 갱신하세요.",
+    "noPlanTitle": "AbacusAI Bot을 계속 사용하려면 요금제를 선택하세요",
+    "noPlanBody": "로그인되었지만 AbacusAI Bot을 사용하려면 계정에 요금제가 필요합니다.",
     "upgrade": "업그레이드",
     "renew": "갱신",
     "webAgent": "웹에서 Abacus AI Agent로 이동 →",

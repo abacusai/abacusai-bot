@@ -1,9 +1,10 @@
 /**
- * A first payment the platform has not recorded yet. Right after checkout its
- * gate answers 402 "unconfirmed" until the payment lands, usually within
- * seconds, so every surface that meets it (the window dialog, the chat's
- * card) shows one shared state instead of a failure: "confirming" while the
- * account is checked every few seconds, "late" once that has gone on for
+ * A payment the platform holds: its gate answers 402 "unconfirmed" for a
+ * payment made but not confirmed (an account that never paid is
+ * "not_subscribed" and gets a plan instead). Every surface that meets it
+ * (the window dialog, the chat's card) shows one shared state instead of a
+ * failure: "confirming" while the account is checked every few seconds,
+ * "late" once that has gone on for
  * PAYMENT_CONFIRM_WAIT_MS (still checked, in the background, for the checkout
  * link's life), "confirmed" when the gate lets it through.
  */
@@ -58,8 +59,8 @@ export const startPaymentConfirmWatch = (client: AppClient): void => {
       settle("confirmed");
       return;
     }
-    if (verdict?.reason != null && verdict.reason !== "unconfirmed") {
-      // Another gate (a lapsed plan): not a payment landing, not this watch's.
+    if (verdict != null && verdict.reason !== "unconfirmed") {
+      // Another gate (no plan, a lapsed plan): not a payment landing, not this watch's.
       stop();
       settle(null);
       return;

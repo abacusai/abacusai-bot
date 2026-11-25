@@ -4916,6 +4916,8 @@
     "trialEndedBody": "Upgrade om AbacusAI Bot met dit account te blijven gebruiken.",
     "lapsedTitle": "Je abonnement is afgelopen",
     "lapsedBody": "Verleng je abonnement om AbacusAI Bot met dit account te blijven gebruiken.",
+    "noPlanTitle": "Kies een abonnement om AbacusAI Bot te blijven gebruiken",
+    "noPlanBody": "Je bent ingelogd, maar je account heeft een abonnement nodig voordat AbacusAI Bot kan werken.",
     "upgrade": "Upgraden",
     "renew": "Verlengen",
     "webAgent": "Naar Abacus AI Agent op het web →",
