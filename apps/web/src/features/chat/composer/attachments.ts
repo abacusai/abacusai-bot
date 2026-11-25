@@ -4,6 +4,7 @@
  * The extension rule is today's (`chat-panel.tsx:1403-1410`).
  */
 import { UPLOAD_LIMITS } from "@abacus-ai/contract/contract/files";
+import { USER_TEXT_INLINE_MAX } from "@abacus-ai/contract/transcript/user-text";
 
 import {
   draftStore,
@@ -87,16 +88,13 @@ export const addPaths = (
   }));
 
 /**
- * Pasted text longer than this goes in as a file. Roughly 25-30k tokens:
- * under it the model reads the text inline at no extra call; over it a page
- * dump or a log would fill a small window and be re-sent on every turn,
- * where one read or grep of a file finds what the task needs.
+ * Pasted text to attach as a file instead of typing it, or null to paste it
+ * as text. Under the bound the model reads it inline at no extra call; over
+ * it a page dump or a log would fill a small window and be re-sent on every
+ * turn, where one read or grep of a file finds what the task needs.
  */
-export const LONG_PASTE_CHARS = 100_000;
-
-/** Pasted text to attach as a file instead of typing it, or null to paste it as text. */
 export const longPasteFile = (text: string): File | null =>
-  text.length > LONG_PASTE_CHARS
+  text.length > USER_TEXT_INLINE_MAX
     ? new File([text], `pasted-text-${nextId()}.txt`, { type: "text/plain" })
     : null;
 

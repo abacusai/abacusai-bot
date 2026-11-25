@@ -429,6 +429,7 @@
         "placeholderDownAgent": "Agente neyi değiştirmesi gerektiğini söyle…",
         "readerNamed": "{{name}} bunu okur ve sohbette yanıt verir. Ekibimiz de görür.",
         "readerAgent": "Agent bunu okur ve sohbette yanıt verir. Ekibimiz de görür.",
+        "tooLong": "Buradan göndermek için çok uzun. Bunun yerine sohbete yapıştırın; uzun metin dosya olarak eklenir.",
         "send": "Gönder",
         "sent": "Geri bildirimin için teşekkürler",
         "notSynced": "Geri bildirim henüz gönderilemedi",

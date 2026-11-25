@@ -1,4 +1,5 @@
 import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
+import { USER_TEXT_INLINE_MAX } from "@abacus-ai/contract/transcript/user-text";
 /**
  * Two feedback buttons in the action bar, with an optional comment, sent as
  * `agent.feedback`. A second click on a rating the server holds sends
@@ -16,7 +17,9 @@ import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
  * With `reader` (a chat the user can write in), main also hands the comment
  * to the chat's agent as their reply to that message (service-host
  * `deliverFeedbackComment`), so the box says who reads it. Without it (a
- * bot's chat with someone else, a routine run) the copy is the team's.
+ * bot's chat with someone else, a routine run) the copy is the team's. The
+ * agent gets the comment whole, so a box it reads refuses one past
+ * `USER_TEXT_INLINE_MAX` and points to the chat rather than sending part.
  */
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useId, useSyncExternalStore } from "react";
@@ -145,12 +148,13 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
 
   const unsent = status === "failed" || status === "not-synced";
   const typed = comment.trim() || undefined;
+  const tooLong = reader != null && (typed?.length ?? 0) > USER_TEXT_INLINE_MAX;
 
   const rate = (next: Rating): void => {
     if (status === "sending") return;
     if (rating === next && held === next) submit("clear");
     else if (rating === next)
-      submit(next, typed); // retry the failed send
+      submit(next, tooLong ? undefined : typed); // retry the failed send
     else submit(next);
   };
 
@@ -196,7 +200,7 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
               className="flex flex-col gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                submit(rating, typed);
+                if (!tooLong) submit(rating, typed);
               }}
             >
               <Textarea
@@ -227,6 +231,15 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
                 }
                 className="min-h-16 text-xs"
               />
+              {tooLong && (
+                <p
+                  data-slot="feedback-too-long"
+                  role="alert"
+                  className="text-destructive text-xs"
+                >
+                  {t("bots.chat.feedback.tooLong")}
+                </p>
+              )}
               {reader != null && (
                 <p
                   data-slot="feedback-reader"
@@ -242,7 +255,9 @@ export const MessageFeedback = ({ id, reader, send }: MessageFeedbackProps) => {
                 size="sm"
                 className="self-end"
                 // After a failed send, an empty comment still retries the rating.
-                disabled={status === "sending" || (typed == null && !unsent)}
+                disabled={
+                  status === "sending" || tooLong || (typed == null && !unsent)
+                }
               >
                 {t("bots.chat.feedback.send")}
               </Button>

@@ -429,6 +429,7 @@
         "placeholderDownAgent": "Beri tahu agen apa yang perlu diubah…",
         "readerNamed": "{{name}} membaca ini dan membalas di chat. Tim kami juga melihatnya.",
         "readerAgent": "Agen membaca ini dan membalas di chat. Tim kami juga melihatnya.",
+        "tooLong": "Terlalu panjang untuk dikirim di sini. Tempel di chat saja, teks panjang akan dilampirkan sebagai file.",
         "send": "Send",
         "sent": "Thanks for the feedback",
         "notSynced": "Couldn't send feedback yet",

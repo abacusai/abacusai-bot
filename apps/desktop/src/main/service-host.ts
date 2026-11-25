@@ -17,7 +17,11 @@ import {
   readUserLanguage,
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
-import { ownWords, visibleUserText } from "@abacus-ai/agent/user-text";
+import {
+  ownWords,
+  USER_TEXT_INLINE_MAX,
+  visibleUserText,
+} from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
@@ -5474,6 +5478,13 @@ export class ServiceHost {
       !this.isOwnerSession(feedback.sessionId)
     )
       return;
+    // Whole or not at all: the box refuses a longer one before it gets here.
+    if (feedback.comment.length > USER_TEXT_INLINE_MAX) {
+      console.warn(
+        `[feedback] ${feedback.sessionId}: a comment over the bound was not sent to the agent`
+      );
+      return;
+    }
     this.aguiRelay
       .feedback({
         threadId: feedback.sessionId,

@@ -42,8 +42,11 @@ export interface FeedbackOutcome {
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-/** The platform's cap; anything longer is cut there anyway. */
-const MAX_COMMENT_LENGTH = 2000;
+/**
+ * The platform's cap on the team's copy; anything longer is cut there anyway.
+ * Only that copy: the chat's agent gets the user's words whole.
+ */
+const PLATFORM_COMMENT_MAX = 2000;
 const MAX_MODEL_LENGTH = 200;
 /** Same shape the transcript sync uses for session ids. */
 const SESSION_ID = /^[A-Za-z0-9._-]{1,128}$/;
@@ -70,10 +73,7 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
     return null;
   if (typeof rating !== "string" || !RATINGS.has(rating as FeedbackRating))
     return null;
-  const comment =
-    typeof raw.comment === "string"
-      ? raw.comment.trim().slice(0, MAX_COMMENT_LENGTH)
-      : "";
+  const comment = typeof raw.comment === "string" ? raw.comment.trim() : "";
   const model =
     typeof raw.model === "string" && raw.model.length > 0
       ? raw.model.slice(0, MAX_MODEL_LENGTH)
@@ -174,7 +174,7 @@ export class FeedbackService {
     if (feedback == null) return { ok: false, reason: "invalid" };
     return this.post(feedback.sessionId, feedback.segmentId, {
       rating: feedback.rating,
-      comment: feedback.comment ?? "",
+      comment: (feedback.comment ?? "").slice(0, PLATFORM_COMMENT_MAX),
       model: feedback.model ?? null,
     });
   }

@@ -429,6 +429,7 @@
         "placeholderDownAgent": "Vertel de agent wat er anders moet…",
         "readerNamed": "{{name}} leest dit en antwoordt in de chat. Ons team ziet het ook.",
         "readerAgent": "De agent leest dit en antwoordt in de chat. Ons team ziet het ook.",
+        "tooLong": "Te lang om hier te versturen. Plak het in de chat, waar lange tekst als bestand wordt bijgevoegd.",
         "send": "Versturen",
         "sent": "Bedankt voor je feedback",
         "notSynced": "Feedback nog niet verstuurd",

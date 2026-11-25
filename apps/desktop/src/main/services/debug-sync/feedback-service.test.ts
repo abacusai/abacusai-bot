@@ -158,7 +158,7 @@ describe("reporting a turn's thumbs", () => {
 });
 
 describe("what the renderer may send", () => {
-  it("passes a well-formed rating through, trimmed and capped", () => {
+  it("passes a well-formed rating through, trimmed, the comment whole", () => {
     expect(
       sanitizeFeedback({
         sessionId: "sess-1",
@@ -181,7 +181,7 @@ describe("what the renderer may send", () => {
         rating: "up",
         comment: "x".repeat(5000),
       })?.comment
-    ).toHaveLength(2000);
+    ).toHaveLength(5000);
   });
 
   it.each([

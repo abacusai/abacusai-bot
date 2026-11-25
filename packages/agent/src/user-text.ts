@@ -5,6 +5,14 @@ const REMINDER_CLOSE = "</system_reminder>";
 const ROUTINE_FIRE = /^\[routine\] "/;
 
 /**
+ * The longest the user's own text goes into a turn as written, about 25-30k
+ * tokens. Nothing on the way cuts their words: past this the composer
+ * attaches a paste as a file the model reads, and a box that cannot attach
+ * (the thumbs comment) says it is too long instead of sending part of it.
+ */
+export const USER_TEXT_INLINE_MAX = 100_000;
+
+/**
  * Removes each `<system_reminder>...</system_reminder>` block (shortest match,
  * left to right). A plain scan rather than a lazy regex, which goes quadratic
  * on many unclosed openers.

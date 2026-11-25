@@ -12,6 +12,7 @@ export {
   isRoutineFire,
   isHiddenUserText,
   legacyOperator,
+  USER_TEXT_INLINE_MAX,
   visibleUserText,
 } from "@abacus-ai/agent/user-text";
 
