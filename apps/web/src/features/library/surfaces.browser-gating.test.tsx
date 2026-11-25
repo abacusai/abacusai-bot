@@ -171,17 +171,52 @@ it("terminal shell menu uses the translated label rather than an object", async 
   const { fireEvent } = await import("@testing-library/react");
   const { sessionConversationKey } =
     await import("@abacus-ai/contract/conversation-scope");
+  const { contract } = await import("@abacus-ai/contract/contract");
+  const { implement } = await import("@orpc/server");
+  const { SYSTEM_INFO } = await import("#renderer/test-support/app-harness");
   const { openTab } =
     await import("#renderer/features/sessions/dock/panel-tabs-store");
   openTab(sessionConversationKey("default", "spreadsheet"), {
     ref: "files",
     title: "Files",
   });
-  const app = await renderApp("/sessions/spreadsheet?tab=files&view=split");
+  const os = implement(contract);
+  // Windows with two shells that start: Terminal lists them under it.
+  const app = await renderApp("/sessions/spreadsheet?tab=files&view=split", {
+    system: { ...SYSTEM_INFO, platform: "win32" },
+    procedures: {
+      terminal: {
+        events: os.terminal.events.handler(async function* ({
+          signal,
+        }: {
+          signal?: AbortSignal;
+        }) {
+          await new Promise<void>((resolve) =>
+            signal?.addEventListener("abort", () => resolve(), { once: true })
+          );
+          yield* [];
+        } as never),
+        shell: {
+          get: os.terminal.shell.get.handler(() => ({
+            selected: "powershell",
+            effective: "powershell",
+            statuses: [
+              { id: "cmd", available: true },
+              { id: "powershell", available: true },
+            ],
+          })),
+        },
+      },
+    },
+  });
   try {
     fireEvent.click(await screen.findByRole("button", { name: "Add tab" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Terminal" }));
     expect(
-      await screen.findByRole("menuitem", { name: /Default shell/ })
+      await screen.findByRole("menuitem", { name: "Command Prompt" })
+    ).toBeDefined();
+    expect(
+      screen.getByRole("menuitem", { name: "Windows PowerShell" })
     ).toBeDefined();
     expect(screen.queryByText(/returned an object/)).toBeNull();
   } finally {
