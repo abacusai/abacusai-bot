@@ -49,7 +49,7 @@ vi.mock("../../services/workspace/terminal-shells", async () => {
   return {
     effectiveTerminalShell: () => "system",
     terminalShellStatuses: () => [],
-    preferredTerminalShell: () => settings.readTerminalShell(),
+    preferredTerminalShell: () => settings.readTerminalShell("linux"),
   };
 });
 
