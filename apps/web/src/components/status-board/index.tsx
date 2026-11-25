@@ -199,7 +199,6 @@ export const StatusBanner = ({
 }: {
   suppressed?: boolean;
 }) => {
-  const { t } = useTranslation();
   const items = useStatusItems();
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
   const item = items.find(
@@ -209,6 +208,25 @@ export const StatusBanner = ({
       !closed.has(`${entry.key}@${entry.since}`)
   );
   if (!IS_ELECTRON || suppressed || item == null) return null;
+  return (
+    <StatusBannerCard
+      item={item}
+      onClose={() =>
+        setClosed(new Set([...closed, `${item.key}@${item.since}`]))
+      }
+    />
+  );
+};
+
+/** The banner itself, for one lane's stop (also the gallery's fixture). */
+export const StatusBannerCard = ({
+  item,
+  onClose,
+}: {
+  item: StatusItem;
+  onClose: () => void;
+}) => {
+  const { t } = useTranslation();
   const name = platformName(item.key.slice(5), t);
   return (
     <aside
@@ -232,13 +250,7 @@ export const StatusBanner = ({
         <p className="text-muted-foreground text-xs">{statusLine(item, t)}</p>
         <div className="mt-1 flex gap-2">
           <BannerAction item={item} />
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() =>
-              setClosed(new Set([...closed, `${item.key}@${item.since}`]))
-            }
-          >
+          <Button size="sm" variant="ghost" onClick={onClose}>
             {t("common.close")}
           </Button>
         </div>
