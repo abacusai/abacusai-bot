@@ -95,7 +95,10 @@ import {
 } from "#renderer/lib/own-key-unavailable";
 import {
   checkPaymentNow,
+  claimTurnSendAgain,
+  noteTurnPaymentVerdict,
   startPaymentConfirmWatch,
+  turnPaymentVerdict,
   usePaymentConfirmPhase,
   usePaymentRecheck,
 } from "#renderer/lib/payment-confirming";
@@ -865,9 +868,12 @@ const PAYMENT_PLAN_COPY = {
  */
 const PaymentPlanCard = ({
   cause,
+  runId,
   onSendAgain,
 }: {
   cause: "lapsed" | "no_plan";
+  /** The refused turn: its card's verdict and its one send-again outlive a remount. */
+  runId: string;
   /** Offered when Retry would be: the latest outcome, a thread that can reply. */
   onSendAgain?: () => void;
 }) => {
@@ -875,23 +881,27 @@ const PaymentPlanCard = ({
   const { runtime, composer } = useChatView();
   const { transport } = useAppContext();
   const copy = PAYMENT_PLAN_COPY[cause];
-  const [shownAt] = useState(() => (cause === "no_plan" ? Date.now() : null));
-  const [verdict, setVerdict] = useState<"landed" | "held" | null>(null);
-  usePaymentRecheck(shownAt, () => {
-    void transport.client.account
-      .payment({ refresh: true })
-      .then((next) => {
-        if (next === null) setVerdict("landed");
-        else if (next.reason === "unconfirmed") setVerdict("held");
-      })
-      .catch(() => {});
-  });
-  // Sent once: the verdict stays "landed" after the resend starts.
-  const sent = useRef(false);
+  const [verdict, setVerdict] = useState(() => turnPaymentVerdict(runId));
+  // The shared re-check (payment-confirming.ts): one account read for every
+  // card and the screen. Not once Confirming has taken over: its own watch
+  // then sends the message again, the one way it is sent.
+  usePaymentRecheck(
+    transport.client,
+    cause === "no_plan" && verdict == null ? `run:${runId}` : null,
+    (next) => {
+      const settled =
+        next === null
+          ? "landed"
+          : next.reason === "unconfirmed"
+            ? "held"
+            : null;
+      if (settled == null) return;
+      noteTurnPaymentVerdict(runId, settled);
+      setVerdict(settled);
+    }
+  );
   const sendAgain = useEffectEvent(() => {
-    if (sent.current) return;
-    sent.current = true;
-    onSendAgain?.();
+    if (onSendAgain != null && claimTurnSendAgain(runId)) onSendAgain();
   });
   useEffect(() => {
     if (verdict === "landed") sendAgain();
@@ -1434,6 +1444,7 @@ export const ErrorCard = ({
     ) : (
       <PaymentPlanCard
         cause={payment.cause === "lapsed" ? "lapsed" : "no_plan"}
+        runId={outcome.runId}
         {...(latest && canReply ? { onSendAgain: retry } : {})}
       />
     );

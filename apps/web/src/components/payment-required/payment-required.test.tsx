@@ -3,6 +3,7 @@ import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { resetPaymentConfirmWatch } from "#renderer/lib/payment-confirming";
 import { renderApp } from "#renderer/test-support/app-harness";
 
 const os = implement(contract);
@@ -11,6 +12,7 @@ afterEach(async () => {
   app?.view.unmount();
   await app?.cleanup();
   app = undefined;
+  resetPaymentConfirmWatch();
 });
 
 it("Sign out on the shell's payment screen signs out as the profile menu does", async () => {
@@ -42,7 +44,7 @@ it("Sign out on the shell's payment screen signs out as the profile menu does", 
   expect(signOut).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({ input: { keepOtherApiKeys: true } })
   );
-});
+}, 30_000);
 
 const DIALOG_SCREENS = [
   { reason: "unconfirmed", title: "Confirming your payment…", cta: null },

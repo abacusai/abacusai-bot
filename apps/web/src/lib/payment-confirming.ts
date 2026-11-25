@@ -1,3 +1,4 @@
+import type { AbacusPaymentRequired } from "@abacus-ai/contract/contracts";
 /**
  * A payment the platform holds: its gate answers 402 "unconfirmed" for a
  * payment made but not confirmed (an account that never paid is
@@ -17,7 +18,7 @@ import type { AppClient } from "#renderer/data/transport/types";
 export const PAYMENT_CONFIRM_WAIT_MS = 5 * 60_000;
 const PAYMENT_CONFIRM_POLL_MS = 5_000;
 /** The checkout link lives 30 minutes; the watch stops after it. */
-const PAYMENT_CONFIRM_LIMIT_MS = 30 * 60_000;
+export const PAYMENT_CONFIRM_LIMIT_MS = 30 * 60_000;
 
 export type PaymentConfirmPhase = "confirming" | "late" | "confirmed";
 
@@ -87,39 +88,112 @@ export const checkPaymentNow = (): void => watch?.check();
 export const resetPaymentConfirmWatch = (): void => {
   watch?.stop();
   settle(null);
+  recheckRun?.stop();
+  recheckKeys.clear();
+  recheckUntil = 0;
+  turnVerdicts.clear();
+  turnsSentAgain.clear();
 };
 
 export const usePaymentConfirmPhase = (): PaymentConfirmPhase | null =>
   useStore(paymentConfirmStore, (state) => state.phase);
 
+type PaymentVerdict = AbacusPaymentRequired | null;
+
+/** Who hears the shared re-check's verdicts: the no-plan screen and every no-plan chat card on screen. */
+const recheckListeners = new Set<(verdict: PaymentVerdict) => void>();
+/** What has already opened a re-check window: a remount never opens another. */
+const recheckKeys = new Set<string>();
+let recheckUntil = 0;
+let recheckRun: { stop: () => void } | null = null;
+
 /**
- * A plan screen's re-check: `check` runs every few seconds and when the
- * window comes back, from `since` for the checkout link's life, as the
- * confirm watch does. A payment made anywhere (a checkout the user opened
- * themselves, in the browser) moves them on without Try again. Null: none.
- * `expired` runs once the window is over.
+ * The one re-check for an account with no plan, shared like the confirm
+ * watch: one account read every few seconds and on focus, whoever listens,
+ * and one checkout link's life (30 minutes) from the first `key` that asked.
+ * A new `key` (a checkout opened, a new refused turn) opens a fresh window; a
+ * key already seen (a remount) does not. It stops once nobody listens, the
+ * window ends, the payment lands, or the platform says it holds the payment
+ * (the confirm watch takes over from there).
+ */
+const startPaymentRecheck = (client: AppClient, key: string): void => {
+  if (!recheckKeys.has(key)) {
+    recheckKeys.add(key);
+    recheckUntil = Date.now() + PAYMENT_CONFIRM_LIMIT_MS;
+  }
+  if (recheckRun != null || Date.now() >= recheckUntil) return;
+  let checking = false;
+  const check = async () => {
+    if (checking) return;
+    if (Date.now() >= recheckUntil) {
+      stop();
+      return;
+    }
+    checking = true;
+    const verdict = await client.account
+      .payment({ refresh: true })
+      .catch(() => undefined);
+    checking = false;
+    if (verdict === undefined || recheckRun !== run) return;
+    if (verdict === null || verdict.reason === "unconfirmed") {
+      // Settled: a remount must not open the window again. A new key may.
+      recheckUntil = 0;
+      stop();
+    }
+    for (const listener of Array.from(recheckListeners)) listener(verdict);
+  };
+  const timer = setInterval(() => void check(), PAYMENT_CONFIRM_POLL_MS);
+  const onFocus = () => void check();
+  window.addEventListener("focus", onFocus);
+  const stop = () => {
+    clearInterval(timer);
+    window.removeEventListener("focus", onFocus);
+    if (recheckRun === run) recheckRun = null;
+  };
+  const run = { stop };
+  recheckRun = run;
+};
+
+/** What the re-check settled for a refused turn's card, kept across remounts. */
+const turnVerdicts = new Map<string, "landed" | "held">();
+/** Turns whose waiting message was already sent again. */
+const turnsSentAgain = new Set<string>();
+
+export const turnPaymentVerdict = (runId: string): "landed" | "held" | null =>
+  turnVerdicts.get(runId) ?? null;
+
+export const noteTurnPaymentVerdict = (
+  runId: string,
+  verdict: "landed" | "held"
+): void => {
+  turnVerdicts.set(runId, verdict);
+};
+
+/** True once per turn: the one send-again a landed payment allows. */
+export const claimTurnSendAgain = (runId: string): boolean => {
+  if (turnsSentAgain.has(runId)) return false;
+  turnsSentAgain.add(runId);
+  return true;
+};
+
+/**
+ * Listen to the shared no-plan re-check while `key` is set (null: not
+ * listening). `heard` gets each verdict: null once the payment lands.
  */
 export const usePaymentRecheck = (
-  since: number | null,
-  check: () => void,
-  expired?: () => void
+  client: AppClient,
+  key: string | null,
+  heard: (verdict: PaymentVerdict) => void
 ): void => {
-  const tick = useEffectEvent(check);
-  const over = useEffectEvent(() => expired?.());
+  const onVerdict = useEffectEvent(heard);
   useEffect(() => {
-    if (since == null) return;
-    const stop = () => {
-      clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
+    if (key == null) return;
+    const listener = (verdict: PaymentVerdict) => onVerdict(verdict);
+    recheckListeners.add(listener);
+    startPaymentRecheck(client, key);
+    return () => {
+      recheckListeners.delete(listener);
+      if (recheckListeners.size === 0) recheckRun?.stop();
     };
-    const timer = setInterval(() => {
-      if (Date.now() - since > PAYMENT_CONFIRM_LIMIT_MS) {
-        stop();
-        over();
-      } else tick();
-    }, PAYMENT_CONFIRM_POLL_MS);
-    const onFocus = () => tick();
-    window.addEventListener("focus", onFocus);
-    return stop;
-  }, [since]);
+  }, [client, key]);
 };

@@ -23,6 +23,7 @@ import { UpgradeSeen } from "#renderer/components/upgrade-seen";
 import { ABACUS_BILLING_URL } from "#renderer/lib/abacus-links";
 import {
   checkPaymentNow,
+  PAYMENT_CONFIRM_LIMIT_MS,
   resetPaymentConfirmWatch,
   startPaymentConfirmWatch,
   usePaymentConfirmPhase,
@@ -248,7 +249,6 @@ const PaymentPlanPanel = ({
   // the start. A trial or plan that ended is re-checked once Upgrade opens checkout.
   const noPlan =
     payment?.reason !== "lapsed" && payment?.reason !== "trial_ended";
-  const [shownAt] = useState(() => (noPlan ? Date.now() : null));
   const src = noPlan ? "payment_no_plan" : "payment_lapsed";
   const [billing, setBilling] = useState<BillingPlan | null>(null);
   const [checkoutAt, setCheckoutAt] = useState<number | null>(null);
@@ -270,12 +270,7 @@ const PaymentPlanPanel = ({
     };
   }, [transport, lapsed]);
 
-  const recheck = async (asked: boolean) => {
-    if (asked) setChecking(true);
-    const next = await transport.client.account
-      .payment({ refresh: true })
-      .catch(() => payment);
-    if (asked) setChecking(false);
+  const settle = async (next: AbacusPaymentRequired | null) => {
     if (next == null) {
       await queryClient.invalidateQueries();
       await onSignedIn?.();
@@ -285,14 +280,33 @@ const PaymentPlanPanel = ({
       transport.orpc.account.payment.queryKey({ input: {} }),
       next
     );
-    if (asked) setStill(true);
   };
-  // Checkout runs in the browser: the app goes on the moment it lands.
+  const recheck = async () => {
+    setChecking(true);
+    const next = await transport.client.account
+      .payment({ refresh: true })
+      .catch(() => payment);
+    setChecking(false);
+    await settle(next);
+    if (next != null) setStill(true);
+  };
+  // Checkout runs in the browser: the app goes on the moment it lands. One
+  // shared re-check (payment-confirming.ts), with the no-plan chat cards; a
+  // checkout opened here opens a fresh window for its link.
   usePaymentRecheck(
-    checkoutAt ?? shownAt,
-    () => void recheck(false),
-    () => setCheckoutAt(null)
+    transport.client,
+    checkoutAt != null ? `checkout:${checkoutAt}` : noPlan ? "screen" : null,
+    (next) => void settle(next)
   );
+  // The waiting line goes with the checkout link.
+  useEffect(() => {
+    if (checkoutAt == null) return;
+    const timer = setTimeout(
+      () => setCheckoutAt(null),
+      checkoutAt + PAYMENT_CONFIRM_LIMIT_MS - Date.now()
+    );
+    return () => clearTimeout(timer);
+  }, [checkoutAt]);
 
   const offer = lapsed ? null : wallOffer(billing);
   return (
@@ -361,7 +375,7 @@ const PaymentPlanPanel = ({
           className="h-10 text-sm"
           data-action="try-again"
           disabled={checking}
-          onClick={() => void recheck(true)}
+          onClick={() => void recheck()}
         >
           {checking && <Loader2 aria-hidden className="animate-spin" />}
           {t(
