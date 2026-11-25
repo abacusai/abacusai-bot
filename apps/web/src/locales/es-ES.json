@@ -5631,7 +5631,8 @@
       "missed": "{{name}} se ha saltado ejecuciones",
       "missedMany": "Las rutinas se han saltado ejecuciones",
       "many_one": "{{count}} cosa se ha detenido",
-      "many_other": "{{count}} cosas se han detenido"
+      "many_other": "{{count}} cosas se han detenido",
+      "firstMessage": "Saluda a Abacus AI en {{app}}"
     },
     "body": {
       "signedOut": "No puede ejecutarse mientras tengas la sesión cerrada. Inicia sesión y volverá a ejecutarse.",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "El inicio de sesión en {{platform}} no terminó, así que está en pausa. Haz clic en Conectar para terminarlo.",
       "missedMany_one": "{{routines}} rutinas se han saltado {{count}} ejecución mientras el ordenador dormía o la app estaba cerrada. {{madeUp}} recuperadas.",
       "missedMany_other": "{{routines}} rutinas se han saltado {{count}} ejecuciones mientras el ordenador dormía o la app estaba cerrada. {{madeUp}} recuperadas.",
-      "routineLaneOff": "Sus ejecuciones no te llegan: {{platform}} está desactivado. Vuelve a conectarlo para recibirlas."
+      "routineLaneOff": "Sus ejecuciones no te llegan: {{platform}} está desactivado. Vuelve a conectarlo para recibirlas.",
+      "firstMessage": "{{app}} solo deja que Abacus AI te escriba después de que tú le escribas una vez. Abre su chat y salúdalo: lo que te espera ahí llega enseguida."
     },
     "chat": {
       "back": "{{name}} vuelve a ejecutarse."

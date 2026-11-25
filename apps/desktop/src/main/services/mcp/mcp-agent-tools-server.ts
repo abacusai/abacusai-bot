@@ -593,6 +593,8 @@ export interface McpAgentToolsServerOptions {
       downApp: string | null;
       /** No path to the user was up: it goes, once, when one is back. */
       queued: boolean;
+      /** The app asked for waits for the user's first message to its bot. */
+      firstMessageApp?: string;
     } | void>;
     /** Throws where unsupported. */
     sendFile?: (
@@ -2973,6 +2975,12 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     if (went != null && went.queued && this.internetDown())
       return this.ok(QUEUED_OFFLINE);
+    if (went != null && went.queued && went.firstMessageApp != null)
+      return this.ok(
+        `Queued, not delivered: ${went.firstMessageApp} will not let the bot message the user until they message the bot there once. ` +
+          "The app has told them how; it goes by itself, once, when they do. " +
+          "Do not send it again and do not say it was delivered or that it should be in their messages."
+      );
     if (went != null && went.queued)
       return this.ok(
         "Queued: no chat app reaches the user right now, so it goes by itself, once, as soon as one is back. " +

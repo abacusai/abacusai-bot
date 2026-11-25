@@ -5631,7 +5631,8 @@
       "missed": "{{name}} missed runs",
       "missedMany": "Routines missed runs",
       "many_one": "{{count}} thing stopped",
-      "many_other": "{{count}} things stopped"
+      "many_other": "{{count}} things stopped",
+      "firstMessage": "Say hi to Abacus AI on {{app}}"
     },
     "body": {
       "signedOut": "It can't run while you're signed out. Sign in and it runs again.",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "The {{platform}} sign-in didn't finish, so it's paused. Click Connect to finish it.",
       "missedMany_one": "{{routines}} routines missed {{count}} run while the computer slept or the app was closed. {{madeUp}} made up.",
       "missedMany_other": "{{routines}} routines missed {{count}} runs while the computer slept or the app was closed. {{madeUp}} made up.",
-      "routineLaneOff": "Its runs can't reach you: {{platform}} is turned off. Connect it again to get them."
+      "routineLaneOff": "Its runs can't reach you: {{platform}} is turned off. Connect it again to get them.",
+      "firstMessage": "{{app}} only lets Abacus AI message you after you message it once. Open its chat and say hi: what's waiting for you there arrives right after."
     },
     "chat": {
       "back": "{{name}} is running again."

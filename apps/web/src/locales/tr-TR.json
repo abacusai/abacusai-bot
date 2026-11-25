@@ -5631,7 +5631,8 @@
       "missed": "{{name}} çalıştırmaları kaçırdı",
       "missedMany": "Rutinler çalıştırmaları kaçırdı",
       "many_one": "{{count}} şey durdu",
-      "many_other": "{{count}} şey durdu"
+      "many_other": "{{count}} şey durdu",
+      "firstMessage": "{{app}} üzerinde Abacus AI'a merhaba deyin"
     },
     "body": {
       "signedOut": "Oturum kapalıyken çalışamaz. Oturum açın, yeniden çalışır.",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "{{platform}} oturum açma işlemi tamamlanmadı, bu yüzden duraklatıldı. Tamamlamak için Bağlan'a tıklayın.",
       "missedMany_one": "Bilgisayar uykudayken veya uygulama kapalıyken {{routines}} rutin {{count}} çalıştırmayı kaçırdı. {{madeUp}} telafi edildi.",
       "missedMany_other": "Bilgisayar uykudayken veya uygulama kapalıyken {{routines}} rutin {{count}} çalıştırmayı kaçırdı. {{madeUp}} telafi edildi.",
-      "routineLaneOff": "Çalıştırmaları size ulaşamıyor: {{platform}} kapalı. Almak için yeniden bağlayın."
+      "routineLaneOff": "Çalıştırmaları size ulaşamıyor: {{platform}} kapalı. Almak için yeniden bağlayın.",
+      "firstMessage": "{{app}}, siz bir kez mesaj gönderene kadar Abacus AI'ın size yazmasına izin vermez. Sohbetini açıp merhaba deyin: orada sizi bekleyenler hemen ardından gelir."
     },
     "chat": {
       "back": "{{name}} yeniden çalışıyor."

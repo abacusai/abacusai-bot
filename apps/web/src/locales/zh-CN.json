@@ -5631,7 +5631,8 @@
       "missed": "{{name}} 错过了运行",
       "missedMany": "例行任务错过了运行",
       "many_one": "{{count}} 项已停止",
-      "many_other": "{{count}} 项已停止"
+      "many_other": "{{count}} 项已停止",
+      "firstMessage": "在 {{app}} 上向 Abacus AI 打个招呼"
     },
     "body": {
       "signedOut": "你退出登录时它无法运行。登录后会再次运行。",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "{{platform}} 登录没有完成，所以已暂停。点击“连接”完成登录。",
       "missedMany_one": "电脑休眠或应用关闭期间，{{routines}} 个例行任务错过了 {{count}} 次运行，已补上 {{madeUp}} 次。",
       "missedMany_other": "电脑休眠或应用关闭期间，{{routines}} 个例行任务错过了 {{count}} 次运行，已补上 {{madeUp}} 次。",
-      "routineLaneOff": "{{platform}} 已关闭，它的运行结果无法送达你。重新连接即可收到。"
+      "routineLaneOff": "{{platform}} 已关闭，它的运行结果无法送达你。重新连接即可收到。",
+      "firstMessage": "{{app}} 要求你先给 Abacus AI 发一条消息，它才能给你发消息。打开它的聊天并打个招呼，等着你的消息随后就会送达。"
     },
     "chat": {
       "back": "{{name}} 已恢复运行。"

@@ -5631,7 +5631,8 @@
       "missed": "{{name}} ha saltato delle esecuzioni",
       "missedMany": "Le routine hanno saltato delle esecuzioni",
       "many_one": "{{count}} elemento fermo",
-      "many_other": "{{count}} elementi fermi"
+      "many_other": "{{count}} elementi fermi",
+      "firstMessage": "Saluta Abacus AI su {{app}}"
     },
     "body": {
       "signedOut": "Non può essere eseguita finché sei disconnesso. Accedi e riprenderà.",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "L'accesso a {{platform}} non è stato completato, quindi è in pausa. Fai clic su Connetti per completarlo.",
       "missedMany_one": "{{routines}} routine hanno saltato {{count}} esecuzione mentre il computer era in sospensione o l'app era chiusa. {{madeUp}} recuperate.",
       "missedMany_other": "{{routines}} routine hanno saltato {{count}} esecuzioni mentre il computer era in sospensione o l'app era chiusa. {{madeUp}} recuperate.",
-      "routineLaneOff": "Le sue esecuzioni non ti raggiungono: {{platform}} è disattivato. Ricollegalo per riceverle."
+      "routineLaneOff": "Le sue esecuzioni non ti raggiungono: {{platform}} è disattivato. Ricollegalo per riceverle.",
+      "firstMessage": "{{app}} consente ad Abacus AI di scriverti solo dopo che gli hai scritto una volta. Apri la sua chat e saluta: quello che ti aspetta lì arriva subito dopo."
     },
     "chat": {
       "back": "{{name}} è di nuovo in esecuzione."

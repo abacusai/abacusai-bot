@@ -10,8 +10,10 @@ import {
   chatAppReportText,
   REPORT_CHAT_APP_MAX_CHARS,
   reportExcerpt,
+  reportOutboxId,
   RoutineReportStore,
   runReportTargets,
+  type LaneDelivery,
   type RunReport,
 } from "./routine-report-delivery";
 
@@ -189,6 +191,53 @@ describe("the note on the user's next message", () => {
     first.taken();
     expect(notes.notesFor("bot-chat").notes).toEqual([]);
     expect(notes.notesFor("another-chat").notes).toEqual([]);
+  });
+
+  it("names only the chat apps its copy reached, as they stand when the note is shown", () => {
+    const { notes } = store();
+    notes.addNote("chat", report(), {
+      delivered: true,
+      lanes: ["abacus_discord", "abacus_telegram", "whatsapp"],
+    });
+    const stand = new Map<string, LaneDelivery>([
+      [
+        reportOutboxId("job-1@100", "abacus_discord"),
+        { status: "held", firstMessage: true },
+      ],
+      [reportOutboxId("job-1@100", "abacus_telegram"), { status: "sent" }],
+      [reportOutboxId("job-1@100", "whatsapp"), { status: "not-sent" }],
+    ]);
+    const lookup = (_lane: string, id: string) => stand.get(id)!;
+    const [held] = notes.notesFor("chat", lookup).notes;
+    expect(held).toContain(
+      "delivered its report to the user in this chat and Telegram:"
+    );
+    expect(held).not.toMatch(/in this chat and[^:]*Discord/);
+    expect(held).toContain(
+      "Its copy for Discord has NOT reached them: Discord will not let the bot message them until they message the bot there once."
+    );
+    expect(held).toContain("Its copy for WhatsApp never reached them.");
+    // The user said hi on Discord: the held copy went, and the note says so.
+    stand.set(reportOutboxId("job-1@100", "abacus_discord"), {
+      status: "sent",
+    });
+    const [arrived] = notes.notesFor("chat", lookup).notes;
+    expect(arrived).toContain("in this chat and Discord and Telegram:");
+    expect(arrived).not.toContain("Its copy for Discord");
+  });
+
+  it("names the app a copy reached instead of the one it was for", () => {
+    const { notes } = store();
+    notes.addNote("chat", report(), {
+      delivered: true,
+      lanes: ["abacus_discord"],
+    });
+    const [note] = notes.notesFor("chat", () => ({
+      status: "sent",
+      via: "Telegram",
+    })).notes;
+    expect(note).toContain("in this chat and Telegram:");
+    expect(note).toContain("Its copy for Discord went to Telegram instead");
   });
 
   it("does not say delivered for a run the user opened to answer", () => {

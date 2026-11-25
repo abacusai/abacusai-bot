@@ -11,6 +11,7 @@ import {
   type SiteDeployGalleryState,
 } from "#renderer/components/site-deploy/gallery";
 import { SoundSynthesisProbe } from "#renderer/components/sound-preview/probe";
+import { StatusBannerCard } from "#renderer/components/status-board";
 import {
   STREAK_GALLERY_STATES,
   StreakGallery,
@@ -266,6 +267,17 @@ const extension = {
     ) : props.fixture === "resume-card" ||
       props.fixture === "resume-card-plain" ? (
       <ResumeCardGallery chips={props.fixture === "resume-card"} />
+    ) : props.fixture === "status-banner-first-message" ? (
+      <StatusBannerCard
+        item={{
+          key: "lane:abacus_discord",
+          state: "stopped-needs-user",
+          reason: "first-message",
+          since: 0,
+          detail: { platform: "abacus_discord" },
+        }}
+        onClose={() => undefined}
+      />
     ) : props.fixture === "new-look" ? (
       <div className="relative h-40 transform-gpu">
         <NewLookCard onTour={() => undefined} onDismiss={() => undefined} />

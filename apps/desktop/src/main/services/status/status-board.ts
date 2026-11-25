@@ -12,6 +12,7 @@ import * as fs from "node:fs";
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 import type { PlanT } from "@abacus-ai/contract/billing-plan";
 import {
+  appOfSelfLane,
   messagingPlatformSpec,
   type MessagingPlatformId,
 } from "@abacus-ai/contract/messaging";
@@ -631,6 +632,12 @@ const platformName = (platform: string, t: PlanT): string => {
   return t(`messaging.platforms.${spec?.nameKey ?? platform}`);
 };
 
+/** The chat app a lane is on ("Discord" for the shared bot's lane there). */
+const appName = (entry: Pending, t: PlanT): string => {
+  const lane = entry.key.slice("lane:".length);
+  return platformName(appOfSelfLane(lane as MessagingPlatformId) ?? lane, t);
+};
+
 /** The one-line title of a single item's notice. */
 const titleOf = (entry: Pending, t: PlanT): string => {
   const name = subject(entry, t);
@@ -640,6 +647,8 @@ const titleOf = (entry: Pending, t: PlanT): string => {
       return t("status.title.paused", { name });
     case "stopped-needs-user":
       if (!lane) return t("status.title.onHold", { name });
+      if (entry.reason === "first-message")
+        return t("status.title.firstMessage", { app: appName(entry, t) });
       return entry.reason === "link-lost"
         ? t("native.linkLostTitle", { platform: name })
         : entry.reason === "login-not-finished"
@@ -686,6 +695,8 @@ const bodyOf = (entry: Pending, t: PlanT): string => {
         : t("status.body.routineLinkLost", { platform });
     case "login-not-finished":
       return t("status.body.loginNotFinished", { platform: name });
+    case "first-message":
+      return t("status.body.firstMessage", { app: appName(entry, t) });
     case "lane-off":
       return t("status.body.routineLaneOff", { platform });
     case "gave-up":

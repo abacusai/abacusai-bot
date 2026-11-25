@@ -5631,7 +5631,8 @@
       "missed": "{{name}}が実行を逃しました",
       "missedMany": "ルーティンが実行を逃しました",
       "many_one": "{{count}}件が停止しました",
-      "many_other": "{{count}}件が停止しました"
+      "many_other": "{{count}}件が停止しました",
+      "firstMessage": "{{app}} で Abacus AI にあいさつしてください"
     },
     "body": {
       "signedOut": "サインアウト中は実行できません。サインインすると再び実行されます。",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "{{platform}}のサインインが完了していないため、一時停止しています。「接続」をクリックして完了してください。",
       "missedMany_one": "コンピューターのスリープ中またはアプリが閉じている間に、{{routines}}件のルーティンが{{count}}回の実行を逃しました。{{madeUp}}回を補いました。",
       "missedMany_other": "コンピューターのスリープ中またはアプリが閉じている間に、{{routines}}件のルーティンが{{count}}回の実行を逃しました。{{madeUp}}回を補いました。",
-      "routineLaneOff": "{{platform}}がオフのため、実行結果が届きません。受け取るには再接続してください。"
+      "routineLaneOff": "{{platform}}がオフのため、実行結果が届きません。受け取るには再接続してください。",
+      "firstMessage": "{{app}} では、あなたが一度メッセージを送るまで Abacus AI からメッセージを送れません。チャットを開いて「hi」と送ると、届いていないメッセージがすぐに届きます。"
     },
     "chat": {
       "back": "{{name}}が再び実行されています。"

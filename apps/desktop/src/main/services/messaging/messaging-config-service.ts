@@ -35,6 +35,10 @@ type StoredPlatform = {
    * `enabled`: it stays on, is not started again, and Connect resumes it.
    */
   appStopped?: "login-not-finished" | null;
+  /** A shared bot's lane: the user must message the bot there once before it can reach them. */
+  firstMessageNeeded?: boolean;
+  /** A shared bot's profile, where its chat is one click away; learned at pairing. */
+  botProfileUrl?: string;
 };
 
 type StoredConfig = {
@@ -377,6 +381,38 @@ export const savePlatformLinkLost = (platformId: MessagingPlatformId): void => {
   const config = readConfig();
   const platforms = { ...config.platforms };
   platforms[platformId] = { ...platforms[platformId], linkLost: true };
+  writeConfig({ ...config, platforms });
+};
+
+export const readPlatformFirstMessageNeeded = (
+  platformId: MessagingPlatformId
+): boolean => readConfig().platforms?.[platformId]?.firstMessageNeeded === true;
+
+export const savePlatformFirstMessageNeeded = (
+  platformId: MessagingPlatformId,
+  needed: boolean
+): void => {
+  const config = readConfig();
+  const platforms = { ...config.platforms };
+  platforms[platformId] = {
+    ...platforms[platformId],
+    firstMessageNeeded: needed,
+  };
+  writeConfig({ ...config, platforms });
+};
+
+export const readPlatformBotProfileUrl = (
+  platformId: MessagingPlatformId
+): string | null => readConfig().platforms?.[platformId]?.botProfileUrl ?? null;
+
+export const savePlatformBotProfileUrl = (
+  platformId: MessagingPlatformId,
+  url: string
+): void => {
+  const config = readConfig();
+  if (config.platforms?.[platformId]?.botProfileUrl === url) return;
+  const platforms = { ...config.platforms };
+  platforms[platformId] = { ...platforms[platformId], botProfileUrl: url };
   writeConfig({ ...config, platforms });
 };
 

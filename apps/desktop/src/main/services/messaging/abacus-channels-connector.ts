@@ -15,6 +15,7 @@ import { resolveAbacusApiKey } from "../providers/abacus";
 import { abacusRoutellmV1, abacusUserAgent } from "../providers/abacus-host";
 import {
   chunkMessage,
+  FirstMessageNeededError,
   saveInboundMedia,
   type ConnectorCallbacks,
   type MessagingConnector,
@@ -24,6 +25,10 @@ import {
   DISCORD_PARTITION,
 } from "./discord-web-connector";
 import type { LaneFailure } from "./lane-supervisor";
+import {
+  readPlatformBotProfileUrl,
+  savePlatformBotProfileUrl,
+} from "./messaging-config-service";
 
 /**
  * Discord or Telegram through the shared "Abacus AI" bots. The platform owns
@@ -43,6 +48,13 @@ const MAX_MESSAGE_LENGTH: Record<SharedChannel, number> = {
 const INBOX_WAIT_SECS = 25;
 /** How often the pairing card re-asks "linked yet?" while a code is up. */
 const PAIR_POLL_MS = 3000;
+
+/**
+ * The server's code when Discord refuses to open the user's DM with the bot:
+ * the user never messaged it and shares no server with it. A server that
+ * sends no code makes this a plain send failure.
+ */
+const DISCORD_DM_CLOSED_CODE = "discord_dm_closed";
 
 /** A channels call the server answered with an HTTP error. */
 class ChannelCallError extends Error {
@@ -245,6 +257,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
     private readonly platform: HostPlatform = "electron"
   ) {
     this.id = `abacus_${channel}`;
+    // Kept from the pairing: a linked lane is never paired again to learn it.
+    this.botProfileUrl = readPlatformBotProfileUrl(this.id) ?? undefined;
   }
 
   /** What the settings card shows: linked, a pending code, or the way in. */
@@ -295,11 +309,17 @@ export class AbacusChannelsConnector implements MessagingConnector {
       );
     for (const chunk of chunkMessage(text, MAX_MESSAGE_LENGTH[this.channel])) {
       const messageId = replyContext?.message_id;
-      const result = await this.call<{ ok?: boolean; error?: string }>(
+      const result = await this.call<{
+        ok?: boolean;
+        error?: string;
+        code?: string;
+      }>(
         messageId != null
           ? { action: "reply", message_id: messageId, text: chunk }
           : { action: "send", channel: this.channel, text: chunk }
       );
+      if (result.ok !== true && result.code === DISCORD_DM_CLOSED_CODE)
+        throw new FirstMessageNeededError(result.error);
       if (result.ok !== true)
         throw new Error(
           result.error ?? `${this.channel} did not accept the message`
@@ -335,8 +355,10 @@ export class AbacusChannelsConnector implements MessagingConnector {
       this.channel === "discord" && result.deep_link != null
         ? /[?&]client_id=(\d+)/.exec(result.deep_link)?.[1]
         : undefined;
-    this.botProfileUrl =
-      clientId != null ? `https://discord.com/users/${clientId}` : undefined;
+    if (clientId != null) {
+      this.botProfileUrl = `https://discord.com/users/${clientId}`;
+      savePlatformBotProfileUrl(this.id, this.botProfileUrl);
+    }
     // A browser host has no Discord window to hold the consent page in.
     this.consent =
       this.channel === "discord" && this.platform !== "web-host"

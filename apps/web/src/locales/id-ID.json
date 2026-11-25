@@ -5631,7 +5631,8 @@
       "missed": "{{name}} melewatkan jalankan",
       "missedMany": "Rutinitas melewatkan jalankan",
       "many_one": "{{count}} hal berhenti",
-      "many_other": "{{count}} hal berhenti"
+      "many_other": "{{count}} hal berhenti",
+      "firstMessage": "Sapa Abacus AI di {{app}}"
     },
     "body": {
       "signedOut": "Rutinitas ini tidak bisa berjalan saat Anda keluar. Masuk dan rutinitas berjalan lagi.",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "Proses masuk {{platform}} belum selesai, jadi dijeda. Klik Hubungkan untuk menyelesaikannya.",
       "missedMany_one": "{{routines}} rutinitas melewatkan {{count}} jalankan saat komputer tidur atau aplikasi ditutup. {{madeUp}} disusulkan.",
       "missedMany_other": "{{routines}} rutinitas melewatkan {{count}} jalankan saat komputer tidur atau aplikasi ditutup. {{madeUp}} disusulkan.",
-      "routineLaneOff": "Jalankannya tidak sampai ke Anda: {{platform}} dimatikan. Hubungkan lagi untuk menerimanya."
+      "routineLaneOff": "Jalankannya tidak sampai ke Anda: {{platform}} dimatikan. Hubungkan lagi untuk menerimanya.",
+      "firstMessage": "{{app}} hanya mengizinkan Abacus AI mengirimi Anda pesan setelah Anda mengirim pesan kepadanya sekali. Buka chatnya dan sapa: yang menunggu Anda di sana langsung masuk."
     },
     "chat": {
       "back": "{{name}} berjalan lagi."

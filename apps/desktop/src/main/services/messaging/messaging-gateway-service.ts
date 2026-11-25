@@ -81,6 +81,7 @@ import {
 } from "./chat-failure-reply";
 import { forChat } from "./chat-markdown";
 import {
+  FirstMessageNeededError,
   looksLikeBotOutput,
   nameIsClose,
   RecipientNotFoundError,
@@ -121,6 +122,7 @@ import {
   readGatewaySettings,
   readStoredMessageLog,
   readPlatformAppStopped,
+  readPlatformFirstMessageNeeded,
   readPlatformLinkLost,
   readPlatformSignedIn,
   readStoredOutbox,
@@ -129,6 +131,7 @@ import {
   revokePairing,
   saveGatewaySettings,
   savePlatformAppStopped,
+  savePlatformFirstMessageNeeded,
   savePlatformValues,
   setPlatformEnabled,
   writeStoredMessageLog,
@@ -574,6 +577,8 @@ export type ChatSendResult = {
   /** The app asked for, when it went to another app's own chat instead. */
   downApp: HomeChannel | null;
   queued: boolean;
+  /** Queued because this app (its name) waits for the user's first message to its bot. */
+  firstMessageApp?: string;
 };
 
 /** A status notice the outbox still owes is dropped after this. */
@@ -1064,6 +1069,8 @@ export class MessagingGatewayService {
         // hold a frame that arrived before the close completed, and routing it
         // would start a turn on behalf of a platform that is switched off.
         if (!current()) return;
+        if (message.chatId === this.connectors.get(platformId)?.selfChatId?.())
+          this.firstMessageArrived(platformId);
         void this.handleInbound(platformId, message).catch((error: unknown) => {
           console.error(`[messaging] ${platformId} inbound failed:`, error);
         });
@@ -2135,6 +2142,8 @@ export class MessagingGatewayService {
   /** A lane that can take a message now: running, and connected as far as it last said. */
   private laneUp(platformId: MessagingPlatformId): boolean {
     if (!this.connectors.has(platformId)) return false;
+    // Connected, but nothing reaches the user there until they message the bot.
+    if (readPlatformFirstMessageNeeded(platformId)) return false;
     const state = this.states.get(platformId)?.state;
     return state == null || state === "connected";
   }
@@ -2676,8 +2685,16 @@ export class MessagingGatewayService {
     // The user's own chat may have a route sending an answer: this waits for
     // it, so the chat reads them in order.
     const route = own != null ? this.routes.get(`${platform}:${chatId}`) : null;
-    if (route != null) await this.inRouteOrder(route, send);
-    else await send();
+    try {
+      if (route != null) await this.inRouteOrder(route, send);
+      else await send();
+    } catch (error) {
+      // That path is closed until the user writes there; the next one up takes it.
+      if (own == null || !(error instanceof FirstMessageNeededError))
+        throw error;
+      this.firstMessageNeeded(platform);
+      return this.sendOwed(message);
+    }
     this.appendLog({
       platform,
       chatId,
@@ -2687,7 +2704,34 @@ export class MessagingGatewayService {
       direction: "out",
       at: new Date(this.options.now?.() ?? Date.now()).toISOString(),
     });
+    if (own?.downApp != null) {
+      this.wentElsewhere.set(message.id, platform);
+      for (const old of [...this.wentElsewhere.keys()].slice(0, -200))
+        this.wentElsewhere.delete(old);
+    }
     return true;
+  }
+
+  /** Own-chat sends that reached another app's own chat, by id: the path it took. Recent ones only. */
+  private readonly wentElsewhere = new Map<string, MessagingPlatformId>();
+
+  /**
+   * Where a sendToOwnChat message stands, by its id: still owed, sent (and
+   * the platform when another app carried it), finished unsent, or unknown.
+   */
+  ownChatSendStatus(id: string): {
+    status: "queued" | "sent" | "dropped" | null;
+    via: MessagingPlatformId | null;
+  } {
+    return {
+      status: this.outbox.statusOf(id),
+      via: this.wentElsewhere.get(id) ?? null,
+    };
+  }
+
+  /** The user's own chat on `lane` waits for their first message to its bot. */
+  awaitsFirstMessage(lane: SelfLanePlatform): boolean {
+    return readPlatformFirstMessageNeeded(lane);
   }
 
   /** An owed line in the user's language as of now. */
@@ -2885,6 +2929,8 @@ export class MessagingGatewayService {
       );
     // Connect cleared the app's stop: the login is being tried again.
     status.clear(key, ["login-not-finished"]);
+    if (readPlatformFirstMessageNeeded(platformId))
+      return status.report(key, "stopped-needs-user", "first-message", detail);
     if (state === "connected" || state === "syncing")
       return status.clear(key, [
         ...LANE_RETRY_REASONS,
@@ -2913,6 +2959,32 @@ export class MessagingGatewayService {
   reportLaneStates(): void {
     for (const entry of MESSAGING_PLATFORM_CATALOG)
       this.reportLane(entry.id, this.states.get(entry.id)?.state);
+  }
+
+  /**
+   * The user's own chat on `platformId` refused a message until they write
+   * to the bot there: it stops counting as a way to them (the next app up
+   * carries their messages, else they wait), and the status board tells them
+   * once what to do. Kept across restarts.
+   */
+  private firstMessageNeeded(platformId: MessagingPlatformId): void {
+    if (readPlatformFirstMessageNeeded(platformId)) return;
+    console.log(
+      `[messaging] ${platformId}: the user's own chat waits for their first message to the bot`
+    );
+    savePlatformFirstMessageNeeded(platformId, true);
+    this.reportLane(platformId, this.states.get(platformId)?.state);
+    this.options.emitChanged();
+  }
+
+  /** The user wrote to the bot (or unlinked it): what waited for that goes now. */
+  private firstMessageArrived(platformId: MessagingPlatformId): void {
+    if (!readPlatformFirstMessageNeeded(platformId)) return;
+    console.log(`[messaging] ${platformId}: the user's own chat is open`);
+    savePlatformFirstMessageNeeded(platformId, false);
+    this.options.status?.clear(`lane:${platformId}`, ["first-message"]);
+    if (this.outbox.size > 0) this.outbox.schedule(0);
+    this.options.emitChanged();
   }
 
   /** The user's own chat hears which message never went, unless it was theirs. */
@@ -3032,6 +3104,9 @@ export class MessagingGatewayService {
     const connector = this.connectors.get(platformId);
     if (connector instanceof AbacusChannelsConnector) {
       await connector.unlink();
+      // A new link starts over: nothing is owed to a first message on this one.
+      if (readPlatformFirstMessageNeeded(platformId))
+        this.firstMessageArrived(platformId);
       this.options.emitChanged();
     }
     return this.getSnapshot();
@@ -4048,6 +4123,11 @@ export class MessagingGatewayService {
         );
         return { ...path, queued: false };
       } catch (error) {
+        // Not a failure to retry: that path stays closed until the user writes there.
+        if (error instanceof FirstMessageNeededError) {
+          this.firstMessageNeeded(path.platform);
+          return this.sendToSelf(platformId, text, from);
+        }
         console.error(
           `[messaging] ${path.platform} send to the user's own chat failed, kept to retry:`,
           error
@@ -4069,7 +4149,16 @@ export class MessagingGatewayService {
       },
       path != null ? (OUTBOX_RETRY_MS[0] ?? 0) : 0
     );
-    return { platform: platformId, chatId: "", downApp: null, queued: true };
+    const lane = app != null ? SELF_LANE_FOR_APP[app] : null;
+    return {
+      platform: platformId,
+      chatId: "",
+      downApp: null,
+      queued: true,
+      ...(app != null && lane != null && readPlatformFirstMessageNeeded(lane)
+        ? { firstMessageApp: platformLabel(app) }
+        : {}),
+    };
   }
 
   /** Send a file where sendToChat would send words. Platform support varies. */

@@ -404,6 +404,13 @@ export class PollScheduler {
  */
 export class UndeliverableChatError extends Error {}
 
+/**
+ * The user's own chat on a shared bot refused the message until the user
+ * messages the bot there once (Discord's rule for an app it shares no
+ * server with). Nothing went; it can go once they have.
+ */
+export class FirstMessageNeededError extends Error {}
+
 /** A chat or person a name that did not resolve might have meant. */
 export type RecipientCandidate = {
   name: string;

@@ -374,8 +374,10 @@ import {
   REPORT_CHAT_PLATFORM,
   REPORT_LANE_NAMES,
   REPORT_OUTBOX_KEPT_MS,
+  reportOutboxId,
   RoutineReportStore,
   runReportTargets,
+  type LaneDelivery,
   type RunReport,
 } from "./services/agent-tools/routine-report-delivery";
 import {
@@ -5818,7 +5820,30 @@ export class ServiceHost {
       this.isUnattendedSession(sessionId)
     )
       return { notes: [], taken: () => undefined };
-    return this.routineReports.notesFor(sessionId);
+    return this.routineReports.notesFor(sessionId, (lane, outboxId) =>
+      this.reportLaneDelivery(lane, outboxId)
+    );
+  }
+
+  /** Where a report's copy for one chat app stands now, from the gateway's outbox. */
+  private reportLaneDelivery(
+    lane: SelfLanePlatform,
+    outboxId: string
+  ): LaneDelivery {
+    const { status, via } =
+      this.messagingGatewayService.ownChatSendStatus(outboxId);
+    if (status === "sent") {
+      const other = via != null ? selfLaneOf(via) : null;
+      return other != null && other !== lane
+        ? { status: "sent", via: REPORT_LANE_NAMES[other] }
+        : { status: "sent" };
+    }
+    if (status === "dropped") return { status: "not-sent" };
+    // Still owed, or not handed over yet (a delivery the app closed under).
+    return {
+      status: "held",
+      firstMessage: this.messagingGatewayService.awaitsFirstMessage(lane),
+    };
   }
 
   /**
@@ -7149,6 +7174,7 @@ export class ServiceHost {
         report.runSessionId,
         report.text
       );
+      // Where each chat app's copy arrived is read when the note is shown.
       this.routineReports.addNote(targets.chat, report, {
         delivered: true,
         lanes: targets.lanes,
@@ -7169,7 +7195,7 @@ export class ServiceHost {
       for (const lane of lanes) {
         // The gateway's one own-chat send: sent now, or held in its outbox.
         const status = await this.messagingGatewayService.sendToOwnChat(lane, {
-          id: `routine-report:${report.fire}:${lane}`,
+          id: reportOutboxId(report.fire, lane),
           text,
           ...(notBefore != null ? { notBefore } : {}),
           expiresAt: now + REPORT_OUTBOX_KEPT_MS,

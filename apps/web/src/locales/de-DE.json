@@ -5631,7 +5631,8 @@
       "missed": "{{name}} hat Läufe verpasst",
       "missedMany": "Routinen haben Läufe verpasst",
       "many_one": "{{count}} Sache gestoppt",
-      "many_other": "{{count}} Sachen gestoppt"
+      "many_other": "{{count}} Sachen gestoppt",
+      "firstMessage": "Schreib Abacus AI auf {{app}} ein Hallo"
     },
     "body": {
       "signedOut": "Sie kann nicht laufen, solange du abgemeldet bist. Melde dich an, dann läuft sie wieder.",
@@ -5640,7 +5641,8 @@
       "loginNotFinished": "Die Anmeldung bei {{platform}} wurde nicht abgeschlossen, daher ist es pausiert. Klicke auf Verbinden, um sie abzuschließen.",
       "missedMany_one": "{{routines}} Routinen haben {{count}} Lauf verpasst, während der Computer schlief oder die App geschlossen war. {{madeUp}} nachgeholt.",
       "missedMany_other": "{{routines}} Routinen haben {{count}} Läufe verpasst, während der Computer schlief oder die App geschlossen war. {{madeUp}} nachgeholt.",
-      "routineLaneOff": "Ihre Läufe erreichen dich nicht: {{platform}} ist ausgeschaltet. Verbinde es erneut, um sie zu bekommen."
+      "routineLaneOff": "Ihre Läufe erreichen dich nicht: {{platform}} ist ausgeschaltet. Verbinde es erneut, um sie zu bekommen.",
+      "firstMessage": "{{app}} lässt Abacus AI dir erst schreiben, nachdem du ihm einmal geschrieben hast. Öffne den Chat und sag Hallo: Was dort auf dich wartet, kommt gleich danach an."
     },
     "chat": {
       "back": "{{name}} läuft wieder."
