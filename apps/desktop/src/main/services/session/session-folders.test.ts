@@ -13,7 +13,9 @@ import {
 
 let home = "";
 beforeEach(() => {
-  home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "folders-")));
+  home = fs.realpathSync.native(
+    fs.mkdtempSync(path.join(os.tmpdir(), "folders-"))
+  );
   fs.mkdirSync(path.join(home, "Desktop", "site"), { recursive: true });
   fs.writeFileSync(path.join(home, "Desktop", "brief.pdf"), "%PDF-1.4\n");
   fs.mkdirSync(path.join(home, ".config"));
