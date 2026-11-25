@@ -506,6 +506,8 @@ export function nudgeNotes(entry: PhoneInboxEntry): string[] {
     );
   const hint = upgradeHintNote(entry.upgrade_hint);
   if (hint != null) notes.push(hint);
+  const pitch = agentPitchNote(entry.agent_pitch);
+  if (pitch != null) notes.push(pitch);
   if (entry.stop_keyword === true)
     notes.push(
       appNoteTag("stop keyword") +
@@ -543,6 +545,22 @@ function upgradeHintNote(hint: PhoneInboxEntry["upgrade_hint"]): string | null {
     `${plan} adds ${PLAN_GIVES} for ${priceText} (write ${firstMonth} exactly), and ask ` +
     `whether they want the link. On their yes, send it with \`billing_plan\`. Never mid-task, after a complaint or an ` +
     `error, or when you just asked them something: then leave it out.`
+  );
+}
+
+/**
+ * The hidden line for a paid account still on the bot, due one line a day:
+ * its own personal agent can take over. Left out unless this reply does a task.
+ */
+function agentPitchNote(pitch: PhoneInboxEntry["agent_pitch"]): string | null {
+  const keyword = hintField(pitch?.keyword);
+  if (keyword == null) return null;
+  const plan = hintField(pitch?.plan);
+  return (
+    `${appNoteTag("agent pitch")} The user's ${plan ?? "paid"} plan includes a personal agent of their own that works ` +
+    `24/7 with their computer off. Only if this reply does a task for them, end it with one short line in their ` +
+    `language: their own agent can do this end to end, and they can reply ${keyword} to switch. Never mid-task, after a ` +
+    `complaint or an error, or when you just asked them something: then leave it out.`
   );
 }
 

@@ -135,6 +135,7 @@ export const APP_NOTE_TAGS = {
     "check-ins sent",
     "first brief",
     "upgrade hint",
+    "agent pitch",
     "stop keyword",
     "not attached",
     "not sent",
