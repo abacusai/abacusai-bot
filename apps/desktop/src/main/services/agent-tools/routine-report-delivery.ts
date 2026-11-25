@@ -6,7 +6,8 @@
  * whose home bot made it, through the gateway's one own-chat send (its
  * outbox holds it through quiet hours or a lane that is down). A delivery is
  * recorded before it is made and replayed at launch, and the chat that got a
- * report hears it on the user's next message there, as a hidden note.
+ * report hears it on the user's next message there, as a hidden note saying
+ * where it actually arrived by then.
  */
 import fs from "node:fs";
 
@@ -42,6 +43,25 @@ export const REPORT_LANE_NAMES: Record<SelfLanePlatform, string> = {
   abacus_telegram: "Telegram",
   abacus_discord: "Discord",
 };
+
+/** The outbox id of a fire's report on one chat app: owed and sent once. */
+export const reportOutboxId = (fire: string, lane: SelfLanePlatform): string =>
+  `routine-report:${fire}:${lane}`;
+
+/**
+ * Where a report's copy for one chat app stands. `via`: the app it reached
+ * instead. `firstMessage`: held until the user messages the bot there once.
+ */
+export type LaneDelivery =
+  | { status: "sent"; via?: string }
+  | { status: "held"; firstMessage: boolean }
+  | { status: "not-sent" };
+
+/** Looks up a lane's copy by its outbox id (the gateway's answer). */
+export type LaneDeliveryOf = (
+  lane: SelfLanePlatform,
+  outboxId: string
+) => LaneDelivery;
 
 /** One finished run's report. */
 export interface RunReport {
@@ -140,9 +160,12 @@ export interface PendingNote {
   addedAt: number;
   text: string;
   runFile: string | null;
-  /** The app delivered it here (and on these apps); false: the user opened the chat to answer it. */
+  /** The app delivered it here; false: the user opened the chat to answer it. */
   delivered: boolean;
+  /** The chat apps it was handed to; where each copy arrived is asked when the note is shown. */
   lanes: SelfLanePlatform[];
+  /** The fire it answers, naming each lane's outbox copy; absent on older notes. */
+  fire?: string;
 }
 
 interface Stored {
@@ -227,7 +250,7 @@ export class RoutineReportStore {
       | "startedAt"
       | "text"
       | "runFile"
-    >,
+    > & { fire?: string },
     delivery: { delivered: boolean; lanes?: SelfLanePlatform[] }
   ): void {
     this.prune();
@@ -250,11 +273,14 @@ export class RoutineReportStore {
    * to call once that message has gone to the agent: an unsent message
    * leaves them owed.
    */
-  notesFor(sessionId: string): { notes: string[]; taken: () => void } {
+  notesFor(
+    sessionId: string,
+    laneDelivery?: LaneDeliveryOf
+  ): { notes: string[]; taken: () => void } {
     this.prune();
     const pending = this.state.notes[sessionId] ?? [];
     return {
-      notes: pending.map(reportNote),
+      notes: pending.map((note) => reportNote(note, laneDelivery)),
       taken: () => {
         const left = (this.state.notes[sessionId] ?? []).filter(
           (note) => !pending.includes(note)
@@ -281,14 +307,60 @@ export class RoutineReportStore {
   }
 }
 
+/**
+ * The chat apps' part of a note: where each copy arrived, never where it was
+ * only sent. Without a fire (an older note) or a lookup, each counts as sent.
+ */
+const laneOutcomes = (
+  note: PendingNote,
+  laneDelivery: LaneDeliveryOf | undefined
+): { arrived: string[]; after: string } => {
+  const arrived: string[] = [];
+  const lines: string[] = [];
+  for (const lane of note.lanes) {
+    const name = REPORT_LANE_NAMES[lane];
+    const delivery: LaneDelivery =
+      note.fire != null && laneDelivery != null
+        ? laneDelivery(lane, reportOutboxId(note.fire, lane))
+        : { status: "sent" };
+    if (delivery.status === "sent") {
+      arrived.push(delivery.via ?? name);
+      if (delivery.via != null)
+        lines.push(
+          ` Its copy for ${name} went to ${delivery.via} instead, as ${name} could not take it.`
+        );
+    } else if (delivery.status === "held" && delivery.firstMessage)
+      lines.push(
+        ` Its copy for ${name} has NOT reached them: ${name} will not let the bot message them until they ` +
+          `message the bot there once. The app has shown them how; it arrives by itself once they do.`
+      );
+    else if (delivery.status === "held")
+      lines.push(
+        ` Its copy for ${name} has NOT reached them yet: it waits until the app can reach them there.`
+      );
+    else lines.push(` Its copy for ${name} never reached them.`);
+  }
+  const after =
+    lines.length > 0
+      ? `${lines.join("")} Never tell them it is in a chat app it did not reach.`
+      : "";
+  return { arrived: [...new Set(arrived)], after };
+};
+
 /** The `[routine report sent]` line: what the user is likely answering. */
-export const reportNote = (note: PendingNote): string => {
+export const reportNote = (
+  note: PendingNote,
+  laneDelivery?: LaneDeliveryOf
+): string => {
   const when = new Date(note.startedAt).toLocaleString();
+  const lanes = note.delivered
+    ? laneOutcomes(note, laneDelivery)
+    : { arrived: [], after: "" };
   const head = note.delivered
-    ? `${appNoteTag("routine report sent")} Your routine "${note.routineName}" (id ${note.routineId}) ran at ${when} and the app delivered its report to the user in ${["this chat", ...note.lanes.map((lane) => REPORT_LANE_NAMES[lane])].join(" and ")}:`
+    ? `${appNoteTag("routine report sent")} Your routine "${note.routineName}" (id ${note.routineId}) ran at ${when} and the app delivered its report to the user in ${["this chat", ...lanes.arrived].join(" and ")}:`
     : `${appNoteTag("routine report")} The user opened this chat to reply to the report of your routine "${note.routineName}" (id ${note.routineId}) from its run at ${when}:`;
   return (
-    `${head} ${neutralized(JSON.stringify(note.text))}. Their message may answer it: if they say go or ` +
+    `${head} ${neutralized(JSON.stringify(note.text))}.${lanes.after} Their message may answer it: if they say go or ` +
     "answer its question, do it here with your own tools; change the routine with the cronjob tool only " +
     "when they ask about the routine itself." +
     (note.runFile != null

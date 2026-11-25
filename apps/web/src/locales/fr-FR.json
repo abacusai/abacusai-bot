@@ -5624,7 +5624,8 @@
       "missed": "{{name}} a manqué des exécutions",
       "missedMany": "Des routines ont manqué des exécutions",
       "many_one": "{{count}} élément arrêté",
-      "many_other": "{{count}} éléments arrêtés"
+      "many_other": "{{count}} éléments arrêtés",
+      "firstMessage": "Dites bonjour à Abacus AI sur {{app}}"
     },
     "body": {
       "signedOut": "Elle ne peut pas tourner tant que vous êtes déconnecté. Connectez-vous et elle reprendra.",
@@ -5633,7 +5634,8 @@
       "loginNotFinished": "La connexion à {{platform}} n'a pas été terminée, il est donc en pause. Cliquez sur Connecter pour la terminer.",
       "missedMany_one": "{{routines}} routines ont manqué {{count}} exécution pendant que l'ordinateur était en veille ou l'app fermée. {{madeUp}} rattrapée(s).",
       "missedMany_other": "{{routines}} routines ont manqué {{count}} exécutions pendant que l'ordinateur était en veille ou l'app fermée. {{madeUp}} rattrapée(s).",
-      "routineLaneOff": "Ses exécutions ne vous parviennent pas : {{platform}} est désactivé. Reconnectez-le pour les recevoir."
+      "routineLaneOff": "Ses exécutions ne vous parviennent pas : {{platform}} est désactivé. Reconnectez-le pour les recevoir.",
+      "firstMessage": "{{app}} ne laisse Abacus AI vous écrire qu'après que vous lui avez écrit une fois. Ouvrez sa conversation et dites bonjour : ce qui vous attend arrive juste après."
     },
     "chat": {
       "back": "{{name}} tourne de nouveau."

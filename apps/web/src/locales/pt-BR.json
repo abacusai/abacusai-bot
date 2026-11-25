@@ -5624,7 +5624,8 @@
       "missed": "{{name}} perdeu execuções",
       "missedMany": "Rotinas perderam execuções",
       "many_one": "{{count}} item parou",
-      "many_other": "{{count}} itens pararam"
+      "many_other": "{{count}} itens pararam",
+      "firstMessage": "Diga oi para o Abacus AI no {{app}}"
     },
     "body": {
       "signedOut": "Ela não pode rodar enquanto você está desconectado. Entre e ela volta a rodar.",
@@ -5633,7 +5634,8 @@
       "loginNotFinished": "O login no {{platform}} não terminou, então está pausado. Clique em Conectar para terminar.",
       "missedMany_one": "{{routines}} rotinas perderam {{count}} execução enquanto o computador dormia ou o app estava fechado. {{madeUp}} recuperadas.",
       "missedMany_other": "{{routines}} rotinas perderam {{count}} execuções enquanto o computador dormia ou o app estava fechado. {{madeUp}} recuperadas.",
-      "routineLaneOff": "As execuções não chegam até você: o {{platform}} está desligado. Conecte-o de novo para recebê-las."
+      "routineLaneOff": "As execuções não chegam até você: o {{platform}} está desligado. Conecte-o de novo para recebê-las.",
+      "firstMessage": "O {{app}} só deixa o Abacus AI mandar mensagens para você depois que você mandar uma para ele. Abra a conversa e diga oi: o que está esperando por você chega logo em seguida."
     },
     "chat": {
       "back": "{{name}} voltou a rodar."

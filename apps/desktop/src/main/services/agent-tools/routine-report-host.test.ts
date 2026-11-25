@@ -167,6 +167,11 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
         owed.push({ lane, ...message });
         return "sent";
       },
+      ownChatSendStatus: (id: string) => ({
+        status: owed.some((entry) => entry.id === id) ? "sent" : null,
+        via: null,
+      }),
+      awaitsFirstMessage: () => false,
     },
   };
   for (const name of [
@@ -179,6 +184,7 @@ const harness = (options: { quiet?: boolean; platform?: string } = {}) => {
     "reportChatOf",
     "reportLanesOf",
     "routineReportNotes",
+    "reportLaneDelivery",
     "userMessageNotes",
     "routineDeliversToSelf",
     "routineOrigin",

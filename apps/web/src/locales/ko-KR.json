@@ -5624,7 +5624,8 @@
       "missed": "{{name}} 실행을 놓침",
       "missedMany": "루틴이 실행을 놓쳤습니다",
       "many_one": "{{count}}개가 멈춤",
-      "many_other": "{{count}}개가 멈춤"
+      "many_other": "{{count}}개가 멈춤",
+      "firstMessage": "{{app}}에서 Abacus AI에게 인사해 주세요"
     },
     "body": {
       "signedOut": "로그아웃 상태에서는 실행할 수 없습니다. 로그인하면 다시 실행됩니다.",
@@ -5633,7 +5634,8 @@
       "loginNotFinished": "{{platform}} 로그인이 끝나지 않아 일시 중지되었습니다. 연결을 눌러 마무리하세요.",
       "missedMany_one": "컴퓨터가 잠자기 상태이거나 앱이 닫혀 있는 동안 루틴 {{routines}}개가 실행 {{count}}회를 놓쳤습니다. {{madeUp}}회를 보충했습니다.",
       "missedMany_other": "컴퓨터가 잠자기 상태이거나 앱이 닫혀 있는 동안 루틴 {{routines}}개가 실행 {{count}}회를 놓쳤습니다. {{madeUp}}회를 보충했습니다.",
-      "routineLaneOff": "{{platform}}이(가) 꺼져 있어 실행 결과가 전달되지 않습니다. 받으려면 다시 연결하세요."
+      "routineLaneOff": "{{platform}}이(가) 꺼져 있어 실행 결과가 전달되지 않습니다. 받으려면 다시 연결하세요.",
+      "firstMessage": "{{app}}에서는 먼저 한 번 메시지를 보내야 Abacus AI가 메시지를 보낼 수 있어요. 채팅을 열고 인사하면 기다리던 메시지가 바로 도착해요."
     },
     "chat": {
       "back": "{{name}}이(가) 다시 실행됩니다."

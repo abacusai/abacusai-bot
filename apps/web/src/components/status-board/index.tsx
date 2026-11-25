@@ -1,4 +1,7 @@
-import { messagingPlatformSpec } from "@abacus-ai/contract/messaging";
+import {
+  appOfSelfLane,
+  messagingPlatformSpec,
+} from "@abacus-ai/contract/messaging";
 import { ROUTINE_QUIET_RUNS_BEFORE_PAUSE } from "@abacus-ai/contract/routines";
 /**
  * The status board's in-app side: one query (`status.list`) kept fresh by
@@ -56,6 +59,10 @@ const platformName = (platform: string, t: TFunction): string =>
     `messaging.platforms.${messagingPlatformSpec(platform as never)?.nameKey ?? platform}`
   );
 
+/** The chat app a lane is on ("Discord" for the shared bot's lane there). */
+const appName = (lane: string, t: TFunction): string =>
+  platformName(appOfSelfLane(lane as never) ?? lane, t);
+
 /** The in-app line for an item, worded as its notice is. */
 export const statusLine = (item: StatusItem, t: TFunction): string => {
   const lane = item.key.startsWith("lane:");
@@ -93,6 +100,10 @@ export const statusLine = (item: StatusItem, t: TFunction): string => {
         : t("status.body.routineLinkLost", { platform });
     case "login-not-finished":
       return t("status.body.loginNotFinished", { platform: name });
+    case "first-message":
+      return t("status.body.firstMessage", {
+        app: appName(item.key.slice(5), t),
+      });
     case "lane-off":
       return t("status.body.routineLaneOff", { platform });
     case "gave-up":
@@ -147,6 +158,20 @@ const useLaneAction = (item: StatusItem) => {
   const { transport } = useAppContext();
   const navigate = useAppNavigate();
   const platform = item.key.slice(5);
+  // The bot's own chat on the app, where the one message it waits for is sent.
+  if (isReason(item, "first-message"))
+    return {
+      label: t("messaging.sharedLink.openDm"),
+      run: () =>
+        void transport.client.messaging
+          .openSharedLink({ platformId: platform as never, target: "dm" })
+          .catch(() =>
+            navigate({
+              to: "/library/messaging",
+              search: { platform: platform as never },
+            })
+          ),
+    };
   if (isReason(item, "gave-up") || isReason(item, "needs-user"))
     return {
       label: t("messaging.recovery.tryNow"),
@@ -194,11 +219,15 @@ export const StatusBanner = ({
       <StatusDot item={item} className="mt-1.5" />
       <div className="flex min-w-0 flex-col gap-1">
         <p className="font-medium">
-          {isReason(item, "link-lost")
-            ? t("native.linkLostTitle", { platform: name })
-            : isReason(item, "login-not-finished")
-              ? t("status.title.laneStopped", { name })
-              : t("native.laneDownTitle", { platform: name })}
+          {isReason(item, "first-message")
+            ? t("status.title.firstMessage", {
+                app: appName(item.key.slice(5), t),
+              })
+            : isReason(item, "link-lost")
+              ? t("native.linkLostTitle", { platform: name })
+              : isReason(item, "login-not-finished")
+                ? t("status.title.laneStopped", { name })
+                : t("native.laneDownTitle", { platform: name })}
         </p>
         <p className="text-muted-foreground text-xs">{statusLine(item, t)}</p>
         <div className="mt-1 flex gap-2">

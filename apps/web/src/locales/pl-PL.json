@@ -5816,7 +5816,8 @@
       "many_one": "Zatrzymano {{count}} element",
       "many_other": "Zatrzymano {{count}} elementu",
       "many_few": "Zatrzymano {{count}} elementy",
-      "many_many": "Zatrzymano {{count}} elementów"
+      "many_many": "Zatrzymano {{count}} elementów",
+      "firstMessage": "Przywitaj się z Abacus AI na {{app}}"
     },
     "body": {
       "signedOut": "Nie może działać po wylogowaniu. Zaloguj się, a znów ruszy.",
@@ -5827,7 +5828,8 @@
       "missedMany_other": "Rutyny ({{routines}}) pominęły {{count}} uruchomienia, gdy komputer był uśpiony lub aplikacja zamknięta. Nadrobiono: {{madeUp}}.",
       "missedMany_few": "Rutyny ({{routines}}) pominęły {{count}} uruchomienia, gdy komputer był uśpiony lub aplikacja zamknięta. Nadrobiono: {{madeUp}}.",
       "missedMany_many": "Rutyny ({{routines}}) pominęły {{count}} uruchomień, gdy komputer był uśpiony lub aplikacja zamknięta. Nadrobiono: {{madeUp}}.",
-      "routineLaneOff": "Wyniki nie mogą do ciebie dotrzeć, bo wyłączono: {{platform}}. Połącz ponownie, aby je otrzymywać."
+      "routineLaneOff": "Wyniki nie mogą do ciebie dotrzeć, bo wyłączono: {{platform}}. Połącz ponownie, aby je otrzymywać.",
+      "firstMessage": "{{app}} pozwala Abacus AI pisać do Ciebie dopiero wtedy, gdy raz do niego napiszesz. Otwórz czat i się przywitaj: to, co tam na Ciebie czeka, dotrze zaraz potem."
     },
     "chat": {
       "back": "{{name}} znowu działa."

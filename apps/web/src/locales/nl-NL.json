@@ -5624,7 +5624,8 @@
       "missed": "{{name}} heeft uitvoeringen gemist",
       "missedMany": "Routines hebben uitvoeringen gemist",
       "many_one": "{{count}} ding gestopt",
-      "many_other": "{{count}} dingen gestopt"
+      "many_other": "{{count}} dingen gestopt",
+      "firstMessage": "Zeg hallo tegen Abacus AI op {{app}}"
     },
     "body": {
       "signedOut": "Het kan niet draaien terwijl je bent uitgelogd. Log in en het draait weer.",
@@ -5633,7 +5634,8 @@
       "loginNotFinished": "Het inloggen bij {{platform}} is niet voltooid, dus het is gepauzeerd. Klik op Verbinden om het af te ronden.",
       "missedMany_one": "{{routines}} routines hebben {{count}} uitvoering gemist terwijl de computer sliep of de app gesloten was. {{madeUp}} ingehaald.",
       "missedMany_other": "{{routines}} routines hebben {{count}} uitvoeringen gemist terwijl de computer sliep of de app gesloten was. {{madeUp}} ingehaald.",
-      "routineLaneOff": "De uitvoeringen kunnen je niet bereiken: {{platform}} staat uit. Verbind het opnieuw om ze te ontvangen."
+      "routineLaneOff": "De uitvoeringen kunnen je niet bereiken: {{platform}} staat uit. Verbind het opnieuw om ze te ontvangen.",
+      "firstMessage": "{{app}} laat Abacus AI je pas berichten sturen nadat jij het één keer een bericht hebt gestuurd. Open de chat en zeg hallo: wat daar op je wacht, komt direct daarna binnen."
     },
     "chat": {
       "back": "{{name}} draait weer."

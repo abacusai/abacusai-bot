@@ -45,6 +45,8 @@ export type StatusReason =
   | "signed-out"
   /** A bot's check-in waits for the one account its job needs. */
   | "needs-account"
+  /** A shared bot's chat app delivers nothing to the user until they message the bot there once. */
+  | "first-message"
   /** The watchdog's: due twice over with the app online, and never fired. */
   | "unfired"
   | "ok";
