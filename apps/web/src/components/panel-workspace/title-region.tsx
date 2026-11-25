@@ -81,6 +81,33 @@ export const WorkspaceTitleRegion = ({ children }: { children: ReactNode }) => {
         barRect.right - end
       );
       report(next.width);
+      // No tools pane on screen: the region would span the whole workspace,
+      // over the bar's own controls (the actions, the folded "More", the
+      // identity). It is a drag area later in the DOM, and Electron applies
+      // app-region in DOM order, so on Windows and macOS those controls
+      // would only drag the window. It starts after them. (With tabs in the
+      // region, tokens.css already ends the actions before it.)
+      let controlsEnd = -Infinity;
+      for (
+        let before =
+          rects.length || element.querySelector('[role="tablist"]')
+            ? null
+            : element.previousElementSibling;
+        before;
+        before = before.previousElementSibling
+      ) {
+        if (!observed.has(before)) {
+          observed.add(before);
+          observer.observe(before);
+        }
+        const box = before.getBoundingClientRect();
+        if (box.width > 0) controlsEnd = Math.max(controlsEnd, box.right);
+      }
+      if (controlsEnd + 8 > next.left) {
+        const right = next.left + next.width;
+        next.left = Math.min(right, controlsEnd + 8);
+        next.width = right - next.left;
+      }
       // Positioned inside the bar, so relative to its left edge.
       const local = { left: next.left - barRect.left, width: next.width };
       setRegion((previous) =>
