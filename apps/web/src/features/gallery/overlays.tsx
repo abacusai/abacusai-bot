@@ -284,6 +284,28 @@ const DialogExample = () => {
             {content ? "Save and keep the old name as an alias" : "Save"}
           </Button>
         </DialogFooter>
+        {content && (
+          // A confirm opened from the dialog: Base UI nests it, with no backdrop of its own.
+          <AlertDialog open>
+            <AlertDialogContent data-example="nested-confirm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>{`Remove the key for ${UNBROKEN_NAME}?`}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {`Chats that use it stop until you add another. ${LONG_PATH}`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="secondary">
+                  Keep it for this chat only
+                </AlertDialogAction>
+                <AlertDialogAction variant="destructive">
+                  Remove the key everywhere
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </DialogContent>
     </Dialog>
   );

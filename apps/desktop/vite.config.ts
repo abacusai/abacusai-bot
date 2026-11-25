@@ -148,6 +148,8 @@ export default defineConfig(({ command, mode }) => {
                 // `hono/ws` import tree-shaking then drops. mcp-http-server.ts
                 // imports it dynamically, so all of it lands in a chunk under
                 // dist/main/assets rather than in the entry.
+                // Chat names are read as Markdown (contract's session-title),
+                // so main inlines marked too.
                 include: [
                   "@abacus-ai/updater",
                   "extract-zip",
@@ -170,6 +172,7 @@ export default defineConfig(({ command, mode }) => {
                   "json-schema-traverse",
                   "zod",
                   "zod-to-json-schema",
+                  "marked",
                 ],
               },
             },

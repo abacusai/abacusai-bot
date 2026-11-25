@@ -162,7 +162,14 @@ const OVERLAYS = [
  * bug); popups keep their own long-label stress (`stress=top-left` etc.).
  */
 const CONTENT_OVERLAYS = ["dialog", "alert-dialog", "sheet", "drawer"];
-const CONTENT_FIXTURES = ["/__ui?fixture=quit-guard-3"];
+/** Real dialogs whose footers mix a hint, a group or three actions. */
+const CONTENT_FIXTURES = [
+  "/__ui?fixture=quit-guard-3",
+  "/__ui?fixture=routines-repo-watch-sheet",
+  "/__ui?fixture=bots-channel-details",
+];
+/** The content overlays are measured again at a phone's width. */
+const PHONE_WIDTH = 390;
 
 /**
  * Each open overlay's box and the parts of its content that show past it:
@@ -170,12 +177,22 @@ const CONTENT_FIXTURES = ["/__ui?fixture=quit-guard-3"];
  * overlay, and only the outermost element that reaches past an edge counts.
  */
 export const overlayGeometry = () => {
+  // A dialog opened from a dialog has no backdrop: Base UI marks it nested.
   const selector = [
+    '[data-slot="dialog-content"]',
+    '[data-slot="alert-dialog-content"]',
     '[data-slot="dialog-overlay"] ~ [role="dialog"]',
-    '[data-slot="alert-dialog-overlay"] ~ [role="alertdialog"]',
+    '[role="alertdialog"]',
+    '[role="dialog"][data-nested]:not(.ui-popup)',
     '[data-slot="sheet-overlay"] ~ [role="dialog"]',
     '[data-slot="drawer-popup"]',
     ".ui-popup",
+  ].join(",");
+  const footerSelector = [
+    '[data-slot="dialog-footer"]',
+    '[data-slot="alert-dialog-footer"]',
+    '[data-slot="sheet-footer"]',
+    '[data-slot="drawer-footer"]',
   ].join(",");
   const round = (value) => Math.round(value * 10) / 10;
   return [...document.querySelectorAll(selector)]
@@ -233,12 +250,40 @@ export const overlayGeometry = () => {
             ),
           };
         });
+      // The main action is the footer's last; where it sits depends on the direction.
+      const footers = [...box.querySelectorAll(footerSelector)]
+        .filter(
+          (footer) =>
+            footer.checkVisibility() && footer.closest(selector) === box
+        )
+        .map((footer) => {
+          const actions = [...footer.querySelectorAll("button")].filter(
+            (button) => button.checkVisibility()
+          );
+          if (actions.length === 0) return null;
+          const rects = actions.map((button) => button.getBoundingClientRect());
+          const main = rects.at(-1);
+          const style = getComputedStyle(footer);
+          const frame = footer.getBoundingClientRect();
+          return {
+            slot: footer.dataset.slot,
+            direction: style.flexDirection,
+            main: (actions.at(-1).textContent ?? "").trim().slice(0, 40),
+            mainRight: round(main.right),
+            mainTop: round(main.top),
+            contentRight: round(frame.right - parseFloat(style.paddingRight)),
+            rightmost: round(Math.max(...rects.map((rect) => rect.right))),
+            topmost: round(Math.min(...rects.map((rect) => rect.top))),
+          };
+        })
+        .filter((footer) => footer != null);
       return {
         slot: box.dataset.slot ?? box.getAttribute("role"),
         left: round(outer.left),
         right: round(outer.right),
         innerWidth,
         spills,
+        footers,
       };
     });
 };
@@ -254,6 +299,21 @@ export const overlayProblems = (name, overlays) =>
     ...overlay.spills.map(
       (spill) =>
         `${name}: ${spill.slot} shows ${spill.by} px past the edge of ${overlay.slot}`
+    ),
+    // A row ends with the main action; a stack (column-reverse) puts it on top.
+    ...(overlay.footers ?? []).flatMap((footer) =>
+      footer.direction === "row" &&
+      (Math.abs(footer.mainRight - footer.contentRight) > 1 ||
+        footer.mainRight < footer.rightmost - 1)
+        ? [
+            `${name}: ${footer.slot}'s main action "${footer.main}" ends at ${footer.mainRight}, not at the end (${footer.contentRight})`,
+          ]
+        : footer.direction === "column-reverse" &&
+            footer.mainTop > footer.topmost + 1
+          ? [
+              `${name}: ${footer.slot}'s main action "${footer.main}" is not on top of the stack`,
+            ]
+          : []
     ),
   ]);
 
@@ -816,7 +876,9 @@ const main = async () => {
             failures.push(...panelSplitProblems(name, split));
             geometry.split = split;
           }
-          if (route.includes("open=") || CONTENT_FIXTURES.includes(route)) {
+          const measured =
+            route.includes("open=") || CONTENT_FIXTURES.includes(route);
+          if (measured) {
             geometry.overlays = await cdp.evaluate(
               `(${overlayGeometry.toString()})()`
             );
@@ -825,6 +887,61 @@ const main = async () => {
             failures.push(...overlayProblems(name, geometry.overlays));
           }
           await capture(cdp, name, { route, width, theme, geometry });
+          if (
+            measured &&
+            (route.includes("stress=content") ||
+              CONTENT_FIXTURES.includes(route))
+          ) {
+            // The same overlay on a phone: the stacked footer, the narrow box.
+            await cdp.send("Emulation.setDeviceMetricsOverride", {
+              width: PHONE_WIDTH,
+              height: HEIGHT,
+              deviceScaleFactor: 0,
+              mobile: false,
+            });
+            await settle(cdp, route);
+            await animationsDone(cdp);
+            const phone = `${slug(route)}@${PHONE_WIDTH}-${theme}.png`;
+            const overlays = await cdp.evaluate(
+              `(${overlayGeometry.toString()})()`
+            );
+            if (overlays.length === 0)
+              failures.push(`${phone}: no overlay open`);
+            failures.push(...overlayProblems(phone, overlays));
+            await capture(cdp, phone, {
+              route,
+              width: PHONE_WIDTH,
+              theme,
+              geometry: { overlays },
+            });
+            await cdp.send("Emulation.clearDeviceMetricsOverride");
+            await sleep(150);
+          }
+          if (CONTENT_FIXTURES.includes(route)) {
+            // French and German run longest: the footers wrap here, if anywhere.
+            for (const language of ["fr-FR", "de-DE"]) {
+              await cdp.evaluate(
+                `window.__abacusDev.setLanguage(${JSON.stringify(language)})`
+              );
+              await settle(cdp, route);
+              await animationsDone(cdp);
+              const localized = `${slug(route)}@${width}-${theme}-${language}.png`;
+              const overlays = await cdp.evaluate(
+                `(${overlayGeometry.toString()})()`
+              );
+              if (overlays.length === 0)
+                failures.push(`${localized}: no overlay open`);
+              failures.push(...overlayProblems(localized, overlays));
+              await capture(cdp, localized, {
+                route,
+                width,
+                theme,
+                geometry: { overlays },
+              });
+            }
+            await cdp.evaluate(`window.__abacusDev.setLanguage("en-US")`);
+            await settle(cdp, route);
+          }
         }
 
         if (flag("--phase6")) continue;
