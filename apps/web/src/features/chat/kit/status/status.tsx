@@ -42,13 +42,7 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import {
-  cloneElement,
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-} from "react";
+import { cloneElement, useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChatCard } from "#renderer/components/chat-card";
@@ -95,6 +89,8 @@ import {
 } from "#renderer/lib/own-key-unavailable";
 import {
   checkPaymentNow,
+  claimPaymentSendAgain,
+  paymentConfirmedFor,
   startPaymentConfirmWatch,
   usePaymentConfirmPhase,
 } from "#renderer/lib/payment-confirming";
@@ -757,34 +753,46 @@ const OwnKeyCard = ({
 };
 
 /**
- * Abacus's billing gate refused the turn because a first payment is not
- * recorded yet (payment-confirming.ts): "Confirming your payment…", the
+ * Abacus's billing gate refused the turn because it holds a payment it has
+ * not confirmed (payment-confirming.ts): "Confirming your payment…", the
  * waiting message sent again once it lands, and after a few minutes that the
  * payment cannot be seen yet, with billing and Check again. Never a purchase.
  */
+/**
+ * A refused turn's card joins the shared payment watch (payment-confirming.ts)
+ * from its view. Once the payment the turn waited on lands, its waiting
+ * message is sent again, once per turn, whichever card (or remount) sees it.
+ */
+const useTurnPaymentWatch = (
+  from: "confirming" | "no_plan" | null,
+  runId: string,
+  onSendAgain?: () => void
+) => {
+  const { transport } = useAppContext();
+  const phase = usePaymentConfirmPhase();
+  useEffect(() => {
+    if (from != null) startPaymentConfirmWatch(transport.client, from, runId);
+  }, [transport, from, runId]);
+  const sendAgain = useEffectEvent(() => {
+    if (onSendAgain != null && claimPaymentSendAgain(runId)) onSendAgain();
+  });
+  useEffect(() => {
+    if (from != null && phase === "confirmed") sendAgain();
+  }, [from, phase]);
+  return phase;
+};
+
 const PaymentConfirmingCard = ({
+  runId,
   onSendAgain,
 }: {
+  runId: string;
   onSendAgain?: () => void;
 }) => {
   const { t } = useTranslation();
   const { runtime } = useChatView();
-  const { transport } = useAppContext();
-  const phase = usePaymentConfirmPhase();
-  // Sent once: the phase stays "confirmed" after the resend starts.
-  const sent = useRef(false);
-  useEffect(() => {
-    startPaymentConfirmWatch(transport.client);
-  }, [transport]);
-  const sendAgain = useEffectEvent(() => {
-    if (sent.current) return;
-    sent.current = true;
-    onSendAgain?.();
-  });
-  useEffect(() => {
-    if (phase === "confirmed") sendAgain();
-  }, [phase]);
-  if (phase === "confirmed") return null;
+  const phase = useTurnPaymentWatch("confirming", runId, onSendAgain);
+  if (paymentConfirmedFor(phase, runId)) return null;
   const late = phase === "late";
   return (
     <div
@@ -837,14 +845,59 @@ const PaymentConfirmingCard = ({
   );
 };
 
+const PAYMENT_PLAN_COPY = {
+  lapsed: {
+    title: "paymentRequired.lapsedTitle",
+    body: "paymentRequired.lapsedBody",
+    cta: "paymentRequired.renew",
+    action: "renew",
+    src: "payment_lapsed",
+  },
+  no_plan: {
+    title: "paymentRequired.noPlanTitle",
+    body: "paymentRequired.noPlanBody",
+    cta: "paymentRequired.upgrade",
+    action: "upgrade",
+    src: "payment_no_plan",
+  },
+} as const;
+
 /**
- * Abacus's billing gate refused the turn because the subscription ended
- * (renew). Not the credits card: buying more would not let this account
- * through.
+ * Abacus's billing gate refused the turn for the plan: the subscription ended
+ * (renew), or the account never had one (choose one). Not the credits card:
+ * buying more would not let this account through.
  */
-const PaymentLapsedCard = () => {
+const PaymentPlanCard = ({
+  cause,
+  runId,
+  onSendAgain,
+}: {
+  cause: "lapsed" | "no_plan";
+  runId: string;
+  /** Offered when Retry would be: the latest outcome, a thread that can reply. */
+  onSendAgain?: () => void;
+}) => {
   const { t } = useTranslation();
   const { runtime, composer } = useChatView();
+  const { transport } = useAppContext();
+  const copy = PAYMENT_PLAN_COPY[cause];
+  // No plan: watched for a payment made anywhere, as the confirming card is.
+  const phase = useTurnPaymentWatch(
+    cause === "no_plan" ? "no_plan" : null,
+    runId,
+    onSendAgain
+  );
+  if (cause === "no_plan") {
+    if (paymentConfirmedFor(phase, runId)) return null;
+    // Paid, and held: confirming, never a second purchase.
+    if (phase === "confirming" || phase === "late")
+      return (
+        <PaymentConfirmingCard
+          runId={runId}
+          {...(onSendAgain != null ? { onSendAgain } : {})}
+        />
+      );
+  }
   return (
     <div
       role="group"
@@ -852,20 +905,23 @@ const PaymentLapsedCard = () => {
       className="mx-auto w-full max-w-[calc(var(--composer-max-w)-var(--spacing)*8)]"
       data-slot="error-card"
       data-variant="payment-required"
-      data-cause="lapsed"
+      data-cause={cause}
     >
-      <ChatCard icon={<CreditCard />} title={t("paymentRequired.lapsedTitle")}>
-        <p className="text-muted-foreground p-3 text-sm">
-          {t("paymentRequired.lapsedBody")}
-        </p>
+      <ChatCard icon={<CreditCard />} title={t(copy.title)}>
+        <p className="text-muted-foreground p-3 text-sm">{t(copy.body)}</p>
         <div className="flex flex-wrap gap-2 p-3">
           <Button
             size="sm"
-            data-action="renew"
-            onClick={() => void runtime.host.openUpgrade("payment_lapsed")}
+            data-action={copy.action}
+            onClick={() => {
+              void runtime.host.openUpgrade(copy.src);
+              // A watch past its 30 minutes reads the account again for this checkout.
+              if (cause === "no_plan")
+                startPaymentConfirmWatch(transport.client, "no_plan", runId);
+            }}
           >
-            <UpgradeSeen src="payment_lapsed" />
-            {t("paymentRequired.renew")}
+            <UpgradeSeen src={copy.src} />
+            {t(copy.cta)}
           </Button>
           {composer.model != null && composer.readOnly == null && (
             <Button
@@ -1371,10 +1427,15 @@ export const ErrorCard = ({
     );
   const payment = actions.find((action) => action.type === "payment-required");
   if (payment != null)
-    return payment.cause === "lapsed" ? (
-      <PaymentLapsedCard />
-    ) : (
+    return payment.cause === "unconfirmed" ? (
       <PaymentConfirmingCard
+        runId={outcome.runId}
+        {...(latest && canReply ? { onSendAgain: retry } : {})}
+      />
+    ) : (
+      <PaymentPlanCard
+        cause={payment.cause === "lapsed" ? "lapsed" : "no_plan"}
+        runId={outcome.runId}
         {...(latest && canReply ? { onSendAgain: retry } : {})}
       />
     );

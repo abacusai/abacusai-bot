@@ -4916,6 +4916,8 @@
     "trialEndedBody": "このアカウントで AbacusAI Bot を引き続き使うにはアップグレードしてください。",
     "lapsedTitle": "サブスクリプションが終了しました",
     "lapsedBody": "このアカウントで AbacusAI Bot を引き続き使うにはプランを更新してください。",
+    "noPlanTitle": "AbacusAI Bot を引き続き使うにはプランを選んでください",
+    "noPlanBody": "サインイン済みですが、AbacusAI Bot を使うにはアカウントにプランが必要です。",
     "upgrade": "アップグレード",
     "renew": "更新する",
     "webAgent": "Web の Abacus AI Agent へ →",

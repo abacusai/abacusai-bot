@@ -988,6 +988,28 @@ describe("who refused: Abacus's wall, its billing gate, or the user's own key", 
     });
   });
 
+  it("an account that never paid, or a billing refusal with no known reason, is a plan to choose, never confirming", () => {
+    for (const raw of [
+      '402 {"error":"Choose a plan to continue.","errorType":"PaymentMethodRequired","reason":"not_subscribed","abacus_error_code":"abacus_payment_required"}',
+      '402 "Choose a plan to continue."',
+      '402 "A payment method is required."',
+    ]) {
+      const cause = classifyAttempt(raw, "abacus");
+      expect(cause, raw).toBe("payment_required");
+      const shown = presentFailure(
+        { cause, provider: "abacus", raw },
+        pinned("credits")
+      );
+      expect(shown.actions?.[0], raw).toEqual({
+        type: "payment-required",
+        cause: "not_subscribed",
+      });
+      expect(shown.message, raw).not.toMatch(
+        /couldn't confirm|purchase again/i
+      );
+    }
+  });
+
   it("Abacus's wall, coded or not, is still the credits card", () => {
     for (const raw of [ABACUS_WALL, ABACUS_WALL_CODED]) {
       const shown = presentFailure(

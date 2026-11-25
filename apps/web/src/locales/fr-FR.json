@@ -4916,6 +4916,8 @@
     "trialEndedBody": "Passez à une offre supérieure pour continuer à utiliser AbacusAI Bot avec ce compte.",
     "lapsedTitle": "Votre abonnement est terminé",
     "lapsedBody": "Renouvelez votre offre pour continuer à utiliser AbacusAI Bot avec ce compte.",
+    "noPlanTitle": "Choisissez une offre pour continuer à utiliser AbacusAI Bot",
+    "noPlanBody": "Vous êtes connecté, mais votre compte a besoin d'une offre pour qu'AbacusAI Bot fonctionne.",
     "upgrade": "Passer à l'offre supérieure",
     "renew": "Renouveler",
     "webAgent": "Aller sur Abacus AI Agent sur le web →",

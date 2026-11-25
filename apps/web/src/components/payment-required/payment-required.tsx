@@ -48,6 +48,11 @@ export const usePaymentRequired = (enabled = true) => {
 };
 
 const COPY = {
+  no_plan: {
+    title: "paymentRequired.noPlanTitle",
+    body: "paymentRequired.noPlanBody",
+    cta: "paymentRequired.upgrade",
+  },
   trial_ended: {
     title: "paymentRequired.trialEndedTitle",
     body: "paymentRequired.trialEndedBody",
@@ -60,15 +65,56 @@ const COPY = {
   },
 } as const;
 
-/** An unconfirmed payment (a server that sends no reason too) is confirming, never a plan to buy. */
+/**
+ * Only a payment the server says it holds is confirming. Anything else, an
+ * account that never paid or a reason this build does not know, gets a plan:
+ * a confirming screen would wait for a payment that was never made.
+ */
 const isUnconfirmed = (payment: AbacusPaymentRequired | null): boolean =>
-  payment?.reason == null || payment.reason === "unconfirmed";
+  payment?.reason === "unconfirmed";
 
 const paymentCopy = (payment: AbacusPaymentRequired | null) =>
-  COPY[payment?.reason === "lapsed" ? "lapsed" : "trial_ended"];
+  payment?.reason === "lapsed" || payment?.reason === "trial_ended"
+    ? COPY[payment.reason]
+    : COPY.no_plan;
+
+/** An account that never paid (or a reason this build does not know): a plan, watched for a payment made anywhere. */
+const isNoPlan = (payment: AbacusPaymentRequired | null): boolean =>
+  payment != null &&
+  payment.reason !== "unconfirmed" &&
+  payment.reason !== "trial_ended" &&
+  payment.reason !== "lapsed";
 
 /**
- * A first payment not recorded yet (payment-confirming.ts): "Confirming your
+ * Join the shared payment watch (payment-confirming.ts) from this screen's
+ * view, and go on once it confirms the payment: the account is signed in.
+ */
+const useConfirmWatch = (
+  from: "confirming" | "no_plan" | null,
+  onSignedIn?: () => void | Promise<void>
+) => {
+  const { transport } = useAppContext();
+  const queryClient = useQueryClient();
+  const phase = usePaymentConfirmPhase();
+  useEffect(() => {
+    if (from != null) startPaymentConfirmWatch(transport.client, from);
+  }, [transport, from]);
+  const confirmed = useEffectEvent(async () => {
+    queryClient.setQueryData(
+      transport.orpc.account.payment.queryKey({ input: {} }),
+      null
+    );
+    await queryClient.invalidateQueries();
+    await onSignedIn?.();
+  });
+  useEffect(() => {
+    if (from != null && phase === "confirmed") void confirmed();
+  }, [from, phase]);
+  return phase;
+};
+
+/**
+ * A payment the platform holds (payment-confirming.ts): "Confirming your
  * payment…" while the account is checked, then, after a few minutes, that it
  * cannot see the payment yet, with billing and Check again. Never a plan to
  * buy: the account already has one. Goes on by itself once it lands.
@@ -89,21 +135,7 @@ const PaymentConfirmingPanel = ({
   const { transport } = context;
   const [busy, setBusy] = useState(false);
   const queryClient = useQueryClient();
-  const phase = usePaymentConfirmPhase();
-  useEffect(() => {
-    startPaymentConfirmWatch(transport.client);
-  }, [transport]);
-  const confirmed = useEffectEvent(async () => {
-    queryClient.setQueryData(
-      transport.orpc.account.payment.queryKey({ input: {} }),
-      null
-    );
-    await queryClient.invalidateQueries();
-    await onSignedIn?.();
-  });
-  useEffect(() => {
-    if (phase === "confirmed") void confirmed();
-  }, [phase]);
+  const phase = useConfirmWatch("confirming", onSignedIn);
   const late = phase === "late";
   return (
     <div
@@ -200,8 +232,13 @@ const PaymentConfirmingPanel = ({
 
 export const PaymentRequiredPanel = (
   props: Parameters<typeof PaymentPlanPanel>[0]
-) =>
-  isUnconfirmed(props.payment) ? (
+) => {
+  const phase = usePaymentConfirmPhase();
+  // A held payment, or one the watch found held while the plan showed.
+  const held =
+    isUnconfirmed(props.payment) ||
+    (isNoPlan(props.payment) && (phase === "confirming" || phase === "late"));
+  return held ? (
     <PaymentConfirmingPanel
       title={props.title}
       {...(props.onSignedIn != null && { onSignedIn: props.onSignedIn })}
@@ -211,8 +248,9 @@ export const PaymentRequiredPanel = (
   ) : (
     <PaymentPlanPanel {...props} />
   );
+};
 
-/** A free trial that ended or a plan that lapsed: the plan, and the ways out. */
+/** No plan yet, a free trial that ended or a plan that lapsed: the plan, and the ways out. */
 const PaymentPlanPanel = ({
   payment,
   title,
@@ -236,6 +274,12 @@ const PaymentPlanPanel = ({
   const queryClient = useQueryClient();
   const copy = paymentCopy(payment);
   const lapsed = payment?.reason === "lapsed";
+  // No plan yet: the shared payment watch reads the account from the start, as
+  // the confirming screen did, so a payment made anywhere moves the user on.
+  // A trial or plan that ended is read once Upgrade opens checkout.
+  const noPlan = isNoPlan(payment);
+  useConfirmWatch(noPlan ? "no_plan" : null, onSignedIn);
+  const src = noPlan ? "payment_no_plan" : "payment_lapsed";
   const [billing, setBilling] = useState<BillingPlan | null>(null);
   const [checkoutAt, setCheckoutAt] = useState<number | null>(null);
   const [checking, setChecking] = useState(false);
@@ -278,17 +322,20 @@ const PaymentPlanPanel = ({
   // Checkout runs in the browser: the app goes on the moment it lands.
   useEffect(() => {
     if (checkoutAt == null) return;
+    // No plan: the payment watch already reads the account; the link's life only.
     const timer = setInterval(() => {
       if (Date.now() - checkoutAt > CHECKOUT_POLL_LIMIT_MS) setCheckoutAt(null);
-      else poll();
+      else if (!noPlan) poll();
     }, CHECKOUT_POLL_MS);
-    const onFocus = () => poll();
+    const onFocus = () => {
+      if (!noPlan) poll();
+    };
     window.addEventListener("focus", onFocus);
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [checkoutAt]);
+  }, [checkoutAt, noPlan]);
 
   const offer = lapsed ? null : wallOffer(billing);
   return (
@@ -345,11 +392,13 @@ const PaymentPlanPanel = ({
           data-action="upgrade"
           onClick={() => {
             // Called inside the click: the web build opens its tab here.
-            void openUpgrade(transport.client, "payment_lapsed");
+            void openUpgrade(transport.client, src);
+            // A watch past its 30 minutes reads the account again for this link.
+            if (noPlan) startPaymentConfirmWatch(transport.client, "no_plan");
             setCheckoutAt(Date.now());
           }}
         >
-          <UpgradeSeen src="payment_lapsed" />
+          <UpgradeSeen src={src} />
           {t(copy.cta)}
         </Button>
         <Button

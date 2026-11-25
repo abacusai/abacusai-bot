@@ -1297,6 +1297,210 @@ describe("the turn's outcome card", () => {
     expect(screen.queryByRole("button", { name: /Upgrade/ })).toBeNull();
   });
 
+  it("an account with no plan gets the plan card, never Confirming", async () => {
+    const openUpgrade = vi.fn(async () => {});
+    const os = implement(contract);
+    current = await renderRelay(
+      failed({
+        message: "Your Abacus.AI account doesn't have a plan yet.",
+        cause: "payment_required",
+        actions: [
+          { type: "payment-required", cause: "not_subscribed" },
+          { type: "switch-model" },
+        ],
+      }),
+      "session",
+      {},
+      {},
+      host("free", { openUpgrade }),
+      {
+        account: {
+          payment: os.account.payment.handler(
+            () => ({ reason: "not_subscribed" }) as never
+          ),
+        },
+      }
+    );
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    expect(screen.queryByText("Confirming your payment…")).toBeNull();
+    expect(screen.queryByText(/couldn't confirm|purchase again/i)).toBeNull();
+    screen.getByRole("button", { name: "Upgrade" }).click();
+    expect(openUpgrade).toHaveBeenCalledWith("payment_no_plan");
+  });
+
+  const NO_PLAN = {
+    message: "Your Abacus.AI account doesn't have a plan yet.",
+    cause: "payment_required",
+    actions: [
+      { type: "payment-required", cause: "not_subscribed" },
+      { type: "switch-model" },
+    ],
+  };
+
+  it("a payment made anywhere while the no-plan card shows sends the waiting message again, once", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    const relay = failed(NO_PLAN);
+    current = await renderRelay(relay, "session", {}, {}, host("free"), {
+      account: {
+        payment: os.account.payment.handler(() => verdict as never),
+      },
+    });
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    // Nothing tapped: the user paid in the browser and came back.
+    verdict = null;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(relay.stats.send).toHaveLength(1);
+    expect(
+      screen.queryByText("Choose a plan to keep using AbacusAI Bot")
+    ).toBeNull();
+  });
+
+  it("a payment that lands while the thread is away: back on it, the card is gone and the turn is sent again once", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    const relay = failed(NO_PLAN);
+    const procedures = {
+      account: {
+        payment: os.account.payment.handler(() => verdict as never),
+      },
+    };
+    const away = await renderRelay(
+      relay,
+      "session",
+      {},
+      {},
+      host("free"),
+      procedures
+    );
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    // The user leaves the thread: its cards unmount; the watch goes on.
+    away.view.unmount();
+    verdict = null;
+    await act(async () => checkPaymentNow());
+    await waitFor(() =>
+      expect(paymentConfirmStore.state.phase).toBe("confirmed")
+    );
+    expect(relay.stats.send).toHaveLength(0);
+    // Back on the thread: its cards mount again from its history.
+    const back = await renderRelay(
+      relay,
+      "session",
+      {},
+      {},
+      host("free"),
+      procedures
+    );
+    current = back;
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    expect(
+      screen.queryByText("Choose a plan to keep using AbacusAI Bot")
+    ).toBeNull();
+    expect(screen.queryByText("Confirming your payment…")).toBeNull();
+    // A remount (the scroller) and a focus: never a second send.
+    await back.remount();
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(relay.stats.send).toHaveLength(1);
+  });
+
+  it("five refused turns share one re-check, and only the latest sends again, once", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const payment = vi.fn(() => verdict as never);
+    const os = implement(contract);
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      ...[1, 2, 3, 4, 5].flatMap((n) => [
+        b.runStarted(`r${n}`),
+        ...b.text(`u${n}`, "user", `ask ${n}`),
+        b.runError(`r${n}`, NO_PLAN as never),
+      ]),
+    ]);
+    current = await renderRelay(relay, "session", {}, {}, host("free"), {
+      account: { payment: os.account.payment.handler(payment) },
+    });
+    await waitFor(() =>
+      expect(
+        document.querySelectorAll('[data-variant="payment-required"]').length
+      ).toBeGreaterThan(1)
+    );
+    const before = payment.mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(payment.mock.calls.length).toBe(before + 1));
+    verdict = null;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(relay.stats.send).toHaveLength(1);
+    expect(payment.mock.calls.length).toBe(before + 2);
+  });
+
+  it("a payment that lands while the no-plan card shows Confirming sends the message again exactly once", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    const relay = failed(NO_PLAN);
+    current = await renderRelay(relay, "session", {}, {}, host("free"), {
+      account: {
+        payment: os.account.payment.handler(() => verdict as never),
+      },
+    });
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    verdict = { reason: "unconfirmed" };
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await screen.findByText("Confirming your payment…");
+    verdict = null;
+    await act(async () => checkPaymentNow());
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      checkPaymentNow();
+    });
+    expect(relay.stats.send).toHaveLength(1);
+  });
+
+  it("a payment the platform holds turns the no-plan card into Confirming, never a second purchase", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    current = await renderRelay(
+      failed(NO_PLAN),
+      "session",
+      {},
+      {},
+      host("free"),
+      {
+        account: {
+          payment: os.account.payment.handler(() => verdict as never),
+        },
+      }
+    );
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    verdict = { reason: "unconfirmed" };
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await screen.findByText("Confirming your payment…");
+    expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  });
+
   it("a dropped connection is the connection card, with its details and a retry", async () => {
     current = await renderRelay(
       failed({

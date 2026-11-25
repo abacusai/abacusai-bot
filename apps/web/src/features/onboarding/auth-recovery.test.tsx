@@ -167,9 +167,19 @@ it("cancel after credentials are saved skips signup without allowing a stale han
 });
 
 const paymentScreens = [
-  // A first payment not recorded yet: confirming, never a plan to buy.
+  // A payment the platform holds: confirming, never a plan to buy.
   { reason: "unconfirmed", title: "Confirming your payment…", cta: null },
-  { reason: null, title: "Confirming your payment…", cta: null },
+  // Never paid, or a reason this build does not know: a plan, never confirming.
+  {
+    reason: "not_subscribed",
+    title: "Choose a plan to keep using AbacusAI Bot",
+    cta: "Upgrade",
+  },
+  {
+    reason: null,
+    title: "Choose a plan to keep using AbacusAI Bot",
+    cta: "Upgrade",
+  },
   { reason: "trial_ended", title: "Your free trial has ended", cta: "Upgrade" },
   { reason: "lapsed", title: "Your subscription has ended", cta: "Renew" },
 ] as const;
@@ -257,7 +267,7 @@ it.each(paymentScreens)(
     // The plan comes from billing_plan; a lapsed plan is renewed, not sold.
     await waitFor(() =>
       expect(screen.queryByText("Upgrade to Basic — Intro offer") != null).toBe(
-        reason === "trial_ended"
+        cta === "Upgrade"
       )
     );
     expect(
@@ -269,7 +279,7 @@ it.each(paymentScreens)(
         (item) => item.textContent
       )
     ).toEqual(
-      reason !== "trial_ended"
+      cta !== "Upgrade"
         ? []
         : [
             "20,000 credits a month (10x the free plan)",
