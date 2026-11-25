@@ -2034,7 +2034,7 @@
       "files": "Files",
       "agents": "Agents",
       "device": "기기",
-      "terminal": "Terminal",
+      "terminal": "터미널",
       "browser": "Browser",
       "full": "Toggle full view",
       "move": "Move tab",
@@ -2139,7 +2139,7 @@
       "unavailable": "Device stream unavailable"
     },
     "terminal": {
-      "title": "Terminal",
+      "title": "터미널",
       "exited": "프로세스가 종료됨 ({{code}})",
       "newShell": "새 터미널 · {{shell}}",
       "planRequired": "무료 요금제에서는 호스팅 컴퓨터에서 터미널을 사용할 수 없습니다. 사용하려면 업그레이드하세요.",
@@ -2965,7 +2965,7 @@
       "emptyDescription": "항목을 선택하면 여기에 세부 정보가 표시됩니다.",
       "tabs": {
         "changes": "Changes",
-        "terminal": "Terminal",
+        "terminal": "터미널",
         "files": "Files",
         "browser": "Browser",
         "memory": "Memory",
