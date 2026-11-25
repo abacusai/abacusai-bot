@@ -87,9 +87,10 @@ export type TerminalOutputChunk =
    * This generation ended without an exit of its own: `closed` (the terminal
    * was closed, or its scope or workspace disposed), or `superseded` (a
    * scope promotion moved the shell to a new key and generation; the
-   * terminal state events name the new one).
+   * terminal state events name the new one), or `quit` (the app is
+   * quitting; the tab is kept and reopens with a fresh shell).
    */
-  | { type: "retired"; reason: "closed" | "superseded" };
+  | { type: "retired"; reason: "closed" | "superseded" | "quit" };
 
 export type TerminalEvent =
   /** First yield on (re)open: every terminal's state in scope. */
