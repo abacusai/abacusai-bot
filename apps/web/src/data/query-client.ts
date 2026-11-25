@@ -23,7 +23,7 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 
-import { errorText, FailedAnswer } from "#renderer/lib/error-text";
+import { FailedAnswer, failureText } from "#renderer/lib/error-text";
 
 /**
  * What a failed mutation toasts (`meta.errorToast`): `errorText` of the
@@ -102,7 +102,7 @@ export const createQueryClient = ({
       onError: (error, _variables, _result, mutation) => {
         const toast = mutation.meta?.errorToast;
         if (toast === undefined || !showError) return;
-        const text = errorText(error, toast === true ? undefined : toast);
+        const text = failureText(error, toast === true ? undefined : toast);
         if (text === null || shown.has(text)) return;
         shown.add(text);
         setTimeout(() => shown.delete(text), 0);
@@ -327,7 +327,13 @@ export const succeeding = <
     mutationFn?: (
       variables: never,
       context: MutationFunctionContext
-    ) => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
+    ) => Promise<{
+      success: boolean;
+      error?: string;
+      cancelled?: boolean;
+      /** `error` was written for the user: the toast shows it. */
+      userFacing?: boolean;
+    }>;
   },
 >(
   options: Options
@@ -336,7 +342,7 @@ export const succeeding = <
   mutationFn: async (variables: never, context: MutationFunctionContext) => {
     const result = await options.mutationFn!(variables, context);
     if (!result.success && !result.cancelled)
-      throw new FailedAnswer(result.error);
+      throw new FailedAnswer(result.error, result.userFacing === true);
     return result;
   },
 });

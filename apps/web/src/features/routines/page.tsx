@@ -23,7 +23,7 @@ import { EmptyState } from "#renderer/components/empty-state";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { isRpcError } from "#renderer/data/query-client";
 import { persistedStore } from "#renderer/lib/continuity/registry";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showError, showFailure, showInfo } from "#renderer/lib/toast";
@@ -121,7 +121,7 @@ const RunsRail = ({
                   {a.outcome === "running" ? (
                     <Loader2 className="text-primary size-3.5 shrink-0 animate-spin" />
                   ) : a.outcome === "failed" ? (
-                    <CircleAlert className="text-attention size-3.5 shrink-0" />
+                    <CircleAlert className="text-failed size-3.5 shrink-0" />
                   ) : a.outcome === "offline" ||
                     a.outcome === "skipped-offline" ||
                     a.outcome === "skipped-link" ? (
@@ -654,7 +654,7 @@ export const EditorChat = ({
       const reply =
         code === "TIMEOUT"
           ? t("phase5.editTimeout")
-          : errorText(e, "phase5.editFailed");
+          : failureText(e, "phase5.editFailed");
       if (reply != null)
         store.setState((log) => [...log, { user, reply }].slice(-10));
     }

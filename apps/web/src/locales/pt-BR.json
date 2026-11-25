@@ -1088,6 +1088,7 @@
     "add": "Adicionar",
     "addPlaceholder": "Algo para lembrar…",
     "typeLabel": "Tipo de nota",
+    "saveRefused": "Não salvo: {{reason}}",
     "busy": "A memória estava sendo alterada ao mesmo tempo. Tente de novo.",
     "types": {
       "profile": "Perfil",
@@ -1341,6 +1342,8 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
+      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "Entre no Abacus.AI pelo seu navegador",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "Todas as fontes gratuitas se esgotaram por enquanto. Conecte outra fonte gratuita ou escolha outro modelo.",
       "rate_limited": "Os modelos gratuitos estão ocupados agora. Tente de novo em alguns minutos ou mude para outro modelo.",
       "empty": "O modelo devolveu uma resposta vazia. Tente de novo ou mude para outro modelo.",
+      "stalled": "O modelo parou de responder. Tente de novo ou mude para outro modelo.",
+      "stream_cut": "A resposta foi cortada no meio, mesmo depois de pedir de novo. Tente de novo ou mude para outro modelo.",
+      "config_rejected": "Seu provedor recusou uma configuração deste modelo. Confira as configurações do modelo ou mude para outro modelo.",
       "disk_full": "O disco está cheio (restam {{free}}), então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
       "disk_fullUnmeasured": "O disco está cheio, então esta conversa não pode ser salva e o agente não pode gravar arquivos. Libere algum espaço e tente novamente.",
       "unknown": "O modelo não conseguiu terminar isso. Tente de novo ou mude para outro modelo."

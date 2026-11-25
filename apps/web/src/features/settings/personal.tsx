@@ -301,9 +301,14 @@ const useMemoryWrites = () => {
   const { t } = useTranslation();
   const { transport, db } = useAppContext();
   const fail = (error: unknown) =>
-    isRpcError(error) && error.code === "CONFLICT"
-      ? showError(t("memory.busy"))
-      : showFailure(error, "phase5.saveFailed");
+    // A refusal's reason is worded for the user where it is thrown.
+    isRpcError(error) &&
+    error.code === "BAD_REQUEST" &&
+    error.data?.userFacing === true
+      ? showError(t("memory.saveRefused", { reason: error.message }))
+      : isRpcError(error) && error.code === "CONFLICT"
+        ? showError(t("memory.busy"))
+        : showFailure(error, "phase5.saveFailed");
   return {
     /** Resolves true once saved; a failure is shown. */
     save: (
@@ -979,7 +984,7 @@ export const QuietTimes = ({
         </form.Field>
       ))}
       {error && (
-        <p role="alert" className="text-foreground self-end text-xs">
+        <p role="alert" className="text-failed self-end text-xs">
           {t("phase5.differentTimes")}
         </p>
       )}

@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
-import { errorText } from "#renderer/lib/error-text";
+import { failureCode } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 /** How often the snapshot is read again while the card is up. */
@@ -120,7 +120,8 @@ export const HomeChannelConnect = ({
       .catch((reason: unknown) => {
         attempt.current = null;
         setBusy(false);
-        setError(errorText(reason));
+        // A code: the card puts it in the app's words.
+        setError(failureCode(reason));
       });
   };
   return (

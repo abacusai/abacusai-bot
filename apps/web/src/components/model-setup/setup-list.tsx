@@ -8,7 +8,7 @@ import {
   markForProvider,
 } from "#renderer/components/connector-mark";
 import { ConnectPending } from "#renderer/components/form-kit/connect-dialog";
-import { errorText } from "#renderer/lib/error-text";
+import { errorText, failureText } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useRowConnects } from "#renderer/lib/use-row-connects";
 import { Button } from "#renderer/ui/button";
@@ -62,7 +62,7 @@ export const ModelSetupPopover = ({
       setProvider(null);
       setKey("");
     } catch (error) {
-      setError(errorText(error));
+      setError(failureText(error));
     }
     setPending(false);
   };
@@ -152,7 +152,7 @@ export const ModelSetupPopover = ({
                       {failed != null && (
                         <span
                           role="alert"
-                          className="text-foreground basis-full ps-6 text-xs"
+                          className="text-failed basis-full ps-6 text-xs"
                         >
                           {errorText(failed, "phase5.connectFailed")}
                         </span>
@@ -233,7 +233,7 @@ export const ModelSetupPopover = ({
           </p>
         ) : null}
         {error ? (
-          <p role="alert" className="text-foreground px-2 py-1">
+          <p role="alert" className="text-failed px-2 py-1">
             {error}
           </p>
         ) : null}

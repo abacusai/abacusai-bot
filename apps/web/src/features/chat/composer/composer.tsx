@@ -42,7 +42,7 @@ import {
   type Draft,
 } from "#renderer/lib/continuity/composer-drafts";
 import { documentSoundPlayer } from "#renderer/lib/document-sound";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
@@ -357,7 +357,7 @@ const Attach = () => {
                 );
                 if (files != null) addPaths(threadId, files);
               } catch (e) {
-                setError(errorText(e));
+                setError(failureText(e));
               }
             }}
           >

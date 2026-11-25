@@ -1088,6 +1088,7 @@
     "add": "Toevoegen",
     "addPlaceholder": "Iets om te onthouden…",
     "typeLabel": "Soort notitie",
+    "saveRefused": "Niet opgeslagen: {{reason}}",
     "busy": "Het geheugen werd op hetzelfde moment gewijzigd. Probeer het opnieuw.",
     "types": {
       "profile": "Profiel",
@@ -1341,6 +1342,8 @@
       "waiting": "Je account wordt gekoppeld…",
       "session": "Je inlogsessie is verlopen. Gebruik ‘Op een andere manier inloggen’ om op deze site in te loggen en kom daarna terug om je account te koppelen.",
       "authCode": "Deze site kon geen koppelcode voor je account aanmaken. Probeer het opnieuw. Blijft het mislukken, neem dan contact op met support.",
+      "hostStart": "De host kon de accountkoppeling niet starten ({{code}}). Probeer het opnieuw. Blijft het mislukken, neem dan contact op met support en vermeld deze code.",
+      "hostComplete": "De host kon de accountkoppeling niet voltooien ({{code}}). Probeer het opnieuw. Blijft het mislukken, neem dan contact op met support en vermeld deze code.",
       "network": "De netwerkverbinding is weggevallen tijdens het koppelen van je account. Controleer je verbinding en probeer het opnieuw."
     },
     "pages.connect.browserTitle": "Log in bij Abacus.AI in je browser",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "Alle gratis bronnen zijn voorlopig op. Koppel een andere gratis bron of kies een ander model.",
       "rate_limited": "De gratis modellen zijn nu druk bezet. Probeer het over een paar minuten opnieuw of kies een ander model.",
       "empty": "Het model gaf een leeg antwoord. Probeer het opnieuw of kies een ander model.",
+      "stalled": "Het model is gestopt met antwoorden. Probeer het opnieuw of kies een ander model.",
+      "stream_cut": "Het antwoord werd halverwege afgebroken, ook na opnieuw vragen. Probeer het opnieuw of kies een ander model.",
+      "config_rejected": "Je provider heeft een instelling in de configuratie van dit model geweigerd. Controleer de instellingen van het model of kies een ander model.",
       "disk_full": "De schijf is vol ({{free}} over), dus deze chat kan niet worden opgeslagen en de agent kan geen bestanden schrijven. Maak wat ruimte vrij en probeer het opnieuw.",
       "disk_fullUnmeasured": "De schijf is vol, dus deze chat kan niet worden opgeslagen en de agent kan geen bestanden schrijven. Maak wat ruimte vrij en probeer het opnieuw.",
       "unknown": "Het model kon dit niet afronden. Probeer het opnieuw of kies een ander model."

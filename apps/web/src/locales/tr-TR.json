@@ -1088,6 +1088,7 @@
     "add": "Ekle",
     "addPlaceholder": "Hatırlanacak bir şey…",
     "typeLabel": "Not türü",
+    "saveRefused": "Kaydedilmedi: {{reason}}",
     "busy": "Bellek aynı anda değiştiriliyordu. Yeniden dene.",
     "types": {
       "profile": "Profil",
@@ -1341,6 +1342,8 @@
       "waiting": "Hesabın bağlanıyor…",
       "session": "Giriş oturumunun süresi doldu. Bu sitede giriş yapmak için “Başka bir yolla giriş yap” seçeneğini kullan, ardından hesabını bağlamak için geri dön.",
       "authCode": "Bu site bir hesap bağlantı kodu oluşturamadı. Yeniden dene. Sorun sürerse destek ekibiyle iletişime geç.",
+      "hostStart": "Sunucu hesap bağlantısını başlatamadı ({{code}}). Yeniden dene. Sorun sürerse bu kodla destek ekibiyle iletişime geç.",
+      "hostComplete": "Sunucu hesap bağlantısını tamamlayamadı ({{code}}). Yeniden dene. Sorun sürerse bu kodla destek ekibiyle iletişime geç.",
       "network": "Hesap bağlantısı sırasında ağ bağlantısı koptu. Bağlantını kontrol et ve yeniden dene."
     },
     "pages.connect.browserTitle": "Tarayıcında Abacus.AI'a giriş yap",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "Şimdilik tüm ücretsiz kaynaklar tükendi. Başka bir ücretsiz kaynak bağla veya başka bir model seç.",
       "rate_limited": "Ücretsiz modeller şu anda yoğun. Birkaç dakika sonra tekrar dene veya başka bir modele geç.",
       "empty": "Model boş bir yanıt döndürdü. Tekrar dene veya başka bir modele geç.",
+      "stalled": "Model yanıt vermeyi bıraktı. Tekrar dene veya başka bir modele geç.",
+      "stream_cut": "Yanıt, yeniden istense de yarıda kesildi. Tekrar dene veya başka bir modele geç.",
+      "config_rejected": "Sağlayıcın bu modelin yapılandırmasındaki bir ayarı reddetti. Modelin ayarlarını kontrol et veya başka bir modele geç.",
       "disk_full": "Disk dolu ({{free}} kaldı), bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "disk_fullUnmeasured": "Disk dolu, bu yüzden bu sohbet kaydedilemiyor ve ajan dosya yazamıyor. Biraz yer açın, ardından tekrar deneyin.",
       "unknown": "Model bunu tamamlayamadı. Tekrar dene veya başka bir modele geç."

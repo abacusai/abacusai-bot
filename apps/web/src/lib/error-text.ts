@@ -1,8 +1,14 @@
 /**
- * The one path from a failure to what the user reads. A page never shows an
- * error's own words (an exception, main's or a server's message, a status,
- * command output): it shows the app's copy for a reason it knows, else a
- * calm generic line, and the detail goes to the log.
+ * The one path from a failure to what the user reads. Text written for the
+ * user is shown as it is; an internal failure (an exception, a server's
+ * body, a status, command output) never is: the page shows the app's copy
+ * for a reason it knows, else its own calm line, and the detail is logged.
+ *
+ * Written for the user, by type, never by guessing at the text:
+ * - a `UserFacingError` the renderer throws with its own translated copy;
+ * - a contract error main marks `data.userFacing` (an `InvalidInputError`, a
+ *   cron schedule's detail, gh's own plain sentence);
+ * - a `{ success: false, error, userFacing: true }` answer.
  */
 import { isDefinedError } from "@orpc/client";
 import { isCancelledError } from "@tanstack/react-query";
@@ -10,9 +16,17 @@ import { isCancelledError } from "@tanstack/react-query";
 import { isHostUnavailable } from "#renderer/data/transport/lifecycle";
 import { i18n } from "#renderer/lib/i18n";
 
+/** A failure whose message the renderer wrote for the user, translated. */
+export class UserFacingError extends Error {
+  override name = "UserFacingError";
+}
+
 /** A procedure's `{ success: false }` answer, as a mutation's error. */
 export class FailedAnswer extends Error {
-  constructor(readonly reason: string | undefined) {
+  constructor(
+    readonly reason: string | undefined,
+    readonly userFacing = false
+  ) {
     super(reason ?? "failed");
   }
 }
@@ -45,10 +59,11 @@ const REASON_COPY: Readonly<Record<string, string>> = {
   "app-missing": "phase5.connectAppMissing",
   "app-not-ready": "phase5.connectAppNotReady",
   "other-os": "phase5.connectOtherOs",
+  "host-unavailable": "chat.message.notSent",
   "disk-full": "errors.diskFull",
 };
 
-/** The reason code a failure carries, if it is one the app has copy for. */
+/** The reason code an answer carries, if it is one the app has copy for. */
 const reasonCode = (error: unknown): string | undefined => {
   // Only an answer's own code: an exception's message is never a code.
   const reason =
@@ -62,9 +77,33 @@ const reasonCode = (error: unknown): string | undefined => {
     : undefined;
 };
 
-/** Failures already logged: a page may ask for the same one's text each render. */
+/** A failure's text when it was written for the user, else undefined. */
+const userText = (error: unknown): string | undefined => {
+  if (error instanceof UserFacingError) return error.message;
+  if (error instanceof FailedAnswer)
+    return error.userFacing ? error.reason : undefined;
+  if (!isDefinedError(error)) return undefined;
+  const { data, message } = error as { data?: unknown; message?: unknown };
+  return (data as { userFacing?: unknown } | undefined)?.userFacing === true &&
+    typeof message === "string"
+    ? message
+    : undefined;
+};
+
+/** What a caught failure is, as a code the page translates when it shows it. */
+export const failureCode = (
+  error: unknown
+): "cancelled" | "host-unavailable" | "disk-full" | "failed" => {
+  if (isCancellation(error)) return "cancelled";
+  if (isHostUnavailable(error)) return "host-unavailable";
+  if (isDiskFull(error)) return "disk-full";
+  logFailure(error);
+  return "failed";
+};
+
+/** Failures already logged: the same one can come through more than once. */
 const logged = new Set<unknown>();
-/** Logs a failure's detail once, for a page that shows its own words for it. */
+/** Logs a failure's detail once. Never call it while rendering. */
 export const logFailure = (error: unknown): void => {
   if (logged.has(error)) return;
   logged.add(error);
@@ -72,24 +111,42 @@ export const logFailure = (error: unknown): void => {
   console.error("[error]", error);
 };
 
+/** Null: nothing to show. `known`: the app has words for it (no log needed). */
+const describe = (
+  error: unknown,
+  fallback: string
+): { text: string | null; known: boolean } => {
+  if (isCancellation(error) || error === "cancelled")
+    return { text: null, known: true };
+  // Never reached the host: one "not sent", whichever write it was.
+  if (isHostUnavailable(error))
+    return { text: i18n.t("chat.message.notSent"), known: true };
+  // Every write fails the same way, so the cause outranks the site's copy.
+  if (isDiskFull(error))
+    return { text: i18n.t("errors.diskFull"), known: true };
+  const written = userText(error);
+  if (written != null && written !== "") return { text: written, known: true };
+  const code = reasonCode(error);
+  if (code != null) return { text: i18n.t(REASON_COPY[code]!), known: true };
+  return { text: i18n.t(fallback), known: false };
+};
+
 /**
- * What the user reads for `error`; null shows nothing.
- * - one the app cancelled itself: nothing;
- * - never sent, a full disk, or a reason code the app knows: its copy;
- * - anything else: `fallback`'s copy (a site's own, else "Something went
- *   wrong. Try again."), the detail in the log, never on the page.
+ * What the user reads for `error`; null shows nothing. Pure, so a page may
+ * call it while rendering. `fallback` is the site's copy for a failure the
+ * app has no words for ("Something went wrong. Try again." by default).
  */
 export const errorText = (
   error: unknown,
   fallback = "errors.tryAgain"
+): string | null => describe(error, fallback).text;
+
+/** `errorText` for a failure just caught: an internal one is logged. */
+export const failureText = (
+  error: unknown,
+  fallback = "errors.tryAgain"
 ): string | null => {
-  if (isCancellation(error) || error === "cancelled") return null;
-  // Never reached the host: one "not sent", whichever write it was.
-  if (isHostUnavailable(error)) return i18n.t("chat.message.notSent");
-  // Every write fails the same way, so the cause outranks the site's copy.
-  if (isDiskFull(error)) return i18n.t("errors.diskFull");
-  const code = reasonCode(error);
-  if (code != null) return i18n.t(REASON_COPY[code]!);
-  logFailure(error);
-  return i18n.t(fallback);
+  const { text, known } = describe(error, fallback);
+  if (!known) logFailure(error);
+  return text;
 };

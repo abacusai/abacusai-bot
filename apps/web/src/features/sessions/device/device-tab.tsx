@@ -9,7 +9,7 @@ import { DeviceStreamPlayer } from "#renderer/components/device/stream-player";
 import { EmptyState } from "#renderer/components/empty-state";
 import { useMutation, useMutationState } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText, UserFacingError } from "#renderer/lib/error-text";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
@@ -48,7 +48,9 @@ const startDeviceCapture = (
       deviceId: device.id,
     });
     if (!shot.dataUrl)
-      throw new Error(shot.error ?? t("sessions.device.unavailable"));
+      throw new UserFacingError(t("sessions.device.unavailable"), {
+        cause: shot.error,
+      });
     const image = new Image();
     image.src = shot.dataUrl;
     await image.decode();
@@ -64,7 +66,7 @@ const startDeviceCapture = (
       try {
         await paintScreenshot();
       } catch (e) {
-        if (!abort.signal.aborted) setError(errorText(e));
+        if (!abort.signal.aborted) setError(failureText(e));
       }
       await pause(1000);
     }
@@ -74,7 +76,7 @@ const startDeviceCapture = (
     fallbackStarted = true;
     streamAbort.abort();
     player?.dispose();
-    setError(errorText(reason));
+    setError(failureText(reason));
     if (streamId !== undefined)
       await transport.client.devices.stream.stop({ streamId }).catch(() => {});
     streamId = undefined;
@@ -86,7 +88,7 @@ const startDeviceCapture = (
           focus: false,
         });
         if (denied.current.has(device.id))
-          throw new Error(t("sessions.device.permission"));
+          throw new UserFacingError(t("sessions.device.permission"));
         const aspect = await paintScreenshot().catch(() => null);
         for (let attempt = 0; ; attempt++) {
           const source = await transport.client.devices.simulatorWindowSource({
@@ -98,7 +100,7 @@ const startDeviceCapture = (
           ) {
             denied.current.add(device.id);
             setPermission(true);
-            throw new Error(t("sessions.device.permission"));
+            throw new UserFacingError(t("sessions.device.permission"));
           }
           if (source.sourceId) {
             media = await navigator.mediaDevices.getUserMedia({
@@ -114,7 +116,9 @@ const startDeviceCapture = (
             break;
           }
           if (attempt >= 3 || abort.signal.aborted)
-            throw new Error(source.error ?? t("sessions.device.unavailable"));
+            throw new UserFacingError(t("sessions.device.unavailable"), {
+              cause: source.error,
+            });
           await pause(800);
         }
         if (abort.signal.aborted) {
@@ -159,7 +163,7 @@ const startDeviceCapture = (
         return;
       } catch (e) {
         media?.getTracks().forEach((track) => track.stop());
-        if (!abort.signal.aborted) setError(errorText(e));
+        if (!abort.signal.aborted) setError(failureText(e));
       }
     }
     await snapshots();
@@ -172,7 +176,9 @@ const startDeviceCapture = (
       });
       streamId = start.streamId;
       if (!start.success || streamId === undefined)
-        throw new Error(start.error ?? t("sessions.device.unavailable"));
+        throw new UserFacingError(t("sessions.device.unavailable"), {
+          cause: start.error,
+        });
       if (abort.signal.aborted) {
         await transport.client.devices.stream.stop({ streamId });
         return;
@@ -244,8 +250,8 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
   }, [device, active, retry, transport, t]);
   // Pointer and key events stay raw calls: one per event, nothing to guard.
   const action = (promise: Promise<unknown>) =>
-    void promise.catch((e) => setError(errorText(e)));
-  const reports = { onError: (e: unknown) => setError(errorText(e)) };
+    void promise.catch((e) => setError(failureText(e)));
+  const reports = { onError: (e: unknown) => setError(failureText(e)) };
   const boot = useMutation(
     transport.orpc.devices.boot.mutationOptions(reports)
   );

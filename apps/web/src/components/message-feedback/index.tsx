@@ -330,7 +330,7 @@ export const MessageFeedback = ({
               status === "failed" ||
                 status === "not-synced" ||
                 status === "not-saved"
-                ? "text-foreground"
+                ? "text-failed"
                 : "text-muted-foreground",
               (status === "idle" || status === "sending") && "sr-only"
             )}

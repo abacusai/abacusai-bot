@@ -30,8 +30,10 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
-    /* A failure's mark (an icon, a dot, a rule): calm, never an alarm's red. */
+    /* Needs you: the attention tone. */
     --color-attention: var(--chat-status-attention);
+    /* A failure's words and mark: its own tone, never an alarm's red. */
+    --color-failed: var(--status-failed);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -74,6 +76,8 @@
     /* Status colors are global: Library and onboarding can load before chat. */
     --chat-status-running: oklch(0.52 0.15 50);
     --chat-status-attention: oklch(0.52 0.15 50);
+    /* Failed: magenta-rose, apart from running and needs-you, never alarm red. */
+    --status-failed: oklch(0.52 0.17 335);
     --chat-status-done: oklch(0.47 0.12 150);
     --chat-status-muted: oklch(0.5 0 0);
 
@@ -114,6 +118,7 @@
     --destructive: oklch(0.704 0.191 22.216);
     --chat-status-running: oklch(0.84 0.1 60);
     --chat-status-attention: oklch(0.84 0.1 60);
+    --status-failed: oklch(0.8 0.12 335);
     --chat-status-done: oklch(0.87 0.12 150);
     --chat-status-muted: oklch(0.7 0 0);
 
@@ -211,22 +216,20 @@ html:not([data-palette="default"]):is([data-palette]) :is(:is([data-slot="alert-
 }
 
 /*
- * A failure is told calmly; only the destructive actions above keep their
- * red. An error toast's mark and an invalid control's outline take the
- * attention tone, and a field's message stays in the page's own colour.
+ * A failure is told calmly, in its own tone; only the destructive actions
+ * above keep their red. An error toast's mark, a field's message and an
+ * invalid control's outline take the failed tone.
  */
-[data-slot="toast-icon"] .text-destructive {
-  color: var(--chat-status-attention);
-}
+[data-slot="toast-icon"] .text-destructive,
 [data-slot="field"][data-invalid="true"],
 :is([data-slot="field-error"], [data-slot="questionnaire-error"]) {
-  color: var(--foreground);
+  color: var(--status-failed);
 }
 [aria-invalid="true"],
 [data-slot="questionnaire-choice"][data-invalid],
 :is([data-slot="input-group"], [data-slot="combobox-chips"]):has([aria-invalid="true"]) {
-  border-color: var(--chat-status-attention);
-  --tw-ring-color: color-mix(in oklch, var(--chat-status-attention) 25%, transparent);
+  border-color: var(--status-failed);
+  --tw-ring-color: color-mix(in oklch, var(--status-failed) 25%, transparent);
 }
 
 /* This viewport starts below the title bar, so the stack grows downward. */

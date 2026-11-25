@@ -20,7 +20,7 @@ import {
 import { followNotices } from "#renderer/data/queries/notices";
 import { useMutation } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
-import { isCancellation, logFailure } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { getLogDump } from "#renderer/lib/log-ring";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -37,6 +37,17 @@ import {
 import { Button } from "#renderer/ui/button";
 
 import { LicenseSection } from "./license-section";
+/**
+ * What an install failure adds under its title: the service's own words
+ * ("The app is busy"), not the title said again.
+ */
+export const installNote = (
+  installError: string | null | undefined,
+  t: (key: string) => string
+): string | null =>
+  installError != null && installError !== t("phase5.updates.installFailed")
+    ? installError
+    : null;
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false
@@ -217,10 +228,9 @@ export const useUpdateStatus = () => {
       },
       onError: (e) => {
         setClicked(false);
-        // The phase says the install failed; main's own words are for the log.
-        if (isCancellation(e)) return;
-        logFailure(e);
-        setInstallError("failed");
+        // The service's own words ("The app is busy") as they are; the
+        // updater's are for the log, and the phase says the install failed.
+        setInstallError(failureText(e, "phase5.updates.installFailed"));
       },
     })
   );
@@ -287,6 +297,12 @@ export const AboutPage = () => {
             version: update.status?.updateInfo?.version,
             percent: Math.round(update.status?.progress?.percent ?? 0),
           })}
+          // The updater's own status error stays in the log: the title says it.
+          detail={
+            update.phase === "manualInstall"
+              ? undefined
+              : (installNote(update.installError, t) ?? undefined)
+          }
         >
           {["downloaded", "installFailed"].includes(update.phase) && (
             <Button size="sm" onClick={() => update.install()}>
@@ -395,13 +411,14 @@ export const CriticalUpdateDialog = () => {
         {update.status?.error || update.installError ? (
           // What failed, in the app's words; main's own stay in the log.
           <PageNote error>
-            {t(
-              update.installError || update.status?.failedPhase === "install"
-                ? "phase5.updates.installFailed"
-                : update.status?.failedPhase === "download"
-                  ? "phase5.updates.downloadFailed"
-                  : "phase5.updates.checkFailed"
-            )}
+            {update.installError ??
+              t(
+                update.status?.failedPhase === "install"
+                  ? "phase5.updates.installFailed"
+                  : update.status?.failedPhase === "download"
+                    ? "phase5.updates.downloadFailed"
+                    : "phase5.updates.checkFailed"
+              )}
           </PageNote>
         ) : update.phase === "queued" ? (
           <p>{t("phase5.updates.queued")}</p>

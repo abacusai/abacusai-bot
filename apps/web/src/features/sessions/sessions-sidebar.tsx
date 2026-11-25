@@ -23,7 +23,7 @@ import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useCollectionStatus } from "#renderer/data/db/status";
 import { usePendingConnectorAsks } from "#renderer/lib/connector-requests";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText, UserFacingError } from "#renderer/lib/error-text";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
@@ -179,7 +179,7 @@ export const SessionsSidebar = () => {
           .add({ path })
           .then(async (result) => {
             if (!result.workspaceId)
-              throw new Error(t("shell.sidebar.loadError"));
+              throw new UserFacingError(t("shell.sidebar.loadError"));
             await collections.workspaces.utils.resync();
             await navigate({
               to: "/sessions/new",
@@ -190,7 +190,7 @@ export const SessionsSidebar = () => {
               transition: "nav-forward",
             });
           })
-          .catch((error) => setDropError(errorText(error)));
+          .catch((error) => setDropError(failureText(error)));
       }}
     >
       <NavList.Root label={t("sessions.sidebar.label")}>
@@ -401,7 +401,7 @@ const SessionSidebarRow = ({
           })
           .then((branch) => {
             if (!branch.currentBranch)
-              throw new Error(t("sessions.tray.noBranch"));
+              throw new UserFacingError(t("sessions.tray.noBranch"));
             startDraftStore.setState(() => ({
               ...newStartDraft(),
               workspaceId: session.workspaceId,
@@ -416,7 +416,7 @@ const SessionSidebarRow = ({
               transition: "nav-forward",
             });
           })
-          .catch((e) => setError(errorText(e)));
+          .catch((e) => setError(failureText(e)));
       },
     },
     {
@@ -514,7 +514,7 @@ const SessionSidebarRow = ({
                 e.preventDefault();
                 void renameSession(db, session.id, label)
                   .then(() => setRename(false))
-                  .catch((e) => setError(errorText(e)));
+                  .catch((e) => setError(failureText(e)));
               }}
             >
               <Input
@@ -553,7 +553,7 @@ const SessionSidebarRow = ({
                         replace: true,
                         transition: "nav-lateral",
                       });
-                  }).catch((e) => setError(errorText(e)))
+                  }).catch((e) => setError(failureText(e)))
                 }
               >
                 {t("sessions.sidebar.delete")}
@@ -562,7 +562,7 @@ const SessionSidebarRow = ({
           </AlertDialogContent>
         </AlertDialog>
         {error ? (
-          <p role="alert" className="text-foreground text-xs">
+          <p role="alert" className="text-failed text-xs">
             {error}
           </p>
         ) : null}
@@ -715,7 +715,7 @@ const WorkspaceGroup = ({
                   d.label = label.trim();
                 })
                 .isPersisted.promise.then(() => setRename(false))
-                .catch((e) => setError(errorText(e)));
+                .catch((e) => setError(failureText(e)));
             }}
           >
             <Input

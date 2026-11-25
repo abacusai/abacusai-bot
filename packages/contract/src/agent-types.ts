@@ -371,6 +371,8 @@ export type AgentEvent =
         message?: string;
         code?: string;
         name?: string;
+        /** `message` is the app's own sentence for the user: shown as it is. */
+        userFacing?: boolean;
         /** The provider's own sentence, for the log rather than the screen. */
         detail?: string;
         /** Why the turn did not finish: a FailureCause (turn-outcome.ts). */

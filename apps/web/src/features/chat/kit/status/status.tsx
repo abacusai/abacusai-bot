@@ -132,7 +132,7 @@ import {
   useCreditWallTask,
   useUpgradeResume,
 } from "../upgrade-triggers";
-import { failureLine } from "./failure-line";
+import { failureLine, type TurnFailureView } from "./failure-line";
 import { TurnCredits } from "./turn-credits";
 
 interface ErrorAction {
@@ -1280,6 +1280,10 @@ export const ErrorCard = ({
   tier: providedTier,
 }: ErrorCardProps) => {
   const { t, i18n } = useTranslation();
+  // What failed, in the provider's or the system's words, is for the log.
+  useEffect(() => {
+    if (outcome.error != null) logFailure(outcome.error);
+  }, [outcome.error]);
   const { session, composer, runtime, skin, slots } = useChatView();
   const { transport } = useAppContext();
   const resume = useUpgradeResume();
@@ -1841,22 +1845,10 @@ export const ErrorCard = ({
           (button) => button.props["data-action"] === "switch-to-abacus"
         )
       );
-  const line = crashed
-    ? t("chat.error.crashed")
-    : connection
-      ? t("outcome.connection.title")
-      : cause === "disk_full"
-        ? diskFullLine(actions, t)
-        : failureLine(
-            t,
-            cause,
-            actions.find((action) => action.provider != null)?.provider
-          );
+  const line = failureLine(t, error as TurnFailureView);
   const { title, body } = connection
     ? { title: line, body: t("outcome.connection.body") }
     : splitLine(line, i18n.language);
-  // What failed, in the provider's or the system's words, is for the log.
-  logFailure(error);
   const Icon = connection
     ? WifiOff
     : (CAUSE_ICON[cause as keyof typeof CAUSE_ICON] ?? CircleAlert);
@@ -1944,17 +1936,6 @@ const formatBytes = (bytes: number): string =>
   bytes >= 1024 ** 3
     ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
     : `${Math.round(bytes / 1024 ** 2)} MB`;
-
-/** The full-disk card's line, with what is left when the agent measured it. */
-const diskFullLine = (
-  actions: ErrorAction[],
-  t: (key: string, values?: Record<string, string>) => string
-): string => {
-  const free = actions.find((action) => action.type === "retry")?.bytesFree;
-  return free != null
-    ? t("outcome.cause.disk_full", { free: formatBytes(free) })
-    : t("outcome.cause.disk_fullUnmeasured");
-};
 
 /** The action on a job that finished with no turn running. */
 const BACKGROUND_JOB_ACTION = "background-job";
@@ -2072,6 +2053,13 @@ export const NoticeRow = ({
 }) => {
   const { t } = useTranslation();
   const { runtime, session, composer, skin } = useChatView();
+  // The agent's own error shows only when it was worded for the user; any
+  // other is for the log, and the row says it in the app's words.
+  const agentInternal =
+    notice.name === "agent.error" && notice.value.userFacing !== true;
+  useEffect(() => {
+    if (agentInternal) logFailure(notice.value);
+  }, [agentInternal, notice.value]);
   const severity = (
     notice.name === "agent.error"
       ? "error"
@@ -2127,9 +2115,8 @@ export const NoticeRow = ({
                 ? ownKeyMovedLine(moved, t)
                 : backgroundJob != null
                   ? backgroundJobLine(backgroundJob, t)
-                  : notice.name === "agent.error"
-                    ? // The agent's own error is for the log.
-                      (errorText(notice.value) ?? "")
+                  : agentInternal
+                    ? (errorText(notice.value) ?? "")
                     : String(notice.value.message ?? "");
   return (
     <Marker

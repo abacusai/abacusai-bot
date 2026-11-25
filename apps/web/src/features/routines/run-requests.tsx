@@ -7,7 +7,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { noticeSnapshot } from "#renderer/data/queries/notices";
-import { errorText } from "#renderer/lib/error-text";
+import { failureCode } from "#renderer/lib/error-text";
 import { useAppContext } from "#renderer/lib/use-app-context";
 /** The pending connector asks of these run sessions, one card each. */
 export const RunRequests = ({
@@ -64,11 +64,12 @@ export const RunRequests = ({
           await respond(request, "connected");
         } else if (result.cancelled) await respond(request, "declined");
         else {
-          setError(errorText(result.error, "phase5.connectFailed"));
+          // The card puts the code (or main's text) in the app's words.
+          setError(result.error);
           await respond(request, "failed", result.error);
         }
       } catch (e) {
-        setError(errorText(e, "phase5.connectFailed"));
+        setError(failureCode(e));
         // The run's agent reads the detail; the page shows the app's words.
         const detail = e instanceof Error ? e.message : String(e);
         await respond(request, "failed", detail).catch(() => undefined);
@@ -89,12 +90,12 @@ export const RunRequests = ({
           onConnect={(values) => void accept(ask, values)}
           onConnected={() =>
             void respond(ask.request, "connected").catch((e) =>
-              setError(errorText(e))
+              setError(failureCode(e))
             )
           }
           onDecline={() =>
             void respond(ask.request, "declined").catch((e) =>
-              setError(errorText(e))
+              setError(failureCode(e))
             )
           }
           onStop={() => void cancel()}

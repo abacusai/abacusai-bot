@@ -30,6 +30,9 @@ export const signInFailureCopy = (error: string) => {
           : "onboarding.webSignIn.authCode",
       code,
     };
-  // The host's own failure: its protocol code is for the log, not the page.
+  if (stage === "host-start")
+    return { key: "onboarding.webSignIn.hostStart", code };
+  if (stage === "host-complete")
+    return { key: "onboarding.webSignIn.hostComplete", code };
   return { key: "onboarding.frame.failed", code };
 };

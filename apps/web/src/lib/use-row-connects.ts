@@ -7,6 +7,8 @@
  */
 import { useEffect, useRef, useState } from "react";
 
+import { failureCode } from "#renderer/lib/error-text";
+
 /** How a row's wait ended. A cancelled one is not a failure. */
 export type RowConnectOutcome =
   | { ok: true }
@@ -54,9 +56,11 @@ export const useRowConnects = () => {
     // Run in the click itself (a tab may open there); a throw is a failure.
     void new Promise<RowConnectOutcome>((resolve) => resolve(row.run()))
       .catch((error: unknown): RowConnectOutcome => {
-        // The row shows the app's words (`errorText`); the detail is logged.
-        console.error(`[connect] ${key}: connect failed`, error);
-        return { ok: false, error: "failed" };
+        // A code the row words (`errorText`); an internal failure is logged.
+        const code = failureCode(error);
+        return code === "cancelled"
+          ? { ok: false, cancelled: true, error: code }
+          : { ok: false, error: code };
       })
       .then(async (outcome) => {
         // A failed re-read leaves the row to the next one; the connect stands.

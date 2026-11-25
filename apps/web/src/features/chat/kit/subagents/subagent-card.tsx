@@ -166,7 +166,7 @@ const MountedSubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
             running
               ? "bg-[var(--chat-status-running)]"
               : subagent.status === "error"
-                ? "bg-attention"
+                ? "bg-failed"
                 : "bg-[var(--chat-status-done)]"
           )}
         />
@@ -177,7 +177,7 @@ const MountedSubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
               className={cn(
                 "truncate text-xs",
                 subagent.status === "error"
-                  ? "text-attention"
+                  ? "text-failed"
                   : "text-muted-foreground"
               )}
             >

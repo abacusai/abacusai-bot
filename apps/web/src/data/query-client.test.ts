@@ -114,7 +114,7 @@ it("a full disk is said as such, whatever copy the site chose", async () => {
   ]);
 });
 
-it("toasts the app's words, never an error's own: a known reason's copy, else the site's copy or the generic one", async () => {
+it("toasts the app's words, never an internal error's own: words written for the user, a known reason's copy, else the site's copy or the generic one", async () => {
   const client = createClient();
   const fail = () => Promise.reject(new Error("EACCES: permission denied"));
   const refuse = (error?: string) => async () => ({ success: false, error });
@@ -158,12 +158,27 @@ it("toasts the app's words, never an error's own: a known reason's copy, else th
     succeeding({ mutationFn: refuse(), meta: { errorToast: true as const } }),
     undefined
   );
+  await tick();
+  // Words main wrote for the user are shown as they are.
+  await run(
+    client,
+    succeeding({
+      mutationFn: async () => ({
+        success: false,
+        error: "The app is busy",
+        userFacing: true,
+      }),
+      meta: { errorToast: true as const },
+    }),
+    undefined
+  );
   expect(showError.mock.calls).toEqual([
     [enUS.phase5.saveFailed],
     [enUS.errors.tryAgain],
     [enUS.phase5.saveFailed],
     [enUS.phase5.connectTimedOut],
     [enUS.errors.tryAgain],
+    ["The app is busy"],
   ]);
   // The detail is in the log.
   expect(errors.mock.calls.flat().map(String).join("\n")).toContain(

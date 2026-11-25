@@ -40,7 +40,7 @@ import {
   draftStore,
   updateDraft,
 } from "#renderer/lib/continuity/composer-drafts";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -210,7 +210,7 @@ export const SessionStartPage = ({
       envelope
     )
       .catch((e) => {
-        setError(errorText(e));
+        setError(failureText(e));
         throw e;
       })
       .finally(() => {

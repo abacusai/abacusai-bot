@@ -7,7 +7,7 @@ import * as v from "valibot";
 import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
 import { Spinner } from "#renderer/components/spinner";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showInfo } from "#renderer/lib/toast";
@@ -130,7 +130,7 @@ export const InviteDialog = ({
         });
         close();
       } catch (e) {
-        setError(errorText(e));
+        setError(failureText(e));
       }
     },
   });
@@ -191,7 +191,7 @@ export const InviteDialog = ({
                           }),
                         })
                       )
-                      .catch((e) => setError(errorText(e)))
+                      .catch((e) => setError(failureText(e)))
                   }
                 >
                   {t("phase5.connectGmail")}

@@ -172,7 +172,7 @@ export const ConnectorRequestCard = ({
         )}
         {error != null && (
           <p
-            className="text-foreground mt-1 text-xs"
+            className="text-failed mt-1 text-xs"
             role="alert"
             data-slot="connector-request-error"
           >

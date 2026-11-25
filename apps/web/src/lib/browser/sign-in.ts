@@ -20,7 +20,6 @@ const failure = (stage: SignInFailure["stage"], error: unknown) => {
     error instanceof TypeError ||
     (stage !== "auth-code" && error instanceof Error && !("code" in error)) ||
     ["TIMEOUT", "SERVICE_UNAVAILABLE", "GATEWAY_TIMEOUT"].includes(code);
-  console.error(`[sign-in] ${stage} failed (${code})`);
   return new SignInFailure(
     stage,
     network

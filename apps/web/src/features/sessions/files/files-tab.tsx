@@ -16,7 +16,7 @@ import {
   previewKind,
 } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { i18n } from "#renderer/lib/i18n";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -207,7 +207,7 @@ export const FilesTab = ({
   };
   const requestTrash = (path: string) => {
     if (!IS_ELECTRON || path.endsWith("/")) setTrash(path);
-    else void doTrash(path).catch((e) => setError(errorText(e)));
+    else void doTrash(path).catch((e) => setError(failureText(e)));
   };
   const paths = useMemo(
     () => flattenFiles([...(tree.data?.fileTree ?? []), ...children]),
@@ -344,7 +344,7 @@ export const FilesTab = ({
                 .rename({ checkout, fromPath, toPath })
                 .then(() => tree.refetch())
                 .catch((e) => {
-                  setError(errorText(e));
+                  setError(failureText(e));
                   void tree.refetch();
                 })
             }
@@ -419,7 +419,7 @@ export const FilesTab = ({
             <AlertDialogAction
               onClick={() =>
                 trash &&
-                void doTrash(trash).catch((e) => setError(errorText(e)))
+                void doTrash(trash).catch((e) => setError(failureText(e)))
               }
             >
               {t("sessions.files.trash")}

@@ -263,7 +263,7 @@ export const useModelSwitchGuard = (
           </AlertDialogDescription>
         </AlertDialogHeader>
         {failed && (
-          <p role="alert" className="text-foreground text-xs">
+          <p role="alert" className="text-failed text-xs">
             {t("chat.continuation.failed")}
           </p>
         )}

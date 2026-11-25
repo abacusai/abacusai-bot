@@ -31,7 +31,7 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
-import { errorText } from "#renderer/lib/error-text";
+import { errorText, failureText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -495,7 +495,7 @@ const FieldForm = ({ connector }: { connector: string }) => {
       try {
         await flow.submit(v.parse(schema, value));
       } catch (e) {
-        setError(errorText(e, "phase5.connectFailed"));
+        setError(failureText(e, "phase5.connectFailed"));
       }
     },
   });

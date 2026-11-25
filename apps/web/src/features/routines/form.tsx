@@ -225,15 +225,19 @@ export const RoutineDialog = ({
           setRefusal(hosted);
           return;
         }
-        // Main's own words for the refusal are for the log.
-        logFailure(e);
         const refused = isRpcError(e) && e.code === "BAD_REQUEST" ? e : null;
+        // The schedule's detail is worded for the user; any other is logged.
+        const detail =
+          refused?.data?.userFacing === true ? refused.data.detail : undefined;
+        if (detail == null) logFailure(e);
         if (refused?.data?.field === "schedule") {
-          setScheduleError(t("phase5.mainScheduleError"));
+          setScheduleError(detail ?? t("phase5.mainScheduleError"));
           return;
         }
         setError(
-          t(refused ? "phase5.mainScheduleError" : "phase5.saveRoutineFailed")
+          refused
+            ? [t("phase5.mainScheduleError"), detail].filter(Boolean).join(" ")
+            : t("phase5.saveRoutineFailed")
         );
       }
     },

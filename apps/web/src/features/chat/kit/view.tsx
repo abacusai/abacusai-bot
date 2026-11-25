@@ -294,7 +294,7 @@ export const ChatView = (props: ChatViewProps) => {
             </div>
           )}
           {dropError && (
-            <p role="alert" className="text-foreground px-4 text-sm">
+            <p role="alert" className="text-failed px-4 text-sm">
               {dropError}
             </p>
           )}

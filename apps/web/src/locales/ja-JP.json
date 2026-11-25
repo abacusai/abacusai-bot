@@ -1088,6 +1088,7 @@
     "add": "追加",
     "addPlaceholder": "覚えておくこと…",
     "typeLabel": "メモの種類",
+    "saveRefused": "保存されませんでした: {{reason}}",
     "busy": "同時にメモリが変更されていました。もう一度お試しください。",
     "types": {
       "profile": "プロフィール",
@@ -1341,6 +1342,8 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
+      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "ブラウザーで Abacus.AI にサインイン",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "無料のソースは今のところすべて使い切りました。別の無料ソースを接続するか、別のモデルを選んでください。",
       "rate_limited": "無料モデルは現在混み合っています。数分後にもう一度試すか、別のモデルに切り替えてください。",
       "empty": "モデルから空の返信が返されました。もう一度試すか、別のモデルに切り替えてください。",
+      "stalled": "モデルが応答しなくなりました。もう一度試すか、別のモデルに切り替えてください。",
+      "stream_cut": "再試行しても、返信が途中で途切れました。もう一度試すか、別のモデルに切り替えてください。",
+      "config_rejected": "プロバイダーがこのモデルの設定の一部を受け付けませんでした。モデルの設定を確認するか、別のモデルに切り替えてください。",
       "disk_full": "ディスクがいっぱいです(残り {{free}})。このチャットを保存できず、エージェントはファイルを書き込めません。空き容量を確保してから、もう一度お試しください。",
       "disk_fullUnmeasured": "ディスクがいっぱいです。このチャットを保存できず、エージェントはファイルを書き込めません。空き容量を確保してから、もう一度お試しください。",
       "unknown": "モデルはこれを完了できませんでした。もう一度試すか、別のモデルに切り替えてください。"

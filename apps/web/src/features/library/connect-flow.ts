@@ -14,7 +14,7 @@ import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
-import { isCancellation } from "#renderer/lib/error-text";
+import { failureCode } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { connectTarget } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -63,10 +63,10 @@ const thrownOutcome = (
   connectorId: string,
   error: unknown
 ): ConnectorOutcome => {
-  if (isCancellation(error))
-    return { ok: false, cancelled: true, error: "cancelled" };
-  console.error(`[connect] ${connectorId}: connect failed`, error);
-  return { ok: false, error: "failed" };
+  const code = failureCode(error);
+  if (code === "cancelled") return { ok: false, cancelled: true, error: code };
+  if (code === "failed") console.error(`[connect] ${connectorId}: failed`);
+  return { ok: false, error: code };
 };
 /**
  * Main's messaging snapshot as of now, read from main itself: a read through

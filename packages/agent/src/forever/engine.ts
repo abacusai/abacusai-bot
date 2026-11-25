@@ -853,7 +853,11 @@ export class ForeverEngine {
       this.emitAgentEvent(
         {
           type: "error",
-          error: { message: model.error, code: "model_unavailable" },
+          error: {
+            message: model.error,
+            code: "model_unavailable",
+            ...(model.error === NO_MODEL_CONFIGURED && { userFacing: true }),
+          },
         },
         { origin: "startup" }
       );
@@ -958,7 +962,11 @@ export class ForeverEngine {
       this.emitAgentEvent(
         {
           type: "error",
-          error: { message: NO_MODEL_CONFIGURED, code: "model_unavailable" },
+          error: {
+            message: NO_MODEL_CONFIGURED,
+            code: "model_unavailable",
+            userFacing: true,
+          },
         },
         { origin: "turn" }
       );

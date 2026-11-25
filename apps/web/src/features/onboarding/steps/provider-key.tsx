@@ -130,7 +130,7 @@ export const ProviderKeyDialog = ({
                   <FieldDescription
                     id="onboarding-key-error"
                     role="alert"
-                    className="text-foreground text-xs"
+                    className="text-failed text-xs"
                   >
                     {error === "validation"
                       ? t("onboarding.setupKeyInvalid")

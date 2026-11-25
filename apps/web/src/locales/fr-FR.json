@@ -1088,6 +1088,7 @@
     "add": "Ajouter",
     "addPlaceholder": "Quelque chose à retenir…",
     "typeLabel": "Type de note",
+    "saveRefused": "Non enregistré : {{reason}}",
     "busy": "La mémoire était modifiée au même moment. Réessayez.",
     "types": {
       "profile": "Profil",
@@ -1341,6 +1342,8 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
+      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "Connectez-vous à Abacus.AI dans votre navigateur",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "Toutes les sources gratuites sont épuisées pour le moment. Connectez une autre source gratuite ou choisissez un autre modèle.",
       "rate_limited": "Les modèles gratuits sont occupés en ce moment. Réessayez dans quelques minutes ou passez à un autre modèle.",
       "empty": "Le modèle a renvoyé une réponse vide. Réessayez ou passez à un autre modèle.",
+      "stalled": "Le modèle a cessé de répondre. Réessayez ou passez à un autre modèle.",
+      "stream_cut": "La réponse a été coupée en cours de route, même après une nouvelle demande. Réessayez ou passez à un autre modèle.",
+      "config_rejected": "Votre fournisseur a refusé un paramètre de la configuration de ce modèle. Vérifiez les paramètres du modèle ou passez à un autre modèle.",
       "disk_full": "Le disque est plein (il reste {{free}}) : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "disk_fullUnmeasured": "Le disque est plein : cette conversation ne peut pas être enregistrée et l'agent ne peut pas écrire de fichiers. Libérez de l'espace, puis réessayez.",
       "unknown": "Le modèle n'a pas pu terminer. Réessayez ou passez à un autre modèle."

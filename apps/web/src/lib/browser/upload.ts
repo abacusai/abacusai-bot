@@ -1,5 +1,6 @@
 import { UPLOAD_LIMITS } from "@abacus-ai/contract/contract/files";
 
+import { UserFacingError } from "#renderer/lib/error-text";
 import { i18n } from "#renderer/lib/i18n";
 
 import type { UploadContext } from "./files";
@@ -17,7 +18,7 @@ export const uploadFile = async (
   options: UploadOptions
 ): Promise<string> => {
   if (file.size > UPLOAD_LIMITS.fileBytes)
-    throw new Error(i18n.t("web.files.tooLarge"));
+    throw new UserFacingError(i18n.t("web.files.tooLarge"));
   const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
   let host = await refreshUploadToken();
@@ -79,7 +80,7 @@ export const uploadFile = async (
         } catch (error) {
           reject(
             error instanceof SyntaxError
-              ? new Error(i18n.t("web.files.uploadFailed"))
+              ? new UserFacingError(i18n.t("web.files.uploadFailed"))
               : error
           );
         }

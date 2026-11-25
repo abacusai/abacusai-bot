@@ -28,6 +28,28 @@ const checkoutFor = (
 };
 
 /**
+ * gh's own line as a sentence the user can act on ("Can not approve your
+ * own pull request"), or null when it carries internals: a URL, a path, an
+ * HTTP status, JSON or a stack. Its "GraphQL:" lead and the operation's
+ * name in brackets are dropped.
+ */
+export const plainGhSentence = (line: string): string | null => {
+  const text = line
+    .trim()
+    .replace(/^(?:GraphQL|gh|error):\s*/i, "")
+    .replace(/\s*\([A-Za-z]+\)\.?$/, "")
+    .trim();
+  if (text === "" || text.length > 160) return null;
+  if (
+    /https?:|[\\/{}[\]<>`$]|\bHTTP\b|\b\d{3}\b|\bat\s+\S+:\d|[A-Z_]{4,}/.test(
+      text
+    )
+  )
+    return null;
+  return text;
+};
+
+/**
  * A refused request as the contract's error: an empty body is BAD_REQUEST,
  * the rest CONFLICT with `data.reason` (`pr-mismatch`, `gh-missing`,
  * `gh-unauthenticated`, `gh-timeout`, `gh-error`) and gh's own words.
@@ -37,9 +59,15 @@ const mapped = async <T>(work: () => Promise<T>): Promise<T> => {
     return await work();
   } catch (error) {
     if (!(error instanceof GithubRequestError)) throw error;
-    throw error.reason === "empty-body"
-      ? badRequest(error.message)
-      : conflict(error.reason, error.message);
+    if (error.reason === "empty-body") throw badRequest(error.message, true);
+    // The app's own sentences are for the user; gh's only when plain.
+    const plain =
+      error.reason === "gh-error" ? plainGhSentence(error.message) : null;
+    throw error.reason !== "gh-error"
+      ? conflict(error.reason, error.message, true)
+      : plain != null
+        ? conflict(error.reason, plain, true)
+        : conflict(error.reason, error.message);
   }
 };
 

@@ -34,7 +34,7 @@ import {
   useMutationState,
 } from "#renderer/data/query-client";
 import { openTab } from "#renderer/lib/connect-target";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { connectTarget } from "#renderer/lib/platform-system";
@@ -610,7 +610,7 @@ export const McpServerDialog = ({
         });
         close();
       } catch (e) {
-        setError(errorText(e));
+        setError(failureText(e));
       }
     },
   });

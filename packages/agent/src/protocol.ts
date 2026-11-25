@@ -403,6 +403,8 @@ export type AgentEvent =
         message?: string;
         code?: string;
         name?: string;
+        /** `message` is the app's own sentence for the user: shown as it is. */
+        userFacing?: boolean;
         segmentData?: { message?: string; type?: string; [k: string]: unknown };
         /**
          * What the provider itself said, when `message` is the app's reading

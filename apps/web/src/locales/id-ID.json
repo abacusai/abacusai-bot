@@ -1088,6 +1088,7 @@
     "add": "Tambah",
     "addPlaceholder": "Sesuatu untuk diingat…",
     "typeLabel": "Jenis catatan",
+    "saveRefused": "Tidak disimpan: {{reason}}",
     "busy": "Memori sedang diubah pada saat yang sama. Coba lagi.",
     "types": {
       "profile": "Profil",
@@ -1341,6 +1342,8 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
+      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "Masuk ke Abacus.AI di browser Anda",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "Semua sumber gratis sudah habis untuk saat ini. Hubungkan sumber gratis lain, atau pilih model lain.",
       "rate_limited": "Model gratis sedang sibuk. Coba lagi dalam beberapa menit, atau beralih ke model lain.",
       "empty": "Model mengembalikan balasan kosong. Coba lagi, atau beralih ke model lain.",
+      "stalled": "Model berhenti menjawab. Coba lagi, atau beralih ke model lain.",
+      "stream_cut": "Balasan terpotong di tengah jalan, bahkan setelah diminta lagi. Coba lagi, atau beralih ke model lain.",
+      "config_rejected": "Penyedia Anda menolak salah satu pengaturan di konfigurasi model ini. Periksa pengaturan model, atau beralih ke model lain.",
       "disk_full": "Disk penuh (tersisa {{free}}), jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "disk_fullUnmeasured": "Disk penuh, jadi chat ini tidak bisa disimpan dan agen tidak bisa menulis file. Kosongkan sebagian ruang, lalu coba lagi.",
       "unknown": "Model tidak bisa menyelesaikan ini. Coba lagi, atau beralih ke model lain."

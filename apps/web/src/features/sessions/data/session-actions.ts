@@ -3,13 +3,14 @@ import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { Db } from "#renderer/data/db";
 import { isRpcError } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
+import { UserFacingError } from "#renderer/lib/error-text";
 export const renameSession = async (
   db: Db,
   id: string,
   label: string
 ): Promise<void> => {
   const trimmed = label.trim();
-  if (!trimmed) throw new Error("Name can't be empty");
+  if (!trimmed) throw new UserFacingError("Name can't be empty");
   await db.collections.sessions.update(id, (d) => {
     d.label = trimmed;
   }).isPersisted.promise;

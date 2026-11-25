@@ -168,7 +168,7 @@ export const RoutineSidebarRow = ({
             <span
               aria-hidden
               data-routine-state={state}
-              className={`size-1.5 shrink-0 rounded-full ${state === "failed" ? "bg-attention" : state === "needs-you" ? "bg-attention" : state === "running" ? "bg-primary" : "bg-muted-foreground"}`}
+              className={`size-1.5 shrink-0 rounded-full ${state === "failed" ? "bg-failed" : state === "needs-you" ? "bg-attention" : state === "running" ? "bg-primary" : "bg-muted-foreground"}`}
             />
           </AppLink>
           <DropdownMenu>

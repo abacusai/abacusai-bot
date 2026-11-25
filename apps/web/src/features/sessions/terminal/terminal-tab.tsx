@@ -18,7 +18,7 @@ import {
 } from "#renderer/components/terminal/keys";
 import { followNotices } from "#renderer/data/queries/notices";
 import { isRpcError } from "#renderer/data/query-client";
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import { uiPlatform } from "#renderer/lib/platform";
 
@@ -187,7 +187,7 @@ export const TerminalTab = ({
                 if (!focused.current) close();
               }, 2000);
             },
-            (e) => setError(errorText(e))
+            (e) => setError(failureText(e))
           );
         };
         disposers.push(() => {
@@ -259,7 +259,7 @@ export const TerminalTab = ({
             ? t("sessions.terminal.planRequired")
             : reason === "plan-unreadable"
               ? t("sessions.terminal.planUnreadable")
-              : errorText(e)
+              : failureText(e)
         );
       })
       .finally(finishStart);
@@ -284,7 +284,7 @@ export const TerminalTab = ({
           });
       })
       .catch((e) => {
-        if (live) setError(errorText(e));
+        if (live) setError(failureText(e));
       });
     return () => {
       live = false;

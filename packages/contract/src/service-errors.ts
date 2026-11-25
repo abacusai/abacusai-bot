@@ -26,5 +26,9 @@ export class ForbiddenError extends Error {
   }
 }
 
-/** `BAD_REQUEST`: a value the schema cannot rule out (a blank name). */
+/**
+ * `BAD_REQUEST`: a value the schema cannot rule out (a blank name). Its
+ * message is a sentence for the user, shown as it is: never put an id, a
+ * path or another error's text in it.
+ */
 export class InvalidInputError extends Error {}

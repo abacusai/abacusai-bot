@@ -116,7 +116,7 @@ export const ModelsStep = ({
                 {error != null && (
                   <span
                     role="alert"
-                    className="text-foreground mt-1 block text-[13px] font-normal"
+                    className="text-failed mt-1 block text-[13px] font-normal"
                   >
                     {error}
                   </span>

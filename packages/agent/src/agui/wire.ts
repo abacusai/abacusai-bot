@@ -162,6 +162,8 @@ export type PiStopReason =
 export interface AgentErrorPayload {
   message?: string;
   code?: string;
+  /** `message` is the app's own sentence for the user: shown as it is. */
+  userFacing?: boolean;
   name?: string;
   segmentData?: { message?: string; type?: string; [k: string]: unknown };
   detail?: string;

@@ -26,7 +26,7 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
-import { errorText } from "#renderer/lib/error-text";
+import { errorText, failureText } from "#renderer/lib/error-text";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { Button } from "#renderer/ui/button";
 import { Dialog } from "#renderer/ui/dialog";
@@ -146,7 +146,7 @@ const LinkDialog = ({
     };
     await request()
       .catch((e) => {
-        setError(errorText(e));
+        setError(failureText(e));
       })
       .finally(() => setBusy(false));
   };
@@ -262,7 +262,7 @@ const LinkDialog = ({
                 />
               </label>
               {error && (
-                <p role="alert" className="text-foreground text-sm">
+                <p role="alert" className="text-failed text-sm">
                   {error}
                 </p>
               )}
@@ -429,7 +429,7 @@ export const WebMessagingPage = ({
         </SettingRow>
       </GroupCard>
       {status.error instanceof Error && (
-        <p role="alert" className="text-foreground px-1 text-[13px]">
+        <p role="alert" className="text-failed px-1 text-[13px]">
           {errorText(status.error)}
         </p>
       )}

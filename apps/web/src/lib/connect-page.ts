@@ -18,6 +18,7 @@ import {
   openTab,
   type ConnectTarget,
 } from "#renderer/lib/connect-target";
+import { failureCode } from "#renderer/lib/error-text";
 import { connectTarget } from "#renderer/lib/platform-system";
 
 export const CONNECT_WAIT_MS = 180_000;
@@ -80,9 +81,11 @@ export class ConnectAttempt {
           error: "popup-blocked",
         })
       : this.run().catch((error: unknown): ConnectorOutcome => {
-          // The page shows its own words (`errorText`); the detail is logged.
-          console.error(`[connect] ${connectorId}: connect failed`, error);
-          return { ok: false, error: "failed" };
+          // A code the page words (`errorText`); an internal failure is logged.
+          const code = failureCode(error);
+          return code === "cancelled"
+            ? { ok: false, cancelled: true, error: code }
+            : { ok: false, error: code };
         });
     this.result = Promise.race([run, stopped]).finally(() => {
       this.abort.abort();

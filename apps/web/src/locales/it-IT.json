@@ -1088,6 +1088,7 @@
     "add": "Aggiungi",
     "addPlaceholder": "Qualcosa da ricordare…",
     "typeLabel": "Tipo di nota",
+    "saveRefused": "Non salvato: {{reason}}",
     "busy": "La memoria veniva modificata nello stesso momento. Riprova.",
     "types": {
       "profile": "Profilo",
@@ -1341,6 +1342,8 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
+      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "Accedi ad Abacus.AI nel browser",
@@ -5174,6 +5177,9 @@
       "free_pool_spent": "Tutte le fonti gratuite sono esaurite per ora. Collega un'altra fonte gratuita o scegli un altro modello.",
       "rate_limited": "I modelli gratuiti sono occupati in questo momento. Riprova tra qualche minuto o passa a un altro modello.",
       "empty": "Il modello ha restituito una risposta vuota. Riprova o passa a un altro modello.",
+      "stalled": "Il modello ha smesso di rispondere. Riprova o passa a un altro modello.",
+      "stream_cut": "La risposta si è interrotta a metà, anche dopo averla richiesta di nuovo. Riprova o passa a un altro modello.",
+      "config_rejected": "Il tuo provider ha rifiutato un'impostazione nella configurazione di questo modello. Controlla le impostazioni del modello o passa a un altro modello.",
       "disk_full": "Il disco è pieno (restano {{free}}), quindi questa chat non può essere salvata e l'agente non può scrivere file. Libera un po' di spazio, poi riprova.",
       "disk_fullUnmeasured": "Il disco è pieno, quindi questa chat non può essere salvata e l'agente non può scrivere file. Libera un po' di spazio, poi riprova.",
       "unknown": "Il modello non è riuscito a completare. Riprova o passa a un altro modello."

@@ -59,12 +59,28 @@ export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
     data: { entity, id },
   });
 
-/** A combination the schema cannot express was invalid. */
-export const badRequest = (message: string): RpcError =>
-  new ORPCError("BAD_REQUEST", { status: 400, message, data: {} });
+/**
+ * A combination the schema cannot express was invalid. `userFacing`: the
+ * message is a sentence for the user (the app shows it as it is); without
+ * it the app shows its own words and the message stays in the log.
+ */
+export const badRequest = (message: string, userFacing = false): RpcError =>
+  new ORPCError("BAD_REQUEST", {
+    status: 400,
+    message,
+    data: userFacing ? { userFacing: true } : {},
+  });
 
-export const conflict = (reason: string, message: string = reason): RpcError =>
-  new ORPCError("CONFLICT", { status: 409, message, data: { reason } });
+export const conflict = (
+  reason: string,
+  message: string = reason,
+  userFacing = false
+): RpcError =>
+  new ORPCError("CONFLICT", {
+    status: 409,
+    message,
+    data: userFacing ? { reason, userFacing: true } : { reason },
+  });
 
 export const preconditionFailed = (
   reason: PreconditionReason,
@@ -91,12 +107,14 @@ export const toRpcError = (error: unknown): RpcError => {
     return preconditionFailed(error.reason, error.message);
   if (error instanceof ForbiddenError)
     return forbidden(error.reason, error.message);
-  if (error instanceof InvalidInputError) return badRequest(error.message);
+  // Both are worded for the user where they are thrown.
+  if (error instanceof InvalidInputError)
+    return badRequest(error.message, true);
   if (error instanceof CronParseError)
     return new ORPCError("BAD_REQUEST", {
       status: 400,
       message: error.message,
-      data: { field: "schedule", detail: error.detail },
+      data: { field: "schedule", detail: error.detail, userFacing: true },
     });
   if (error instanceof TimeoutError)
     return new ORPCError("TIMEOUT", {

@@ -95,7 +95,7 @@ export const secondaryLine = (
 const TONE_CLASS = {
   attention: "text-(--bots-attention)",
   running: "text-(--bots-running)",
-  error: "text-attention",
+  error: "text-failed",
   muted: "text-muted-foreground",
 } as const;
 

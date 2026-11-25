@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { errorText } from "#renderer/lib/error-text";
+import { failureText } from "#renderer/lib/error-text";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -75,7 +75,7 @@ export const ConfirmAction = ({
                 setError(null);
                 void onConfirm()
                   .then(() => setOpen(false))
-                  .catch((e) => setError(errorText(e)))
+                  .catch((e) => setError(failureText(e)))
                   .finally(() => setBusy(false));
               }}
             >

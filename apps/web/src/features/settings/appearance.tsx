@@ -648,7 +648,7 @@ export const AppearancePage = () => {
           </CollapsibleContent>
         </Collapsible>
         {importError && (
-          <p role="alert" className="text-foreground px-3 pb-3 text-xs">
+          <p role="alert" className="text-failed px-3 pb-3 text-xs">
             {importError}
           </p>
         )}

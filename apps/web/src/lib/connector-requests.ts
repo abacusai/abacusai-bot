@@ -21,6 +21,7 @@ import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { CONNECTED_PARAM } from "#renderer/lib/connect-target";
+import { failureCode } from "#renderer/lib/error-text";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
 
@@ -59,9 +60,6 @@ export type ConnectResult =
   | { kind: "connected" }
   | { kind: "declined" }
   | { kind: "error"; message: string };
-
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** Answer the ask (never throws: an answer that fails is logged by main). */
 const respond = async (
@@ -110,7 +108,7 @@ export const connectRequest = async (
         values,
       });
     } catch (error) {
-      return { kind: "error", message: messageOf(error) };
+      return { kind: "error", message: failureCode(error) };
     }
   if (!outcome.ok) {
     if (outcome.cancelled === true) {
@@ -235,7 +233,7 @@ export const useConnectorRequests = (
             (row) => row.requestId !== current.requestId
           ),
         }));
-    })().catch((error: unknown) => setError(messageOf(error)));
+    })().catch((error: unknown) => setError(failureCode(error)));
   }, [current, transport]);
 
   return {

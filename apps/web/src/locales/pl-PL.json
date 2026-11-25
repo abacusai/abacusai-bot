@@ -1102,6 +1102,7 @@
     "add": "Dodaj",
     "addPlaceholder": "Coś do zapamiętania…",
     "typeLabel": "Rodzaj notatki",
+    "saveRefused": "Nie zapisano: {{reason}}",
     "busy": "Pamięć była w tej samej chwili zmieniana. Spróbuj ponownie.",
     "types": {
       "profile": "Profil",
@@ -1355,6 +1356,8 @@
       "waiting": "Łączenie konta…",
       "session": "Twoja sesja logowania wygasła. Użyj opcji „Zaloguj się w inny sposób”, aby zalogować się na tej stronie, a potem wróć i połącz konto.",
       "authCode": "Ta strona nie mogła utworzyć kodu połączenia konta. Spróbuj ponownie. Jeśli problem się powtarza, skontaktuj się z pomocą techniczną.",
+      "hostStart": "Host nie mógł rozpocząć łączenia konta ({{code}}). Spróbuj ponownie. Jeśli problem się powtarza, skontaktuj się z pomocą techniczną i podaj ten kod.",
+      "hostComplete": "Host nie mógł dokończyć łączenia konta ({{code}}). Spróbuj ponownie. Jeśli problem się powtarza, skontaktuj się z pomocą techniczną i podaj ten kod.",
       "network": "Podczas łączenia konta utracono połączenie z siecią. Sprawdź połączenie i spróbuj ponownie."
     },
     "pages.connect.browserTitle": "Zaloguj się do Abacus.AI w przeglądarce",
@@ -5324,6 +5327,9 @@
       "free_pool_spent": "Wszystkie darmowe źródła są na razie wyczerpane. Podłącz inne darmowe źródło lub wybierz inny model.",
       "rate_limited": "Darmowe modele są teraz zajęte. Spróbuj ponownie za kilka minut lub przełącz się na inny model.",
       "empty": "Model zwrócił pustą odpowiedź. Spróbuj ponownie lub przełącz się na inny model.",
+      "stalled": "Model przestał odpowiadać. Spróbuj ponownie lub przełącz się na inny model.",
+      "stream_cut": "Odpowiedź urwała się w połowie, nawet po ponownej prośbie. Spróbuj ponownie lub przełącz się na inny model.",
+      "config_rejected": "Twój dostawca odrzucił ustawienie w konfiguracji tego modelu. Sprawdź ustawienia modelu lub przełącz się na inny model.",
       "disk_full": "Dysk jest pełny (zostało {{free}}), więc nie da się zapisać tego czatu, a agent nie może zapisywać plików. Zwolnij trochę miejsca i spróbuj ponownie.",
       "disk_fullUnmeasured": "Dysk jest pełny, więc nie da się zapisać tego czatu, a agent nie może zapisywać plików. Zwolnij trochę miejsca i spróbuj ponownie.",
       "unknown": "Model nie zdołał tego dokończyć. Spróbuj ponownie lub przełącz się na inny model."

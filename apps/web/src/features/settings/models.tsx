@@ -31,7 +31,7 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useMutation } from "#renderer/data/query-client";
-import { errorText } from "#renderer/lib/error-text";
+import { errorText, failureText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -310,7 +310,7 @@ export const ProviderDialog = ({
       try {
         await save(v.parse(schema, value).key);
       } catch (e) {
-        setError(errorText(e));
+        setError(failureText(e));
       }
     },
   });

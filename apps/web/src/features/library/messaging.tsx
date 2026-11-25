@@ -48,7 +48,7 @@ import {
   useMutation,
   useMutationState,
 } from "#renderer/data/query-client";
-import { errorText } from "#renderer/lib/error-text";
+import { errorText, failureText } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showFailure } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -322,7 +322,7 @@ export const MessagingPlatformDialog = ({
       await flow.settlePairing(platform);
       await onClose();
     } catch (e) {
-      setError(errorText(e));
+      setError(failureText(e));
     }
   };
   useEffect(() => {
@@ -344,7 +344,7 @@ export const MessagingPlatformDialog = ({
     });
     void ready
       .catch((e) => {
-        if (live) setError(errorText(e));
+        if (live) setError(failureText(e));
       })
       .finally(() => {
         if (live) setPreparing(false);
@@ -465,7 +465,7 @@ export const MessagingPlatformDialog = ({
                   void pairSharedLane(
                     { transport, queryClient: cache },
                     shared.id
-                  ).catch((e) => setError(errorText(e)))
+                  ).catch((e) => setError(failureText(e)))
                 }
               />
             )}
