@@ -16,7 +16,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#renderer/lib/i18n";
 
-import { Markdown, MarkdownLinksProvider } from "./markdown";
+import { FoldsWholeContext, Markdown, MarkdownLinksProvider } from "./markdown";
 import { loadMath } from "./math";
 import { fileTarget, prepass } from "./prepass";
 
@@ -44,6 +44,31 @@ const renderMd = (
 };
 
 describe("R2-T17 markdown", () => {
+  it.each([
+    ["a reply", "assistant", false, 1],
+    [
+      "a user's text outside a bubble (a PR description, a channel)",
+      "user",
+      false,
+      1,
+    ],
+    ["a user's message folding as a whole in its bubble", "user", true, 0],
+  ] as const)(
+    "a long code block folds by itself in %s",
+    (_label, role, whole, folds) => {
+      const code = `\`\`\`text\n${Array.from({ length: 400 }, (_, i) => `line ${i}`).join("\n")}\n\`\`\``;
+      const { container } = render(
+        <FoldsWholeContext value={whole}>
+          <Markdown content={code} role={role} workspaceRoot="/repo" />
+        </FoldsWholeContext>
+      );
+      expect(container.querySelectorAll(".chat-code-more")).toHaveLength(folds);
+      expect(container.querySelectorAll(".chat-code-collapsed")).toHaveLength(
+        folds
+      );
+    }
+  );
+
   it("escapes code immediately and adds grammar tokens when syntax loads", async () => {
     const { container } = renderMd('```ts\nconst value = "<script>&";\n```');
     const code = container.querySelector("pre code");

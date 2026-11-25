@@ -942,7 +942,7 @@ it("turns a thumbs comment into the user's reply to that message: a note for the
     );
     const prompt = s.session.sent.at(-1)!;
     expect(prompt).toMatch(
-      /^\[feedback\] The user rated your message "Shall I restart the home server now\?" 👍 \(good\) and wrote what follows in the feedback box under it\. It is their reply to that message: act on it here/
+      /^\[feedback\] The user rated your message "Shall I restart the home server now\?" 👍 \(good\) and wrote what follows in the feedback box under it, as their reply to that message\. Answer any question they ask directly and truthfully, from what you actually did/
     );
     expect(prompt.endsWith("\n\nyes please")).toBe(true);
     const processor = new StreamProcessor();
@@ -995,6 +995,46 @@ it("turns a thumbs comment into the user's reply to that message: a note for the
     );
     expect(s.session.sent.length).toBe(sent + 1);
     expect(s.session.sent.at(-1)).toContain('"Here is the header" 👎 (bad)');
+    // A note saved as pasted text: the agent is told to read the file.
+    s.send({
+      type: "message.feedback",
+      messageId: "b",
+      rating: "down",
+      excerpt: "Here is the header",
+      comment: "@/Users/me/My Bot/.abacusai-bot/temp/pasted-text-note-1a2b.txt",
+    });
+    await s.waitFor(
+      () =>
+        s.session.sent.some((text) =>
+          text.endsWith("pasted-text-note-1a2b.txt")
+        ),
+      "file feedback turn"
+    );
+    expect(s.session.sent.at(-1)).toContain(
+      "Their note was long, so it is in the attached file: read all of it"
+    );
+    expect(s.session.sent.at(-2)).not.toContain("attached file");
+    // Words past the inline bound never go in inline.
+    const before = s.session.sent.length;
+    s.send({
+      type: "message.feedback",
+      messageId: "b",
+      rating: "down",
+      excerpt: "Here is the header",
+      comment: "z".repeat(100_001),
+    });
+    s.send({
+      type: "message.feedback",
+      messageId: "b",
+      rating: "down",
+      excerpt: "Here is the header",
+      comment: "after the long one",
+    });
+    await s.waitFor(
+      () => s.session.sent.some((text) => text.endsWith("after the long one")),
+      "next feedback turn"
+    );
+    expect(s.session.sent.length).toBe(before + 1);
   } finally {
     await s.close();
   }

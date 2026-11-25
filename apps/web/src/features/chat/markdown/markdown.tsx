@@ -59,6 +59,11 @@ const InLinkContext = createContext(false);
  * math, no file links; only http(s) and mailto links open, on a click.
  */
 const UntrustedContext = createContext(false);
+/**
+ * Inside a message that folds as a whole (the user's bubble, `FoldedText`):
+ * one fold, so its code blocks show every line rather than folding inside it.
+ */
+export const FoldsWholeContext = createContext(false);
 
 const COLLAPSE_LINES = 30;
 
@@ -219,7 +224,7 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
   if (lang === "visualizer" && !untrusted)
     return <VisualizerBlock html={html ?? ""} streaming={streaming} />;
   const lines = (html ?? "").split("\n").length;
-  const collapsible = lines > COLLAPSE_LINES + 1;
+  const collapsible = !use(FoldsWholeContext) && lines > COLLAPSE_LINES + 1;
   const copy = () => {
     const text = ref.current?.textContent ?? "";
     void navigator.clipboard?.writeText(text);

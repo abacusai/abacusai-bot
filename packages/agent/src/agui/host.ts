@@ -32,7 +32,11 @@ import {
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
 import { listServed } from "../static-server.js";
 import type { UnattendedPolicy } from "../tool-policy.js";
-import { appNoteTag } from "../user-text.js";
+import {
+  appNoteTag,
+  isPastedText,
+  USER_TEXT_INLINE_MAX,
+} from "../user-text.js";
 import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
 import { AguiEmitter } from "./emit.js";
@@ -171,15 +175,12 @@ export function newestUserMessage(
   return undefined;
 }
 
-/** The longest comment the agent takes, as the feedback endpoint caps it. */
-const FEEDBACK_COMMENT_MAX = 2000;
-
 /**
  * What the user wrote in the thumbs box under a reply, as their reply to it:
  * an app note naming the rating and the reply, then their words. The chat
  * draws only their words, quoting the reply above them; and only their
  * words are theirs (`ownWords`), so the note never sets the reply language.
- * Null for a malformed command or an empty comment.
+ * Null for a malformed command, an empty comment or one over the bound.
  */
 function feedbackTurn(
   command: unknown
@@ -197,11 +198,21 @@ function feedbackTurn(
     typeof comment !== "string"
   )
     return null;
-  const words = comment.trim().slice(0, FEEDBACK_COMMENT_MAX);
-  if (words.length === 0) return null;
+  // Whole: a note past the inline bound arrives as one pasted-text file, never inline.
+  const words = comment.trim();
+  if (words.length === 0 || words.length > USER_TEXT_INLINE_MAX) return null;
   // One line: the note owns one paragraph, and the user's words start after it.
   const quoted = excerpt.replace(/\s+/g, " ").trim().slice(0, 80);
-  const note = `${appNoteTag("feedback")} The user rated your message "${quoted}" ${rating === "up" ? "👍 (good)" : "👎 (bad)"} and wrote what follows in the feedback box under it. It is their reply to that message: act on it here (answer it, do what it asks, or fix what it points out); for praise alone, a short thanks.`;
+  const inFile =
+    words.startsWith("@") && !words.includes("\n") && isPastedText(words)
+      ? " Their note was long, so it is in the attached file: read all of it (search it if it is large) before you act."
+      : "";
+  // A thumbs-down is a correction to act on, not a verdict to answer.
+  const ask =
+    rating === "up"
+      ? "Answer any question they ask directly and truthfully, from what you actually did (say so if you cannot tell), report only what you actually did, and do what they ask; for praise alone, a short thanks."
+      : "Answer any question they ask directly and truthfully, from what you actually did (say so if you cannot tell), report only what you actually did, do what they ask, and fix what they point out (or ask one short question if what they want is unclear); never defend or explain away the earlier reply. If they only say it was bad, acknowledge that in one short sentence, without excuses, and offer one concrete fix.";
+  const note = `${appNoteTag("feedback")} The user rated your message "${quoted}" ${rating === "up" ? "👍 (good)" : "👎 (bad)"} and wrote what follows in the feedback box under it, as their reply to that message.${inFile} ${ask}`;
   return {
     message: `${note}\n\n${words}`,
     userText: {

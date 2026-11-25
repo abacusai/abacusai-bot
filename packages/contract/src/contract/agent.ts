@@ -16,7 +16,9 @@ export const TurnFeedbackInputSchema = v.object({
   sessionId: SessionId,
   segmentId: v.pipe(v.string(), v.nonEmpty()),
   rating: v.picklist(["up", "down", "clear"]),
+  // Main cuts it to the inline bound (an older client may send more).
   comment: v.optional(v.string()),
+  commentFile: v.optional(v.pipe(v.string(), v.maxLength(4096))),
   model: v.optional(v.nullable(v.string())),
 });
 

@@ -10,6 +10,7 @@ import {
   addPaths,
   removeAttachment,
   retryAttachment,
+  saveLongText,
 } from "./attachments";
 const context = async () => ({ workspaceId: "w", sessionId: "s" });
 beforeEach(async () => {
@@ -189,4 +190,41 @@ it("resolves one shared session context for a concurrent selection", async () =>
   expect(
     draftStore.state.thread!.attachments.every((item) => item.state === "done")
   ).toBe(true);
+});
+
+it("saves long text once as pasted text where the composer saves a paste, and leaves short text or no folder alone", async () => {
+  const savePasted = vi.fn(
+    async (base: string, files: Array<{ name: string }>, _context?: unknown) =>
+      files.map((file) => `${base}/.abacusai-bot/temp/${file.name}`)
+  );
+  const host = { ...inertHostActions, savePasted };
+  const note = "x".repeat(120_001);
+  // Sent three times and retried: one file, the same path each time.
+  const paths = await Promise.all(
+    Array.from({ length: 4 }, () => saveLongText(note, host, "/repo", context))
+  );
+  expect(savePasted).toHaveBeenCalledTimes(1);
+  expect(new Set(paths).size).toBe(1);
+  expect(paths[0]).toMatch(
+    /^\/repo\/\.abacusai-bot\/temp\/pasted-text-note-[0-9a-f]{16}\.txt$/
+  );
+  expect(savePasted.mock.calls[0]![2]).toBe(context);
+  await expect(saveLongText("short", host, "/repo")).resolves.toBeNull();
+  await expect(saveLongText(note, host, null)).resolves.toBeNull();
+});
+
+it("keeps only the last few long-text saves", async () => {
+  const savePasted = vi.fn(
+    async (_base: string, files: Array<{ name: string }>, _context?: unknown) =>
+      files.map((file) => `/repo/.abacusai-bot/temp/${file.name}`)
+  );
+  const host = { ...inertHostActions, savePasted };
+  const notes = Array.from({ length: 10 }, (_, i) => `${i}`.repeat(100_001));
+  for (const note of notes) await saveLongText(note, host, "/lru");
+  expect(savePasted).toHaveBeenCalledTimes(10);
+  // The newest are kept; the oldest was let go and is saved again.
+  await saveLongText(notes[9]!, host, "/lru");
+  expect(savePasted).toHaveBeenCalledTimes(10);
+  await saveLongText(notes[0]!, host, "/lru");
+  expect(savePasted).toHaveBeenCalledTimes(11);
 });

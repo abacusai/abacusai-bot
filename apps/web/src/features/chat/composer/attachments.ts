@@ -4,6 +4,11 @@
  * The extension rule is today's (`chat-panel.tsx:1403-1410`).
  */
 import { UPLOAD_LIMITS } from "@abacus-ai/contract/contract/files";
+import {
+  isPastedText,
+  pastedTextName,
+  USER_TEXT_INLINE_MAX,
+} from "@abacus-ai/contract/transcript/user-text";
 
 import {
   draftStore,
@@ -87,30 +92,69 @@ export const addPaths = (
   }));
 
 /**
- * Pasted text longer than this goes in as a file. Roughly 25-30k tokens:
- * under it the model reads the text inline at no extra call; over it a page
- * dump or a log would fill a small window and be re-sent on every turn,
- * where one read or grep of a file finds what the task needs.
+ * Pasted text to attach as a file instead of typing it, or null to paste it
+ * as text. Under the bound the model reads it inline at no extra call; over
+ * it a page dump or a log would fill a small window and be re-sent on every
+ * turn, where one read or grep of a file finds what the task needs.
  */
-export const LONG_PASTE_CHARS = 100_000;
-
-/** Pasted text to attach as a file instead of typing it, or null to paste it as text. */
 export const longPasteFile = (text: string): File | null =>
-  text.length > LONG_PASTE_CHARS
-    ? new File([text], `pasted-text-${nextId()}.txt`, { type: "text/plain" })
+  text.length > USER_TEXT_INLINE_MAX
+    ? new File([text], pastedTextName(nextId()), { type: "text/plain" })
     : null;
 
-/** A file the composer saved from pasted text, by its name or path. */
-export const isPastedText = (pathOrName: string): boolean =>
-  /^pasted-text-[\w-]+\.txt$/.test(pathOrName.split(/[\\/]/).at(-1) ?? "");
+/** A content id for a long text: the same text saved again is the same file. */
+const textId = async (text: string): Promise<string> =>
+  Array.from(
+    new Uint8Array(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+    ).slice(0, 8),
+    (byte) => byte.toString(16).padStart(2, "0")
+  ).join("");
 
-/** A paste's chip title: its first line with text, whitespace folded. */
-export const pastedTextTitle = (head: string): string =>
-  head
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .find((line) => line !== "")
-    ?.slice(0, 120) ?? "";
+/** The last few long texts saved, by folder and content id: a re-send names the same file. */
+const SAVED_TEXTS_KEPT = 8;
+const savedTexts = new Map<string, Promise<string | null>>();
+
+/**
+ * Text past `USER_TEXT_INLINE_MAX` that is not typed into the composer (a
+ * long feedback note) saved as pasted text the way the composer saves a long
+ * paste: the same host call, folder and upload context. Named by its content,
+ * and the last few saves are kept, so a re-send names the same file. Null
+ * for text under the bound, or where there is nowhere to save one.
+ */
+export const saveLongText = async (
+  text: string,
+  host: ChatHostActions,
+  attachmentsBase: string | null,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext
+): Promise<string | null> => {
+  if (text.length <= USER_TEXT_INLINE_MAX) return null;
+  if (host.uploadFile == null && attachmentsBase == null) return null;
+  const id = await textId(text);
+  const key = `${attachmentsBase ?? ""}\u0000${id}`;
+  const known = savedTexts.get(key);
+  if (known != null) return known;
+  const saved = host
+    .savePasted(
+      attachmentsBase ?? "",
+      [
+        {
+          name: pastedTextName(`note-${id}`),
+          data: new TextEncoder().encode(text),
+        },
+      ],
+      context
+    )
+    .then(([path]) => path ?? null);
+  savedTexts.set(key, saved);
+  for (const old of savedTexts.keys()) {
+    if (savedTexts.size <= SAVED_TEXTS_KEPT) break;
+    savedTexts.delete(old);
+  }
+  // A failed save is tried again on the next send.
+  saved.catch(() => savedTexts.delete(key));
+  return saved;
+};
 
 /** Dropped or pasted `File`s: real paths directly, blobs saved first. */
 export const addFiles = async (

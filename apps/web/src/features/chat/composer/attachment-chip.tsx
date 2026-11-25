@@ -1,3 +1,7 @@
+import {
+  isPastedText,
+  pastedTextTitle,
+} from "@abacus-ai/contract/transcript/user-text";
 import { FileText, Folder, RotateCcw, ScanText } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,7 +23,7 @@ import {
 } from "#renderer/ui/hover-card";
 
 import type { ChatHostActions } from "../runtime/host-actions";
-import { formatSize, isPastedText, pastedTextTitle } from "./attachments";
+import { formatSize } from "./attachments";
 
 export const AttachmentChip = ({
   attachment,

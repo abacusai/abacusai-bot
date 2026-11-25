@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { RowSendContext } from "#renderer/components/file-preview/row-send";
+import { LongNoteSaverContext } from "#renderer/components/message-feedback";
 import {
   draftStore,
   updateDraft,
@@ -24,7 +25,7 @@ import {
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
 
-import { addDroppedFiles } from "../composer/attachments";
+import { addDroppedFiles, saveLongText } from "../composer/attachments";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
 import { useThreadHost } from "../runtime/host";
@@ -43,6 +44,30 @@ import { KitPartsProvider } from "./message-scope";
 import { useModelSwitchGuard } from "./model-switch-guard";
 import { useSendAsUser } from "./send-as-user";
 import { BotUI, SessionUI } from "./ui";
+
+/** A long thumbs note in this chat is saved where its composer saves a long paste. */
+const LongNoteBridge = ({ children }: { children: ReactNode }) => {
+  const { runtime, composer } = useChatView();
+  const canSave =
+    runtime.host.uploadFile != null || composer.attachmentsBase != null;
+  return (
+    <LongNoteSaverContext.Provider
+      value={
+        canSave
+          ? (text) =>
+              saveLongText(
+                text,
+                runtime.host,
+                composer.attachmentsBase,
+                composer.attachmentContext
+              )
+          : null
+      }
+    >
+      {children}
+    </LongNoteSaverContext.Provider>
+  );
+};
 
 /** File rows in this chat can send as the user ("Try another look" on a deck). */
 const RowSendBridge = ({ children }: { children: ReactNode }) => (
@@ -275,7 +300,9 @@ export const ChatView = (props: ChatViewProps) => {
           )}
           {ready ? (
             <RowSendBridge>
-              <Kit key={threadId} skin={skin} />
+              <LongNoteBridge>
+                <Kit key={threadId} skin={skin} />
+              </LongNoteBridge>
             </RowSendBridge>
           ) : phase === "error" ? (
             <Failed

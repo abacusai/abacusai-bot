@@ -17,7 +17,11 @@ import {
   readUserLanguage,
   resolveReplyLanguage,
 } from "@abacus-ai/agent/user-language";
-import { ownWords, visibleUserText } from "@abacus-ai/agent/user-text";
+import {
+  ownWords,
+  pastedTextKey,
+  visibleUserText,
+} from "@abacus-ai/agent/user-text";
 import {
   connectorById,
   connectorForService,
@@ -5473,7 +5477,9 @@ export class ServiceHost {
    * reply: it goes to the chat's agent (the relay keeps it to once per
    * comment), whatever became of the team's copy. Only in the user's own
    * conversation; a bot's chat with someone else or a routine run is not
-   * theirs to steer, and its thumbs stay with the team.
+   * theirs to steer, and its thumbs stay with the team. A note past
+   * `USER_TEXT_INLINE_MAX` comes with the pasted-text file the renderer saved
+   * it in, as the composer saves a long paste; the agent reads that file.
    */
   private deliverFeedbackComment(input: TurnFeedbackInput): void {
     const feedback = sanitizeFeedback(input);
@@ -5488,7 +5494,16 @@ export class ServiceHost {
         threadId: feedback.sessionId,
         segmentId: feedback.segmentId,
         rating: feedback.rating,
-        comment: feedback.comment,
+        comment:
+          feedback.commentFile != null
+            ? `@${feedback.commentFile}`
+            : feedback.comment,
+        // Once per note: a file's name is its content id, so a re-send of the
+        // same note is the same key and a corrected one a new key.
+        note:
+          feedback.commentFile != null
+            ? (pastedTextKey(feedback.commentFile) ?? feedback.commentFile)
+            : feedback.comment,
       })
       .catch((error: unknown) =>
         console.warn(

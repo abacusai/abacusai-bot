@@ -1,5 +1,7 @@
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import {
+  isPastedText,
+  pastedTextTitle,
   stripAttachmentRefs,
   visibleUserText,
   isHiddenUserText,
@@ -37,6 +39,7 @@ import {
 } from "lucide-react";
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ComponentType,
@@ -68,8 +71,7 @@ import {
 } from "#renderer/ui/collapsible";
 import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
-import { isPastedText, pastedTextTitle } from "../composer/attachments";
-import { Markdown } from "../markdown/markdown";
+import { FoldsWholeContext, Markdown } from "../markdown/markdown";
 import { coalescedIds, isBlankText, isThinking } from "../scroller/coalesce";
 import { useToolWindow } from "../scroller/row-context";
 import {
@@ -340,6 +342,94 @@ const AppLine = ({ kind }: { kind: AppLineKind }) => {
   );
 };
 
+/** A user message taller than this folds, with a toggle; its words are all there. */
+const USER_FOLD_PX = 320;
+
+/**
+ * The user's words in their bubble, folded past `USER_FOLD_PX` (with room
+ * to spare, so a message just over it stays open) behind "Show more", as a
+ * long code block folds. The one fold here: it tells markdown's code blocks
+ * not to fold inside it (`FoldsWholeContext`), and once opened it stays
+ * open. Keyboard focus landing below the fold (a link, a code block) opens
+ * it; a click or drag-select anywhere in it, or the text's own focus ring,
+ * does not. Measured, so it holds for any width and font.
+ */
+const FoldedText = ({ children }: { children: ReactNode }) => {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDivElement>(null);
+  const [tall, setTall] = useState(false);
+  const [open, setOpen] = useState(false);
+  /** A pointer is down in the text: the focus it causes is not keyboard focus. */
+  const pointer = useRef(false);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (node == null) return;
+    const measure = () => setTall(node.scrollHeight > USER_FOLD_PX * 1.25);
+    measure();
+    if (typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const folded = tall && !open;
+  return (
+    <FoldsWholeContext value>
+      <div
+        ref={ref}
+        data-slot="user-text"
+        data-folded={folded ? "" : undefined}
+        onPointerDownCapture={() => {
+          pointer.current = true;
+        }}
+        onPointerUpCapture={() => {
+          pointer.current = false;
+        }}
+        onPointerCancelCapture={() => {
+          pointer.current = false;
+        }}
+        onFocusCapture={(event) => {
+          // A press (a click, a drag-select) focuses what it lands on: only keyboard focus opens.
+          if (pointer.current) {
+            pointer.current = false;
+            return;
+          }
+          if (!folded) return;
+          const fold = event.currentTarget;
+          const target = event.target as HTMLElement;
+          // The text's own wrapper (selection, focus ring) holds everything: not a reason to open.
+          if (target.contains(fold.firstElementChild)) return;
+          // Where the target sits in the text, whatever focus scrolled the clip by.
+          const bottom =
+            target.getBoundingClientRect().bottom -
+            fold.getBoundingClientRect().top +
+            fold.scrollTop;
+          if (bottom > fold.clientHeight) {
+            fold.scrollTop = 0;
+            setOpen(true);
+          }
+        }}
+        className={cn(
+          folded &&
+            "max-h-80 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"
+        )}
+      >
+        {children}
+      </div>
+      {tall ? (
+        <button
+          type="button"
+          data-slot="user-text-more"
+          aria-expanded={open}
+          className="mt-1 text-xs font-medium underline-offset-2 opacity-80 hover:underline hover:opacity-100"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? t("chat.message.showLess") : t("chat.message.showMore")}
+        </button>
+      ) : null}
+    </FoldsWholeContext>
+  );
+};
+
 const UserMessage = ({
   message,
   tint,
@@ -378,12 +468,14 @@ const UserMessage = ({
                 onJump={(id) => jumpToMessage(id, threadId)}
               />
             ) : null}
-            <Markdown
-              content={body}
-              role="user"
-              selectable
-              workspaceRoot={workspaceRoot}
-            />
+            <FoldedText>
+              <Markdown
+                content={body}
+                role="user"
+                selectable
+                workspaceRoot={workspaceRoot}
+              />
+            </FoldedText>
             {badge != null ? (
               // The bot's badge stays where it is; the user's pill sits beside it.
               <span className="inline-flex items-center gap-1.5">

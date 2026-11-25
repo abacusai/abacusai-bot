@@ -644,12 +644,13 @@ const SessionRoute = () => {
                           {...(!row.routineId &&
                             workspace?.status !== "deleted" &&
                             !model.missing && { reader: {} })}
-                          send={(rating, comment) =>
+                          send={(rating, comment, commentFile) =>
                             transport.client.agent.feedback({
                               sessionId,
                               segmentId,
                               rating,
                               ...(comment ? { comment } : {}),
+                              ...(commentFile ? { commentFile } : {}),
                             })
                           }
                         />

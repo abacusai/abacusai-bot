@@ -4,14 +4,21 @@
  * `renderer/conversation/{user-file-refs,temp-image-refs}.ts`), as pure
  * functions both the v1 mapper (which tags migrated messages with the result)
  * and the chat kit (which renders them) can share. The stored text is never
- * changed: these are display derivations.
+ * changed: these are display derivations. Re-exported beside them, the
+ * agent's rules for the user's own text: the inline bound and how a text
+ * past it is named as a pasted-text file.
  */
 
 export {
   hasSystemReminder,
   isRoutineFire,
   isHiddenUserText,
+  isPastedText,
   legacyOperator,
+  pastedTextKey,
+  pastedTextName,
+  pastedTextTitle,
+  USER_TEXT_INLINE_MAX,
   visibleUserText,
 } from "@abacus-ai/agent/user-text";
 

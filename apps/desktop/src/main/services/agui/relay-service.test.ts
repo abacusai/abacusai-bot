@@ -1491,6 +1491,20 @@ it("hands a thumbs comment to the agent once: a repeat is dropped while queued, 
     first.relay.feedback({ ...comment, segmentId: "missing" })
   ).resolves.toBe(false);
   expect(feedbackCommands(first.agent)).toHaveLength(2);
+  // A long note goes as its file; a re-send naming another file is the same note.
+  const long = {
+    ...comment,
+    note: "a long note",
+    comment: "@/w/pasted-text-note-1.txt",
+  };
+  await expect(first.relay.feedback(long)).resolves.toBe(true);
+  await expect(
+    first.relay.feedback({ ...long, comment: "@/w/pasted-text-note-2.txt" })
+  ).resolves.toBe(false);
+  expect(feedbackCommands(first.agent).at(-1)).toMatchObject({
+    comment: "@/w/pasted-text-note-1.txt",
+  });
+  expect(feedbackCommands(first.agent)).toHaveLength(3);
   // The agent took it: its echo, the user's reply to "a", is saved.
   const note = "[feedback] The user rated your message.";
   for (const event of [

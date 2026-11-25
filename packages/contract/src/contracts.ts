@@ -1149,7 +1149,14 @@ export interface TurnFeedbackInput {
   /** The rated bot text segment. */
   segmentId: string;
   rating: "up" | "down" | "clear";
+  /** The note, or its first `USER_TEXT_INLINE_MAX` characters past that (main cuts the rest). */
   comment?: string;
+  /**
+   * `comment` saved as a pasted-text file where the composer saves a paste,
+   * when it is past `USER_TEXT_INLINE_MAX`: the bot reads this file, the
+   * team gets `comment`.
+   */
+  commentFile?: string;
   model?: string | null;
 }
 

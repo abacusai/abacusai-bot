@@ -14,6 +14,10 @@ import {
   redactContactDetails,
 } from "@abacus-ai/contract/rating-prompt";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
+import {
+  isPastedText,
+  USER_TEXT_INLINE_MAX,
+} from "@abacus-ai/contract/transcript/user-text";
 import { app } from "electron";
 
 import { readSettings } from "../config/settings";
@@ -29,6 +33,8 @@ export interface TurnFeedback {
   segmentId: string;
   rating: FeedbackRating;
   comment?: string;
+  /** The pasted-text file `comment` was saved in, for the chat's agent. */
+  commentFile?: string;
   /** The model the turn ran on, for the alert. */
   model?: string | null;
 }
@@ -42,9 +48,23 @@ export interface FeedbackOutcome {
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-/** The platform's cap; anything longer is cut there anyway. */
-const MAX_COMMENT_LENGTH = 2000;
+/**
+ * The platform's cap on the team's copy; anything longer is cut there anyway.
+ * Only that copy: the chat's agent gets the user's words whole.
+ */
+const PLATFORM_COMMENT_MAX = 2000;
+/** Ends a team copy that was cut, so a short copy never reads as the whole note. */
+const PLATFORM_CUT_MARK = "… (cut here: the note was longer)";
+
+/** The team's copy of a comment: whole when it fits, else cut with a mark. */
+const platformComment = (comment: string): string =>
+  comment.length <= PLATFORM_COMMENT_MAX
+    ? comment
+    : `${comment.slice(0, PLATFORM_COMMENT_MAX - PLATFORM_CUT_MARK.length)}${PLATFORM_CUT_MARK}`;
 const MAX_MODEL_LENGTH = 200;
+const MAX_COMMENT_FILE_LENGTH = 4096;
+/** POSIX or Windows absolute, as the composer's `@` references are. */
+const ABSOLUTE_PATH = /^(?:[A-Za-z]:[\\/]|\/)/;
 /** Same shape the transcript sync uses for session ids. */
 const SESSION_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const MAX_SEGMENT_ID_LENGTH = 256;
@@ -70,19 +90,33 @@ export const sanitizeFeedback = (input: unknown): TurnFeedback | null => {
     return null;
   if (typeof rating !== "string" || !RATINGS.has(rating as FeedbackRating))
     return null;
+  // Never more than the inline bound: the renderer sends a longer note as a
+  // file and its start; an older client that sends it all is cut here, as
+  // the 2,000-character cut it replaces did.
   const comment =
     typeof raw.comment === "string"
-      ? raw.comment.trim().slice(0, MAX_COMMENT_LENGTH)
+      ? raw.comment.trim().slice(0, USER_TEXT_INLINE_MAX)
       : "";
   const model =
     typeof raw.model === "string" && raw.model.length > 0
       ? raw.model.slice(0, MAX_MODEL_LENGTH)
+      : null;
+  // Only an absolute path to a pasted-text file, as the composer names one.
+  const commentFile =
+    comment.length > 0 &&
+    typeof raw.commentFile === "string" &&
+    raw.commentFile.length <= MAX_COMMENT_FILE_LENGTH &&
+    !raw.commentFile.includes("\n") &&
+    ABSOLUTE_PATH.test(raw.commentFile) &&
+    isPastedText(raw.commentFile)
+      ? raw.commentFile
       : null;
   return {
     sessionId,
     segmentId,
     rating: rating as FeedbackRating,
     ...(comment.length > 0 ? { comment } : {}),
+    ...(commentFile != null ? { commentFile } : {}),
     model,
   };
 };
@@ -174,7 +208,7 @@ export class FeedbackService {
     if (feedback == null) return { ok: false, reason: "invalid" };
     return this.post(feedback.sessionId, feedback.segmentId, {
       rating: feedback.rating,
-      comment: feedback.comment ?? "",
+      comment: platformComment(feedback.comment ?? ""),
       model: feedback.model ?? null,
     });
   }

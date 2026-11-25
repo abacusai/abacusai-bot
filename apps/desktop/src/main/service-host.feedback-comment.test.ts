@@ -106,9 +106,56 @@ it("sends the team its copy first, then hands the comment to the chat's agent, s
       segmentId: "a#1",
       rating: "down",
       comment: "no logo image there",
+      note: "no logo image there",
     });
     vi.restoreAllMocks();
   }
+});
+
+it("hands a long note to the agent as the pasted-text file it was saved in, keyed by its content id", async () => {
+  const { host, relay } = wired({ team: true, owner: true });
+  const file = "/w/.abacusai-bot/temp/pasted-text-note-1a2b.txt";
+  const hosted =
+    "/vm/.abacusai-bot/temp/0f8fad5b-d9cb-469f-a165-70867728950e-pasted-text-note-1a2b.txt";
+  const corrected = "/w/.abacusai-bot/temp/pasted-text-note-9f8e.txt";
+  const start = "x".repeat(100_000);
+  // The same note four times (Send again, a retry, the hosted copy), then a corrected one.
+  for (const commentFile of [file, file, file, hosted, corrected])
+    await host.submitTurnFeedback({
+      sessionId: "s1",
+      segmentId: "a#1",
+      rating: "down",
+      comment: start,
+      commentFile,
+    });
+  // The same note has one key whatever its path, so the relay keeps one; the corrected note is new.
+  expect(
+    relay.mock.calls.map(([input]) => {
+      const call = input as { comment: string; note?: string };
+      return [call.comment, call.note];
+    })
+  ).toEqual([
+    [`@${file}`, "pasted-text-note-1a2b.txt"],
+    [`@${file}`, "pasted-text-note-1a2b.txt"],
+    [`@${file}`, "pasted-text-note-1a2b.txt"],
+    [`@${hosted}`, "pasted-text-note-1a2b.txt"],
+    [`@${corrected}`, "pasted-text-note-9f8e.txt"],
+  ]);
+});
+
+it("cuts what an older client sends past the inline bound, as before, rather than refusing it", async () => {
+  const { host, relay } = wired({ team: true, owner: true });
+  await expect(
+    host.submitTurnFeedback({
+      sessionId: "s1",
+      segmentId: "a#1",
+      rating: "down",
+      comment: "y".repeat(150_000),
+    })
+  ).resolves.toEqual({ ok: true });
+  expect((relay.mock.calls[0]![0] as { comment: string }).comment).toHaveLength(
+    100_000
+  );
 });
 
 it.each([

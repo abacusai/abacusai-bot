@@ -5,6 +5,51 @@ const REMINDER_CLOSE = "</system_reminder>";
 const ROUTINE_FIRE = /^\[routine\] "/;
 
 /**
+ * The longest the user's own text goes into a turn as written, about 25-30k
+ * tokens. Nothing on the way cuts their words: past this the composer
+ * attaches a paste as a file the model reads, and a box that cannot attach
+ * (the thumbs comment) says it is too long instead of sending part of it.
+ */
+export const USER_TEXT_INLINE_MAX = 100_000;
+
+/**
+ * The name a long text gets when it goes in as a file (a composer paste, a
+ * long feedback note): the chat draws such a file as "Pasted text" titled
+ * by its first line, and the model reads it.
+ */
+export const pastedTextName = (id: string): string => `pasted-text-${id}.txt`;
+
+/** The hosted app's upload prefix (`<uuid>-`) on a saved file's name. */
+const UPLOAD_PREFIX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/;
+
+/**
+ * A pasted-text file's own name (`pasted-text-<id>.txt`) from its path, as
+ * the desktop saves it or as the hosted app's upload names it
+ * (`<uuid>-<name>`); null for any other file. A long note's name is its
+ * content id, so this names the note.
+ */
+export const pastedTextKey = (pathOrName: string): string | null => {
+  const name = (pathOrName.split(/[\\/]/).at(-1) ?? "").replace(
+    UPLOAD_PREFIX,
+    ""
+  );
+  return /^pasted-text-[\w-]+\.txt$/.test(name) ? name : null;
+};
+
+/** A file saved from pasted text, by its name or path. */
+export const isPastedText = (pathOrName: string): boolean =>
+  pastedTextKey(pathOrName) != null;
+
+/** A paste's chip title: its first line with text, whitespace folded. */
+export const pastedTextTitle = (head: string): string =>
+  head
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .find((line) => line !== "")
+    ?.slice(0, 120) ?? "";
+
+/**
  * Removes each `<system_reminder>...</system_reminder>` block (shortest match,
  * left to right). A plain scan rather than a lazy regex, which goes quadratic
  * on many unclosed openers.
