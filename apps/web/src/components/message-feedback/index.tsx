@@ -295,7 +295,7 @@ export const MessageFeedback = ({
                 <p
                   data-slot="feedback-too-long"
                   role="alert"
-                  className="text-destructive text-xs"
+                  className="text-failed text-xs"
                 >
                   {t("bots.chat.feedback.tooLong")}
                 </p>
