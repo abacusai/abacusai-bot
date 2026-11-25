@@ -54,6 +54,7 @@ import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
 import { QueueSlot } from "./queue-slot";
 import { RunningStrip } from "./running-strip";
+import { failureLine, type TurnFailureView } from "./status/failure-line";
 import { NoticeRow } from "./status/status";
 
 /** The skin's message widget, for the transcript's rows. */
@@ -101,21 +102,34 @@ const CARD_WAIT_TRIES = 6;
 
 /**
  * What a failed run's card says, read from the card itself: its title, else
- * its text (a one-line card, or the marker it gives way to). The card is the one owner of what a failure says (credit wall,
- * payment, phone, model or the generic line), so the screen reader hears
- * exactly what is on screen.
+ * its text (a one-line card, or the marker it gives way to). The card is the
+ * one owner of what a failure says (credit wall, payment, phone, model or
+ * the generic line), so the screen reader hears exactly what is on screen.
+ * `marker`: a run marker ("You have credits again"), not a failure.
+ *
+ * This reads the run's row from the DOM, so it relies on the transcript
+ * keeping every row mounted. TODO(windowing): if the transcript windows its
+ * rows again (see the "re-enable with windowing" tests), the latest run's
+ * row must stay mounted, or this falls back to `failureLine` for every
+ * failure.
  */
-const failureHeadline = (runId: string): string | null => {
+const failureHeadline = (
+  runId: string
+): { text: string; marker: boolean } | null => {
   const row = [...document.querySelectorAll<HTMLElement>("[data-run-id]")].find(
     (node) => node.dataset.runId === runId
   );
   // The card, or the marker a card gives way to (credits already back).
-  const card = row?.querySelector(
+  const card = row?.querySelector<HTMLElement>(
     '[data-slot="error-card"], [data-slot="run-marker"]'
   );
   if (card == null) return null;
+  const marker = card.dataset.slot === "run-marker";
   const title = card.querySelector("h2");
-  if (title != null) return title.textContent?.trim() || null;
+  if (title != null) {
+    const text = title.textContent?.trim() ?? "";
+    return text === "" ? null : { text, marker };
+  }
   // A one-line card or a marker: its words, not its buttons' labels.
   const words: string[] = [];
   const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
@@ -123,7 +137,7 @@ const failureHeadline = (runId: string): string | null => {
     if (node.parentElement?.closest("button") == null)
       words.push(node.textContent ?? "");
   const text = words.join("").trim();
-  return text === "" ? null : text;
+  return text === "" ? null : { text, marker };
 };
 
 /**
@@ -156,6 +170,8 @@ const Announcer = () => {
       /** A failed run: its text is its card's title, once the card shows. */
       runId?: string;
       tries?: number;
+      /** The failure itself: its cause's line when no card shows in time. */
+      error?: TurnFailureView;
     }>
   >([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -189,7 +205,11 @@ const Announcer = () => {
               ? t("chat.announce.stopped")
               : "",
         // A failure says what its card says: read from the card itself.
-        ...(outcome.kind === "error" && { runId: outcome.runId, tries: 0 }),
+        ...(outcome.kind === "error" && {
+          runId: outcome.runId,
+          tries: 0,
+          error: (outcome.error ?? {}) as TurnFailureView,
+        }),
       });
     }
     for (const item of items) {
@@ -239,12 +259,15 @@ const Announcer = () => {
           timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
           return;
         }
-        // No card on screen: nothing to read out either.
-        if (headline == null) {
-          timer.current = setTimeout(flush, 0);
-          return;
-        }
-        setText(t("chat.announce.error", { message: headline }));
+        // A marker is not a failure; a card still not shown is announced
+        // by its cause's line, so a failure is never silent.
+        setText(
+          headline?.marker === true
+            ? headline.text
+            : t("chat.announce.error", {
+                message: headline?.text ?? failureLine(t, next.error ?? {}),
+              })
+        );
       } else setText(next.text);
       timer.current = setTimeout(flush, ANNOUNCE_GAP_MS);
     };
