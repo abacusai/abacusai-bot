@@ -766,3 +766,54 @@ describe("a chat continued from another on a top model", () => {
     }
   });
 });
+
+describe("a chat's added folders", () => {
+  it("adds a folder once, keeps the widest, and survives a restart", () => {
+    const chat = service.create(WORKSPACE);
+    expect(service.addFolder(chat.id, "/Users/dev/Drive/site/assets")).toBe(
+      true
+    );
+    expect(service.addFolder(chat.id, "/Users/dev/Drive/site")).toBe(true);
+    // Inside one already there: nothing changes.
+    expect(service.addFolder(chat.id, "/Users/dev/Drive/site/css")).toBe(false);
+    expect(service.addFolder(chat.id, "/Users/dev/Downloads")).toBe(true);
+    expect(service.folders(chat.id)).toEqual([
+      "/Users/dev/Drive/site",
+      "/Users/dev/Downloads",
+    ]);
+    expect(service.get(chat.id)?.folders).toEqual(service.folders(chat.id));
+
+    const loaded = new AgentSessionManagerService();
+    loaded.initialize([WORKSPACE]);
+    expect(loaded.folders(chat.id)).toEqual([
+      "/Users/dev/Drive/site",
+      "/Users/dev/Downloads",
+    ]);
+    expect(loaded.removeFolder(chat.id, "/Users/dev/Downloads")).toBe(true);
+    expect(loaded.removeFolder(chat.id, "/Users/dev/Downloads")).toBe(false);
+    expect(loaded.folders(chat.id)).toEqual(["/Users/dev/Drive/site"]);
+  });
+
+  it("is per chat: another chat in the same workspace has none", () => {
+    const one = service.create(WORKSPACE);
+    const two = service.create(WORKSPACE);
+    service.addFolder(one.id, "/Users/dev/Drive/site");
+    service.addAttachedFile(one.id, "/Users/dev/Desktop/brief.pdf");
+    expect(service.folders(two.id)).toEqual([]);
+    expect(service.attachedFiles(two.id)).toEqual([]);
+    expect(service.get(two.id)).not.toHaveProperty("folders");
+  });
+
+  it("goes with the chat into its continuation", () => {
+    const source = service.create(WORKSPACE);
+    service.addFolder(source.id, "/Users/dev/Drive/site");
+    service.addAttachedFile(source.id, "/Users/dev/Desktop/brief.pdf");
+    const next = service.create(WORKSPACE, null, null, null, undefined, {
+      continuedFrom: { sessionId: source.id, summary: "## Goal" },
+    });
+    expect(service.folders(next.id)).toEqual(["/Users/dev/Drive/site"]);
+    expect(service.attachedFiles(next.id)).toEqual([
+      "/Users/dev/Desktop/brief.pdf",
+    ]);
+  });
+});

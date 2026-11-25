@@ -1,11 +1,9 @@
 /**
- * R4-T33, `browser.runtime.materializeFile`'s guard (spec 04 §12.8, §26.4
- * f): the readers' containment (symlinks resolved first), a regular file, a
- * pdf/html/htm type, and the main renderer only. What reaches the runtime
- * are real paths. The root itself is checked against what main derives for
- * the conversation (ServiceHost's real `localPreviewRoots`): its checkout
- * (the session's worktree when it has one) or its workspace's artifact
- * folders; any other `hostRoot` is `FORBIDDEN {root-not-allowed}`.
+ * `browser.runtime.materializeFile`'s guard (spec 04 §12.8): main picks the
+ * root from the chat (ServiceHost's real `previewSources`): its checkout,
+ * the folders added to it, the folders of files it made, a file attached to
+ * it. Then the readers' containment, a regular file, a pdf/html/htm type,
+ * and the main renderer only. What reaches the runtime are real paths.
  */
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -23,6 +21,7 @@ import {
 } from "@abacus-ai/contract/conversation-scope";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PreviewSources } from "../../services/browser/local-preview-file";
 import { CheckoutService } from "../../services/workspace/checkout-service";
 import { FileTreeService } from "../../services/workspace/file-tree-service";
 import { GitService } from "../../services/workspace/git-service";
@@ -54,6 +53,8 @@ let root = "";
 let checkout = "";
 let worktree = "";
 let artifacts = "";
+let added = "";
+let loose = "";
 const closers: Array<() => void> = [];
 
 beforeEach(async () => {
@@ -79,10 +80,19 @@ beforeEach(async () => {
   await fs.mkdir(path.join(root, "other"));
   await fs.writeFile(path.join(artifacts, "out.pdf"), "%PDF-1.4\n");
   await fs.writeFile(path.join(root, "other", "x.pdf"), "%PDF-1.4\n");
+  added = path.join(root, "project");
+  await fs.mkdir(path.join(added, "site"), { recursive: true });
+  await fs.writeFile(path.join(added, "site", "index.html"), "<p>made</p>");
+  loose = path.join(root, "desktop");
+  await fs.mkdir(loose);
+  await fs.writeFile(path.join(loose, "given.pdf"), "%PDF-1.4\n");
+  await fs.writeFile(path.join(loose, "beside.pdf"), "%PDF-1.4\n");
 });
 
 /** ServiceHost's own derivation, over a real CheckoutService. */
-const previewRoots = async (): Promise<(key: ConversationKey) => string[]> => {
+const previewSources = async (): Promise<
+  (key: ConversationKey) => PreviewSources
+> => {
   const { ServiceHost } = await import("../../service-host");
   const checkouts = new CheckoutService({
     workspace: (id) =>
@@ -95,7 +105,7 @@ const previewRoots = async (): Promise<(key: ConversationKey) => string[]> => {
           } as WorkspaceListItem)
         : null,
     session: (id) =>
-      id === "chat-one" || id === "chat-wt"
+      id === "chat-one" || id === "chat-wt" || id === "chat-two"
         ? ({
             id,
             workspaceId: "workspace-one",
@@ -111,23 +121,33 @@ const previewRoots = async (): Promise<(key: ConversationKey) => string[]> => {
     pollMs: null,
   });
   const artifact = (
-    workspaceId: string,
+    sessionId: string,
     location: string,
     kind: SessionArtifact["kind"] = "file"
   ): SessionArtifact =>
-    ({ workspaceId, sessionId: "chat-one", kind, location }) as SessionArtifact;
+    ({
+      workspaceId: "workspace-one",
+      sessionId,
+      kind,
+      location,
+    }) as SessionArtifact;
   const host = {
     checkouts,
     sessionArtifactsService: {
       list: () => [
-        artifact("workspace-one", path.join(artifacts, "out.pdf")),
-        artifact("workspace-two", path.join(root, "other", "x.pdf")),
-        artifact("workspace-one", "https://example.com/", "link"),
+        artifact("chat-one", path.join(artifacts, "out.pdf")),
+        // The same Auto workspace, another chat: not this chat's to show.
+        artifact("chat-two", path.join(root, "other", "x.pdf")),
+        artifact("chat-one", "https://example.com/", "link"),
       ],
     },
+    agentSessionManagerService: {
+      folders: (id: string) => (id === "chat-one" ? [added] : []),
+      attachedFiles: (id: string) =>
+        id === "chat-one" ? [path.join(loose, "given.pdf")] : [],
+    },
   };
-  return (key) =>
-    ServiceHost.prototype.localPreviewRoots.call(host as never, key);
+  return (key) => ServiceHost.prototype.previewSources.call(host as never, key);
 };
 
 afterEach(async () => {
@@ -138,14 +158,14 @@ afterEach(async () => {
 
 const connect = async (mainRendererId: number | null = 1) => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
-  const localPreviewRoots = await previewRoots();
-  const materializeFile = vi.fn(async (request: object) => ({
+  const sources = await previewSources();
+  const materializeFile = vi.fn(async (request: { root?: string }) => ({
     lease: { conversationKey: "k", resourceId: "r", generation: 1 },
     request,
   }));
   const connection = connectInProcess(
     fakeDeps({
-      serviceHost: { localPreviewRoots },
+      serviceHost: { previewSources: sources },
       browserRuntime: { materializeFile },
       windows: { mainRendererId: () => mainRendererId },
     })
@@ -158,14 +178,13 @@ const connect = async (mainRendererId: number | null = 1) => {
 };
 
 const conversationKey = sessionConversationKey("workspace-one", "chat-one");
-const request = (filePath: string) => ({
-  conversationKey,
+const request = (filePath: string, key: ConversationKey = conversationKey) => ({
+  conversationKey: key,
   resourceId: "preview:report",
   filePath,
-  hostRoot: checkout,
 });
 
-describe("browser.runtime.materializeFile (R4-T33)", () => {
+describe("browser.runtime.materializeFile", () => {
   it("a pdf or html file inside the root reaches the runtime as real paths", async () => {
     const { client, materializeFile } = await connect();
     await client.browser.runtime.materializeFile(request("docs/report.pdf"));
@@ -193,9 +212,12 @@ describe("browser.runtime.materializeFile (R4-T33)", () => {
     const cases: Array<[string, object]> = [
       [
         "../secret.pdf",
-        { code: "FORBIDDEN", data: { reason: "outside-root" } },
+        { code: "FORBIDDEN", data: { reason: "outside-folders" } },
       ],
-      ["linked.pdf", { code: "FORBIDDEN", data: { reason: "outside-root" } }],
+      [
+        "linked.pdf",
+        { code: "FORBIDDEN", data: { reason: "outside-folders" } },
+      ],
       [
         "notes.txt",
         { code: "FORBIDDEN", data: { reason: "unsupported-type" } },
@@ -210,47 +232,68 @@ describe("browser.runtime.materializeFile (R4-T33)", () => {
     expect(materializeFile).not.toHaveBeenCalled();
   });
 
-  it("a root main did not derive for the conversation is refused", async () => {
+  it("main picks the root: an added folder, a file the chat made, an attached file", async () => {
     const { client, materializeFile } = await connect();
     const wtKey = sessionConversationKey("workspace-one", "chat-wt");
-    const refused: Array<[ConversationKey, string, string]> = [
-      [conversationKey, "/", path.join(root, "secret.pdf")],
-      [conversationKey, root, "secret.pdf"],
-      // A worktree session may not name the primary checkout.
-      [wtKey, checkout, "docs/report.pdf"],
-      // Another workspace's artifact folder.
-      [conversationKey, path.join(root, "other"), "x.pdf"],
-      [conversationKey, path.join(root, "missing"), "x.pdf"],
+    const shown: Array<[ConversationKey, string, string]> = [
+      [wtKey, "wt.pdf", worktree],
+      [conversationKey, path.join(added, "site", "index.html"), added],
+      [conversationKey, path.join(artifacts, "out.pdf"), artifacts],
+      [
+        conversationKey,
+        path.join(loose, "given.pdf"),
+        path.join(loose, "given.pdf"),
+      ],
+      [draftConversationKey("workspace-one"), "docs/report.pdf", checkout],
     ];
-    for (const [key, hostRoot, filePath] of refused)
+    for (const [key, filePath] of shown)
+      await client.browser.runtime.materializeFile(request(filePath, key));
+    expect(materializeFile.mock.calls.map(([call]) => call.root)).toEqual(
+      shown.map(([, , picked]) => picked)
+    );
+  });
+
+  it("refuses what is in none of the chat's folders", async () => {
+    const { client, materializeFile } = await connect();
+    const wtKey = sessionConversationKey("workspace-one", "chat-wt");
+    const refused: Array<[ConversationKey, string]> = [
+      [conversationKey, path.join(root, "secret.pdf")],
+      // A worktree chat does not see the primary checkout.
+      [wtKey, path.join(checkout, "docs", "report.pdf")],
+      // Another chat's file in the same workspace.
+      [conversationKey, path.join(root, "other", "x.pdf")],
+      // Beside an attached file: the file alone was given.
+      [conversationKey, path.join(loose, "beside.pdf")],
+      // Missing outside: refused, not "not found".
+      [conversationKey, path.join(root, "missing", "x.pdf")],
+      // Added to one chat only.
+      [wtKey, path.join(added, "site", "index.html")],
+    ];
+    for (const [key, filePath] of refused)
       await expect(
-        client.browser.runtime.materializeFile({
-          conversationKey: key,
-          resourceId: "preview:report",
-          filePath,
-          hostRoot,
-        })
+        client.browser.runtime.materializeFile(request(filePath, key))
       ).rejects.toMatchObject({
         code: "FORBIDDEN",
-        data: { reason: "root-not-allowed" },
+        data: { reason: "outside-folders" },
       });
     expect(materializeFile).not.toHaveBeenCalled();
-
-    const allowed: Array<[ConversationKey, string, string]> = [
-      [wtKey, worktree, "wt.pdf"],
-      [conversationKey, path.join(checkout, "docs"), "report.pdf"],
-      [conversationKey, artifacts, "out.pdf"],
-      [draftConversationKey("workspace-one"), checkout, "docs/report.pdf"],
-    ];
-    for (const [key, hostRoot, filePath] of allowed)
-      await client.browser.runtime.materializeFile({
-        conversationKey: key,
-        resourceId: "preview:report",
-        filePath,
-        hostRoot,
-      });
-    expect(materializeFile).toHaveBeenCalledTimes(allowed.length);
   }, 30_000);
+
+  it("answers previewRoot with the same root, or the folder to add", async () => {
+    const { client } = await connect();
+    await expect(
+      client.browser.runtime.previewRoot({
+        conversationKey,
+        filePath: path.join(added, "site", "notes.md"),
+      })
+    ).resolves.toEqual({ ok: true, root: added });
+    await expect(
+      client.browser.runtime.previewRoot({
+        conversationKey,
+        filePath: path.join(loose, "beside.pdf"),
+      })
+    ).resolves.toEqual({ ok: false, reason: "outside-folders", folder: loose });
+  });
 
   it("is restricted to the main renderer", async () => {
     const { client, materializeFile } = await connect(99);

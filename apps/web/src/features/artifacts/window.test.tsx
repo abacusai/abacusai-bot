@@ -149,7 +149,6 @@ it.each(["pdf", "html"])(
     );
     expect(materializeFile).toHaveBeenCalledWith({
       filePath: artifact.location,
-      hostRoot: "/guest",
       conversationKey: lease.conversationKey,
       resourceId: lease.resourceId,
     });

@@ -182,7 +182,9 @@ export function commandConfig(
       denyRead: [...policy.secrets.denied],
       allowRead: [...policy.secrets.allowed],
       allowWrite: [
-        ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
+        ...(policy.mode === "workspace-write"
+          ? [policy.workspaceRoot, ...policy.workspaceFolders]
+          : []),
         ...policy.writableTemp,
         ...(policy.mode === "workspace-write" ? policy.toolHomes : []),
         ...policy.approvedWrites.map(writableRoot),
@@ -423,6 +425,7 @@ export async function probeCommands(
     mode: "workspace-write",
     enforcement: "auto",
     workspaceRoot: writable,
+    workspaceFolders: [],
     writableTemp: [],
     toolHomes: [],
     secrets: { denied: [], allowed: [], promptable: [] },

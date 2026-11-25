@@ -545,8 +545,13 @@ export const FilesTab = ({
               hostRoot={containmentRootFor(preview, workspaceRoot)}
               read={{
                 localUrl: IS_ELECTRON
-                  ? async (filePath, hostRoot) => {
-                      const viewedId = sessionId ?? bot.sessionId;
+                  ? async (filePath) => {
+                      // Under the chat that made the file, else the one on screen.
+                      const viewedId =
+                        files.find((file) => file.location === filePath)
+                          ?.sessionId ??
+                        sessionId ??
+                        bot.sessionId;
                       const viewed = viewedId
                         ? db.collections.sessions.get(viewedId)
                         : undefined;
@@ -555,7 +560,6 @@ export const FilesTab = ({
                       const state =
                         await transport.client.browser.runtime.materializeFile({
                           filePath,
-                          hostRoot,
                           conversationKey: sessionConversationKey(
                             viewed.workspaceId,
                             viewed.id

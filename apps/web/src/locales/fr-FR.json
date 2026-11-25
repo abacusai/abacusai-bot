@@ -2308,6 +2308,21 @@
       "label": "Votre tâche depuis le site web",
       "stop": "Arrêter",
       "edit": "Modifier"
+    },
+    "folders": {
+      "add": "Ajouter le dossier",
+      "addFailed": "Le dossier n'a pas pu être ajouté. Réessayez.",
+      "addOther": "Ajouter un dossier…",
+      "chatFolder": "Dossier de ce chat",
+      "chip": "Dossiers",
+      "chipCount": "Dossiers · {{count}}",
+      "help": "Le bot travaille et enregistre dans ces dossiers, et le chat affiche ce qu'ils contiennent.",
+      "label": "Dossiers de ce chat",
+      "notAllowed": "Impossible d'ajouter {{name}} : il contient votre dossier personnel ou des fichiers système ou d'apps.",
+      "outsideBody": "Il ne peut pas s'afficher ici. Ajoutez le dossier {{name}} à ce chat pour l'afficher, ou ouvrez-le avec l'app par défaut.",
+      "outsideTitle": "Ce fichier est en dehors des dossiers de ce chat",
+      "remove": "Retirer {{name}}",
+      "removeFailed": "Le dossier n'a pas pu être retiré. Réessayez."
     }
   },
   "terminalShells": {

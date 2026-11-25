@@ -2330,6 +2330,21 @@
       "label": "Twoje zadanie ze strony",
       "stop": "Zatrzymaj",
       "edit": "Edytuj"
+    },
+    "folders": {
+      "add": "Dodaj folder",
+      "addFailed": "Nie udało się dodać folderu. Spróbuj ponownie.",
+      "addOther": "Dodaj folder…",
+      "chatFolder": "Folder tego czatu",
+      "chip": "Foldery",
+      "chipCount": "Foldery · {{count}}",
+      "help": "Bot pracuje i zapisuje w tych folderach, a czat pokazuje, co w nich jest.",
+      "label": "Foldery tego czatu",
+      "notAllowed": "Nie można dodać folderu {{name}}: zawiera folder domowy albo pliki systemu lub aplikacji.",
+      "outsideBody": "Nie można go tu pokazać. Dodaj folder {{name}} do tego czatu, aby go wyświetlić, albo otwórz go w domyślnej aplikacji.",
+      "outsideTitle": "Ten plik jest poza folderami tego czatu",
+      "remove": "Usuń {{name}}",
+      "removeFailed": "Nie udało się usunąć folderu. Spróbuj ponownie."
     }
   },
   "terminalShells": {

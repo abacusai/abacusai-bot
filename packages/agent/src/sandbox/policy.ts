@@ -33,8 +33,10 @@ export type SandboxEnforcement =
 export interface SandboxPolicy {
   mode: SandboxMode;
   enforcement: SandboxEnforcement;
-  /** The one directory `workspace-write` may write under, fully resolved. */
+  /** The chat's own directory, which `workspace-write` may write under, fully resolved. */
   workspaceRoot: string;
+  /** The folders the user added to the chat, written like `workspaceRoot`; fully resolved. */
+  workspaceFolders: string[];
   /** Temp directories a build is entitled to, fully resolved. */
   writableTemp: string[];
   /** Caches and toolchains a build writes to as a matter of course (zones.ts). */
@@ -105,6 +107,8 @@ export function resolvePolicy(
     approvedWrites?: readonly string[];
     /** Whether the backend can force connections through the asking proxy. */
     filteredNetwork?: boolean;
+    /** The folders the user added to the chat (workspace-folders.ts). */
+    workspaceFolders?: readonly string[];
   } = {}
 ): SandboxPolicy {
   const temps = new Set<string>();
@@ -117,6 +121,7 @@ export function resolvePolicy(
     mode: modeToSandboxMode(mode),
     enforcement: sandboxEnforcement(mode),
     workspaceRoot,
+    workspaceFolders: (options.workspaceFolders ?? []).map(canonicalize),
     writableTemp: [...temps],
     toolHomes: existingToolHomes(),
     secrets: resolveSecretPaths({

@@ -380,6 +380,8 @@ export interface AgentSessionListItem {
   report?: RunReportStamp | null;
   /** The chat this one continues on another model, linked both ways in the transcripts. */
   continuedFrom?: string;
+  /** Folders the user added to this chat beyond its own, as real paths. Absent: none. */
+  folders?: string[];
   /** The routine this session edits, when it is the editor turn behind a routine page. Hidden from lists. */
   editorFor: string | null;
   /** Derived from `owner` (plus legacy stamps); hides the session from the Sessions tree. */

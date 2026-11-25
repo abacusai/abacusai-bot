@@ -255,6 +255,48 @@ describe("ai.send", () => {
     );
   });
 
+  it("hands main the user's text before the agent starts, so its spawn has the attached folders", async () => {
+    const { agent } = setup();
+    agent.answer = (command) =>
+      command.type === "run"
+        ? started((command.input as { runId: string }).runId)
+        : [];
+    const order: string[] = [];
+    const hostWithPaths = host(agent);
+    hostWithPaths.start = async (id) => {
+      order.push("start");
+      return agent.start(id);
+    };
+    hostWithPaths.attachedPaths = async (threadId, text) => {
+      order.push(`attached ${threadId}: ${text}`);
+    };
+    const relay = new AguiRelayService({
+      host: hostWithPaths,
+      files: new ThreadStore({ home: () => home, log: () => undefined }),
+      ackTimeoutMs: 2_000,
+      log: () => undefined,
+    });
+    agent.relay = relay;
+    const connection = connectInProcess(fakeDeps({ ai: relay }));
+
+    await connection.client.ai.send({
+      threadId: "s1",
+      runId: "run-1",
+      messages: [userMessage("u-1", "make a page\n\n@/Users/dev/Drive/site")],
+    });
+    agent.emit("s1", finished("run-1"));
+    await connection.client.ai.queue.enqueue({
+      threadId: "s1",
+      message: "and a pdf\n\n@/Users/dev/Desktop/brief.pdf",
+    });
+
+    expect(order).toEqual([
+      "attached s1: make a page\n\n@/Users/dev/Drive/site",
+      "start",
+      "attached s1: and a pdf\n\n@/Users/dev/Desktop/brief.pdf",
+    ]);
+  });
+
   it("leaves the note owed when the agent takes no input", async () => {
     const { agent } = setup();
     const taken = vi.fn();

@@ -704,6 +704,8 @@ export type DesktopCommand =
       tier: "free" | "basic" | "paid" | "unknown";
       name: string | null;
     }
+  /** The folders the user added to this chat; see workspace-folders.ts. */
+  | { type: "workspace_folders"; folders: string[] }
   /**
    * Reconnect every MCP server. With `requestId`, the agent answers
    * `mcp_refreshed` (or `mcp_refresh_failed`) carrying it once done.

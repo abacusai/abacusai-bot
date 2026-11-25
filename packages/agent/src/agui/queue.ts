@@ -34,6 +34,7 @@ import {
 } from "../protocol.js";
 import { shutdownRuntime } from "../sandbox/index.js";
 import type { AbacusBotSession } from "../session.js";
+import { setHostWorkspaceFolders } from "../workspace-folders.js";
 import type { TurnToken } from "./runs.js";
 
 export type HostSession = AbacusBotSession | BotSession;
@@ -325,6 +326,11 @@ export class HostCore {
 
       case "account_plan":
         setHostAccountPlan(command);
+
+        return;
+
+      case "workspace_folders":
+        setHostWorkspaceFolders(command.folders);
 
         return;
 

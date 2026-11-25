@@ -25,7 +25,8 @@ const READS: Record<string, string> = {
   auth: "abacus.shouldAutoSignIn",
   bots: "chatPreviews events senderChats",
   channels: "events list thread",
-  browser: "events permissions.list profiles.list sites.list status",
+  browser:
+    "events permissions.list profiles.list runtime.previewRoot sites.list status",
   connectors: "events requests statuses",
   db: [
     "artifacts",

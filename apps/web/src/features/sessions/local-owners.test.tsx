@@ -4,7 +4,22 @@ import { act, render, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 vi.mock("./data/queries", () => ({
-  useSessionsTransport: () => ({ client: {} }),
+  useSessionsTransport: () => ({
+    client: {},
+    orpc: {
+      browser: {
+        runtime: {
+          previewRoot: {
+            key: () => ["previewRoot"],
+            queryOptions: ({ input }: { input: object }) => ({
+              queryKey: ["previewRoot", input],
+              queryFn: async () => ({ ok: true, root: "/repo" }),
+            }),
+          },
+        },
+      },
+    },
+  }),
   useWorkspace: () => ({ path: "/repo" }),
   effectiveCheckoutIdentity: () => "checkout",
   useCheckoutWatch: () => {},

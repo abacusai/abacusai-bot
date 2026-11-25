@@ -167,7 +167,9 @@ export function buildConfig(
   shell: { sh: string; args?: readonly string[] } | null = posixShell() ?? null
 ): Record<string, unknown> {
   const writable = [
-    ...(policy.mode === "workspace-write" ? [policy.workspaceRoot] : []),
+    ...(policy.mode === "workspace-write"
+      ? [policy.workspaceRoot, ...policy.workspaceFolders]
+      : []),
     ...policy.writableTemp,
     ...(policy.mode === "workspace-write" ? policy.toolHomes : []),
     ...policy.approvedWrites,
@@ -183,7 +185,10 @@ export function buildConfig(
       cwd,
     },
     filesystem: {
-      readonlyPaths: driveRoots([cwd, policy.workspaceRoot], env),
+      readonlyPaths: driveRoots(
+        [cwd, policy.workspaceRoot, ...policy.workspaceFolders],
+        env
+      ),
       readwritePaths: writable,
       deniedPaths: denied,
     },

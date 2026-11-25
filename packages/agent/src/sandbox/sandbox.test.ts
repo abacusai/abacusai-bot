@@ -43,6 +43,7 @@ function policy(overrides: Partial<SandboxPolicy> = {}): SandboxPolicy {
     mode: "workspace-write",
     enforcement: "auto",
     workspaceRoot: "/tmp/ws",
+    workspaceFolders: [],
     writableTemp: ["/private/tmp"],
     toolHomes: [],
     secrets: { denied: [], allowed: [], promptable: [] },

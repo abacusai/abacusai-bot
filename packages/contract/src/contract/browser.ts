@@ -46,13 +46,27 @@ export const MaterializeBrowserRuntimeFileRequestSchema = v.object({
   conversationKey: ConversationKeySchema,
   resourceId: v.pipe(v.string(), v.nonEmpty()),
   filePath: v.pipe(v.string(), v.nonEmpty()),
-  hostRoot: v.pipe(v.string(), v.nonEmpty()),
   /**
    * A viewer holding the runtime open: main closes it once the last holder
    * `release`s it (or its conversation goes). Absent, nothing holds it.
    */
   holder: v.optional(v.pipe(v.string(), v.nonEmpty())),
 });
+
+export const PreviewRootRequestSchema = v.object({
+  conversationKey: ConversationKeySchema,
+  filePath: v.pipe(v.string(), v.nonEmpty()),
+});
+
+/**
+ * Where main previews a local file for a conversation: under `root` (one of
+ * the chat's folders, the folder of a file the chat made, or the attached
+ * file itself), or refused because it is in none of them; `folder` is the
+ * one "Add folder" would add.
+ */
+export type PreviewRoot =
+  | { ok: true; root: string }
+  | { ok: false; reason: "outside-folders"; folder: string };
 
 export type MaterializeBrowserRuntimeFileRequest = v.InferOutput<
   typeof MaterializeBrowserRuntimeFileRequestSchema
@@ -159,6 +173,9 @@ export const browser = {
     materializeFile: mutation
       .input(MaterializeBrowserRuntimeFileRequestSchema)
       .output(type<BrowserRuntimeState>()),
+    previewRoot: query
+      .input(PreviewRootRequestSchema)
+      .output(type<PreviewRoot>()),
     present: mutation
       .input(PresentBrowserRuntimeRequestSchema)
       .output(type<BrowserRuntimeState>()),

@@ -115,6 +115,11 @@ export interface AguiRelayHost {
     threadId: string,
     tags: UserTextTags | undefined
   ): { notes: string[]; taken: () => void };
+  /**
+   * The user's message, before the agent has it: the folders and files it
+   * attaches join the chat (ServiceHost.noteAttachedPaths).
+   */
+  attachedPaths?(threadId: string, text: string): Promise<void>;
   /** Main's turn state: a turn was sent (legacy `sendAgentMessage` does this). */
   markSent(threadId: string): void;
   /** A human message the agent accepted, including queued admissions. */
@@ -286,6 +291,16 @@ const toHistory = (
 };
 
 /** The newest user message's id in an `ai.send`, whose echo the run carries. */
+/** A user message's text parts, as the agent reads them. */
+const userTextOf = (
+  message: AiSendInput["messages"][number] | undefined
+): string =>
+  message == null
+    ? ""
+    : message.parts
+        .flatMap((part) => (part.type === "text" ? [part.content] : []))
+        .join("\n");
+
 const newestUserId = (messages: AiSendInput["messages"]): string | null => {
   for (let index = messages.length - 1; index >= 0; index -= 1)
     if (messages[index]!.role === "user") return messages[index]!.id;
@@ -1079,6 +1094,11 @@ export class AguiRelayService implements AguiSource {
     let written = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
+      // Before a start, so a new agent is spawned with the folders it attaches.
+      const newestText = userTextOf(
+        input.messages.findLast((message) => message.role === "user")
+      );
+      if (newestText !== "") await this.#attached(threadId, newestText);
       await this.#ensureAguiRuntime(threadId);
       // The session was forgotten while the runtime started.
       if (pending.abandoned !== undefined) throw pending.abandoned;
@@ -1145,9 +1165,7 @@ export class AguiRelayService implements AguiSource {
           (message) => message.role === "user"
         );
         if (message != null) {
-          const text = message.parts
-            .flatMap((part) => (part.type === "text" ? [part.content] : []))
-            .join("\n");
+          const text = userTextOf(message);
           const metadata = message.metadata as
             | { abacus?: { userText?: UserTextTags } }
             | undefined;
@@ -1376,6 +1394,7 @@ export class AguiRelayService implements AguiSource {
     // bot's turn that follows cannot tell it was the user's.
     enqueue: async (threadId, message, userText) => {
       this.#requireAgui(threadId);
+      await this.#attached(threadId, message);
       this.#write(threadId, {
         type: "enqueue",
         message,
@@ -1409,6 +1428,15 @@ export class AguiRelayService implements AguiSource {
   };
 
   // ─── internals ────────────────────────────────────────────────────────
+
+  /** What the user's message attaches joins the chat; a failure never blocks the message. */
+  async #attached(threadId: string, text: string): Promise<void> {
+    try {
+      await this.#host.attachedPaths?.(threadId, text);
+    } catch (error) {
+      this.#log(`${threadId}: attached paths not noted: ${String(error)}`);
+    }
+  }
 
   /** A human message the agent took (started or queued): main hears it. */
   #accepted(threadId: string, message: string, userText?: UserTextTags): void {

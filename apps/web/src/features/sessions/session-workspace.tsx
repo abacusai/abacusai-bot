@@ -1,6 +1,6 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
   lazy,
@@ -107,6 +107,15 @@ export const SessionWorkspace = ({
     workspace?.path
   );
   useCheckoutWatch(transport, checkout, checkoutIdentity);
+  // A folder added or removed (attached in a message, the Folders control):
+  // every preview asks main again where its file may show.
+  const folders = (row.folders ?? []).join("\n");
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    void queryClient.invalidateQueries({
+      queryKey: transport.orpc.browser.runtime.previewRoot.key(),
+    });
+  }, [folders, queryClient, transport]);
   // The two tabs a session opens most: their chunks load while idle, so
   // the first switch to one does not wait on the network.
   useEffect(
@@ -275,6 +284,7 @@ export const SessionWorkspace = ({
                     preview
                     path={tab.path ?? ""}
                     root={root}
+                    scope={key}
                     visible={visible}
                     onShown={() => reportTabDraw(key, tab.ref, "drawn")}
                     renderLocal={(path) => local(path, tab.ref, visible)}

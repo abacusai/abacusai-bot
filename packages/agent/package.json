@@ -149,6 +149,10 @@
     "./language-id": {
       "types": "./dist/language-id.d.ts",
       "default": "./dist/language-id.js"
+    },
+    "./workspace-folders": {
+      "types": "./dist/workspace-folders.d.ts",
+      "default": "./dist/workspace-folders.js"
     }
   },
   "scripts": {

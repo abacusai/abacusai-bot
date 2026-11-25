@@ -2308,6 +2308,21 @@
       "label": "Tugas Anda dari situs web",
       "stop": "Hentikan",
       "edit": "Edit"
+    },
+    "folders": {
+      "add": "Tambahkan folder",
+      "addFailed": "Folder tidak bisa ditambahkan. Coba lagi.",
+      "addOther": "Tambahkan folder…",
+      "chatFolder": "Folder chat ini",
+      "chip": "Folder",
+      "chipCount": "Folder · {{count}}",
+      "help": "Bot bekerja dan menyimpan di folder ini, dan chat menampilkan isinya.",
+      "label": "Folder chat ini",
+      "notAllowed": "{{name}} tidak bisa ditambahkan: folder ini berisi folder pribadi Anda, file sistem, atau file aplikasi.",
+      "outsideBody": "File ini tidak bisa ditampilkan di sini. Tambahkan folder {{name}} ke chat ini untuk melihatnya, atau buka dengan aplikasi default.",
+      "outsideTitle": "File ini berada di luar folder chat ini",
+      "remove": "Hapus {{name}}",
+      "removeFailed": "Folder tidak bisa dihapus. Coba lagi."
     }
   },
   "terminalShells": {

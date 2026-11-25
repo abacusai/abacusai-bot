@@ -267,6 +267,10 @@ import { isAppTurnForPerson, ownWords } from "./user-text.js";
 import { webHostPrompt } from "./web-host-prompt.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
+import {
+  hostWorkspaceFolders,
+  workspaceFoldersPrompt,
+} from "./workspace-folders.js";
 import { isInsideDirectory } from "./workspace-path.js";
 
 /** The answers that mean "and keep allowing this for the session". */
@@ -924,6 +928,8 @@ export class AbacusBotSession {
   private promptMcpRoster = "";
   /** The plan line the prompt was built with; an upgrade mid-chat rebuilds it. */
   private promptPlan = "";
+  /** The workspace-folders block the live prompt was built with. */
+  private promptFolders = "";
 
   constructor(private readonly options: SessionOptions) {
     this.mode = parseMode(options.mode);
@@ -1061,6 +1067,8 @@ export class AbacusBotSession {
         this.promptMcpRoster = mcpRosterFingerprint(this.mcp.statuses);
         const plan = planFactsPrompt();
         this.promptPlan = plan;
+        const folders = workspaceFoldersPrompt(this.options.cwd);
+        this.promptFolders = folders;
 
         return [
           ...base,
@@ -1068,6 +1076,8 @@ export class AbacusBotSession {
           ...(mcp == null ? [] : [mcp]),
           // After the static blocks: a plan change rebuilds only from here.
           plan,
+          // Next to it, for the same reason: a folder added mid-chat.
+          folders,
           ...(instructions == null ? [] : [instructions]),
           // Last of all, so it outweighs a template or routine written in English.
           language,
@@ -3789,10 +3799,7 @@ export class AbacusBotSession {
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
-        ...this.allowances.gateOptions({
-          commands: this.config.allowedCommands,
-          readPaths: this.config.allowedReadPaths,
-        }),
+        ...this.gateAllowances(),
         userWords: this.userWords.window,
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
@@ -4288,6 +4295,22 @@ export class AbacusBotSession {
    * The hidden stores a command may ask to read, when the sandbox is on. Empty
    * otherwise, so no card mentions a store nothing is hiding.
    */
+  /**
+   * What the gate lets through without a card: the session's allowances, and
+   * the folders the user added to the chat, which count as its workspace.
+   */
+  private gateAllowances(): ReturnType<Allowances["gateOptions"]> {
+    const folders = hostWorkspaceFolders();
+    const options = this.allowances.gateOptions({
+      commands: this.config.allowedCommands,
+      readPaths: [...(this.config.allowedReadPaths ?? []), ...folders],
+    });
+    return {
+      ...options,
+      allowedWritePaths: [...folders, ...options.allowedWritePaths],
+    };
+  }
+
   private promptableCredentialPaths(cwd: string): string[] {
     if (sandboxEnforcement() === "off" || backendName() === null) return [];
 
@@ -4439,13 +4462,15 @@ export class AbacusBotSession {
     const roster = mcpRosterFingerprint(this.mcp.statuses);
     const language = accountReplyLanguagePrompt();
     const plan = planFactsPrompt();
+    const folders = workspaceFoldersPrompt(this.options.cwd);
 
     if (
       current === this.promptInstructions &&
       persona === this.promptPersona &&
       roster === this.promptMcpRoster &&
       language === this.promptUserLanguage &&
-      plan === this.promptPlan
+      plan === this.promptPlan &&
+      folders === this.promptFolders
     )
       return;
 

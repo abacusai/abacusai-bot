@@ -2308,6 +2308,21 @@
       "label": "Web sitesinden gelen göreviniz",
       "stop": "Durdur",
       "edit": "Düzenle"
+    },
+    "folders": {
+      "add": "Klasör ekle",
+      "addFailed": "Klasör eklenemedi. Tekrar deneyin.",
+      "addOther": "Klasör ekle…",
+      "chatFolder": "Bu sohbetin klasörü",
+      "chip": "Klasörler",
+      "chipCount": "Klasörler · {{count}}",
+      "help": "Bot bu klasörlerde çalışır ve kaydeder, sohbet de içlerindekileri gösterir.",
+      "label": "Bu sohbetin klasörleri",
+      "notAllowed": "{{name}} eklenemez: ana klasörünüzü ya da sistem veya uygulama dosyalarını içeriyor.",
+      "outsideBody": "Burada gösterilemiyor. Önizlemek için {{name}} klasörünü bu sohbete ekleyin ya da varsayılan uygulamayla açın.",
+      "outsideTitle": "Bu dosya bu sohbetin klasörlerinin dışında",
+      "remove": "{{name}} klasörünü kaldır",
+      "removeFailed": "Klasör kaldırılamadı. Tekrar deneyin."
     }
   },
   "terminalShells": {

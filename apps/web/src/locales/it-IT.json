@@ -2308,6 +2308,21 @@
       "label": "Il tuo compito dal sito web",
       "stop": "Ferma",
       "edit": "Modifica"
+    },
+    "folders": {
+      "add": "Aggiungi cartella",
+      "addFailed": "Impossibile aggiungere la cartella. Riprova.",
+      "addOther": "Aggiungi cartella…",
+      "chatFolder": "Cartella di questa chat",
+      "chip": "Cartelle",
+      "chipCount": "Cartelle · {{count}}",
+      "help": "Il bot lavora e salva in queste cartelle, e la chat mostra cosa contengono.",
+      "label": "Cartelle di questa chat",
+      "notAllowed": "Impossibile aggiungere {{name}}: contiene la tua cartella personale o file di sistema o di app.",
+      "outsideBody": "Non può essere mostrato qui. Aggiungi la cartella {{name}} a questa chat per vederlo, oppure aprilo con l'app predefinita.",
+      "outsideTitle": "Questo file è fuori dalle cartelle di questa chat",
+      "remove": "Rimuovi {{name}}",
+      "removeFailed": "Impossibile rimuovere la cartella. Riprova."
     }
   },
   "terminalShells": {
