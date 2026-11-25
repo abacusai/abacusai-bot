@@ -145,7 +145,8 @@ export const StatusDot = ({
       data-state={item.state}
       className={cn(
         "size-2 shrink-0 rounded-full",
-        TONE[item.state],
+        // Waiting on the user's first message is a wait, not a failure.
+        isReason(item, "first-message") ? "bg-amber-500" : TONE[item.state],
         className
       )}
     />
