@@ -50,10 +50,11 @@ const INBOX_WAIT_SECS = 25;
 const PAIR_POLL_MS = 3000;
 
 /**
- * The server's reason when Discord refuses to open the user's DM with the
- * bot: the user never messaged it and shares no server with it.
+ * The server's code when Discord refuses to open the user's DM with the bot:
+ * the user never messaged it and shares no server with it. A server that
+ * sends no code makes this a plain send failure.
  */
-const DISCORD_DM_CLOSED_REASON = /^Discord will not deliver DMs\b/;
+const DISCORD_DM_CLOSED_CODE = "discord_dm_closed";
 
 /** A channels call the server answered with an HTTP error. */
 class ChannelCallError extends Error {
@@ -308,15 +309,16 @@ export class AbacusChannelsConnector implements MessagingConnector {
       );
     for (const chunk of chunkMessage(text, MAX_MESSAGE_LENGTH[this.channel])) {
       const messageId = replyContext?.message_id;
-      const result = await this.call<{ ok?: boolean; error?: string }>(
+      const result = await this.call<{
+        ok?: boolean;
+        error?: string;
+        code?: string;
+      }>(
         messageId != null
           ? { action: "reply", message_id: messageId, text: chunk }
           : { action: "send", channel: this.channel, text: chunk }
       );
-      if (
-        result.ok !== true &&
-        DISCORD_DM_CLOSED_REASON.test(result.error ?? "")
-      )
+      if (result.ok !== true && result.code === DISCORD_DM_CLOSED_CODE)
         throw new FirstMessageNeededError(result.error);
       if (result.ok !== true)
         throw new Error(

@@ -55,18 +55,26 @@ afterEach(() => {
 describe("the shared Discord bot's own chat", () => {
   it("throws Discord's first-message refusal as its own error, and any other failure as a plain one", async () => {
     const connector = new AbacusChannelsConnector(callbacks as never);
-    answers.send = {
-      ok: false,
-      error:
-        "Discord will not deliver DMs from the agent until you message it on Discord first or share a server with it",
-    };
-    await expect(connector.sendText("me", "Report")).rejects.toBeInstanceOf(
-      FirstMessageNeededError
-    );
-    answers.send = { ok: false, error: "Discord did not accept the message" };
-    const failed = await connector.sendText("me", "Report").catch((e) => e);
-    expect(failed).toBeInstanceOf(Error);
-    expect(failed).not.toBeInstanceOf(FirstMessageNeededError);
+    const reason =
+      "Discord will not deliver DMs from the agent until you message it on Discord first or share a server with it";
+    answers.send = { ok: false, error: reason, code: "discord_dm_closed" };
+    const refused = await connector.sendText("me", "Report").catch((e) => e);
+    expect(refused).toBeInstanceOf(FirstMessageNeededError);
+    expect(refused.message).toBe(reason);
+    answers.reply = { ok: false, error: reason, code: "discord_dm_closed" };
+    await expect(
+      connector.sendText("me", "Report", { message_id: "m1" })
+    ).rejects.toBeInstanceOf(FirstMessageNeededError);
+    for (const answer of [
+      { ok: false, error: "Discord did not accept the message" },
+      // A server too old to send the code: its words alone are a plain failure.
+      { ok: false, error: reason },
+    ]) {
+      answers.send = answer;
+      const failed = await connector.sendText("me", "Report").catch((e) => e);
+      expect(failed).toBeInstanceOf(Error);
+      expect(failed).not.toBeInstanceOf(FirstMessageNeededError);
+    }
   });
 
   it("keeps the bot's chat link from the pairing, so a restarted app can still open it", async () => {
