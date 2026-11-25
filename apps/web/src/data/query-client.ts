@@ -102,11 +102,17 @@ class FailedAnswer extends Error {
   }
 }
 
+/**
+ * Cancelled by the app itself (an unmount, a superseded or refetched read,
+ * an aborted call): not a failure, so never shown as one.
+ */
+export const isCancellation = (error: unknown): boolean =>
+  isCancelledError(error) ||
+  (error as { name?: unknown } | null)?.name === "AbortError";
+
 /** The text `meta.errorToast` shows for `error`; null shows nothing. */
 const toastText = (error: unknown, toast: ErrorToast): string | null => {
-  // Cancelled by the page (an unmount, a superseded call): not a failure.
-  if (isCancelledError(error)) return null;
-  if ((error as { name?: unknown } | null)?.name === "AbortError") return null;
+  if (isCancellation(error)) return null;
   // Never reached the host: one "not sent", whichever write it was.
   if (isHostUnavailable(error)) return i18n.t("chat.message.notSent");
   // Every write fails the same way, so the cause outranks the site's copy.
