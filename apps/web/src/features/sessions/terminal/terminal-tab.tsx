@@ -255,34 +255,15 @@ export const TerminalTab = ({
     const cleanup = () => {
       for (const dispose of disposers.splice(0).reverse()) dispose();
     };
-    // A shell slow to print its prompt (PowerShell: a second or more on a
-    // slow machine) shows what is starting, counted from the tab opening:
-    // loading the terminal and starting the shell take time too. Quick ones
-    // never show it; nor does a shell already running.
+    // A shell being started shows what is starting until it prints something
+    // visible (PowerShell can take seconds); a shell already running does not.
     const viewKey = `${key}:${id}`;
-    let startingLabel =
-      shellToStart() && shellToStart() !== "system"
+    const startingLabel = (shell: string | undefined) =>
+      shell && shell !== "system"
         ? t("sessions.terminal.startingShell", {
-            shell: t(`terminalShells.${shellToStart()}.label`),
+            shell: t(`terminalShells.${shell}.label`),
           })
         : t("sessions.terminal.starting");
-    let startingShown = false;
-    // The cursor is hidden while the line shows (it would sit on it).
-    let cursorHidden = false;
-    if (!printed.has(viewKey) && !terminalExited(key, `terminal:${id}`)) {
-      const timer = setTimeout(() => {
-        if (printed.has(viewKey)) return;
-        startingShown = true;
-        setStarting(startingLabel);
-        void getTerminalView(viewKey).then((view) => {
-          if (abort.signal.aborted || printed.has(viewKey) || cursorHidden)
-            return;
-          cursorHidden = true;
-          view.term.write("\x1b[?25l");
-        });
-      }, 500);
-      disposers.push(() => clearTimeout(timer));
-    }
     void getTerminalView(viewKey)
       .then(async (view) => {
         if (abort.signal.aborted) return;
@@ -303,6 +284,7 @@ export const TerminalTab = ({
           setExited(true);
         } else {
           starting = true;
+          if (!printed.has(viewKey)) setStarting(startingLabel(shellToStart()));
           const start = await transport.client.terminal.start({
             terminalId: id,
             conversationKey: key,
@@ -324,13 +306,8 @@ export const TerminalTab = ({
           if (!start.created) {
             printed.add(viewKey);
             setStarting(null);
-          } else if (start.state.shell && start.state.shell !== "system") {
-            startingLabel = t("sessions.terminal.startingShell", {
-              shell: t(`terminalShells.${start.state.shell}.label`),
-            });
-            if (startingShown && !printed.has(viewKey))
-              setStarting(startingLabel);
-          }
+          } else if (!printed.has(viewKey))
+            setStarting(startingLabel(start.state.shell));
         }
         if (abort.signal.aborted) {
           cleanup();
@@ -434,10 +411,6 @@ export const TerminalTab = ({
                 if (shown) {
                   printed.add(viewKey);
                   setStarting(null);
-                  if (cursorHidden) {
-                    cursorHidden = false;
-                    view.term.write("\x1b[?25h");
-                  }
                 }
                 if (pending && !replay && view.offset !== undefined) {
                   const bytes = new TextEncoder().encode(data);
@@ -499,6 +472,7 @@ export const TerminalTab = ({
               );
               ended = true;
               markTerminalExited(key, `terminal:${id}`, true);
+              setStarting(null);
               setExited(true);
             },
             (e) => setError(failureText(e))
@@ -618,6 +592,7 @@ export const TerminalTab = ({
       .catch((e) => {
         cleanup();
         if (abort.signal.aborted) return;
+        setStarting(null);
         const reason = planRefusal(e);
         const message = e instanceof Error ? e.message : String(e);
         // The chat's folder is gone: say which, and offer Restart for when
@@ -780,7 +755,7 @@ export const TerminalTab = ({
           }
         />
         {starting ? (
-          <p className="text-muted-foreground pointer-events-none absolute top-2 left-3 text-xs">
+          <p className="text-muted-foreground pointer-events-none absolute top-2 left-6 text-xs">
             {starting}
           </p>
         ) : null}
