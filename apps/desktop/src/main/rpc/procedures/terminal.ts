@@ -29,6 +29,9 @@ export const terminalRouter = impl.terminal.router({
   hide: impl.terminal.hide.handler(({ input, context }) =>
     context.deps.serviceHost.hideTerminalSession(input)
   ),
+  busy: impl.terminal.busy.handler(({ input, context }) => ({
+    program: context.deps.serviceHost.terminalBusyProgram(input),
+  })),
   promoteScope: impl.terminal.promoteScope.handler(({ input, context }) =>
     context.deps.serviceHost.promoteTerminalSessionScope(input)
   ),

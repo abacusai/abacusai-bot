@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "Coba lagi",
-      "cancel": "Cancel",
+      "cancel": "Batal",
       "save": "Simpan"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "Tambah tab",
       "new": "Tab baru",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "Perangkat",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "Proses selesai ({{code}})",
+      "newShell": "Terminal baru · {{shell}}",
       "planRequired": "Terminal tidak tersedia di paket gratis untuk komputer hosting Anda. Tingkatkan paket untuk menggunakannya.",
-      "planUnreadable": "Paket Anda tidak dapat diperiksa, jadi terminal dimatikan untuk sementara. Coba lagi sebentar lagi."
+      "planUnreadable": "Paket Anda tidak dapat diperiksa, jadi terminal dimatikan untuk sementara. Coba lagi sebentar lagi.",
+      "restart": "Mulai ulang",
+      "starting": "Memulai terminal…",
+      "startingShell": "Memulai {{shell}}…",
+      "actions": "Tindakan terminal",
+      "clear": "Bersihkan",
+      "kill": "Hentikan terminal",
+      "copy": "Salin",
+      "paste": "Tempel",
+      "busyTitle": "Hentikan {{program}}?",
+      "busyBody": "{{program}} masih berjalan di terminal ini. Menutup terminal akan menghentikannya.",
+      "busyConfirm": "Tutup terminal",
+      "folderMissing": "Folder obrolan ini sudah tidak ada: {{path}}. Kembalikan, lalu tekan Mulai ulang.",
+      "folderDenied": "Anda tidak punya izin membuka folder obrolan ini: {{path}}. Perbaiki izinnya, lalu tekan Mulai ulang.",
+      "signalled": "Proses dihentikan (sinyal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2957,10 +2970,10 @@
         "pr": "Pull request"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "Tutup {{name}}",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "Ganti nama tab",
+      "saveTab": "Simpan",
       "searchTabs": "Cari tab…"
     },
     "sidebar": {
@@ -2983,11 +2996,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "Terminal baru",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Ke kotak obrolan",
+      "focusTerminal": "Ke terminal",
+      "renameTerminal": "Ganti nama terminal",
+      "clearTerminal": "Bersihkan terminal",
+      "killTerminal": "Hentikan terminal"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

@@ -1,5 +1,8 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import {
+  draftConversationKey,
+  sessionConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 import {
   terminalShellsForPlatform,
   type TerminalShellId,
@@ -18,6 +21,10 @@ import {
   GitPullRequest,
   Bot,
   Monitor,
+  Ellipsis,
+  Eraser,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   ViewTransition,
@@ -41,7 +48,12 @@ import { useTabsRailPlacement } from "#renderer/components/tabs-rail/placement";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
 import { TopBar } from "#renderer/features/shell/top-bar";
-import { TopBarPanelSlot } from "#renderer/features/shell/top-bar-slots";
+import {
+  TopBarPanelSlot,
+  useTopBarEndActions,
+  type TopBarAction,
+} from "#renderer/features/shell/top-bar-slots";
+import { useAppHotkey } from "#renderer/lib/hotkeys";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
@@ -49,6 +61,16 @@ import {
   useShellWidthSelect,
 } from "#renderer/lib/shell-breakpoints";
 import type { PanelTabKind } from "#renderer/lib/side-panel/store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
@@ -62,6 +84,7 @@ import { Skeleton } from "#renderer/ui/skeleton";
 
 import { useGithubIntegration, useSessionsTransport } from "../data/queries";
 import {
+  clearTerminal,
   getTerminalView,
   disposeTerminalView,
 } from "../terminal/terminal-registry";
@@ -74,12 +97,19 @@ import {
   nextTab,
   reopenTab,
   reconcileTerminals,
+  terminalTitle,
   updateTabs,
   focusTab,
   type PanelTab,
 } from "./panel-tabs-store";
 export interface SessionDockProps {
-  row: SessionRow;
+  row: Pick<SessionRow, "workspaceId" | "id">;
+  /**
+   * A new chat before its first message: keyed by its draft, the selection
+   * kept in the tab store rather than the URL, and only the kinds a draft
+   * can show (Files and Changes need the chat's checkout).
+   */
+  draft?: boolean;
   chat: ReactNode;
   /**
    * `useCodeProject`: false steps the developer tools back. The launcher
@@ -168,8 +198,34 @@ const TabLauncher = ({
     </div>
   );
 };
+
+// Once no dialog, menu or popover is open: each hands the focus back to its
+// button on closing. Outside the component: the React Compiler skips a
+// component whose closures update a captured counter.
+const afterDialogs = (fn: () => void, frames = 0) => {
+  requestAnimationFrame(() => {
+    if (
+      document.querySelector(
+        '[role="dialog"], [role="alertdialog"], [role="menu"], [data-slot="popover-content"]'
+      ) &&
+      frames < 60
+    )
+      afterDialogs(fn, frames + 1);
+    else setTimeout(fn, 0);
+  });
+};
+const focusComposer = () =>
+  afterDialogs(() =>
+    document
+      .querySelector<HTMLTextAreaElement>(
+        '[data-slot="session-dock"] [data-slot="composer"] textarea'
+      )
+      ?.focus()
+  );
+
 export const SessionDock = ({
   row,
+  draft = false,
   chat,
   codeProject = true,
   renderTab,
@@ -178,8 +234,15 @@ export const SessionDock = ({
   const { t } = useTranslation();
   const transport = useSessionsTransport();
   const navigate = useAppNavigate({ from: "/sessions/$sessionId" });
-  const key = sessionConversationKey(row.workspaceId, row.id);
-  const search = useSearch({ from: "/_shell/(sessions)/sessions/$sessionId" });
+  const key = draft
+    ? draftConversationKey(row.workspaceId, row.id)
+    : sessionConversationKey(row.workspaceId, row.id);
+  const routeSearch = useSearch({ strict: false }) as {
+    tab?: string;
+    view?: "full" | "split";
+  };
+  const [draftView, setDraftView] = useState<"full" | "split">("split");
+  const search = draft ? { tab: undefined, view: draftView } : routeSearch;
   const entries = useSelector(panelTabsStore, (s) => s[key] ?? EMPTY_TABS);
   const [terminalSnapshot, setTerminalSnapshot] = useState<string | null>(null);
   const dockApi = useRef<import("dockview-react").DockviewApi | null>(null);
@@ -222,6 +285,7 @@ export const SessionDock = ({
       open: tab != null && (expanded || tab !== "chat"),
       last: tab && tab !== "chat" ? tab : s.last,
     }));
+    if (draft) return Promise.resolve();
     return navigate({
       to: "/sessions/$sessionId",
       params: { sessionId: row.id },
@@ -231,7 +295,39 @@ export const SessionDock = ({
     });
   };
   const normalizeSelection = useEffectEvent(select);
+  // Picked by the user. A new chat keeps no "chat" selection (its tab store
+  // holds the last panel tab): in full view, Chat leaves full view instead.
+  const pick = (tab: string | undefined) => {
+    if (draft && tab === "chat" && expanded) setDraftView("split");
+    else void select(tab);
+  };
+  // Closing a terminal that runs a program (a dev server, an editor) stops
+  // it: ask first. At its prompt, or where the platform can't tell, it
+  // closes at once.
+  const [confirmClose, setConfirmClose] = useState<{
+    ref: string;
+    program: string;
+  } | null>(null);
+  const stopping = useRef(false);
   const close = (ref: string) => {
+    if (!ref.startsWith("terminal:")) return closeNow(ref);
+    const id = ref.slice(9);
+    void getTerminalView(`${key}:${id}`)
+      .then((view) =>
+        view.generation == null
+          ? { program: null }
+          : transport.client.terminal.busy({
+              conversationKey: key,
+              terminalId: id,
+              generation: view.generation,
+            })
+      )
+      .catch(() => ({ program: null }))
+      .then(({ program }) =>
+        program ? setConfirmClose({ ref, program }) : closeNow(ref)
+      );
+  };
+  const closeNow = (ref: string) => {
     if (ref === "chat") return;
     if (ref.startsWith("terminal:")) {
       const id = ref.slice(9);
@@ -261,7 +357,12 @@ export const SessionDock = ({
     }
     // The URL leaves the tab first: while it still names an open-once kind
     // (Files, Changes), the dock reopens that kind.
-    void select(nextTab(key, ref)).then(() => closeTab(key, ref));
+    const next = nextTab(key, ref);
+    void select(next).then(() => closeTab(key, ref));
+    // Closed from its … menu or a question: the keys go to the terminal now
+    // shown, or the chat box when the panel closed (not the menu's button).
+    if (next?.startsWith("terminal:")) focusTerminal(next);
+    else if (next == null) focusComposer();
   };
   useEffect(() => {
     const abort = new AbortController();
@@ -276,10 +377,12 @@ export const SessionDock = ({
         } else {
           // An agent's terminal appears without taking the focus.
           const previous = panelTabsStore.state[key]?.last;
-          openTab(key, {
-            ref: `terminal:${event.state.terminalId}`,
-            title: t("sessions.dock.terminal"),
-          });
+          const ref = `terminal:${event.state.terminalId}`;
+          if (!panelTabsStore.state[key]?.tabs.some((tab) => tab.ref === ref))
+            openTab(key, {
+              ref,
+              title: terminalTitle(key, t("sessions.dock.terminal")),
+            });
           if (previous)
             updateTabs(key, (s) =>
               s.tabs.some((tab) => tab.ref === previous)
@@ -345,21 +448,26 @@ export const SessionDock = ({
     const open = kind === "terminal" ? openTerminalTab : openTab;
     open(key, {
       ref,
-      title: t(`sessions.dock.${kind}`),
+      title:
+        kind === "terminal"
+          ? terminalTitle(key, t("sessions.dock.terminal"))
+          : t(`sessions.dock.${kind}`),
       ...(shell ? { shell } : {}),
     });
     select(ref);
   };
-  const kinds = [
-    ...(IS_ELECTRON ? ["browser"] : []),
-    "terminal",
-    "files",
-    "changes",
-    "agents",
-    ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
-    // Off, the tab is not offered; one already open says why it is empty.
-    ...(github ? ["pr"] : []),
-  ];
+  const kinds = draft
+    ? [...(IS_ELECTRON ? ["browser"] : []), "terminal"]
+    : [
+        ...(IS_ELECTRON ? ["browser"] : []),
+        "terminal",
+        "files",
+        "changes",
+        "agents",
+        ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
+        // Off, the tab is not offered; one already open says why it is empty.
+        ...(github ? ["pr"] : []),
+      ];
   const forward = codeProject
     ? kinds
     : kinds.filter((kind) => !DEVELOPER_KINDS.has(kind));
@@ -383,13 +491,17 @@ export const SessionDock = ({
       };
       return position(a.ref) - position(b.ref);
     });
-  const rename = (ref: string, title: string) =>
+  const rename = (ref: string, title: string) => {
     updateTabs(key, (state) => ({
       ...state,
       tabs: state.tabs.map((tab) =>
         tab.ref === ref ? { ...tab, title } : tab
       ),
     }));
+    // The dialog hands focus back to the … button: give the renamed
+    // terminal the keys again, or typing next would open that menu.
+    if (ref.startsWith("terminal:") && ref === active) focusTerminal(ref);
+  };
   const shellItems = terminalShellsForPlatform(
     (document.documentElement.dataset.platform ?? "darwin") as NodeJS.Platform
   ).map((shell) => (
@@ -399,11 +511,8 @@ export const SessionDock = ({
         shells.data?.statuses.find((s) => s.id === shell.id)?.available ===
         false
       }
-      onClick={() =>
-        void transport.client.terminal.shell
-          .set({ shell: shell.id as TerminalShellId })
-          .then(() => add("terminal", shell.id))
-      }
+      // Opens that shell; the default in Settings stays as the user set it.
+      onClick={() => add("terminal", shell.id as TerminalShellId)}
     >
       <Terminal />
       <span className="min-w-0 truncate">
@@ -422,8 +531,103 @@ export const SessionDock = ({
       </DropdownMenuItem>
     );
   };
+  // One entry per shell only where there is a choice (Windows); with one
+  // shell the plain "Terminal" entry is the same thing.
+  const pickShell = shellItems.length > 1;
+  const [renameRequest, setRenameRequest] = useState<{
+    id: string;
+    at: number;
+  } | null>(null);
+  const activeTerminal = active?.startsWith("terminal:") ? active : null;
+  const clearTab = (ref: string) =>
+    void getTerminalView(`${key}:${ref.slice(9)}`)
+      .then((view) => {
+        clearTerminal(view.term);
+        view.term.focus();
+      })
+      .catch(() => {});
+  // Keyboard paths for what the … menu does, through the command menu, and
+  // between the chat box and the terminal (Esc belongs to the shell).
+  const focusTerminal = (ref: string) =>
+    void getTerminalView(`${key}:${ref.slice(9)}`)
+      .then((view) => afterDialogs(() => view.term.focus()))
+      .catch(() => {});
+  const latestTerminal = entries.tabs.findLast((tab) =>
+    tab.ref.startsWith("terminal:")
+  )?.ref;
+  useAppHotkey(
+    null,
+    () => {
+      if (!latestTerminal) return;
+      const ref = activeTerminal ?? latestTerminal;
+      if (ref !== active) void select(ref);
+      focusTerminal(ref);
+    },
+    { actionId: "focus-terminal", enabled: latestTerminal != null }
+  );
+  useAppHotkey(null, focusComposer, { actionId: "focus-composer" });
+  useAppHotkey(
+    null,
+    () =>
+      activeTerminal &&
+      setRenameRequest({ id: activeTerminal, at: Date.now() }),
+    { actionId: "rename-terminal", enabled: activeTerminal != null }
+  );
+  useAppHotkey(null, () => activeTerminal && clearTab(activeTerminal), {
+    actionId: "clear-terminal",
+    enabled: activeTerminal != null,
+  });
+  useAppHotkey(null, () => activeTerminal && close(activeTerminal), {
+    actionId: "kill-terminal",
+    enabled: activeTerminal != null,
+  });
   const controls = (
     <TopBar.Group className="titlebar-nodrag shrink-0 self-start px-1">
+      {activeTerminal ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <TopBar.IconButton label={t("sessions.terminal.actions")} />
+            }
+          >
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="titlebar-nodrag max-w-[calc(100vw-2rem)] min-w-56"
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={() =>
+                  setRenameRequest({ id: activeTerminal, at: Date.now() })
+                }
+              >
+                <Pencil />
+                {t("shell.panel.renameTab")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => clearTab(activeTerminal)}>
+                <Eraser />
+                {t("sessions.terminal.clear")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => close(activeTerminal)}>
+                <Trash2 />
+                {t("sessions.terminal.kill")}
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              {pickShell ? (
+                shellItems
+              ) : (
+                <DropdownMenuItem onClick={() => add("terminal")}>
+                  <Terminal />
+                  {t("shell.command.newTerminal")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
       {
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -434,7 +638,7 @@ export const SessionDock = ({
           <DropdownMenuContent align="end" className="titlebar-nodrag w-56">
             {codeProject ? (
               <DropdownMenuGroup>
-                {shellItems}
+                {pickShell ? shellItems : null}
                 {kinds.map(kindItem)}
               </DropdownMenuGroup>
             ) : (
@@ -442,7 +646,7 @@ export const SessionDock = ({
                 <DropdownMenuGroup>{forward.map(kindItem)}</DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  {shellItems}
+                  {pickShell ? shellItems : null}
                   {aside.map(kindItem)}
                 </DropdownMenuGroup>
               </>
@@ -454,6 +658,7 @@ export const SessionDock = ({
         label={t("sessions.dock.full")}
         aria-pressed={expanded}
         onClick={() => {
+          if (draft) return setDraftView(expanded ? "split" : "full");
           void navigate({
             to: "/sessions/$sessionId",
             params: { sessionId: row.id },
@@ -469,6 +674,54 @@ export const SessionDock = ({
         {expanded ? <Minimize /> : <Maximize />}
       </TopBar.IconButton>
     </TopBar.Group>
+  );
+  // One click to the panel's main tools, at the chat's edge beside the
+  // panel; terminal last (most people never use one); `+` keeps the rest. A
+  // kind already on screen closes the panel; otherwise its latest tab comes
+  // up, or a new one. Full view has no chat column for them to sit above:
+  // the strip lists the tabs there.
+  useTopBarEndActions(
+    (expanded
+      ? []
+      : [
+          ...(IS_ELECTRON ? ["browser"] : []),
+          ...(draft ? [] : ["changes", "files"]),
+          "terminal",
+        ]
+    ).map((kind): TopBarAction => {
+      const Icon = KIND_ICONS[kind]!;
+      const ofKind = (ref: string) =>
+        ref === kind || ref.startsWith(`${kind}:`);
+      const shown = entries.open === true && !!active && ofKind(active);
+      const onSelect = () => {
+        if (shown) return void select(undefined);
+        // The one last on screen, else the newest of its kind.
+        const latest =
+          entries.last && ofKind(entries.last)
+            ? entries.tabs.find((tab) => tab.ref === entries.last)
+            : entries.tabs.findLast((tab) => ofKind(tab.ref));
+        if (latest) select(latest.ref);
+        else add(kind);
+      };
+      return {
+        id: `panel-shortcut:${kind}`,
+        label: t(`sessions.dock.${kind}`),
+        icon: <Icon />,
+        onSelect,
+        render: (
+          <TopBar.IconButton
+            label={t(`sessions.dock.${kind}`)}
+            aria-pressed={shown}
+            data-active={shown ? "" : undefined}
+            data-slot="panel-shortcut"
+            className="data-active:bg-sidebar-accent data-active:text-sidebar-foreground"
+            onClick={onSelect}
+          >
+            <Icon />
+          </TopBar.IconButton>
+        ),
+      };
+    })
   );
   const railPlacement = useTabsRailPlacement();
   const dockColumns = useDockColumns();
@@ -519,7 +772,8 @@ export const SessionDock = ({
                 : undefined
             }
             onRename={rename}
-            onChange={select}
+            renameRequest={renameRequest}
+            onChange={pick}
             renderIcon={(tab) =>
               tab.id === LAUNCHER ? (
                 <Plus className="size-3.5 shrink-0" aria-hidden />
@@ -557,14 +811,19 @@ export const SessionDock = ({
       >
         <TopBarPanelSlot>
           {railPlacement === "titlebar" && rail}
-          <TopBar.PanelToggle
-            open={entries.open === true && active != null}
-            onToggle={() =>
-              select(
-                entries.open && active ? undefined : (entries.last ?? LAUNCHER)
-              )
-            }
-          />
+          {/* A new chat opens and hides its panel from the icon row. */}
+          {!draft && (
+            <TopBar.PanelToggle
+              open={entries.open === true && active != null}
+              onToggle={() =>
+                select(
+                  entries.open && active
+                    ? undefined
+                    : (entries.last ?? LAUNCHER)
+                )
+              }
+            />
+          )}
         </TopBarPanelSlot>
         {railPlacement === "panel" && (
           <div className="titlebar-nodrag flex min-w-0 shrink-0 items-center">
@@ -577,13 +836,54 @@ export const SessionDock = ({
           () => active && active !== "chat" && close(active),
           () => add("terminal")
         )}
+        <AlertDialog
+          open={confirmClose != null}
+          onOpenChange={(open) => {
+            if (open) return;
+            // Kept running (Cancel, Esc): back to that terminal.
+            if (confirmClose && !stopping.current)
+              focusTerminal(confirmClose.ref);
+            stopping.current = false;
+            setConfirmClose(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("sessions.terminal.busyTitle", {
+                  program: confirmClose?.program ?? "",
+                })}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("sessions.terminal.busyBody", {
+                  program: confirmClose?.program ?? "",
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t("sessions.common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  stopping.current = true;
+                  if (confirmClose) closeNow(confirmClose.ref);
+                  setConfirmClose(null);
+                }}
+              >
+                {t("sessions.terminal.busyConfirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <PanelWorkspace
           scope={key}
           apiRef={dockApi}
           open={entries.open === true && active != null}
+          wide={entries.tabs.some((tab) => tab.ref.startsWith("terminal:"))}
           expanded={expanded}
           active={active ?? null}
-          onSelect={select}
+          onSelect={pick}
           tabs={[
             {
               id: "chat",

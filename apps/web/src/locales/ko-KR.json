@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "다시 시도",
-      "cancel": "Cancel",
+      "cancel": "취소",
       "save": "저장"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "탭 추가",
       "new": "새 탭",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "기기",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "프로세스가 종료됨 ({{code}})",
+      "newShell": "새 터미널 · {{shell}}",
       "planRequired": "무료 요금제에서는 호스팅 컴퓨터에서 터미널을 사용할 수 없습니다. 사용하려면 업그레이드하세요.",
-      "planUnreadable": "요금제를 확인할 수 없어 지금은 터미널이 꺼져 있습니다. 잠시 후 다시 시도하세요."
+      "planUnreadable": "요금제를 확인할 수 없어 지금은 터미널이 꺼져 있습니다. 잠시 후 다시 시도하세요.",
+      "restart": "재시작",
+      "starting": "터미널을 시작하는 중…",
+      "startingShell": "{{shell}} 시작하는 중…",
+      "actions": "터미널 작업",
+      "clear": "지우기",
+      "kill": "터미널 종료",
+      "copy": "복사",
+      "paste": "붙여넣기",
+      "busyTitle": "{{program}}을(를) 중지할까요?",
+      "busyBody": "이 터미널에서 {{program}}이(가) 아직 실행 중입니다. 터미널을 닫으면 중지됩니다.",
+      "busyConfirm": "터미널 닫기",
+      "folderMissing": "이 채팅의 폴더가 더 이상 없습니다: {{path}}. 폴더를 되돌린 뒤 재시작을 누르세요.",
+      "folderDenied": "이 채팅의 폴더를 열 권한이 없습니다: {{path}}. 권한을 고친 뒤 재시작을 누르세요.",
+      "signalled": "프로세스가 중지됨 (시그널 {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2957,10 +2970,10 @@
         "pr": "풀 리퀘스트"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "{{name}} 닫기",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "탭 이름 바꾸기",
+      "saveTab": "저장",
       "searchTabs": "탭 검색…"
     },
     "sidebar": {
@@ -2983,11 +2996,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "새 터미널",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "채팅 입력란으로 이동",
+      "focusTerminal": "터미널로 이동",
+      "renameTerminal": "터미널 이름 바꾸기",
+      "clearTerminal": "터미널 지우기",
+      "killTerminal": "터미널 종료"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

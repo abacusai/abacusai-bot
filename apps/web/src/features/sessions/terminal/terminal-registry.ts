@@ -13,6 +13,26 @@ export interface TerminalView {
   /** The colours the terminal paints with now. */
   theme(): Record<string, string>;
 }
+/** Clear: screen and scrollback go, and the shell redraws its prompt (Ctrl+L). */
+export const clearTerminal = (term: Terminal): void => {
+  const buffer = term.buffer.active;
+  const line =
+    buffer
+      .getLine(buffer.length - term.rows + buffer.cursorY)
+      ?.translateToString(true) ?? "";
+  // Command Prompt has no Ctrl+L: at its prompt, its own cls, after Esc
+  // drops anything typed (sent apart, or ConPTY reads Esc+c as Alt+C).
+  const cmd =
+    document.documentElement.dataset.platform === "win32" &&
+    /^[A-Za-z]:\\[^>]*>/.test(line);
+  term.clear();
+  term.write("\x1b[3J");
+  if (!cmd) return term.input("\x0c", true);
+  if (line.endsWith(">") && buffer.cursorX === line.length)
+    return term.input("cls\r", true);
+  term.input("\x1b", true);
+  setTimeout(() => term.input("cls\r", true), 150);
+};
 const views = new Map<string, Promise<TerminalView>>();
 export const getTerminalView = (key: string): Promise<TerminalView> => {
   let view = views.get(key);
@@ -25,6 +45,7 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         terminalTheme,
         terminalFont,
         installTerminalTheme,
+        fixSelectionText,
       } = await import("#renderer/components/terminal/ghostty");
       const ghostty = await ghosttyReady();
       await document.fonts?.load('13px "Symbols Nerd Font Mono"');
@@ -48,6 +69,7 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         () => term.open(element),
         () => self?.refit?.()
       );
+      fixSelectionText(term);
       self = {
         term,
         fit,

@@ -1,3 +1,4 @@
+import { accessSync, constants, statSync } from "node:fs";
 import path from "node:path";
 
 import { childProcessEnv } from "@abacus-ai/agent/child-env";
@@ -44,6 +45,29 @@ type PtySpawn = (
     useConptyDll?: boolean;
   }
 ) => TerminalPty;
+
+/** A start's error for a chat folder that is gone, then its path. */
+const FOLDER_MISSING = "folder-missing:";
+
+/** Then its path: a folder this user may not open. */
+const FOLDER_DENIED = "folder-denied:";
+
+const canEnter = (folder: string): boolean => {
+  try {
+    accessSync(folder, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isDirectory = (folder: string): boolean => {
+  try {
+    return statSync(folder).isDirectory();
+  } catch {
+    return false;
+  }
+};
 
 let cachedSpawn: PtySpawn | null = null;
 let cachedSpawnError: Error | null = null;
@@ -152,8 +176,24 @@ const snapshot = (
   exitedAt: null,
 });
 
+/** A program's name as `ps` shows it; a login shell's leading `-` dropped. */
+const programName = (value: string) => path.basename(value).replace(/^-/, "");
+
+/** What runs in the foreground instead of the shell; null at its prompt or unknown (Windows). */
+const foregroundProgram = (
+  pty: TerminalPty,
+  file: string | undefined
+): string | null => {
+  if (process.platform === "win32" || file == null || pty.process == null)
+    return null;
+  const running = programName(pty.process);
+  return running === programName(file) ? null : running;
+};
+
 export class TerminalSessionService {
   private readonly registry: ConversationTerminalRuntimeRegistry;
+  /** The file each PTY was spawned from, to tell its shell from a program. */
+  private readonly shellFiles = new WeakMap<TerminalPty, string>();
 
   constructor(private readonly options: TerminalSessionServiceOptions) {
     this.registry = new ConversationTerminalRuntimeRegistry({
@@ -165,9 +205,15 @@ export class TerminalSessionService {
         if (workspacePath == null) {
           throw new Error("Workspace path is unavailable.");
         }
+        // A folder moved or deleted under the chat: say so, rather than a
+        // shell that dies at once with chdir(2) failed.
+        if (!isDirectory(workspacePath))
+          throw new Error(`${FOLDER_MISSING}${workspacePath}`);
+        if (!canEnter(workspacePath))
+          throw new Error(`${FOLDER_DENIED}${workspacePath}`);
         const shell = resolveTerminalShell(requestedShell(requested));
         const spawn = await loadSpawn();
-        return spawn(shell.file, shell.args, {
+        const pty = spawn(shell.file, shell.args, {
           cwd: workspacePath,
           env: childProcessEnv(process.env, shell.env),
           cols,
@@ -180,6 +226,8 @@ export class TerminalSessionService {
           // the app.
           useConptyDll: process.platform === "win32",
         });
+        this.shellFiles.set(pty, shell.file);
+        return pty;
       },
       onOutput: (event) =>
         options.emitTerminalOutput({
@@ -225,6 +273,26 @@ export class TerminalSessionService {
 
   dispose(): void {
     this.registry.disposeAll();
+  }
+
+  /** The program a terminal is running in place of its shell's prompt. */
+  busyProgram(key: ConversationKey, terminalId: string): string | null {
+    const pty = this.registry.ptyOf(key, terminalId);
+    return pty == null
+      ? null
+      : foregroundProgram(pty, this.shellFiles.get(pty));
+  }
+
+  /** Every terminal running a program, for the quit question. */
+  busyTerminals(): {
+    key: ConversationKey;
+    terminalId: string;
+    program: string;
+  }[] {
+    return this.registry.listAll().flatMap(({ key, terminalId }) => {
+      const program = this.busyProgram(key, terminalId);
+      return program == null ? [] : [{ key, terminalId, program }];
+    });
   }
 
   /** True while any terminal PTY is alive. A restart would kill it. */
@@ -287,9 +355,14 @@ export class TerminalSessionService {
         state,
       };
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
-        error: `Terminal backend unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        error:
+          message.startsWith(FOLDER_MISSING) ||
+          message.startsWith(FOLDER_DENIED)
+            ? message
+            : `Terminal backend unavailable: ${message}`,
         created: false,
         initialOutput: "",
         state: {
@@ -318,7 +391,7 @@ export class TerminalSessionService {
     );
   }
 
-  resizeSession(request: ResizeTerminalSessionRequest): boolean {
+  resizeSession(request: ResizeTerminalSessionRequest): number | false {
     return this.registry.resize(
       request.conversationKey,
       request.generation,
@@ -370,9 +443,13 @@ export class TerminalSessionService {
     assertIdentity(request.draftConversationKey, request.draftConversation);
     assertIdentity(request.sessionConversationKey, request.sessionConversation);
     const promoted = await this.registry.promoteDraftToSession(
+      // Its draft id too: the renderer keys a new chat's terminals by it.
       {
         kind: "draft",
         workspaceId: request.draftConversation.workspaceId,
+        ...(request.draftConversation.draftId
+          ? { draftId: request.draftConversation.draftId }
+          : {}),
       },
       {
         kind: "session",
@@ -381,40 +458,10 @@ export class TerminalSessionService {
       }
     );
     if (promoted.attachment == null) return null;
-    let attachment = promoted.attachment;
-    const workspacePath = this.options.resolveWorkspacePath(
-      request.sessionConversation.workspaceId
-    );
-    const sessionPath = this.options.resolveWorkspacePath(
-      request.sessionConversation.workspaceId,
-      request.sessionConversation.sessionId
-    );
-    if (
-      workspacePath != null &&
-      sessionPath != null &&
-      path.resolve(workspacePath) !== path.resolve(sessionPath)
-    ) {
-      const promotedAttachments = this.registry.list(attachment.key);
-      this.registry.disposeScope(attachment.key);
-      const restarted = await Promise.all(
-        promotedAttachments.map(({ terminalId, cols, rows, shell }) =>
-          this.registry.start({
-            terminalId,
-            shell,
-            scope: {
-              kind: "session",
-              workspaceId: request.sessionConversation.workspaceId,
-              sessionId: request.sessionConversation.sessionId,
-            },
-            cols,
-            rows,
-          })
-        )
-      );
-      attachment =
-        restarted.find((item) => item.terminalId === attachment.terminalId) ??
-        restarted[0]!;
-    }
+    // A chat that moved to its own folder (a new worktree) keeps its shells
+    // running where they are: nothing is typed into them. New terminals
+    // open in the chat's folder.
+    const attachment = promoted.attachment;
     const state = snapshot(attachment);
     this.options.emitTerminalState(state);
     return state;

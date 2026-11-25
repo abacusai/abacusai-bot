@@ -29,6 +29,7 @@ const makeView = () => ({
     cols: 80,
     rows: 24,
     resize: vi.fn(),
+    focus: vi.fn(),
     onData: vi.fn(() => ({ dispose: vi.fn() })),
     attachCustomKeyEventHandler: vi.fn(),
   },

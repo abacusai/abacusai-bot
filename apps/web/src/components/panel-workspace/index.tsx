@@ -147,8 +147,14 @@ export const PanelWorkspace = ({
   expanded,
   onSelect,
   apiRef,
+  wide = false,
 }: {
   scope: string;
+  /**
+   * The panel holds something that reads better wide (a terminal): until the
+   * user sizes it, it takes half the split rather than the narrow default.
+   */
+  wide?: boolean;
   tabs: WorkspaceTab[];
   active: string | null;
   open: boolean;
@@ -360,13 +366,26 @@ export const PanelWorkspace = ({
   const split = showTool && !expanded && width >= SPLIT_MIN_PX;
   const folded = showTool && !split && !docked;
   const maximum = panelMaxFor(width);
+  const fallback = wide
+    ? Math.max(
+        PANEL_DEFAULT_PX,
+        Math.floor((Number.isFinite(width) ? width : 0) / 2)
+      )
+    : PANEL_DEFAULT_PX;
   const stored = clampPanelWidth(
-    prefs.panes[prefKey] ?? prefs.panes["side-panel"] ?? PANEL_DEFAULT_PX,
+    prefs.panes[prefKey] ?? prefs.panes["side-panel"] ?? fallback,
     maximum
   );
   useLayoutEffect(() => {
-    if (split) sidePanel.current?.resize(stored);
-    else if (folded) sidePanel.current?.resize("100%");
+    if (split) {
+      sidePanel.current?.resize(stored);
+      // A panel just shown is sized before the group has measured it, and
+      // that first resize lands on the minimum; the next frame has the room.
+      const frame = requestAnimationFrame(() =>
+        sidePanel.current?.resize(stored)
+      );
+      return () => cancelAnimationFrame(frame);
+    } else if (folded) sidePanel.current?.resize("100%");
   }, [split, folded, stored, sidePanel]);
   const attach = (id: string, element: HTMLDivElement | null) => {
     const target = targets.get(id);
@@ -407,8 +426,9 @@ export const PanelWorkspace = ({
             {split ? (
               <PanelResizeHandle
                 onReset={() => {
-                  sidePanel.current?.resize(PANEL_DEFAULT_PX);
-                  writer.write(PANEL_DEFAULT_PX);
+                  const reset = clampPanelWidth(fallback, maximum);
+                  sidePanel.current?.resize(reset);
+                  writer.write(reset);
                 }}
               />
             ) : null}

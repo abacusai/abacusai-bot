@@ -1894,7 +1894,7 @@
     "untitled": "Untitled",
     "common": {
       "retry": "Erneut versuchen",
-      "cancel": "Cancel",
+      "cancel": "Abbrechen",
       "save": "Speichern"
     },
     "notify": {
@@ -2027,7 +2027,7 @@
       "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
-      "add": "Add tab",
+      "add": "Tab hinzufügen",
       "new": "Neuer Tab",
       "chat": "Chat",
       "changes": "Changes",
@@ -2036,7 +2036,6 @@
       "device": "Gerät",
       "terminal": "Terminal",
       "browser": "Browser",
-      "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
       "movePane": "Move to pane {{name}}",
@@ -2141,10 +2140,24 @@
     },
     "terminal": {
       "title": "Terminal",
-      "exited": "Process exited ({{code}})",
-      "newShell": "New terminal · {{shell}}",
+      "exited": "Prozess beendet ({{code}})",
+      "newShell": "Neues Terminal · {{shell}}",
       "planRequired": "Das Terminal ist im kostenlosen Tarif auf deinem gehosteten Computer nicht verfügbar. Führe ein Upgrade durch, um es zu nutzen.",
-      "planUnreadable": "Dein Tarif konnte nicht geprüft werden, daher ist das Terminal vorerst aus. Versuche es gleich noch einmal."
+      "planUnreadable": "Dein Tarif konnte nicht geprüft werden, daher ist das Terminal vorerst aus. Versuche es gleich noch einmal.",
+      "restart": "Neu starten",
+      "starting": "Terminal wird gestartet…",
+      "startingShell": "{{shell}} wird gestartet…",
+      "actions": "Terminal-Aktionen",
+      "clear": "Leeren",
+      "kill": "Terminal beenden",
+      "copy": "Kopieren",
+      "paste": "Einfügen",
+      "busyTitle": "{{program}} beenden?",
+      "busyBody": "{{program}} läuft noch in diesem Terminal. Wenn du das Terminal schließt, wird es beendet.",
+      "busyConfirm": "Terminal schließen",
+      "folderMissing": "Der Ordner dieses Chats ist nicht mehr da: {{path}}. Stell ihn wieder her und drück dann auf „Neu starten“.",
+      "folderDenied": "Du hast keine Berechtigung, den Ordner dieses Chats zu öffnen: {{path}}. Korrigiere die Berechtigungen und drück dann auf „Neu starten“.",
+      "signalled": "Prozess gestoppt (Signal {{signal}})"
     },
     "tray": {
       "workspaceLabel": "Workspace: {{name}}",
@@ -2957,10 +2970,10 @@
         "pr": "Pull Request"
       },
       "addTab": "Add a tab",
-      "closeTab": "Close {{name}}",
+      "closeTab": "{{name}} schließen",
       "openExternalBrowser": "Open in external browser",
-      "renameTab": "Rename tab",
-      "saveTab": "Save",
+      "renameTab": "Tab umbenennen",
+      "saveTab": "Speichern",
       "searchTabs": "Tabs suchen…"
     },
     "sidebar": {
@@ -2983,11 +2996,16 @@
         "panels": "Panels and tabs"
       },
       "newBot": "New bot",
-      "newTerminal": "New terminal",
+      "newTerminal": "Neues Terminal",
       "loading": "Loading sessions, bots and workspaces…",
       "navigate": "navigate",
       "select": "select",
-      "close": "close"
+      "close": "close",
+      "focusComposer": "Zum Chatfeld wechseln",
+      "focusTerminal": "Zum Terminal wechseln",
+      "renameTerminal": "Terminal umbenennen",
+      "clearTerminal": "Terminal leeren",
+      "killTerminal": "Terminal beenden"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {

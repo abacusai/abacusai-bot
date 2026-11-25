@@ -131,7 +131,39 @@ export const updateTab = (
 /** The tab closing `ref` lands on, without closing it. */
 export const nextTab = (key: string, ref: string): string | undefined =>
   removeRefs(panelTabsStore.state[key] ?? EMPTY_TABS, [ref]).last ?? undefined;
+/**
+ * Terminals whose shell exited in this window: main keeps no shell for them,
+ * but the tab stays (its output, Restart) until the user closes it.
+ */
+const exitedTerminals = new Set<string>();
+export const markTerminalExited = (
+  key: string,
+  ref: string,
+  exited: boolean
+): void => {
+  if (exited) exitedTerminals.add(`${key} ${ref}`);
+  else exitedTerminals.delete(`${key} ${ref}`);
+};
+/** The shell a terminal tab started with, kept on the tab once known. */
+export const rememberTerminalShell = (
+  key: string,
+  ref: string,
+  shell: NonNullable<PanelTab["shell"]>
+): void =>
+  updateTabs(key, (s) =>
+    s.tabs.some((tab) => tab.ref === ref && tab.shell !== shell)
+      ? {
+          ...s,
+          tabs: s.tabs.map((tab) =>
+            tab.ref === ref ? { ...tab, shell } : tab
+          ),
+        }
+      : s
+  );
+export const terminalExited = (key: string, ref: string): boolean =>
+  exitedTerminals.has(`${key} ${ref}`);
 export const closeTab = (key: string, ref: string): string | undefined => {
+  exitedTerminals.delete(`${key} ${ref}`);
   const pending = pendingTerminalStarts.get(key);
   pending?.delete(ref);
   if (pending && !pending.size) pendingTerminalStarts.delete(key);
@@ -146,6 +178,20 @@ export const closeTab = (key: string, ref: string): string | undefined => {
   });
   return next;
 };
+/**
+ * A new terminal's title, told apart from the chat's others: "Terminal",
+ * then "Terminal 2", "Terminal 3", the lowest number not in use.
+ */
+export const terminalTitle = (key: string, base: string): string => {
+  const used = new Set(
+    (panelTabsStore.state[key]?.tabs ?? [])
+      .filter((tab) => tab.ref.startsWith("terminal:"))
+      .map((tab) => tab.title)
+  );
+  let n = 1;
+  while (used.has(n === 1 ? base : `${base} ${n}`)) n++;
+  return n === 1 ? base : `${base} ${n}`;
+};
 export const reconcileTerminals = (
   key: string,
   states: TerminalSessionSnapshot[],
@@ -159,17 +205,24 @@ export const reconcileTerminals = (
           (tab) =>
             tab.ref.startsWith("terminal:") &&
             !pendingTerminalStarts.get(key)?.has(tab.ref) &&
+            !exitedTerminals.has(`${key} ${tab.ref}`) &&
             !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
         )
         .map((tab) => tab.ref)
     )
   );
   const previousLast = panelTabsStore.state[key]?.last;
+  // A tab already open keeps its title (numbered, or renamed).
   for (const state of states)
-    openTab(key, {
-      ref: `terminal:${state.terminalId}`,
-      title,
-    });
+    if (
+      !panelTabsStore.state[key]?.tabs.some(
+        (tab) => tab.ref === `terminal:${state.terminalId}`
+      )
+    )
+      openTab(key, {
+        ref: `terminal:${state.terminalId}`,
+        title: terminalTitle(key, title),
+      });
   updateTabs(key, (s) => ({ ...s, last: previousLast ?? s.last }));
 };
 export const promoteTabs = (from: string, to: string): void =>

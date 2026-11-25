@@ -4944,19 +4944,62 @@ export class ServiceHost {
           ? "The terminal needs a paid plan on the hosted computer."
           : "The plan could not be read, so the terminal is off for now."
       );
-    return this.terminalSessionService.startSession(request);
+    const started = await this.terminalSessionService.startSession(request);
+    // Whether people use the terminal at all: once a day per install, when
+    // a shell is really started (not a reattach). The detail is the shell.
+    const today = new Date().toISOString().slice(0, 10);
+    if (
+      started.success &&
+      started.created &&
+      this.terminalCountedOn !== today
+    ) {
+      this.terminalCountedOn = today;
+      reportFunnelStep("terminal_opened", started.state.shell ?? "system");
+    }
+    return started;
   }
+
+  /** The day a terminal start was last counted (see startTerminalSession). */
+  private terminalCountedOn: string | null = null;
 
   writeTerminalInput(request: WriteTerminalInputRequest): boolean {
     return this.terminalSessionService.writeInput(request);
   }
 
-  resizeTerminalSession(request: ResizeTerminalSessionRequest): boolean {
+  resizeTerminalSession(request: ResizeTerminalSessionRequest): number | false {
     return this.terminalSessionService.resizeSession(request);
   }
 
   hideTerminalSession(request: TerminalRuntimeRequest): boolean {
     return this.terminalSessionService.hideSession(request);
+  }
+
+  terminalBusyProgram(request: TerminalRuntimeRequest): string | null {
+    return this.terminalSessionService.busyProgram(
+      request.conversationKey,
+      request.terminalId ?? "terminal-1"
+    );
+  }
+
+  /**
+   * Terminals running a program, as quit-question lines: the program and
+   * the chat it belongs to. A quit would stop them.
+   */
+  busyTerminalWork(): { sessionId: string; label: string }[] {
+    const busy = this.terminalSessionService.busyTerminals();
+    if (busy.length === 0) return [];
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return busy.map(({ key, terminalId, program }) => {
+      const ref = conversationRefFromKey(key);
+      const chat =
+        ref?.kind === "session" ? labels.get(ref.sessionId)?.trim() : "";
+      return {
+        sessionId: `terminal:${terminalId}`,
+        label: chat ? `${program} · ${chat}` : program,
+      };
+    });
   }
 
   /** Running terminals' states, for `terminal.events`' opening snapshot. */

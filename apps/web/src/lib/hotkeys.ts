@@ -21,6 +21,8 @@ const actions = new Map<string, () => void>();
 export const dispatchHotkeyAction = (id: string): void => {
   actions.get(id)?.();
 };
+/** Whether the page on screen handles the action now. */
+export const hasHotkeyAction = (id: string): boolean => actions.has(id);
 
 /** A contenteditable target, or one inside `[data-hotkeys="text"]`. */
 const isRichTextTarget = (target: EventTarget | null): boolean => {

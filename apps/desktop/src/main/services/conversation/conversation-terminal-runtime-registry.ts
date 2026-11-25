@@ -17,6 +17,8 @@ export type TerminalPty = {
   write: (data: string) => void;
   resize: (cols: number, rows: number) => void;
   kill: (signal?: string) => void;
+  /** The foreground program's name (node-pty), where the platform tells it. */
+  readonly process?: string;
 };
 
 export type CreateConversationTerminalPty = (request: {
@@ -362,19 +364,27 @@ export class ConversationTerminalRuntimeRegistry {
     return true;
   }
 
+  /** A running terminal's PTY, whatever its generation. */
+  ptyOf(key: ConversationKey, terminalId: string): TerminalPty | null {
+    return this.runtimes.get(runtimeKey(key, terminalId))?.pty ?? null;
+  }
+
   resize(
     key: ConversationKey,
     generation: number,
     cols: number,
     rows: number,
     terminalId = DEFAULT_TERMINAL_ID
-  ): boolean {
+  ): number | false {
     const runtime = this.currentRuntime(key, terminalId, generation);
     if (runtime == null) return false;
+    // Where its output stands as ConPTY takes the size: the renderer resizes
+    // its screen at exactly that point of the stream (Windows).
+    const at = runtime.scrollback.end;
     runtime.cols = cols;
     runtime.rows = rows;
     runtime.pty.resize(cols, rows);
-    return true;
+    return at;
   }
 
   hide(

@@ -3,12 +3,16 @@ import wasmUrl from "ghostty-web/ghostty-vt.wasm?url";
 
 import { STOCK_ANSI } from "#renderer/lib/look";
 import { LOOK_EVENT } from "#renderer/lib/theme";
-let ready: Promise<Ghostty> | null = null;
-export const ghosttyReady = (): Promise<Ghostty> =>
-  (ready ??= Ghostty.load(wasmUrl).catch((error) => {
-    ready = null;
-    throw error;
-  }));
+// A WASM instance per screen (a few MB, freed with it): Ghostty expects new
+// pages zeroed, and a shared instance hands a new screen a closed one's
+// memory.
+export const ghosttyReady = (): Promise<Ghostty> => Ghostty.load(wasmUrl);
+/** Empty the terminal onto fresh memory, for the same reason. */
+export const resetTerminal = async (terminal: Terminal): Promise<void> => {
+  const ghostty = await ghosttyReady();
+  (terminal as unknown as { ghostty: Ghostty }).ghostty = ghostty;
+  terminal.reset();
+};
 export { Terminal, FitAddon };
 /** Adapter for the installed 0.4.0; same-size resize deliberately does not paint. */
 export const repaint = (terminal: Terminal): void => {
@@ -90,7 +94,7 @@ export const terminalTheme = (): TerminalTheme => {
     theme.selectionForeground = foreground;
   }
   ANSI_NAMES.forEach((name, i) => {
-    theme[name] = read(`--term-${i}`, STOCK_ANSI[i]!);
+    theme[name] = read(`--term-${i}`, STOCK_ANSI[dark ? "dark" : "light"][i]!);
   });
   return theme;
 };
@@ -126,6 +130,95 @@ export const writeTerminalData = async (
     if (offset % 32768 === 28672)
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
+};
+
+/**
+ * Copied text as it was printed: no space for a wide character's spacer
+ * cell, no line break at a soft wrap. A row on screen says whether it
+ * continues the one above; a scrollback row followed by another is taken as
+ * wrapped when filled to its last column. Selecting does not write the
+ * clipboard (copying is Copy, or Ctrl/⌘+Shift+C); a triple click selects
+ * the row.
+ */
+export const fixSelectionText = (terminal: Terminal): void => {
+  type Cell = { codepoint: number; width: number; grapheme_len: number };
+  const internals = terminal as unknown as {
+    selectionManager?: {
+      selectionStart: { col: number; absoluteRow: number } | null;
+      selectionEnd: { col: number; absoluteRow: number } | null;
+      getSelection(): string;
+      copyToClipboard?(text: string): Promise<void>;
+      pixelToCell?(x: number, y: number): { col: number; row: number };
+      viewportRowToAbsolute?(row: number): number;
+      requestRender?(): void;
+    };
+    wasmTerm?: {
+      getScrollbackLength(): number;
+      getScrollbackLine(row: number): Cell[] | null;
+      getLine(row: number): Cell[] | null;
+      getScrollbackGraphemeString(row: number, col: number): string;
+      getGraphemeString(row: number, col: number): string;
+      isRowWrapped(row: number): boolean;
+    };
+  };
+  const manager = internals.selectionManager;
+  if (!manager || typeof manager.getSelection !== "function") return;
+  if (manager.copyToClipboard) manager.copyToClipboard = async () => {};
+  terminal.element?.addEventListener("click", (event) => {
+    if (
+      event.detail !== 3 ||
+      !manager.pixelToCell ||
+      !manager.viewportRowToAbsolute ||
+      !(event.target instanceof HTMLCanvasElement)
+    )
+      return;
+    const cell = manager.pixelToCell(event.offsetX, event.offsetY);
+    const row = manager.viewportRowToAbsolute(cell.row);
+    manager.selectionStart = { col: 0, absoluteRow: row };
+    manager.selectionEnd = { col: terminal.cols - 1, absoluteRow: row };
+    manager.requestRender?.();
+  });
+  manager.getSelection = () => {
+    const wasm = internals.wasmTerm;
+    if (!wasm || !manager.selectionStart || !manager.selectionEnd) return "";
+    let { col: fromCol, absoluteRow: from } = manager.selectionStart;
+    let { col: toCol, absoluteRow: to } = manager.selectionEnd;
+    if (from > to || (from === to && fromCol > toCol))
+      [fromCol, toCol, from, to] = [toCol, fromCol, to, from];
+    const scrollback = wasm.getScrollbackLength();
+    let text = "";
+    for (let row = from; row <= to; row++) {
+      const inScrollback = row < scrollback;
+      const cells = inScrollback
+        ? wasm.getScrollbackLine(row)
+        : wasm.getLine(row - scrollback);
+      if (!cells) continue;
+      const last = row === to ? toCol : cells.length - 1;
+      let line = "";
+      for (let col = row === from ? fromCol : 0; col <= last; col++) {
+        const cell = cells[col];
+        // The second half of a wide character: nothing of its own.
+        if (col > 0 && cells[col - 1]?.width === 2) continue;
+        if (!cell || cell.codepoint === 0) line += " ";
+        else if (cell.grapheme_len > 0)
+          line += inScrollback
+            ? wasm.getScrollbackGraphemeString(row, col)
+            : wasm.getGraphemeString(row - scrollback, col);
+        else line += String.fromCodePoint(cell.codepoint);
+      }
+      // Ghostty marks the row that continues a wrap, so ask the next one;
+      // two scrollback rows have no mark: a full row counts as wrapped.
+      const next = row + 1;
+      const wrapped =
+        row < to &&
+        (next >= scrollback
+          ? wasm.isRowWrapped(next - scrollback)
+          : (cells.at(-1)?.codepoint ?? 0) !== 0);
+      text += wrapped ? line : line.trimEnd();
+      if (row < to && !wrapped) text += "\n";
+    }
+    return text;
+  };
 };
 
 /**
@@ -227,6 +320,46 @@ export const installTerminalTheme = (
     }
     renderLine(out ?? cells, y, cols);
   };
+  // Without the focus (the chat box has the keys) the cursor is a steady
+  // outline, so the terminal still shows where typing would go.
+  const cursor = renderer as unknown as {
+    renderCursor?(x: number, y: number): void;
+    startCursorBlink?(): void;
+    stopCursorBlink?(): void;
+    ctx?: CanvasRenderingContext2D;
+    metrics?: { width: number; height: number };
+    theme?: { cursor?: string };
+  };
+  let focused = false;
+  const solidCursor = cursor.renderCursor?.bind(renderer);
+  if (solidCursor)
+    cursor.renderCursor = (x, y) => {
+      const { ctx, metrics, theme } = cursor;
+      // Asked each time: a focused terminal hidden or removed (a tab
+      // switch, a kill) gets no focusout.
+      const hasKeys =
+        terminal.element?.contains(document.activeElement) ?? focused;
+      if (hasKeys || !ctx || !metrics) return solidCursor(x, y);
+      ctx.strokeStyle = theme?.cursor ?? "currentColor";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(
+        x * metrics.width + 0.5,
+        y * metrics.height + 0.5,
+        metrics.width - 1,
+        metrics.height - 1
+      );
+    };
+  const onFocus = (next: boolean) => () => {
+    focused = next;
+    cursor.stopCursorBlink?.();
+    if (next && terminal.options.cursorBlink) cursor.startCursorBlink?.();
+    repaint(terminal);
+  };
+  const onFocusIn = onFocus(true);
+  const onFocusOut = onFocus(false);
+  terminal.element?.addEventListener("focusin", onFocusIn);
+  terminal.element?.addEventListener("focusout", onFocusOut);
+  cursor.stopCursorBlink?.();
   const onLook = () => {
     const theme = terminalTheme();
     const font = terminalFont();
@@ -249,6 +382,10 @@ export const installTerminalTheme = (
   document.addEventListener(LOOK_EVENT, onLook);
   return {
     theme: () => current,
-    dispose: () => document.removeEventListener(LOOK_EVENT, onLook),
+    dispose: () => {
+      document.removeEventListener(LOOK_EVENT, onLook);
+      terminal.element?.removeEventListener("focusin", onFocusIn);
+      terminal.element?.removeEventListener("focusout", onFocusOut);
+    },
   };
 };

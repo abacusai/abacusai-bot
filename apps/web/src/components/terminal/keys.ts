@@ -3,6 +3,8 @@ import {
   type TerminalAction as SharedTerminalAction,
 } from "@abacus-ai/contract/terminal/keys";
 import { matchesKeyboardEvent } from "@tanstack/react-hotkeys";
+
+import { dispatchHotkeyAction, hasHotkeyAction } from "#renderer/lib/hotkeys";
 export type TerminalAction =
   | SharedTerminalAction
   | "newTerminalTab"
@@ -49,6 +51,21 @@ export const terminalKeyHandler =
     const action = bindings ? match?.[1] : terminalAction(event, platform);
     if (action) {
       dispatch(action);
+      return true;
+    }
+    // Any other app shortcut the page handles now (new bot, stop, panel
+    // tabs): the app's, never also the shell's. Chords only; the keys the
+    // terminal keeps (Ctrl+C, Ctrl+W, …) are not app bindings here.
+    const other = Object.entries(bindings ?? {}).find(
+      ([id, binding]) =>
+        !(id in terminalActions) &&
+        binding != null &&
+        /\b(Mod|Control|Ctrl|Meta|Alt)\+/.test(binding) &&
+        hasHotkeyAction(id) &&
+        matchesKeyboardEvent(event, binding as never, platform)
+    );
+    if (other) {
+      dispatchHotkeyAction(other[0]);
       return true;
     }
     if (

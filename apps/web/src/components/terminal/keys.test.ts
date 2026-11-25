@@ -62,9 +62,12 @@ it("uses terminal overrides and unbindings instead of the old fixed dock chords"
   expect(
     handler(new KeyboardEvent("keydown", { key: "Tab", ctrlKey: true }))
   ).toBe(false);
+  // Ctrl+N is the app's in the terminal too, never also the shell's.
   expect(
     handler(new KeyboardEvent("keydown", { key: "n", ctrlKey: true }))
-  ).toBe(false);
+  ).toBe(true);
+  expect(dispatch).toHaveBeenLastCalledWith("new");
+  dispatch.mockClear();
   expect(
     handler(
       new KeyboardEvent("keydown", { key: "e", ctrlKey: true, shiftKey: true })

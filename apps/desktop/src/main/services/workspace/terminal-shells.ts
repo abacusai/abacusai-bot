@@ -158,7 +158,18 @@ const systemShell = (
 ): ResolvedTerminalShell =>
   platform === "win32"
     ? { id: "system", file: env.ComSpec ?? "cmd.exe", args: [] }
-    : { id: "system", file: env.SHELL ?? "/bin/bash", args: ["-l"] };
+    : {
+        id: "system",
+        // A $SHELL that names nothing (uninstalled, mistyped) would die at
+        // once with execvp(3) failed: fall back as a login does.
+        file:
+          [env.SHELL, "/bin/bash", "/bin/sh"].find(
+            (file): file is string => file != null && isFile(file)
+          ) ??
+          env.SHELL ??
+          "/bin/bash",
+        args: ["-l"],
+      };
 
 export interface ResolveTerminalShellOptions {
   platform?: NodeJS.Platform;

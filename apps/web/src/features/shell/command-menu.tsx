@@ -17,6 +17,9 @@ import {
   Plus,
   Settings,
   Terminal,
+  Pencil,
+  Eraser,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { useContext, useState, type ReactNode } from "react";
@@ -29,7 +32,7 @@ import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { usePublishedCodeProject } from "#renderer/features/sessions/data/code-project";
 import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { resolveLook } from "#renderer/lib/bots/avatar";
-import { dispatchHotkeyAction } from "#renderer/lib/hotkeys";
+import { dispatchHotkeyAction, hasHotkeyAction } from "#renderer/lib/hotkeys";
 import { ActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import {
   AREA_HOME,
@@ -295,6 +298,30 @@ const CommandMenuBody = () => {
               }),
           },
           ...(codeProject ? [] : developerPanels),
+        ]
+      : []),
+    // The chat's terminal by keyboard: what its … menu does, and moving
+    // between it and the chat box (Esc stays with the shell).
+    ...(
+      [
+        ["focus-composer", "focusComposer", MessageSquare],
+        ["focus-terminal", "focusTerminal", Terminal],
+        ["rename-terminal", "renameTerminal", Pencil],
+        ["clear-terminal", "clearTerminal", Eraser],
+        ["kill-terminal", "killTerminal", Trash2],
+      ] as const
+    )
+      .filter(([id]) => hasHotkeyAction(id))
+      .map(([id, label, Icon]): Entry => ({
+        id,
+        title: t(`shell.command.${label}`),
+        group: "panels",
+        icon: Icon,
+        run: () => dispatchHotkeyAction(id),
+      })),
+    // In a chat or a new chat (its draft); elsewhere there is no terminal.
+    ...(hasHotkeyAction("new-terminal-tab")
+      ? [
           {
             id: "new-terminal",
             shortcut: shortcut("new-terminal-tab", "Mod+`"),

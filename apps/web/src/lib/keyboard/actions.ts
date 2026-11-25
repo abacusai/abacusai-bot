@@ -26,7 +26,9 @@ export const APP_ACTIONS: readonly AppAction[] = [
   action("command-menu", "Mod+K"),
   {
     ...action("new-in-area", "Mod+N"),
-    terminalDefault: { windows: null, linux: null },
+    // The app's in the terminal too, never also the shell's; unbind it
+    // there in Settings to give it to the shell.
+    terminalDefault: { windows: "Ctrl+N", linux: "Ctrl+N" },
   },
   action("new-bot", "Mod+Shift+N"),
   action("toggle-sidebar", "Mod+B"),
@@ -87,7 +89,6 @@ export const TERMINAL_RESERVED = [
   "Ctrl+D",
   "Ctrl+R",
   "Ctrl+W",
-  "Ctrl+N",
   "Ctrl+Z",
   "Ctrl+L",
 ];

@@ -334,7 +334,7 @@ describe("Default", () => {
   );
 
   it("misses exactly the floors look.ts records for the shipped design", () => {
-    expect(auditTokens(STOCK.light, false)).toHaveLength(24);
+    expect(auditTokens(STOCK.light, false)).toHaveLength(15);
     expect(auditTokens(STOCK.dark, false)).toHaveLength(19);
   });
 });

@@ -21,6 +21,11 @@ import {
   rejectStartSubmission,
   startDraftStore,
 } from "#renderer/features/sessions/start/start-session";
+import {
+  APP_HOTKEYS,
+  dispatchAppHotkey,
+  useAppHotkey,
+} from "#renderer/features/shell/hotkeys";
 import { nativePresenterFor } from "#renderer/features/shell/platform-presenter";
 import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
 import {
@@ -35,6 +40,24 @@ import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { UserFacingError } from "#renderer/lib/error-text";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+/** The dock's keys, as an open chat has them (sessions.$sessionId). */
+const DraftDockHotkeys = ({
+  next,
+  previous,
+  close,
+  newTerminal,
+}: {
+  next: () => void;
+  previous: () => void;
+  close: () => void;
+  newTerminal: () => void;
+}) => {
+  useAppHotkey("Mod+`", newTerminal, { actionId: "new-terminal-tab" });
+  useAppHotkey(APP_HOTKEYS.nextTab, next, { actionId: "next-tab" });
+  useAppHotkey(APP_HOTKEYS.previousTab, previous, { actionId: "previous-tab" });
+  useAppHotkey(APP_HOTKEYS.closeTab, close, { actionId: "close-tab" });
+  return null;
+};
 /** Offers already turned into a draft: a reload or a revisit never starts another. */
 const offersTaken = new Set<string>();
 const SessionsNewRoute = () => {
@@ -80,6 +103,15 @@ const SessionsNewRoute = () => {
           })
         }
         presenter={nativePresenterFor(transport.client)}
+        dispatch={dispatchAppHotkey}
+        registerHotkeys={(next, previous, close, newTerminal) => (
+          <DraftDockHotkeys
+            next={next}
+            previous={previous}
+            close={close}
+            newTerminal={newTerminal}
+          />
+        )}
         blocked={(rect) =>
           shellStore.state.occlusion.rects.some(
             (r) =>
