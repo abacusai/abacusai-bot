@@ -262,6 +262,14 @@ const setupError = (what: string, error: unknown): Error => {
       `${what}: the disk is full. Free some space and try again.`
     );
   if (
+    /\bE(PERM|BUSY)\b|Access is denied|os error (5|32)\b|used by another process/i.test(
+      detail
+    )
+  )
+    return new Error(
+      `${what}: a file in its folder is in use (a Python program still running, or security software). Close it and try again.`
+    );
+  if (
     /fetch failed|ERR_(INTERNET|NAME|PROXY|CONNECTION|TIMED|ADDRESS|NETWORK)|ENOTFOUND|EAI_AGAIN|ECONN|ETIMEDOUT|dns|connect|timed out|error sending request|proxy|\b407\b/i.test(
       detail
     )
@@ -291,7 +299,10 @@ const ensureShellPythonNow = async (): Promise<void> => {
   }
   const uv = await ensureUv();
   const base = await managedPython(uv);
-  // --seed puts pip in it; --clear replaces a broken one.
+  // Removed first: a clear that stopped part way (a file in use) leaves a
+  // folder that is no longer an environment, and uv refuses to clear that.
+  await fs.rm(envDir(), { recursive: true, force: true, maxRetries: 3 });
+  // --seed puts pip in it.
   await runUv(uv, ["venv", "--clear", "--seed", "--python", base, envDir()]);
   envReady = true;
 };
