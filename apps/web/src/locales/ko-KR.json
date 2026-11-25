@@ -2054,6 +2054,7 @@
       "reload": "Reload or stop loading",
       "external": "Open externally",
       "unavailable": "Browser unavailable",
+      "outsideFolders": "이 파일은 봇이 작업하는 폴더 밖에 있어서 여기에서 표시할 수 없습니다.",
       "permission": "Allow browser access?",
       "allow": "Allow",
       "deny": "Deny",

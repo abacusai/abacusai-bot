@@ -3426,7 +3426,7 @@ export class ServiceHost {
    * The folders a conversation may preview local files from (spec 04
    * §12.8): its checkout (the session's worktree when it has one) and the
    * folders of its workspace's recorded file artifacts. Derived here, never
-   * from the renderer: `materializeFile`'s `hostRoot` must lie inside one.
+   * from the renderer: the file `materializeFile` shows must lie inside one.
    */
   localPreviewRoots(key: ConversationKey): string[] {
     const ref = conversationRefFromKey(key);

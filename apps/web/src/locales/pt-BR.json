@@ -2054,6 +2054,7 @@
       "reload": "Reload or stop loading",
       "external": "Open externally",
       "unavailable": "Browser unavailable",
+      "outsideFolders": "Este arquivo está fora das pastas em que o bot trabalha, então não pode ser exibido aqui.",
       "permission": "Allow browser access?",
       "allow": "Allow",
       "deny": "Deny",

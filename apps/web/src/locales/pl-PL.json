@@ -2076,6 +2076,7 @@
       "reload": "Odśwież lub zatrzymaj ładowanie",
       "external": "Otwórz zewnętrznie",
       "unavailable": "Przeglądarka niedostępna",
+      "outsideFolders": "Ten plik jest poza folderami, w których pracuje bot, więc nie można go tu pokazać.",
       "permission": "Zezwolić na dostęp do przeglądarki?",
       "allow": "Zezwól",
       "deny": "Odmów",

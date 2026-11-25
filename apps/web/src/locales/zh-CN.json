@@ -2054,6 +2054,7 @@
       "reload": "重新加载或停止加载",
       "external": "在外部打开",
       "unavailable": "浏览器不可用",
+      "outsideFolders": "此文件不在机器人工作的文件夹中，因此无法在这里显示。",
       "permission": "允许访问浏览器吗？",
       "allow": "允许",
       "deny": "拒绝",

@@ -35,6 +35,7 @@ import { Input } from "#renderer/ui/input";
 import { useSessionsTransport } from "../data/queries";
 import type { TabDraw } from "../dock/panel-tabs-store";
 import { acquireLocalFile } from "./local-materialization";
+import { isRefusedLocalFile, RefusedLocalFile } from "./refused-local-file";
 /** What a browser tab opens on when nothing asked for a page. */
 export const NEW_TAB_URL = "https://www.google.com/";
 
@@ -89,6 +90,7 @@ export const BrowserTab = ({
   const [state, setState] = useState<BrowserRuntimeState | null>(null);
   const [address, setAddress] = useState(url ?? home);
   const [error, setError] = useState<string | null>(null);
+  const [refused, setRefused] = useState(false);
   const key = scope ?? sessionConversationKey(row.workspaceId, row.id);
   const apply = (next: BrowserRuntimeState) => {
     setState(next);
@@ -111,6 +113,15 @@ export const BrowserTab = ({
           hostRoot: root,
         })
       : null;
+    // Main's refusal of a file outside its folders reads as a calm notice.
+    void local?.promise.then(
+      () => {
+        if (live) setRefused(false);
+      },
+      (e: unknown) => {
+        if (live) setRefused(isRefusedLocalFile(e));
+      }
+    );
     const promise = local
       ? local.promise
       : transport.client.browser.runtime.materialize({
@@ -266,7 +277,9 @@ export const BrowserTab = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {error ? (
+      {refused && file ? (
+        <RefusedLocalFile client={transport.client} file={file} />
+      ) : error ? (
         <div role="alert">
           <p>{t("sessions.browser.unavailable")}</p>
           <p>{error}</p>

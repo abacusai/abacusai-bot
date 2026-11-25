@@ -2054,6 +2054,7 @@
       "reload": "Reload or stop loading",
       "external": "Open externally",
       "unavailable": "Browser unavailable",
+      "outsideFolders": "File ini berada di luar folder tempat bot bekerja, jadi tidak bisa ditampilkan di sini.",
       "permission": "Allow browser access?",
       "allow": "Allow",
       "deny": "Deny",

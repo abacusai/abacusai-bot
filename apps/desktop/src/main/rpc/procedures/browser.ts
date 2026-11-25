@@ -110,10 +110,10 @@ export const browserRouter = impl.browser.router({
           input.hostRoot,
           context.deps.serviceHost.localPreviewRoots(input.conversationKey)
         );
-        // A root that is not the conversation's checkout or an artifact
-        // folder: FORBIDDEN {root-not-allowed}; outside the root: FORBIDDEN
-        // {outside-root}, as `files.readText`; a type the view does not
-        // show: FORBIDDEN {unsupported-type}.
+        // A file in neither the conversation's checkout nor a folder of a
+        // file the bot made: FORBIDDEN {outside-root}, or {root-not-allowed}
+        // when `hostRoot` was not one either; a type the view does not show:
+        // FORBIDDEN {unsupported-type}.
         if (checked.ok === false)
           throw checked.error === "unsupported-type" ||
             checked.error === "root-not-allowed"

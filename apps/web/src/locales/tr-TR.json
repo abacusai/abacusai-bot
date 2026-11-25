@@ -2054,6 +2054,7 @@
       "reload": "Yeniden yükle ya da yüklemeyi durdur",
       "external": "Harici olarak aç",
       "unavailable": "Tarayıcı kullanılamıyor",
+      "outsideFolders": "Bu dosya botun çalıştığı klasörlerin dışında, bu yüzden burada gösterilemiyor.",
       "permission": "Tarayıcı erişimine izin verilsin mi?",
       "allow": "İzin ver",
       "deny": "Reddet",

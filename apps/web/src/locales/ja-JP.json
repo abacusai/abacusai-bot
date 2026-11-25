@@ -2054,6 +2054,7 @@
       "reload": "Reload or stop loading",
       "external": "Open externally",
       "unavailable": "Browser unavailable",
+      "outsideFolders": "このファイルはボットが作業するフォルダーの外にあるため、ここでは表示できません。",
       "permission": "Allow browser access?",
       "allow": "Allow",
       "deny": "Deny",

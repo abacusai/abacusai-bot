@@ -5,7 +5,8 @@
  * are real paths. The root itself is checked against what main derives for
  * the conversation (ServiceHost's real `localPreviewRoots`): its checkout
  * (the session's worktree when it has one) or its workspace's artifact
- * folders; any other `hostRoot` is `FORBIDDEN {root-not-allowed}`.
+ * folders. A file in none of them is `FORBIDDEN`; one in an artifact folder
+ * opens under that folder whatever `hostRoot` the renderer passed.
  */
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -209,6 +210,27 @@ describe("browser.runtime.materializeFile (R4-T33)", () => {
       ).rejects.toMatchObject(error);
     expect(materializeFile).not.toHaveBeenCalled();
   });
+
+  it("a file the bot made outside the checkout opens under its own folder, not the chat's root", async () => {
+    const { client, materializeFile } = await connect();
+    await client.browser.runtime.materializeFile(
+      request(path.join(artifacts, "out.pdf"))
+    );
+    expect(materializeFile.mock.calls[0]?.[0]).toMatchObject({
+      file: path.join(artifacts, "out.pdf"),
+      root: artifacts,
+    });
+    // Another workspace's file stays refused, whatever root the chat passes.
+    await expect(
+      client.browser.runtime.materializeFile(
+        request(path.join(root, "other", "x.pdf"))
+      )
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { reason: "outside-root" },
+    });
+    expect(materializeFile).toHaveBeenCalledOnce();
+  }, 30_000);
 
   it("a root main did not derive for the conversation is refused", async () => {
     const { client, materializeFile } = await connect();

@@ -2054,6 +2054,7 @@
       "reload": "重新載入或停止載入",
       "external": "在外部開啟",
       "unavailable": "無法使用瀏覽器",
+      "outsideFolders": "此檔案不在機器人工作的資料夾中，因此無法在這裡顯示。",
       "permission": "要允許存取瀏覽器嗎？",
       "allow": "允許",
       "deny": "拒絕",

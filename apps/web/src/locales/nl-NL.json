@@ -2054,6 +2054,7 @@
       "reload": "Opnieuw laden of laden stoppen",
       "external": "Extern openen",
       "unavailable": "Browser niet beschikbaar",
+      "outsideFolders": "Dit bestand staat buiten de mappen waarin de bot werkt, dus het kan hier niet worden getoond.",
       "permission": "Browsertoegang toestaan?",
       "allow": "Toestaan",
       "deny": "Weigeren",
