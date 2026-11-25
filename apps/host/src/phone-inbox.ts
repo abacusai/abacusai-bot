@@ -49,6 +49,8 @@ export interface PhoneInboxEntry {
     price_text?: string;
     messages?: number;
   };
+  /** A paid account still on the bot, due one line a day: its own personal agent can take over, by replying `keyword`. */
+  agent_pitch?: { plan?: string; keyword?: string };
 }
 
 export type InboundState = "queued" | "handed" | "closing" | "handled";

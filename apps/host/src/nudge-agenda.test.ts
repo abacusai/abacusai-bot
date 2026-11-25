@@ -520,6 +520,22 @@ describe("what the loop hears with a user message", () => {
     );
   });
 
+  it("an agent pitch offers the paid plan's own agent and the word to switch, only for a task", () => {
+    const [pitch] = nudgeNotes({
+      id: "m1",
+      text: "summarize this",
+      agent_pitch: { plan: "Basic", keyword: "AGENT" },
+    });
+    expect(pitch).toContain(
+      "The user's Basic plan includes a personal agent of their own"
+    );
+    expect(pitch).toContain("they can reply AGENT to switch");
+    expect(pitch).toContain("Only if this reply does a task for them");
+    expect(
+      nudgeNotes({ id: "m2", text: "hi", agent_pitch: { plan: "Basic" } })
+    ).toEqual([]);
+  });
+
   it("nothing extra for a plain message", () => {
     expect(nudgeNotes({ id: "m1", text: "hi" })).toEqual([]);
   });
