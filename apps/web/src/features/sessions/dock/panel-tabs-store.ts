@@ -3,6 +3,7 @@ import {
   conversationRefFromKey,
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
+import { Store } from "@tanstack/react-store";
 
 import { persistedStore } from "#renderer/lib/continuity/registry";
 
@@ -27,6 +28,12 @@ export const panelTabsStore = persistedStore<Record<string, PanelTabs>>(
   () => ({})
 );
 export const EMPTY_TABS: PanelTabs = { tabs: [], last: null };
+/**
+ * A new chat's full view (a chat keeps it in its URL; a new chat has none).
+ * Opening a new chat again (Ctrl+N reuses an empty one) shows its composer:
+ * openStartDraft sets it back to split.
+ */
+export const draftViewStore = new Store<"full" | "split">("split");
 /**
  * Each chat's terminal tabs, kept across app restarts (the tabs above live
  * only as long as the window). The shells die with the app; their tabs come

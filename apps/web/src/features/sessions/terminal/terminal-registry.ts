@@ -5,7 +5,6 @@ export interface TerminalView {
   element: HTMLDivElement;
   offset: number | undefined;
   generation: number | null;
-  received: number;
   reconnect?: () => void;
   /** Set by the tab while mounted: fit cols/rows to the box and resize the PTY. */
   refit?: () => void;
@@ -76,7 +75,6 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         element,
         offset: undefined,
         generation: null,
-        received: 0,
         theme: theme.theme,
         disposeTheme: theme.dispose,
       };
@@ -113,7 +111,6 @@ if (import.meta.env.VITE_UI_GALLERY === "1") {
       return {
         theme: view.theme(),
         offset: view.offset,
-        received: view.received,
         generation: view.generation,
         lines: buffer.length,
         text: Array.from(

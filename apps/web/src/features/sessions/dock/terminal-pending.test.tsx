@@ -47,7 +47,6 @@ it.each([true, false])(
       fit: { proposeDimensions: () => null },
       generation: null,
       offset: undefined,
-      received: 0,
       term: {
         cols: 80,
         rows: 24,

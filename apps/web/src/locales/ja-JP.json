@@ -2034,7 +2034,7 @@
       "files": "Files",
       "agents": "Agents",
       "device": "デバイス",
-      "terminal": "Terminal",
+      "terminal": "ターミナル",
       "browser": "Browser",
       "full": "Toggle full view",
       "move": "Move tab",
@@ -2139,7 +2139,7 @@
       "unavailable": "Device stream unavailable"
     },
     "terminal": {
-      "title": "Terminal",
+      "title": "ターミナル",
       "exited": "プロセスが終了しました ({{code}})",
       "newShell": "新しいターミナル · {{shell}}",
       "planRequired": "無料プランでは、ホスト型コンピューターでターミナルを使えません。使うにはアップグレードしてください。",
@@ -2965,7 +2965,7 @@
       "emptyDescription": "項目を選択すると、ここに詳細が表示されます。",
       "tabs": {
         "changes": "Changes",
-        "terminal": "Terminal",
+        "terminal": "ターミナル",
         "files": "Files",
         "browser": "Browser",
         "memory": "Memory",

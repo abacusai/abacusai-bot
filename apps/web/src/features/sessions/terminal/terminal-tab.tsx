@@ -41,6 +41,7 @@ import {
 } from "#renderer/ui/context-menu";
 
 import { useSessionsTransport } from "../data/queries";
+import { afterMenusClose } from "../dock/after-menus-close";
 import {
   markTerminalExited,
   rememberTerminalShell,
@@ -144,9 +145,21 @@ const resizeTerminal = (
     : "";
   if (rewrap) term.write(rewrap);
 };
-// Terminals (by view) that have shown something in this window: "Starting …"
-// is for a shell that has printed nothing visible yet.
-const printed = new Set<string>();
+/**
+ * Input with a character's two UTF-16 halves in separate events (Windows
+ * SendInput with KEYEVENTF_UNICODE, some IMEs and on-screen keyboards: a
+ * key event per half) is joined into the character. Sent alone, each half
+ * reaches the shell as U+FFFD.
+ */
+const joinSurrogates = () => {
+  let high = "";
+  return (data: string): string => {
+    const joined = high + data;
+    const last = joined.charCodeAt(joined.length - 1);
+    high = last >= 0xd800 && last <= 0xdbff ? joined.slice(-1) : "";
+    return high ? joined.slice(0, -1) : joined;
+  };
+};
 // Outside the component: the React Compiler skips try/finally.
 const writeMuted = (write: () => void, mute: (on: boolean) => void) => {
   mute(true);
@@ -173,25 +186,6 @@ const outputView = (
     if (view.offset !== undefined) await resetTerminal(view.term);
   },
 });
-
-/**
- * Runs `fn` once no menu, popover or dialog is open (up to ~1 s): a tab
- * picked from a list comes on screen while that list still holds the focus,
- * which it then hands back to its button. Outside the component for the
- * React Compiler.
- */
-const whenMenusClosed = (fn: () => void, frames = 0): void => {
-  requestAnimationFrame(() => {
-    if (
-      frames < 60 &&
-      document.querySelector(
-        '[data-slot="popover-content"], [role="menu"], [role="dialog"], [role="alertdialog"]'
-      )
-    )
-      whenMenusClosed(fn, frames + 1);
-    else fn();
-  });
-};
 
 export const TerminalTab = ({
   row,
@@ -257,14 +251,13 @@ export const TerminalTab = ({
     };
     // A shell being started shows what is starting until it prints something
     // visible (PowerShell can take seconds); a shell already running does not.
-    const viewKey = `${key}:${id}`;
     const startingLabel = (shell: string | undefined) =>
       shell && shell !== "system"
         ? t("sessions.terminal.startingShell", {
             shell: t(`terminalShells.${shell}.label`),
           })
         : t("sessions.terminal.starting");
-    void getTerminalView(viewKey)
+    void getTerminalView(`${key}:${id}`)
       .then(async (view) => {
         if (abort.signal.aborted) return;
         const containerElement = container.current;
@@ -284,7 +277,6 @@ export const TerminalTab = ({
           setExited(true);
         } else {
           starting = true;
-          if (!printed.has(viewKey)) setStarting(startingLabel(shellToStart()));
           const start = await transport.client.terminal.start({
             terminalId: id,
             conversationKey: key,
@@ -301,13 +293,8 @@ export const TerminalTab = ({
           // the same shell (not whatever the default is by then).
           if (start.state.shell)
             rememberTerminalShell(key, `terminal:${id}`, start.state.shell);
-          // Already running (shown again): nothing is starting. Otherwise
-          // the line names the shell now known.
-          if (!start.created) {
-            printed.add(viewKey);
-            setStarting(null);
-          } else if (!printed.has(viewKey))
-            setStarting(startingLabel(start.state.shell));
+          // A new shell (not one shown again): named now that it is known.
+          if (start.created) setStarting(startingLabel(start.state.shell));
         }
         if (abort.signal.aborted) {
           cleanup();
@@ -344,8 +331,11 @@ export const TerminalTab = ({
             fit();
           }
         };
-        const input = view.term.onData((data) => {
+        const joined = joinSurrogates();
+        const input = view.term.onData((typed) => {
           if (replaying) return;
+          const data = joined(typed);
+          if (!data) return;
           // The terminal's answers (cursor position, device attributes) are
           // made at the right point of the output, so they go at once.
           const answer =
@@ -406,12 +396,7 @@ export const TerminalTab = ({
             outputView(
               view,
               async (data, replay) => {
-                const shown = visibleLength(data);
-                view.received += shown;
-                if (shown) {
-                  printed.add(viewKey);
-                  setStarting(null);
-                }
+                if (visibleLength(data)) setStarting(null);
                 if (pending && !replay && view.offset !== undefined) {
                   const bytes = new TextEncoder().encode(data);
                   const cut = pending.at - view.offset;
@@ -638,17 +623,10 @@ export const TerminalTab = ({
       // A new generation, read from its start, under the old output.
       view.generation = null;
       view.offset = undefined;
-      // Its new shell has printed nothing yet: "Starting …" may show.
-      view.received = 0;
-      printed.delete(`${key}:${id}`);
-      // ConPTY (Windows) draws a new shell from the top row as if the screen
-      // were empty: scroll the old output up out of its way first.
-      view.term.write(
-        uiPlatform(document.documentElement.dataset.platform ?? "linux") ===
-          "windows"
-          ? `\r${"\n".repeat(view.term.rows)}\x1b[H\x1b[?25h`
-          : "\r\n\x1b[?25h"
-      );
+      // The old output scrolls up into the scrollback, so the new shell
+      // starts on an empty screen: ConPTY (Windows) draws it from the top
+      // row as if the screen were empty, and "Starting …" shows there.
+      view.term.write(`\r${"\n".repeat(view.term.rows)}\x1b[H\x1b[?25h`);
       markTerminalExited(key, `terminal:${id}`, false);
       setExited(false);
       setRun((n) => n + 1);
@@ -661,7 +639,7 @@ export const TerminalTab = ({
         if (!live) return;
         if (visible) {
           view.refit?.();
-          whenMenusClosed(() => {
+          afterMenusClose(() => {
             if (!live) return;
             // Shown by the keyboard (next tab, a closed neighbour), or picked
             // by its tab or the terminal icon: this terminal takes the keys, so

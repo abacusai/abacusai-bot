@@ -92,8 +92,10 @@ import {
   getTerminalView,
   disposeTerminalView,
 } from "../terminal/terminal-registry";
+import { afterMenusClose } from "./after-menus-close";
 import {
   panelTabsStore,
+  draftViewStore,
   EMPTY_TABS,
   openTab,
   openTerminalTab,
@@ -203,23 +205,8 @@ const TabLauncher = ({
   );
 };
 
-// Once no dialog, menu or popover is open: each hands the focus back to its
-// button on closing. Outside the component: the React Compiler skips a
-// component whose closures update a captured counter.
-const afterDialogs = (fn: () => void, frames = 0) => {
-  requestAnimationFrame(() => {
-    if (
-      document.querySelector(
-        '[role="dialog"], [role="alertdialog"], [role="menu"], [data-slot="popover-content"]'
-      ) &&
-      frames < 60
-    )
-      afterDialogs(fn, frames + 1);
-    else setTimeout(fn, 0);
-  });
-};
 const focusComposer = () =>
-  afterDialogs(() =>
+  afterMenusClose(() =>
     document
       .querySelector<HTMLTextAreaElement>(
         '[data-slot="session-dock"] [data-slot="composer"] textarea'
@@ -245,7 +232,14 @@ export const SessionDock = ({
     tab?: string;
     view?: "full" | "split";
   };
-  const [draftView, setDraftView] = useState<"full" | "split">("split");
+  const draftView = useSelector(draftViewStore, (s) => s);
+  const setDraftView = (view: "full" | "split") =>
+    draftViewStore.setState(() => view);
+  // As when it lived in this dock: a new chat shown again starts split.
+  useEffect(
+    () => (draft ? () => draftViewStore.setState(() => "split") : undefined),
+    [draft]
+  );
   const search = draft ? { tab: undefined, view: draftView } : routeSearch;
   const entries = useSelector(panelTabsStore, (s) => s[key] ?? EMPTY_TABS);
   const [terminalSnapshot, setTerminalSnapshot] = useState<string | null>(null);
@@ -587,7 +581,7 @@ export const SessionDock = ({
   // between the chat box and the terminal (Esc belongs to the shell).
   const focusTerminal = (ref: string) =>
     void getTerminalView(`${key}:${ref.slice(9)}`)
-      .then((view) => afterDialogs(() => view.term.focus()))
+      .then((view) => afterMenusClose(() => view.term.focus()))
       .catch(() => {});
   const latestTerminal = entries.tabs.findLast((tab) =>
     tab.ref.startsWith("terminal:")

@@ -1,8 +1,10 @@
 import { Ghostty, Terminal, FitAddon, type GhosttyCell } from "ghostty-web";
-import wasmUrl from "ghostty-web/ghostty-vt.wasm?url";
 
 import { STOCK_ANSI } from "#renderer/lib/look";
 import { LOOK_EVENT } from "#renderer/lib/theme";
+
+// ghostty-web 0.4.0's wasm with an upstream Ghostty fix (ghostty-vt/README.md).
+import wasmUrl from "./ghostty-vt/ghostty-vt.wasm?url";
 // A WASM instance per screen (a few MB, freed with it): Ghostty expects new
 // pages zeroed, and a shared instance hands a new screen a closed one's
 // memory.

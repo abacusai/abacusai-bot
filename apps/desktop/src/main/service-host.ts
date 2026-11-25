@@ -515,7 +515,10 @@ import {
   FeedbackService,
   sanitizeFeedback,
 } from "./services/debug-sync/feedback-service";
-import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
+import {
+  reportFunnelStep,
+  reportFunnelStepOnce,
+} from "./services/debug-sync/funnel-beacon";
 import { LogSyncService } from "./services/debug-sync/log-sync-service";
 import { syncLogFor } from "./services/debug-sync/sync-log";
 import { createUsageReporter } from "./services/debug-sync/usage-report";
@@ -4945,22 +4948,12 @@ export class ServiceHost {
           : "The plan could not be read, so the terminal is off for now."
       );
     const started = await this.terminalSessionService.startSession(request);
-    // Whether people use the terminal at all: once a day per install, when
-    // a shell is really started (not a reattach). The detail is the shell.
-    const today = new Date().toISOString().slice(0, 10);
-    if (
-      started.success &&
-      started.created &&
-      this.terminalCountedOn !== today
-    ) {
-      this.terminalCountedOn = today;
-      reportFunnelStep("terminal_opened", started.state.shell ?? "system");
-    }
+    // Whether people use the terminal at all: the first shell this install
+    // really starts (not a reattach). The detail is the shell.
+    if (started.success && started.created)
+      reportFunnelStepOnce("terminal_opened", started.state.shell ?? "system");
     return started;
   }
-
-  /** The day a terminal start was last counted (see startTerminalSession). */
-  private terminalCountedOn: string | null = null;
 
   writeTerminalInput(request: WriteTerminalInputRequest): boolean {
     return this.terminalSessionService.writeInput(request);
