@@ -12,9 +12,9 @@ import { Store, useStore } from "@tanstack/react-store";
 
 import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
-import { isCancellation } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
+import { isCancellation } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { connectTarget } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";

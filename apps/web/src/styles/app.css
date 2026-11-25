@@ -30,6 +30,8 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    /* A failure's mark (an icon, a dot, a rule): calm, never an alarm's red. */
+    --color-attention: var(--chat-status-attention);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -206,6 +208,25 @@ html:not([data-palette="default"]):is([data-palette]) [data-slot="button"].text-
 html:not([data-palette="default"]):is([data-palette]) :is(:is([data-slot="alert-dialog-footer"], [data-slot="dialog-footer"]) [data-slot="button"], [data-slot="alert-dialog-action"]).text-destructive {
   color: var(--destructive-foreground);
   background-color: var(--destructive);
+}
+
+/*
+ * A failure is told calmly; only the destructive actions above keep their
+ * red. An error toast's mark and an invalid control's outline take the
+ * attention tone, and a field's message stays in the page's own colour.
+ */
+[data-slot="toast-icon"] .text-destructive {
+  color: var(--chat-status-attention);
+}
+[data-slot="field"][data-invalid="true"],
+:is([data-slot="field-error"], [data-slot="questionnaire-error"]) {
+  color: var(--foreground);
+}
+[aria-invalid="true"],
+[data-slot="questionnaire-choice"][data-invalid],
+:is([data-slot="input-group"], [data-slot="combobox-chips"]):has([aria-invalid="true"]) {
+  border-color: var(--chat-status-attention);
+  --tw-ring-color: color-mix(in oklch, var(--chat-status-attention) 25%, transparent);
 }
 
 /* This viewport starts below the title bar, so the stack grows downward. */

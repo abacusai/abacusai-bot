@@ -142,7 +142,10 @@ it.each([false, true])(
       );
       await waitFor(() => expect(d.calls).toContain("unlink:abacus_discord"));
       if (fail) {
-        expect(await screen.findByText("remote unlink failed")).not.toBeNull();
+        expect(
+          await screen.findByText("Something went wrong. Try again.")
+        ).not.toBeNull();
+        expect(screen.queryByText("remote unlink failed")).toBeNull();
         expect(d.calls).not.toContain("discord:false");
       } else
         await waitFor(() =>

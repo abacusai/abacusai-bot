@@ -1088,7 +1088,6 @@
     "add": "Add",
     "addPlaceholder": "Something to remember…",
     "typeLabel": "Kind of note",
-    "saveRefused": "Not saved: {{reason}}",
     "busy": "Memory was being changed at the same moment. Try again.",
     "types": {
       "profile": "Profile",
@@ -1342,8 +1341,6 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
-      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
-      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "Sign in to Abacus.AI in your browser",
@@ -2988,6 +2985,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "The disk is full, so that couldn't be saved. Free some space and try again.",
+    "tryAgain": "Something went wrong. Try again.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4263,6 @@
     "cantCheck": "Can't check",
     "appMissing": "Not installed",
     "appNotReady": "Not ready",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Connect the services your agent can use to complete tasks.",
     "credentialsLocal": "Credentials are stored on this computer.",
     "defaultWorkspace": "Automatic",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "New chat",
       "fixKey": "Check the key",
-      "viewDetails": "View details",
       "tryAgain": "Try again"
     },
     "channel": {

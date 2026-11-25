@@ -163,7 +163,10 @@ describe("ConnectorRequestCard", () => {
         onDecline={() => {}}
       />
     );
-    expect(screen.getByRole("alert").textContent).toBe("Nope");
+    // The host's own words are for the log: the card says it in the app's.
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Connecting didn't finish. Please try again."
+    );
   });
 
   it("a chat app's Connect opens the desktop's pairing, never the connect page, and answers once paired", async () => {

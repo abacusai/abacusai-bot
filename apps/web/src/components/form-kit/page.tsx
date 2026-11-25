@@ -43,7 +43,7 @@ export const PageNote = ({
   className,
 }: {
   children: ReactNode;
-  /** Announced as an alert and painted destructive. */
+  /** Announced as an alert, in the page's own colour: never an alarm's red. */
   error?: boolean;
   /** Announced politely: loading and other passing states. */
   live?: boolean;
@@ -53,7 +53,7 @@ export const PageNote = ({
     role={error ? "alert" : live ? "status" : undefined}
     className={cn(
       "phone:text-[15px] text-[13px] leading-relaxed",
-      error ? "text-destructive" : "text-muted-foreground",
+      error ? "text-foreground" : "text-muted-foreground",
       className
     )}
   >

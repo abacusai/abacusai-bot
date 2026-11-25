@@ -10,7 +10,6 @@
  * `cancel` releases it here and on the host.
  */
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
-import type { TFunction } from "i18next";
 
 import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
@@ -19,30 +18,9 @@ import {
   openTab,
   type ConnectTarget,
 } from "#renderer/lib/connect-target";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import { connectTarget } from "#renderer/lib/platform-system";
 
 export const CONNECT_WAIT_MS = 180_000;
-
-/** Outcome errors the app translates rather than shows. */
-const CONNECT_ERRORS: Readonly<Record<string, string>> = {
-  "popup-blocked": "phase5.popupBlocked",
-  timeout: "phase5.connectTimedOut",
-  failed: "phase5.connectFailed",
-  unreachable: "phase5.connectUnreachable",
-  // A connector whose server ships in another app (Roblox Studio).
-  "app-missing": "phase5.connectAppMissing",
-  "app-not-ready": "phase5.connectAppNotReady",
-  "other-os": "phase5.connectOtherOs",
-  // A browser has no chat-app pairing; the desktop keeps its own wording.
-  ...(IS_ELECTRON ? {} : { "needs-pairing": "phase5.connectChatAppOnDesktop" }),
-};
-
-/** An attempt's error for the page: the app's words for its own codes. */
-export const connectErrorText = (t: TFunction, error: string): string => {
-  const key = CONNECT_ERRORS[error];
-  return key != null ? t(key) : error;
-};
 
 export interface ConnectAttemptOptions {
   /** Signs the host in, when a platform connect finds it signed out. */
@@ -101,10 +79,11 @@ export class ConnectAttempt {
           ok: false,
           error: "popup-blocked",
         })
-      : this.run().catch((error: unknown): ConnectorOutcome => ({
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        }));
+      : this.run().catch((error: unknown): ConnectorOutcome => {
+          // The page shows its own words (`errorText`); the detail is logged.
+          console.error(`[connect] ${connectorId}: connect failed`, error);
+          return { ok: false, error: "failed" };
+        });
     this.result = Promise.race([run, stopped]).finally(() => {
       this.abort.abort();
       // A tab the link never filled is left blank: close it.

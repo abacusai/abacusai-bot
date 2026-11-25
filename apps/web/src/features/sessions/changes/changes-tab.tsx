@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { DiffView } from "#renderer/components/diff-view";
 import type { Transport } from "#renderer/data/transport";
+import { errorText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import {
   AlertDialog,
@@ -172,7 +173,7 @@ export const ChangesTab = ({
       await discardChanges(transport, checkout, undo);
       setUndo(null);
     } catch (e) {
-      setError(String(e));
+      setError(errorText(e));
     }
   };
   if (!rows.length)

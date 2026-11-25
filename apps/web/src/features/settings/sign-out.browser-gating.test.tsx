@@ -1,6 +1,12 @@
 import { contract } from "@abacus-ai/contract/contract";
 import { implement } from "@orpc/server";
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
@@ -47,9 +53,11 @@ it("offers website sign-out without a host API key and shows a failed logout in 
     fireEvent.click(
       within(dialog).getByRole("button", { name: enUS.userMenu.signOut })
     );
-    expect(await screen.findByRole("alert")).toHaveProperty(
-      "textContent",
-      "Please retry sign-out"
+    // The server's own words are for the log: the dialog says it plainly.
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe(
+        "Something went wrong. Try again."
+      )
     );
     expect(app.transport.state).toBe("open");
     expect(app.appDb.stopped).toBe(false);

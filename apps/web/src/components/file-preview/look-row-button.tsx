@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { showError, showInfo } from "#renderer/lib/toast";
+import { showFailure, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   DropdownMenu,
@@ -47,13 +47,7 @@ const LookMenu = ({ path }: { path: string }) => {
     void transport.client.files
       .relook({ path, ...change })
       .then(() => showInfo(t("templates.lookDone", { look: name })))
-      .catch((error: unknown) =>
-        showError(
-          error instanceof Error && error.message
-            ? error.message
-            : t("templates.lookFailed")
-        )
-      )
+      .catch((error: unknown) => showFailure(error, "templates.lookFailed"))
       .finally(() => setBusy(false));
   };
   return (

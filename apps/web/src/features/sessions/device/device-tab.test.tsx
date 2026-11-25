@@ -139,8 +139,9 @@ it("a build is sent once while it runs and its failure is shown", async () => {
     fireEvent.click(build);
     expect(buildAndRun).toHaveBeenCalledOnce();
     fail(new Error("gradle failed"));
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "gradle failed"
+    // The build's own output is for the log.
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Something went wrong. Try again."
     );
     expect(build.hasAttribute("disabled")).toBe(false);
   } finally {

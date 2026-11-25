@@ -76,7 +76,7 @@ it("opens Agent in a safe web tab and confirms website sign-out without a host k
     );
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
-        "Please retry sign-out"
+        "Something went wrong. Try again."
       )
     );
     expect(app.transport.state).toBe("open");

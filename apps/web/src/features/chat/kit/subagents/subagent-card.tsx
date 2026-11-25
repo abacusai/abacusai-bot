@@ -144,7 +144,7 @@ const MountedSubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
     : ending === "unfinished"
       ? t("chat.subagent.unfinished")
       : subagent.status === "error"
-        ? (subagent.error?.message ?? t("chat.subagent.failed"))
+        ? t("chat.subagent.failed")
         : t("chat.subagent.done", {
             count: steps,
             duration: formatElapsed((times?.end ?? now) - started),
@@ -166,7 +166,7 @@ const MountedSubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
             running
               ? "bg-[var(--chat-status-running)]"
               : subagent.status === "error"
-                ? "bg-destructive"
+                ? "bg-attention"
                 : "bg-[var(--chat-status-done)]"
           )}
         />
@@ -177,7 +177,7 @@ const MountedSubagentCard = ({ subagent, Parts }: SubagentProps<unknown>) => {
               className={cn(
                 "truncate text-xs",
                 subagent.status === "error"
-                  ? "text-destructive"
+                  ? "text-attention"
                   : "text-muted-foreground"
               )}
             >

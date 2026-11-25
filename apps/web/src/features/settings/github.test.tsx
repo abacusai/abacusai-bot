@@ -51,7 +51,8 @@ it.each([
   [
     status({ state: "error", message: "gh: something broke" }),
     "Unavailable",
-    "gh: something broke",
+    // The CLI's own words are for the log.
+    "Something went wrong. Try again.",
   ],
 ] as const)("shows gh's state: %o", async (answer, pill, detail) => {
   app = await renderApp("/settings/environment", {

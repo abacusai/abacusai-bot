@@ -271,7 +271,7 @@ const ArtifactShare = ({ path, from }: { path: string; from: ShareEntry }) => {
       {failure != null && (
         <p
           role="alert"
-          className="text-destructive text-sm"
+          className="text-foreground text-sm"
           data-slot="share-error"
         >
           {t(`share.errors.${failure}`)}
@@ -388,7 +388,7 @@ const FileShare = ({ path, from }: { path: string; from: ShareEntry }) => {
       {failure != null && (
         <p
           role="alert"
-          className="text-destructive text-sm"
+          className="text-foreground text-sm"
           data-slot="share-error"
         >
           {t(`share.errors.${failure}`)}
@@ -461,7 +461,7 @@ const SharedLinks = () => {
         <DialogDescription>{t("share.notice")}</DialogDescription>
       </DialogHeader>
       {rows === null && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-foreground text-sm">
           {t("share.errors.FAILED")}
         </p>
       )}

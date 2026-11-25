@@ -54,6 +54,7 @@ import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
 import { QueueSlot } from "./queue-slot";
 import { RunningStrip } from "./running-strip";
+import { failureLine } from "./status/failure-line";
 import { NoticeRow } from "./status/status";
 
 /** The skin's message widget, for the transcript's rows. */
@@ -151,7 +152,10 @@ const Announcer = () => {
             : outcome.kind === "cancelled"
               ? t("chat.announce.stopped")
               : t("chat.announce.error", {
-                  message: outcome.error?.message ?? "",
+                  message: failureLine(
+                    t,
+                    (outcome.error as { cause?: string } | undefined)?.cause
+                  ),
                 }),
       });
     }

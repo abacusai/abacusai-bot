@@ -4,7 +4,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { useDb } from "#renderer/data/db";
-import { showError } from "#renderer/lib/toast";
+import { showFailure } from "#renderer/lib/toast";
 
 import { TourCard } from "./card";
 import { completeTour } from "./completion";
@@ -47,7 +47,7 @@ export const TourHost = () => {
     }).catch((error: unknown) => {
       ending.current = null;
       setClosed(null);
-      showError(error instanceof Error ? error.message : String(error));
+      showFailure(error);
     });
   };
   return target ? (

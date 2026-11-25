@@ -15,9 +15,10 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useMutation } from "#renderer/data/query-client";
+import { errorText } from "#renderer/lib/error-text";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { showError } from "#renderer/lib/toast";
-import { errorText, useAppContext } from "#renderer/lib/use-app-context";
+import { showFailure } from "#renderer/lib/toast";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
 const GH_INSTALL_URL = "https://cli.github.com";
@@ -38,9 +39,7 @@ export const GithubSettings = () => {
           id="githubIntegration"
           checked={enabled}
           onCheckedChange={(githubIntegration) =>
-            void update({ githubIntegration }).catch((e) =>
-              showError(errorText(e))
-            )
+            void update({ githubIntegration }).catch((e) => showFailure(e))
           }
         />
       </SettingRow>
@@ -129,7 +128,8 @@ const cliDetail = (
     case "unauthenticated":
       return t("settings.github.unauthenticatedDetail");
     case "error":
-      return status.message ?? undefined;
+      // The CLI's own words are for the log.
+      return errorText(status.message) ?? undefined;
     case "disabled":
       return undefined;
   }

@@ -19,6 +19,7 @@ import {
   weekdayName,
 } from "#renderer/lib/bots/schedule";
 import { creditsTier } from "#renderer/lib/credits";
+import { logFailure } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_BROWSER } from "#renderer/lib/platform";
 import { FORM_ROUTINE_TEMPLATES as ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
@@ -224,19 +225,15 @@ export const RoutineDialog = ({
           setRefusal(hosted);
           return;
         }
+        // Main's own words for the refusal are for the log.
+        logFailure(e);
         const refused = isRpcError(e) && e.code === "BAD_REQUEST" ? e : null;
         if (refused?.data?.field === "schedule") {
-          setScheduleError(
-            String(refused.data.detail ?? t("phase5.mainScheduleError"))
-          );
+          setScheduleError(t("phase5.mainScheduleError"));
           return;
         }
         setError(
-          refused
-            ? t("phase5.mainScheduleError") +
-                " " +
-                String(refused.data?.detail ?? "")
-            : t("phase5.saveRoutineFailed")
+          t(refused ? "phase5.mainScheduleError" : "phase5.saveRoutineFailed")
         );
       }
     },

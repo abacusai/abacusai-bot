@@ -16,5 +16,3 @@ export const foldSearch = (text: string): string =>
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLocaleLowerCase();
-export const errorText = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);

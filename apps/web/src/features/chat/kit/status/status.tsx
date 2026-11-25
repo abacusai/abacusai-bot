@@ -73,6 +73,7 @@ import {
 import { latestPresented } from "#renderer/lib/bot-turns/deliverables";
 import { cn } from "#renderer/lib/cn";
 import { CREDITS_EXHAUSTED_TTL_MS } from "#renderer/lib/credits";
+import { errorText, logFailure } from "#renderer/lib/error-text";
 import {
   freeCreditsHeld,
   freeCreditsUnlocked,
@@ -131,19 +132,8 @@ import {
   useCreditWallTask,
   useUpgradeResume,
 } from "../upgrade-triggers";
+import { failureLine } from "./failure-line";
 import { TurnCredits } from "./turn-credits";
-
-export const providerMessage = (raw = ""): string => {
-  const start = raw.indexOf("{");
-  if (start < 0) return raw.replace(/^\d{3}\s+/, "");
-  try {
-    const value = JSON.parse(raw.slice(start));
-    const message = value?.error?.message ?? value?.message ?? value?.error;
-    return typeof message === "string" ? message : "";
-  } catch {
-    return "";
-  }
-};
 
 interface ErrorAction {
   type: string;
@@ -165,19 +155,6 @@ interface ErrorAction {
   /** `switch-model` at the credit wall: the model is on the user's own key. */
   ownKey?: boolean;
 }
-
-/** Why the turn did not finish, as the agent named it (turn-outcome.ts). */
-const OUTCOME_CAUSES = new Set([
-  "context_too_long",
-  "key_invalid",
-  "own_key_quota",
-  "model_unavailable",
-  "content_refused",
-  "free_pool_spent",
-  "rate_limited",
-  "empty",
-  "unknown",
-]);
 
 /** `labelled`: the agent named what it does, so its title is already plain words. */
 type RunningCall = {
@@ -1337,7 +1314,6 @@ export const ErrorCard = ({
   const error = outcome.error ?? { message: "" };
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
-  const detail = (error as { detail?: string }).detail;
   const upgrade = wantsUpgradeCard(actions);
   // The turn stopped at the credit wall. Whether the wall still stands is the
   // account's answer, not the turn's: once a plan, a top-up or credits back
@@ -1871,23 +1847,16 @@ export const ErrorCard = ({
       ? t("outcome.connection.title")
       : cause === "disk_full"
         ? diskFullLine(actions, t)
-        : cause != null && OUTCOME_CAUSES.has(cause)
-          ? t(`outcome.cause.${cause}`, {
-              provider: providerDisplayName(
-                actions.find((action) => action.provider != null)?.provider ??
-                  ""
-              ),
-            })
-          : providerMessage(error.message) || t("errors.genericDescription");
+        : failureLine(
+            t,
+            cause,
+            actions.find((action) => action.provider != null)?.provider
+          );
   const { title, body } = connection
     ? { title: line, body: t("outcome.connection.body") }
     : splitLine(line, i18n.language);
-  const raw = [
-    detail,
-    providerMessage(error.message) !== error.message ? error.message : null,
-  ]
-    .filter((part): part is string => part != null && part !== "")
-    .join("\n\n");
+  // What failed, in the provider's or the system's words, is for the log.
+  logFailure(error);
   const Icon = connection
     ? WifiOff
     : (CAUSE_ICON[cause as keyof typeof CAUSE_ICON] ?? CircleAlert);
@@ -1900,7 +1869,7 @@ export const ErrorCard = ({
       data-cause={cause}
     >
       <ChatCard icon={<Icon />} title={title} description={body}>
-        {buttons.length > 0 || raw !== "" ? (
+        {buttons.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5">
             {buttons.map((button, index) =>
               cloneElement(button, {
@@ -1910,19 +1879,6 @@ export const ErrorCard = ({
             )}
           </div>
         ) : null}
-        {raw !== "" && (
-          <details
-            className="group/details text-xs"
-            data-slot={connection ? "connection-details" : "error-details"}
-          >
-            <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden">
-              {t(connection ? "outcome.action.viewDetails" : "phase5.details")}
-            </summary>
-            <pre className="bg-muted/60 text-muted-foreground mt-1.5 max-h-40 overflow-auto rounded-md p-2 font-mono text-[11px] break-all whitespace-pre-wrap">
-              {raw}
-            </pre>
-          </details>
-        )}
         {planOffered && (
           <div className="border-t pt-3">
             <PlanOffer
@@ -2171,7 +2127,10 @@ export const NoticeRow = ({
                 ? ownKeyMovedLine(moved, t)
                 : backgroundJob != null
                   ? backgroundJobLine(backgroundJob, t)
-                  : String(notice.value.message ?? "");
+                  : notice.name === "agent.error"
+                    ? // The agent's own error is for the log.
+                      (errorText(notice.value) ?? "")
+                    : String(notice.value.message ?? "");
   return (
     <Marker
       variant="border"

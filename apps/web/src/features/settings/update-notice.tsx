@@ -74,15 +74,6 @@ export const UpdateNotice = ({
                 <ManualInstallSteps manual={manual} />
               </div>
             )}
-            {manual == null &&
-              (update.installError || update.status?.error) && (
-                <p
-                  className="text-muted-foreground text-xs break-words"
-                  role="alert"
-                >
-                  {update.installError ?? update.status?.error}
-                </p>
-              )}
           </div>
           {placement === "page" && ready && (
             <Button

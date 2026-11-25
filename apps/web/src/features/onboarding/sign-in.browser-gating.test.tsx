@@ -64,11 +64,12 @@ it.each([
       );
     } else {
       expect(screen.queryByText("Sign in another way")).toBeNull();
-      expect(screen.getByRole("alert").textContent).toContain(
-        "contact support"
-      );
-      if (error.startsWith("host-complete"))
-        expect(screen.getByRole("alert").textContent).toContain("UNAUTHORIZED");
+      const alert = screen.getByRole("alert").textContent;
+      // The host's protocol code is for the log, never the page.
+      if (error.startsWith("host-")) {
+        expect(alert).toBe("Something went wrong. Try again.");
+        expect(alert).not.toContain("UNAUTHORIZED");
+      } else expect(alert).toContain("contact support");
     }
   } finally {
     app.view.unmount();

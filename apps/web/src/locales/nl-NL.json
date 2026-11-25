@@ -1088,7 +1088,6 @@
     "add": "Toevoegen",
     "addPlaceholder": "Iets om te onthouden…",
     "typeLabel": "Soort notitie",
-    "saveRefused": "Niet opgeslagen: {{reason}}",
     "busy": "Het geheugen werd op hetzelfde moment gewijzigd. Probeer het opnieuw.",
     "types": {
       "profile": "Profiel",
@@ -1342,8 +1341,6 @@
       "waiting": "Je account wordt gekoppeld…",
       "session": "Je inlogsessie is verlopen. Gebruik ‘Op een andere manier inloggen’ om op deze site in te loggen en kom daarna terug om je account te koppelen.",
       "authCode": "Deze site kon geen koppelcode voor je account aanmaken. Probeer het opnieuw. Blijft het mislukken, neem dan contact op met support.",
-      "hostStart": "De host kon de accountkoppeling niet starten ({{code}}). Probeer het opnieuw. Blijft het mislukken, neem dan contact op met support en vermeld deze code.",
-      "hostComplete": "De host kon de accountkoppeling niet voltooien ({{code}}). Probeer het opnieuw. Blijft het mislukken, neem dan contact op met support en vermeld deze code.",
       "network": "De netwerkverbinding is weggevallen tijdens het koppelen van je account. Controleer je verbinding en probeer het opnieuw."
     },
     "pages.connect.browserTitle": "Log in bij Abacus.AI in je browser",
@@ -2988,6 +2985,7 @@
     "genericTitle": "Er ging iets mis",
     "genericDescription": "Dit scherm kreeg een fout waarvan het niet kon herstellen.",
     "diskFull": "De schijf is vol, dus dit kon niet worden opgeslagen. Maak ruimte vrij en probeer het opnieuw.",
+    "tryAgain": "Er ging iets mis. Probeer het opnieuw.",
     "reload": "Opnieuw laden",
     "notFoundTitle": "Niet gevonden",
     "notFoundDescription": "Deze pagina bestaat niet.",
@@ -4265,7 +4263,6 @@
     "cantCheck": "Kan niet controleren",
     "appMissing": "Niet geïnstalleerd",
     "appNotReady": "Niet klaar",
-    "connectChatAppOnDesktop": "Deze chatapp koppel je via de desktopapp van AbacusAI Bot.",
     "connectorsDescription": "Koppel de diensten die je agent kan gebruiken om taken uit te voeren.",
     "credentialsLocal": "Inloggegevens worden op deze computer opgeslagen.",
     "defaultWorkspace": "Automatisch",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "Nieuwe chat",
       "fixKey": "Sleutel controleren",
-      "viewDetails": "Details bekijken",
       "tryAgain": "Opnieuw proberen"
     },
     "channel": {

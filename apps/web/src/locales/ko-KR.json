@@ -1088,7 +1088,6 @@
     "add": "추가",
     "addPlaceholder": "기억할 내용…",
     "typeLabel": "메모 종류",
-    "saveRefused": "저장되지 않음: {{reason}}",
     "busy": "메모리가 동시에 변경되고 있었습니다. 다시 시도하세요.",
     "types": {
       "profile": "프로필",
@@ -1342,8 +1341,6 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
-      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
-      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "브라우저에서 Abacus.AI에 로그인하세요",
@@ -2988,6 +2985,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "디스크가 가득 차서 저장하지 못했습니다. 공간을 확보한 뒤 다시 시도하세요.",
+    "tryAgain": "문제가 발생했습니다. 다시 시도하세요.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4263,6 @@
     "cantCheck": "확인할 수 없음",
     "appMissing": "설치되지 않음",
     "appNotReady": "준비되지 않음",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "에이전트가 작업을 완료하는 데 사용할 서비스를 연결하세요.",
     "credentialsLocal": "인증 정보는 이 컴퓨터에 저장됩니다.",
     "defaultWorkspace": "Automatic",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "새 채팅",
       "fixKey": "키 확인",
-      "viewDetails": "자세히 보기",
       "tryAgain": "다시 시도"
     },
     "channel": {

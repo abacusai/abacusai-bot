@@ -1088,7 +1088,6 @@
     "add": "Aggiungi",
     "addPlaceholder": "Qualcosa da ricordare…",
     "typeLabel": "Tipo di nota",
-    "saveRefused": "Non salvato: {{reason}}",
     "busy": "La memoria veniva modificata nello stesso momento. Riprova.",
     "types": {
       "profile": "Profilo",
@@ -1342,8 +1341,6 @@
       "waiting": "Connecting your account…",
       "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
       "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
-      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
-      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
       "network": "The account connection lost its network connection. Check your connection and try again."
     },
     "pages.connect.browserTitle": "Accedi ad Abacus.AI nel browser",
@@ -2988,6 +2985,7 @@
     "genericTitle": "Something went wrong",
     "genericDescription": "This screen hit an error it couldn't recover from.",
     "diskFull": "Il disco è pieno, quindi non è stato possibile salvare. Libera un po' di spazio e riprova.",
+    "tryAgain": "Qualcosa è andato storto. Riprova.",
     "reload": "Reload",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page doesn't exist.",
@@ -4265,7 +4263,6 @@
     "cantCheck": "Verifica non possibile",
     "appMissing": "Non installato",
     "appNotReady": "Non pronto",
-    "connectChatAppOnDesktop": "This chat app connects from the AbacusAI Bot desktop app.",
     "connectorsDescription": "Collega i servizi che il tuo agente può usare per completare le attività.",
     "credentialsLocal": "Le credenziali vengono salvate su questo computer.",
     "defaultWorkspace": "Automatic",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "Nuova chat",
       "fixKey": "Controlla la chiave",
-      "viewDetails": "Vedi dettagli",
       "tryAgain": "Riprova"
     },
     "channel": {

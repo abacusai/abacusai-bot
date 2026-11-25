@@ -1088,7 +1088,6 @@
     "add": "Ekle",
     "addPlaceholder": "Hatırlanacak bir şey…",
     "typeLabel": "Not türü",
-    "saveRefused": "Kaydedilmedi: {{reason}}",
     "busy": "Bellek aynı anda değiştiriliyordu. Yeniden dene.",
     "types": {
       "profile": "Profil",
@@ -1342,8 +1341,6 @@
       "waiting": "Hesabın bağlanıyor…",
       "session": "Giriş oturumunun süresi doldu. Bu sitede giriş yapmak için “Başka bir yolla giriş yap” seçeneğini kullan, ardından hesabını bağlamak için geri dön.",
       "authCode": "Bu site bir hesap bağlantı kodu oluşturamadı. Yeniden dene. Sorun sürerse destek ekibiyle iletişime geç.",
-      "hostStart": "Sunucu hesap bağlantısını başlatamadı ({{code}}). Yeniden dene. Sorun sürerse bu kodla destek ekibiyle iletişime geç.",
-      "hostComplete": "Sunucu hesap bağlantısını tamamlayamadı ({{code}}). Yeniden dene. Sorun sürerse bu kodla destek ekibiyle iletişime geç.",
       "network": "Hesap bağlantısı sırasında ağ bağlantısı koptu. Bağlantını kontrol et ve yeniden dene."
     },
     "pages.connect.browserTitle": "Tarayıcında Abacus.AI'a giriş yap",
@@ -2988,6 +2985,7 @@
     "genericTitle": "Bir şeyler ters gitti",
     "genericDescription": "Bu ekranda düzeltilemeyen bir hata oluştu.",
     "diskFull": "Disk dolu, bu yüzden kaydedilemedi. Biraz yer açın ve tekrar deneyin.",
+    "tryAgain": "Bir şeyler ters gitti. Yeniden dene.",
     "reload": "Yeniden yükle",
     "notFoundTitle": "Bulunamadı",
     "notFoundDescription": "Bu sayfa yok.",
@@ -4265,7 +4263,6 @@
     "cantCheck": "Kontrol edilemiyor",
     "appMissing": "Yüklü değil",
     "appNotReady": "Hazır değil",
-    "connectChatAppOnDesktop": "Bu sohbet uygulaması AbacusAI Bot masaüstü uygulamasından bağlanır.",
     "connectorsDescription": "Ajanının görevleri tamamlamak için kullanabileceği hizmetleri bağla.",
     "credentialsLocal": "Kimlik bilgileri bu bilgisayarda saklanır.",
     "defaultWorkspace": "Otomatik",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "Yeni sohbet",
       "fixKey": "Anahtarı kontrol et",
-      "viewDetails": "Ayrıntıları göster",
       "tryAgain": "Tekrar dene"
     },
     "channel": {

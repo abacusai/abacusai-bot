@@ -1,5 +1,6 @@
 import { BotId } from "@abacus-ai/contract/contract/ids";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -201,6 +202,8 @@ const BotRoute = () => {
 };
 const BotError = ({ error }: { error: unknown }) => {
   const { t } = useTranslation();
+  // The detail is for the log; the page says the chat did not open.
+  useEffect(() => console.error("[bots] chat did not open", error), [error]);
   const router = useRouter();
   const botId = (
     router.state.matches.at(-1)?.params as { botId?: string } | undefined
@@ -211,9 +214,6 @@ const BotError = ({ error }: { error: unknown }) => {
       role="alert"
     >
       <p>{t("bots.chat.openError")}</p>
-      <p className="text-muted-foreground text-xs">
-        {error instanceof Error ? error.message : String(error)}
-      </p>
       <Button
         onClick={() => {
           if (botId) forgetOpenChat(botId);

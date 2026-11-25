@@ -7,7 +7,8 @@ import { useState, useSyncExternalStore } from "react";
 
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { noticeSnapshot } from "#renderer/data/queries/notices";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { errorText } from "#renderer/lib/error-text";
+import { useAppContext } from "#renderer/lib/use-app-context";
 /** The pending connector asks of these run sessions, one card each. */
 export const RunRequests = ({
   sessionIds,
@@ -63,13 +64,14 @@ export const RunRequests = ({
           await respond(request, "connected");
         } else if (result.cancelled) await respond(request, "declined");
         else {
-          setError(result.error);
+          setError(errorText(result.error, "phase5.connectFailed"));
           await respond(request, "failed", result.error);
         }
       } catch (e) {
-        const error = errorText(e);
-        setError(error);
-        await respond(request, "failed", error).catch(() => undefined);
+        setError(errorText(e, "phase5.connectFailed"));
+        // The run's agent reads the detail; the page shows the app's words.
+        const detail = e instanceof Error ? e.message : String(e);
+        await respond(request, "failed", detail).catch(() => undefined);
       }
     })().finally(() => {
       setBusy(null);

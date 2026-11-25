@@ -23,6 +23,7 @@ import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useCollectionStatus } from "#renderer/data/db/status";
 import { usePendingConnectorAsks } from "#renderer/lib/connector-requests";
+import { errorText } from "#renderer/lib/error-text";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
@@ -189,7 +190,7 @@ export const SessionsSidebar = () => {
               transition: "nav-forward",
             });
           })
-          .catch((error) => setDropError(String(error)));
+          .catch((error) => setDropError(errorText(error)));
       }}
     >
       <NavList.Root label={t("sessions.sidebar.label")}>
@@ -415,7 +416,7 @@ const SessionSidebarRow = ({
               transition: "nav-forward",
             });
           })
-          .catch((e) => setError(String(e)));
+          .catch((e) => setError(errorText(e)));
       },
     },
     {
@@ -513,7 +514,7 @@ const SessionSidebarRow = ({
                 e.preventDefault();
                 void renameSession(db, session.id, label)
                   .then(() => setRename(false))
-                  .catch((e) => setError(String(e)));
+                  .catch((e) => setError(errorText(e)));
               }}
             >
               <Input
@@ -552,7 +553,7 @@ const SessionSidebarRow = ({
                         replace: true,
                         transition: "nav-lateral",
                       });
-                  }).catch((e) => setError(String(e)))
+                  }).catch((e) => setError(errorText(e)))
                 }
               >
                 {t("sessions.sidebar.delete")}
@@ -561,7 +562,7 @@ const SessionSidebarRow = ({
           </AlertDialogContent>
         </AlertDialog>
         {error ? (
-          <p role="alert" className="text-destructive text-xs">
+          <p role="alert" className="text-foreground text-xs">
             {error}
           </p>
         ) : null}
@@ -714,7 +715,7 @@ const WorkspaceGroup = ({
                   d.label = label.trim();
                 })
                 .isPersisted.promise.then(() => setRename(false))
-                .catch((e) => setError(String(e)));
+                .catch((e) => setError(errorText(e)));
             }}
           >
             <Input

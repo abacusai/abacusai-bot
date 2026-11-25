@@ -1102,7 +1102,6 @@
     "add": "Dodaj",
     "addPlaceholder": "Coś do zapamiętania…",
     "typeLabel": "Rodzaj notatki",
-    "saveRefused": "Nie zapisano: {{reason}}",
     "busy": "Pamięć była w tej samej chwili zmieniana. Spróbuj ponownie.",
     "types": {
       "profile": "Profil",
@@ -1356,8 +1355,6 @@
       "waiting": "Łączenie konta…",
       "session": "Twoja sesja logowania wygasła. Użyj opcji „Zaloguj się w inny sposób”, aby zalogować się na tej stronie, a potem wróć i połącz konto.",
       "authCode": "Ta strona nie mogła utworzyć kodu połączenia konta. Spróbuj ponownie. Jeśli problem się powtarza, skontaktuj się z pomocą techniczną.",
-      "hostStart": "Host nie mógł rozpocząć łączenia konta ({{code}}). Spróbuj ponownie. Jeśli problem się powtarza, skontaktuj się z pomocą techniczną i podaj ten kod.",
-      "hostComplete": "Host nie mógł dokończyć łączenia konta ({{code}}). Spróbuj ponownie. Jeśli problem się powtarza, skontaktuj się z pomocą techniczną i podaj ten kod.",
       "network": "Podczas łączenia konta utracono połączenie z siecią. Sprawdź połączenie i spróbuj ponownie."
     },
     "pages.connect.browserTitle": "Zaloguj się do Abacus.AI w przeglądarce",
@@ -3020,6 +3017,7 @@
     "genericTitle": "Coś poszło nie tak",
     "genericDescription": "Na tym ekranie wystąpił błąd, którego nie udało się naprawić.",
     "diskFull": "Dysk jest pełny, więc nie udało się zapisać. Zwolnij trochę miejsca i spróbuj ponownie.",
+    "tryAgain": "Coś poszło nie tak. Spróbuj ponownie.",
     "reload": "Wczytaj ponownie",
     "notFoundTitle": "Nie znaleziono",
     "notFoundDescription": "Ta strona nie istnieje.",
@@ -4405,7 +4403,6 @@
     "cantCheck": "Nie można sprawdzić",
     "appMissing": "Nie zainstalowano",
     "appNotReady": "Nie gotowe",
-    "connectChatAppOnDesktop": "Tę aplikację czatu łączysz z poziomu aplikacji desktopowej AbacusAI Bot.",
     "connectorsDescription": "Połącz usługi, z których twój agent może korzystać przy wykonywaniu zadań.",
     "credentialsLocal": "Dane logowania są przechowywane na tym komputerze.",
     "defaultWorkspace": "Automatycznie",
@@ -5334,7 +5331,6 @@
     "action": {
       "newChat": "Nowy czat",
       "fixKey": "Sprawdź klucz",
-      "viewDetails": "Pokaż szczegóły",
       "tryAgain": "Spróbuj ponownie"
     },
     "channel": {

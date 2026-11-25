@@ -20,11 +20,12 @@ import {
 import { followNotices } from "#renderer/data/queries/notices";
 import { useMutation } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
+import { isCancellation, logFailure } from "#renderer/lib/error-text";
 import { getLogDump } from "#renderer/lib/log-ring";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showInfo } from "#renderer/lib/toast";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -216,7 +217,10 @@ export const useUpdateStatus = () => {
       },
       onError: (e) => {
         setClicked(false);
-        setInstallError(errorText(e));
+        // The phase says the install failed; main's own words are for the log.
+        if (isCancellation(e)) return;
+        logFailure(e);
+        setInstallError("failed");
       },
     })
   );
@@ -283,11 +287,6 @@ export const AboutPage = () => {
             version: update.status?.updateInfo?.version,
             percent: Math.round(update.status?.progress?.percent ?? 0),
           })}
-          detail={
-            update.phase === "manualInstall"
-              ? undefined
-              : (update.installError ?? update.status?.error ?? undefined)
-          }
         >
           {["downloaded", "installFailed"].includes(update.phase) && (
             <Button size="sm" onClick={() => update.install()}>
@@ -394,8 +393,15 @@ export const CriticalUpdateDialog = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         {update.status?.error || update.installError ? (
+          // What failed, in the app's words; main's own stay in the log.
           <PageNote error>
-            {update.installError ?? update.status?.error}
+            {t(
+              update.installError || update.status?.failedPhase === "install"
+                ? "phase5.updates.installFailed"
+                : update.status?.failedPhase === "download"
+                  ? "phase5.updates.downloadFailed"
+                  : "phase5.updates.checkFailed"
+            )}
           </PageNote>
         ) : update.phase === "queued" ? (
           <p>{t("phase5.updates.queued")}</p>

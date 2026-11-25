@@ -78,7 +78,7 @@ export const CheckInFields = ({
         <p
           id="check-in-time-error"
           role="alert"
-          className="text-destructive text-xs"
+          className="text-foreground text-xs"
         >
           {t("bots.form.validation.required")}
         </p>

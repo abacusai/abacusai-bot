@@ -94,14 +94,14 @@ it("Settings > Models: a failed OpenRouter sign-in says why under its row", asyn
   const dialog = await screen.findByRole("dialog");
   fireEvent.click(within(dialog).getByRole("button", { name: "Connect" }));
   expect((await within(dialog).findByRole("alert")).textContent).toBe(
-    "Timed out"
+    "Connecting didn't finish. Please try again."
   );
   fireEvent.click(
     within(dialog).getAllByRole("button", { name: "Close" }).at(-1)!
   );
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   const alert = await screen.findByRole("alert");
-  expect(alert.textContent).toBe("Timed out");
+  expect(alert.textContent).toBe("Connecting didn't finish. Please try again.");
   expect(alert.parentElement?.contains(row("provider-openrouter"))).toBe(true);
   expect(
     within(row("provider-openrouter")).getByRole("button", { name: "Connect" })

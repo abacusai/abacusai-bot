@@ -109,7 +109,7 @@ export const statusLine = (item: StatusItem, t: TFunction): string => {
 const TONE: Record<StatusItem["state"], string> = {
   waiting: "bg-amber-500",
   "paused-by-app": "bg-amber-500",
-  "stopped-needs-user": "bg-destructive",
+  "stopped-needs-user": "bg-attention",
   missed: "bg-amber-500",
   stopped: "bg-muted-foreground",
 };

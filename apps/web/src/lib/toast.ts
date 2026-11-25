@@ -1,3 +1,4 @@
+import { errorText } from "#renderer/lib/error-text";
 import { toast } from "#renderer/ui/toast";
 export const showError = (
   title: string,
@@ -15,6 +16,11 @@ export const showError = (
         }
       : {}),
   });
+};
+/** Toasts a failure in the app's words (`errorText`); a cancelled one shows nothing. */
+export const showFailure = (error: unknown, fallback?: string): void => {
+  const text = errorText(error, fallback);
+  if (text != null) showError(text);
 };
 export const showInfo = (
   title: string,

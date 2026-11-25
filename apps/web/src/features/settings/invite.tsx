@@ -7,10 +7,11 @@ import * as v from "valibot";
 import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
 import { Spinner } from "#renderer/components/spinner";
+import { errorText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showInfo } from "#renderer/lib/toast";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
 import {

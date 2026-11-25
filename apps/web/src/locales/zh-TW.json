@@ -1088,7 +1088,6 @@
     "add": "新增",
     "addPlaceholder": "要記住的內容…",
     "typeLabel": "筆記類型",
-    "saveRefused": "未儲存：{{reason}}",
     "busy": "記憶正在同時被修改。請再試一次。",
     "types": {
       "profile": "個人資料",
@@ -1342,8 +1341,6 @@
       "waiting": "正在連線你的帳號…",
       "session": "你的登入工作階段已過期。請使用「用其他方式登入」在這個網站上登入，然後回來連線你的帳號。",
       "authCode": "這個網站無法建立帳號連線碼。請再試一次。如果一直失敗，請聯絡支援團隊。",
-      "hostStart": "主機無法開始帳號連線（{{code}}）。請再試一次。如果一直失敗，請提供這個代碼並聯絡支援團隊。",
-      "hostComplete": "主機無法完成帳號連線（{{code}}）。請再試一次。如果一直失敗，請提供這個代碼並聯絡支援團隊。",
       "network": "帳號連線過程中網路已中斷。請檢查你的網路後再試一次。"
     },
     "pages.connect.browserTitle": "在瀏覽器中登入 Abacus.AI",
@@ -2988,6 +2985,7 @@
     "genericTitle": "發生錯誤",
     "genericDescription": "這個畫面發生了無法復原的錯誤。",
     "diskFull": "磁碟已滿，無法儲存。請釋出一些空間後再試一次。",
+    "tryAgain": "發生問題。請再試一次。",
     "reload": "重新載入",
     "notFoundTitle": "找不到",
     "notFoundDescription": "這個頁面不存在。",
@@ -4265,7 +4263,6 @@
     "cantCheck": "無法檢查",
     "appMissing": "未安裝",
     "appNotReady": "尚未就緒",
-    "connectChatAppOnDesktop": "這個聊天應用程式需要在 AbacusAI Bot 桌面應用程式中連接。",
     "connectorsDescription": "連接你的 AI 代理可用來完成任務的服務。",
     "credentialsLocal": "憑證儲存在這台電腦上。",
     "defaultWorkspace": "自動",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "新聊天",
       "fixKey": "檢查金鑰",
-      "viewDetails": "檢視詳細資料",
       "tryAgain": "再試一次"
     },
     "channel": {

@@ -44,7 +44,7 @@ import { formatDayAgo, formatWhen } from "#renderer/lib/format-time";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
-import { showError } from "#renderer/lib/toast";
+import { showError, showFailure } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
@@ -301,13 +301,9 @@ const useMemoryWrites = () => {
   const { t } = useTranslation();
   const { transport, db } = useAppContext();
   const fail = (error: unknown) =>
-    showError(
-      isRpcError(error) && error.code === "BAD_REQUEST"
-        ? t("memory.saveRefused", { reason: error.message })
-        : isRpcError(error) && error.code === "CONFLICT"
-          ? t("memory.busy")
-          : t("phase5.saveFailed")
-    );
+    isRpcError(error) && error.code === "CONFLICT"
+      ? showError(t("memory.busy"))
+      : showFailure(error, "phase5.saveFailed");
   return {
     /** Resolves true once saved; a failure is shown. */
     save: (
@@ -983,7 +979,7 @@ export const QuietTimes = ({
         </form.Field>
       ))}
       {error && (
-        <p role="alert" className="text-destructive self-end text-xs">
+        <p role="alert" className="text-foreground self-end text-xs">
           {t("phase5.differentTimes")}
         </p>
       )}

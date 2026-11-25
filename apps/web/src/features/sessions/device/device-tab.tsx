@@ -9,6 +9,7 @@ import { DeviceStreamPlayer } from "#renderer/components/device/stream-player";
 import { EmptyState } from "#renderer/components/empty-state";
 import { useMutation, useMutationState } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
+import { errorText } from "#renderer/lib/error-text";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
@@ -63,7 +64,7 @@ const startDeviceCapture = (
       try {
         await paintScreenshot();
       } catch (e) {
-        if (!abort.signal.aborted) setError(String(e));
+        if (!abort.signal.aborted) setError(errorText(e));
       }
       await pause(1000);
     }
@@ -73,7 +74,7 @@ const startDeviceCapture = (
     fallbackStarted = true;
     streamAbort.abort();
     player?.dispose();
-    setError(String(reason));
+    setError(errorText(reason));
     if (streamId !== undefined)
       await transport.client.devices.stream.stop({ streamId }).catch(() => {});
     streamId = undefined;
@@ -158,7 +159,7 @@ const startDeviceCapture = (
         return;
       } catch (e) {
         media?.getTracks().forEach((track) => track.stop());
-        if (!abort.signal.aborted) setError(String(e));
+        if (!abort.signal.aborted) setError(errorText(e));
       }
     }
     await snapshots();
@@ -243,8 +244,8 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
   }, [device, active, retry, transport, t]);
   // Pointer and key events stay raw calls: one per event, nothing to guard.
   const action = (promise: Promise<unknown>) =>
-    void promise.catch((e) => setError(String(e)));
-  const reports = { onError: (e: unknown) => setError(String(e)) };
+    void promise.catch((e) => setError(errorText(e)));
+  const reports = { onError: (e: unknown) => setError(errorText(e)) };
   const boot = useMutation(
     transport.orpc.devices.boot.mutationOptions(reports)
   );

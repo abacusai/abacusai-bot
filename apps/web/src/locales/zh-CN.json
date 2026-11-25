@@ -1088,7 +1088,6 @@
     "add": "添加",
     "addPlaceholder": "要记住的内容…",
     "typeLabel": "笔记类型",
-    "saveRefused": "未保存：{{reason}}",
     "busy": "记忆正在被同时修改。请重试。",
     "types": {
       "profile": "个人资料",
@@ -1342,8 +1341,6 @@
       "waiting": "正在连接你的账号…",
       "session": "你的登录会话已过期。请使用“用其他方式登录”在此网站上登录，然后返回连接你的账号。",
       "authCode": "此网站无法创建账号连接码。请重试。如果一直失败，请联系支持团队。",
-      "hostStart": "主机无法开始账号连接（{{code}}）。请重试。如果一直失败，请带上此代码联系支持团队。",
-      "hostComplete": "主机无法完成账号连接（{{code}}）。请重试。如果一直失败，请带上此代码联系支持团队。",
       "network": "账号连接过程中网络已断开。请检查你的网络后重试。"
     },
     "pages.connect.browserTitle": "在浏览器中登录 Abacus.AI",
@@ -2988,6 +2985,7 @@
     "genericTitle": "出了点问题",
     "genericDescription": "此页面遇到了无法恢复的错误。",
     "diskFull": "磁盘已满，无法保存。请释放一些空间后重试。",
+    "tryAgain": "出了点问题。请重试。",
     "reload": "重新加载",
     "notFoundTitle": "未找到",
     "notFoundDescription": "此页面不存在。",
@@ -4265,7 +4263,6 @@
     "cantCheck": "无法检查",
     "appMissing": "未安装",
     "appNotReady": "未就绪",
-    "connectChatAppOnDesktop": "此聊天应用需要在 AbacusAI Bot 桌面应用中连接。",
     "connectorsDescription": "连接你的智能体可用来完成任务的服务。",
     "credentialsLocal": "凭据存储在这台电脑上。",
     "defaultWorkspace": "自动",
@@ -5184,7 +5181,6 @@
     "action": {
       "newChat": "新聊天",
       "fixKey": "检查密钥",
-      "viewDetails": "查看详情",
       "tryAgain": "重试"
     },
     "channel": {

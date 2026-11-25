@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { followNotice } from "#renderer/data/queries/notices";
+import { errorText } from "#renderer/lib/error-text";
 import { Button } from "#renderer/ui/button";
 
 import { useSessionsTransport } from "../data/queries";
@@ -42,7 +43,7 @@ export const BrowserAskHost = () => {
       });
       setAsks((s) => s.filter((r) => r.requestId !== ask.requestId));
     } catch (e) {
-      setError(String(e));
+      setError(errorText(e));
     }
   };
   return (

@@ -16,7 +16,6 @@ import type {
 import { isDefinedError, type ORPCError } from "@orpc/client";
 import {
   hashKey,
-  isCancelledError,
   MutationCache,
   QueryClient,
   type DataTag,
@@ -24,17 +23,13 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 
-import { isHostUnavailable } from "#renderer/data/transport/lifecycle";
-import { i18n } from "#renderer/lib/i18n";
+import { errorText, FailedAnswer } from "#renderer/lib/error-text";
 
 /**
- * What a failed mutation toasts (`meta.errorToast`), chosen at each site:
- * - a copy key: that copy, whatever the error;
- * - `true`: the error's own message;
- * - `{ reasonOr: key }`: main's reason from a `{ success: false, error }`
- *   answer (`succeeding`), else the copy.
+ * What a failed mutation toasts (`meta.errorToast`): `errorText` of the
+ * error, with the site's copy key as its fallback (`true`: the generic one).
  */
-export type ErrorToast = string | true | { reasonOr: string };
+export type ErrorToast = string | true;
 
 declare module "@tanstack/react-query" {
   interface Register {
@@ -76,12 +71,6 @@ export type RpcError = {
 export const isRpcError = (error: unknown): error is RpcError =>
   isDefinedError(error);
 
-/** Main could not save anything: the computer's disk is full. */
-export const isDiskFullError = (error: unknown): boolean =>
-  isRpcError(error) &&
-  error.code === "PRECONDITION_FAILED" &&
-  error.data?.reason === "disk-full";
-
 /** Only a transient UNAVAILABLE is worth retrying (spec 00 A.5). */
 const shouldRetry = (failureCount: number, error: unknown): boolean =>
   isRpcError(error) && error.code === "UNAVAILABLE" && failureCount < 3;
@@ -94,36 +83,6 @@ export interface QueryClientOptions {
    */
   showError?: (title: string) => void;
 }
-
-/** A procedure's `{ success: false }` answer, as a mutation's error. */
-class FailedAnswer extends Error {
-  constructor(readonly reason: string | undefined) {
-    super(reason ?? i18n.t("phase5.failed"));
-  }
-}
-
-/**
- * Cancelled by the app itself (an unmount, a superseded or refetched read,
- * an aborted call): not a failure, so never shown as one.
- */
-export const isCancellation = (error: unknown): boolean =>
-  isCancelledError(error) ||
-  (error as { name?: unknown } | null)?.name === "AbortError";
-
-/** The text `meta.errorToast` shows for `error`; null shows nothing. */
-const toastText = (error: unknown, toast: ErrorToast): string | null => {
-  if (isCancellation(error)) return null;
-  // Never reached the host: one "not sent", whichever write it was.
-  if (isHostUnavailable(error)) return i18n.t("chat.message.notSent");
-  // Every write fails the same way, so the cause outranks the site's copy.
-  if (isDiskFullError(error)) return i18n.t("errors.diskFull");
-  if (toast === true)
-    return error instanceof Error ? error.message : String(error);
-  if (typeof toast === "string") return i18n.t(toast);
-  return error instanceof FailedAnswer && error.reason
-    ? error.reason
-    : i18n.t(toast.reasonOr);
-};
 
 export const createQueryClient = ({
   showError,
@@ -143,7 +102,7 @@ export const createQueryClient = ({
       onError: (error, _variables, _result, mutation) => {
         const toast = mutation.meta?.errorToast;
         if (toast === undefined || !showError) return;
-        const text = toastText(error, toast);
+        const text = errorText(error, toast === true ? undefined : toast);
         if (text === null || shown.has(text)) return;
         shown.add(text);
         setTimeout(() => shown.delete(text), 0);

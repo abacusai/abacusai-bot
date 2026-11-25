@@ -145,7 +145,9 @@ describe("model setup in the composer", () => {
     await open();
     fireEvent.click(screen.getAllByRole("option")[1]!);
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("Timed out");
+    expect(alert.textContent).toBe(
+      "Connecting didn't finish. Please try again."
+    );
     expect(screen.getAllByRole("option")[1]!.contains(alert)).toBe(true);
   });
 
@@ -283,7 +285,10 @@ describe("model setup in the composer", () => {
     await open();
     fireEvent.click(screen.getByRole("option", { name: /Abacus.AI/ }));
     await screen.findByRole("alert");
-    expect(screen.getByText("Connection failed")).toBeTruthy();
+    expect(
+      screen.getByText("Connecting didn't finish. Please try again.")
+    ).toBeTruthy();
+    expect(screen.queryByText("Connection failed")).toBeNull();
     fireEvent.click(screen.getByRole("option", { name: /Abacus.AI/ }));
     await waitFor(() => expect(state.connect).toHaveBeenCalledTimes(2));
   });

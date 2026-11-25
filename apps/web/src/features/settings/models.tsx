@@ -31,11 +31,11 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useMutation } from "#renderer/data/query-client";
-import { connectErrorText } from "#renderer/lib/connect-page";
+import { errorText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { useRowConnects } from "#renderer/lib/use-row-connects";
@@ -135,7 +135,7 @@ export const ModelsPage = () => {
         </SettingRow>
         {error != null && (
           <ConnectNote error className="px-3 pb-2.5">
-            {connectErrorText(t, error)}
+            {errorText(error, "phase5.connectFailed")}
           </ConnectNote>
         )}
       </div>
@@ -347,7 +347,7 @@ export const ProviderDialog = ({
             )}
             {connectError != null && (
               <ConnectNote error>
-                {connectErrorText(t, connectError)}
+                {errorText(connectError, "phase5.connectFailed")}
               </ConnectNote>
             )}
           </div>

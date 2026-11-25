@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { errorText } from "#renderer/lib/error-text";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
@@ -131,7 +132,7 @@ export const SessionContextTray = ({
             {onWorkspace ? (
               <Button
                 variant="ghost"
-                onClick={() => void add().catch((e) => setError(String(e)))}
+                onClick={() => void add().catch((e) => setError(errorText(e)))}
               >
                 {t("sessions.tray.add")}
               </Button>
@@ -256,7 +257,7 @@ export const SessionContextTray = ({
                           )
                         );
                     })
-                    .catch((error) => setError(String(error)));
+                    .catch((error) => setError(errorText(error)));
                 }}
               >
                 {backend === "local"
@@ -278,7 +279,7 @@ export const SessionContextTray = ({
         </Popover>
       ) : null}
       {error ? (
-        <p role="alert" className="text-destructive w-full text-xs">
+        <p role="alert" className="text-foreground w-full text-xs">
           {error}
         </p>
       ) : null}
@@ -315,7 +316,7 @@ const BranchList = ({
       )({ branchName: name, context });
       await qc.invalidateQueries({ queryKey: transport.orpc.git.key() });
     } catch (e) {
-      setError(String(e));
+      setError(errorText(e));
     }
   };
   return (

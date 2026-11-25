@@ -31,7 +31,7 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
-import { connectErrorText } from "#renderer/lib/connect-page";
+import { errorText } from "#renderer/lib/error-text";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -245,7 +245,7 @@ export const ConnectorsPage = () => {
                     </SettingRow>
                     {error && (
                       <ConnectNote error className="px-3 pb-2.5">
-                        {connectErrorText(t, error)}
+                        {errorText(error, "phase5.connectFailed")}
                       </ConnectNote>
                     )}
                   </div>
@@ -400,7 +400,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
           )}
           {flow.state.connectorId === connector && flow.state.error && (
             <ConnectNote error>
-              {connectErrorText(t, flow.state.error)}
+              {errorText(flow.state.error, "phase5.connectFailed")}
             </ConnectNote>
           )}
           {app && appReason === "app-missing" && entry?.kind === "mcp" ? (
@@ -495,7 +495,7 @@ const FieldForm = ({ connector }: { connector: string }) => {
       try {
         await flow.submit(v.parse(schema, value));
       } catch (e) {
-        setError(e instanceof Error ? e.message : t("phase5.failed"));
+        setError(errorText(e, "phase5.connectFailed"));
       }
     },
   });
@@ -550,9 +550,7 @@ const FieldForm = ({ connector }: { connector: string }) => {
               </code>
             )}
           </FieldGroup>
-          {error && (
-            <ConnectNote error>{connectErrorText(t, error)}</ConnectNote>
-          )}
+          {error && <ConnectNote error>{error}</ConnectNote>}
           <form.AppForm>
             <form.SubmitButton
               label={t("phase5.connect")}

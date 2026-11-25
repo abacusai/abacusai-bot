@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { errorText } from "#renderer/lib/error-text";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -64,7 +65,7 @@ export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
             // one back and says why.
             setEditing(false);
             void renameSession(db, sessionId, label).catch((e) =>
-              setError(String(e))
+              setError(errorText(e))
             );
           }}
         >
