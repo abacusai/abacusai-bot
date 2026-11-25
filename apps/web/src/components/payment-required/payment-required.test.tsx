@@ -106,3 +106,61 @@ it("checkout opened from the no-plan screen waits for it, then goes on once the 
     expect(document.querySelector('[data-slot="payment-required"]')).toBeNull()
   );
 }, 30_000);
+
+it("a payment made outside the app moves the no-plan screen on without Try again", async () => {
+  let verdict: { reason: string } | null = { reason: "not_subscribed" };
+  app = await renderApp("/", {
+    procedures: {
+      account: { payment: os.account.payment.handler(() => verdict as never) },
+    },
+  });
+  await screen.findByRole("heading", {
+    name: "Choose a plan to keep using AbacusAI Bot",
+  });
+  // Nothing tapped here: the user paid in the browser and came back.
+  verdict = null;
+  window.dispatchEvent(new Event("focus"));
+  await waitFor(() =>
+    expect(document.querySelector('[data-slot="payment-required"]')).toBeNull()
+  );
+}, 30_000);
+
+it("a payment the platform holds turns the no-plan screen into Confirming", async () => {
+  let verdict: { reason: string } | null = { reason: "not_subscribed" };
+  app = await renderApp("/", {
+    procedures: {
+      account: { payment: os.account.payment.handler(() => verdict as never) },
+    },
+  });
+  await screen.findByRole("heading", {
+    name: "Choose a plan to keep using AbacusAI Bot",
+  });
+  verdict = { reason: "unconfirmed" };
+  window.dispatchEvent(new Event("focus"));
+  await screen.findByRole("heading", { name: "Confirming your payment…" });
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+}, 30_000);
+
+it("the no-plan screen re-checks on its own every few seconds, and stops after the checkout link's life", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const payment = vi.fn(() => ({ reason: "not_subscribed" }) as never);
+    app = await renderApp("/", {
+      procedures: {
+        account: { payment: os.account.payment.handler(payment) },
+      },
+    });
+    await screen.findByRole("heading", {
+      name: "Choose a plan to keep using AbacusAI Bot",
+    });
+    const before = payment.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(5_000 * 3);
+    expect(payment.mock.calls.length).toBeGreaterThanOrEqual(before + 3);
+    await vi.advanceTimersByTimeAsync(31 * 60_000);
+    const settled = payment.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(payment.mock.calls.length).toBe(settled);
+  } finally {
+    vi.useRealTimers();
+  }
+}, 60_000);

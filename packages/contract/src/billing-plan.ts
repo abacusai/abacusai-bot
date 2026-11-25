@@ -21,6 +21,7 @@ export const UPGRADE_SRCS = [
   "chat_notice",
   "free_lane",
   "payment_lapsed",
+  "payment_no_plan",
   "feature_limit",
   "model_locked",
   "credits_card",

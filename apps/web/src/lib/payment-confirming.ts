@@ -9,6 +9,7 @@
  * link's life), "confirmed" when the gate lets it through.
  */
 import { Store, useStore } from "@tanstack/react-store";
+import { useEffect, useEffectEvent } from "react";
 
 import type { AppClient } from "#renderer/data/transport/types";
 
@@ -90,3 +91,35 @@ export const resetPaymentConfirmWatch = (): void => {
 
 export const usePaymentConfirmPhase = (): PaymentConfirmPhase | null =>
   useStore(paymentConfirmStore, (state) => state.phase);
+
+/**
+ * A plan screen's re-check: `check` runs every few seconds and when the
+ * window comes back, from `since` for the checkout link's life, as the
+ * confirm watch does. A payment made anywhere (a checkout the user opened
+ * themselves, in the browser) moves them on without Try again. Null: none.
+ * `expired` runs once the window is over.
+ */
+export const usePaymentRecheck = (
+  since: number | null,
+  check: () => void,
+  expired?: () => void
+): void => {
+  const tick = useEffectEvent(check);
+  const over = useEffectEvent(() => expired?.());
+  useEffect(() => {
+    if (since == null) return;
+    const stop = () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+    const timer = setInterval(() => {
+      if (Date.now() - since > PAYMENT_CONFIRM_LIMIT_MS) {
+        stop();
+        over();
+      } else tick();
+    }, PAYMENT_CONFIRM_POLL_MS);
+    const onFocus = () => tick();
+    window.addEventListener("focus", onFocus);
+    return stop;
+  }, [since]);
+};

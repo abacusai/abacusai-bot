@@ -1325,7 +1325,65 @@ describe("the turn's outcome card", () => {
     expect(screen.queryByText("Confirming your payment…")).toBeNull();
     expect(screen.queryByText(/couldn't confirm|purchase again/i)).toBeNull();
     screen.getByRole("button", { name: "Upgrade" }).click();
-    expect(openUpgrade).toHaveBeenCalledWith("payment_lapsed");
+    expect(openUpgrade).toHaveBeenCalledWith("payment_no_plan");
+  });
+
+  const NO_PLAN = {
+    message: "Your Abacus.AI account doesn't have a plan yet.",
+    cause: "payment_required",
+    actions: [
+      { type: "payment-required", cause: "not_subscribed" },
+      { type: "switch-model" },
+    ],
+  };
+
+  it("a payment made anywhere while the no-plan card shows sends the waiting message again, once", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    const relay = failed(NO_PLAN);
+    current = await renderRelay(relay, "session", {}, {}, host("free"), {
+      account: {
+        payment: os.account.payment.handler(() => verdict as never),
+      },
+    });
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    // Nothing tapped: the user paid in the browser and came back.
+    verdict = null;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(relay.stats.send).toHaveLength(1);
+    expect(
+      screen.queryByText("Choose a plan to keep using AbacusAI Bot")
+    ).toBeNull();
+  });
+
+  it("a payment the platform holds turns the no-plan card into Confirming, never a second purchase", async () => {
+    let verdict: { reason: string } | null = { reason: "not_subscribed" };
+    const os = implement(contract);
+    current = await renderRelay(
+      failed(NO_PLAN),
+      "session",
+      {},
+      {},
+      host("free"),
+      {
+        account: {
+          payment: os.account.payment.handler(() => verdict as never),
+        },
+      }
+    );
+    await screen.findByText("Choose a plan to keep using AbacusAI Bot");
+    verdict = { reason: "unconfirmed" };
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await screen.findByText("Confirming your payment…");
+    expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
   });
 
   it("a dropped connection is the connection card, with its details and a retry", async () => {

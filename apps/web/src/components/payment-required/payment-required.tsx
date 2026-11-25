@@ -26,17 +26,13 @@ import {
   resetPaymentConfirmWatch,
   startPaymentConfirmWatch,
   usePaymentConfirmPhase,
+  usePaymentRecheck,
 } from "#renderer/lib/payment-confirming";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "#renderer/ui/dialog";
-
-/** How often the account is asked again while checkout is open. */
-const CHECKOUT_POLL_MS = 5_000;
-/** The checkout link lives 30 minutes; the watch stops after it. */
-const CHECKOUT_POLL_LIMIT_MS = 30 * 60 * 1000;
 
 /** The payment gate's verdict for this window, or null. */
 export const usePaymentRequired = (enabled = true) => {
@@ -247,6 +243,13 @@ const PaymentPlanPanel = ({
   const queryClient = useQueryClient();
   const copy = paymentCopy(payment);
   const lapsed = payment?.reason === "lapsed";
+  // No plan yet: a payment made anywhere may land while this shows, as on the
+  // confirming screen this replaced for it, so the account is re-checked from
+  // the start. A trial or plan that ended is re-checked once Upgrade opens checkout.
+  const noPlan =
+    payment?.reason !== "lapsed" && payment?.reason !== "trial_ended";
+  const [shownAt] = useState(() => (noPlan ? Date.now() : null));
+  const src = noPlan ? "payment_no_plan" : "payment_lapsed";
   const [billing, setBilling] = useState<BillingPlan | null>(null);
   const [checkoutAt, setCheckoutAt] = useState<number | null>(null);
   const [checking, setChecking] = useState(false);
@@ -284,22 +287,12 @@ const PaymentPlanPanel = ({
     );
     if (asked) setStill(true);
   };
-  const poll = useEffectEvent(() => void recheck(false));
-
   // Checkout runs in the browser: the app goes on the moment it lands.
-  useEffect(() => {
-    if (checkoutAt == null) return;
-    const timer = setInterval(() => {
-      if (Date.now() - checkoutAt > CHECKOUT_POLL_LIMIT_MS) setCheckoutAt(null);
-      else poll();
-    }, CHECKOUT_POLL_MS);
-    const onFocus = () => poll();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [checkoutAt]);
+  usePaymentRecheck(
+    checkoutAt ?? shownAt,
+    () => void recheck(false),
+    () => setCheckoutAt(null)
+  );
 
   const offer = lapsed ? null : wallOffer(billing);
   return (
@@ -356,11 +349,11 @@ const PaymentPlanPanel = ({
           data-action="upgrade"
           onClick={() => {
             // Called inside the click: the web build opens its tab here.
-            void openUpgrade(transport.client, "payment_lapsed");
+            void openUpgrade(transport.client, src);
             setCheckoutAt(Date.now());
           }}
         >
-          <UpgradeSeen src="payment_lapsed" />
+          <UpgradeSeen src={src} />
           {t(copy.cta)}
         </Button>
         <Button

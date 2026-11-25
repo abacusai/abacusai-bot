@@ -97,6 +97,7 @@ import {
   checkPaymentNow,
   startPaymentConfirmWatch,
   usePaymentConfirmPhase,
+  usePaymentRecheck,
 } from "#renderer/lib/payment-confirming";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { onPlanActive } from "#renderer/lib/upgrade";
@@ -843,24 +844,65 @@ const PAYMENT_PLAN_COPY = {
     body: "paymentRequired.lapsedBody",
     cta: "paymentRequired.renew",
     action: "renew",
+    src: "payment_lapsed",
   },
   no_plan: {
     title: "paymentRequired.noPlanTitle",
     body: "paymentRequired.noPlanBody",
     cta: "paymentRequired.upgrade",
     action: "upgrade",
+    src: "payment_no_plan",
   },
 } as const;
 
 /**
  * Abacus's billing gate refused the turn for the plan: the subscription ended
  * (renew), or the account never had one (choose one). Not the credits card:
- * buying more would not let this account through.
+ * buying more would not let this account through. With no plan, the account
+ * is re-checked while the card shows: once a payment lands the waiting
+ * message is sent again, once, and a payment the platform holds turns the
+ * card into Confirming, never a second purchase.
  */
-const PaymentPlanCard = ({ cause }: { cause: "lapsed" | "no_plan" }) => {
+const PaymentPlanCard = ({
+  cause,
+  onSendAgain,
+}: {
+  cause: "lapsed" | "no_plan";
+  /** Offered when Retry would be: the latest outcome, a thread that can reply. */
+  onSendAgain?: () => void;
+}) => {
   const { t } = useTranslation();
   const { runtime, composer } = useChatView();
+  const { transport } = useAppContext();
   const copy = PAYMENT_PLAN_COPY[cause];
+  const [shownAt] = useState(() => (cause === "no_plan" ? Date.now() : null));
+  const [verdict, setVerdict] = useState<"landed" | "held" | null>(null);
+  usePaymentRecheck(shownAt, () => {
+    void transport.client.account
+      .payment({ refresh: true })
+      .then((next) => {
+        if (next === null) setVerdict("landed");
+        else if (next.reason === "unconfirmed") setVerdict("held");
+      })
+      .catch(() => {});
+  });
+  // Sent once: the verdict stays "landed" after the resend starts.
+  const sent = useRef(false);
+  const sendAgain = useEffectEvent(() => {
+    if (sent.current) return;
+    sent.current = true;
+    onSendAgain?.();
+  });
+  useEffect(() => {
+    if (verdict === "landed") sendAgain();
+  }, [verdict]);
+  if (verdict === "landed") return null;
+  if (verdict === "held")
+    return (
+      <PaymentConfirmingCard
+        {...(onSendAgain != null ? { onSendAgain } : {})}
+      />
+    );
   return (
     <div
       role="group"
@@ -876,9 +918,9 @@ const PaymentPlanCard = ({ cause }: { cause: "lapsed" | "no_plan" }) => {
           <Button
             size="sm"
             data-action={copy.action}
-            onClick={() => void runtime.host.openUpgrade("payment_lapsed")}
+            onClick={() => void runtime.host.openUpgrade(copy.src)}
           >
-            <UpgradeSeen src="payment_lapsed" />
+            <UpgradeSeen src={copy.src} />
             {t(copy.cta)}
           </Button>
           {composer.model != null && composer.readOnly == null && (
@@ -1392,6 +1434,7 @@ export const ErrorCard = ({
     ) : (
       <PaymentPlanCard
         cause={payment.cause === "lapsed" ? "lapsed" : "no_plan"}
+        {...(latest && canReply ? { onSendAgain: retry } : {})}
       />
     );
   const cutOff = actions.find((action) => action.type === "cut-off");
