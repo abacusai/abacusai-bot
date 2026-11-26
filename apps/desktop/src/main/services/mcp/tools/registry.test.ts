@@ -489,12 +489,14 @@ describe("billing_plan for what only a plan does", () => {
     expect(text).toContain("link: https://example.test/upgrade");
   });
 
-  it("with the plan's card to come, the reply gives Basic in a line with its link, and never names the card", async () => {
+  it("with the plan's card to come, the reply still has Basic's whole list, in one line with its link, and never names the card", async () => {
     const text = await answerWith("free", { card: true });
     expect(text).toContain(
-      "then Basic: its first-month price and their upgrade link, in one or two lines, without its feature list or other plans."
+      "then Basic: its first-month price and their upgrade link, then every feature line it has above in one line, comma-separated (translated, never shortened or dropped), and no other plans."
     );
     expect(text).toContain("the free ways this app really has");
+    // The lines and link it gives come from the answer itself.
+    expect(text).toContain("link: https://example.test/upgrade");
     expect(text).not.toContain("card");
   });
 

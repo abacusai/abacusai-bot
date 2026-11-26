@@ -182,8 +182,9 @@ export const BILLING_ASK_PROPERTY = {
  * gone", on a free account (only its plan line asks with `ask: "cheaper"`):
  * the free ways this app really has first, then the plan, never other AI
  * products. Where the plan's card will show (`card`), the reply gives the plan
- * in a line with its link and the card adds the list; it never mentions the
- * card, so it holds when the card does not come.
+ * with its link and its whole list in one line, and the card shows the list as
+ * bullets; the reply never mentions the card, and has the whole plan when the
+ * card does not come.
  */
 export const cheaperAnswer = (
   billing: BillingPlan,
@@ -192,7 +193,7 @@ export const cheaperAnswer = (
   if (onPaidPlan(billing)) return null;
   const plan = billing.upgrades[0]?.planName ?? "the next plan";
   const offer = card
-    ? `${plan}: its first-month price and their upgrade link, in one or two lines, without its feature list or other plans`
+    ? `${plan}: its first-month price and their upgrade link, then every feature line it has above in one line, comma-separated (translated, never shortened or dropped), and no other plans`
     : `${plan}: its price, every feature line it has above as a short list, then their upgrade link`;
   return `Asked for ${CHEAPER_ASK}, or told their credits are low or gone: that is a question about plans, not a complaint, and this replaces the plan list above for it. Answer in their language, in this order: the free ways this app really has (${FREE_WAYS}); where their free credits stand (a one-time grant that never renews or resets); then ${offer}. Never hide or deny a free way. ${NO_OTHER_AI_PRODUCTS}`;
 };
