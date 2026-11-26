@@ -683,6 +683,7 @@ import {
   HANDOFFS_WORKING_MAX,
   handOffEndOf,
   handOffNote,
+  subfolderOf,
   type HandOffCheckout,
   type HandOffResult,
 } from "./services/session/hand-off";
@@ -5295,8 +5296,9 @@ export class ServiceHost {
         this.agentSessionManagerService.setHandOffCheckout(
           session.id,
           checkout,
-          // A project in a subfolder of its repository starts there.
-          location?.prefix.replace(/\/+$/, "") || null
+          // A project in a subfolder of its repository starts there. git
+          // writes the prefix with "/" on every platform; kept native.
+          subfolderOf(location?.prefix ?? "")
         );
       }
       this.updateAgentSessionLabel(session.workspaceId, session.id, task.title);

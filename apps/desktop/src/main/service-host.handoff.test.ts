@@ -59,7 +59,8 @@ const { GitService } = await import("./services/workspace/git-service");
 const { WorktreeMaterializer } =
   await import("./services/workspace/worktree-materialize");
 const { turnOpenerOf } = await import("./services/session/turn-ledger");
-const { handOffEndOf } = await import("./services/session/hand-off");
+const { handOffEndOf, subfolderOf } =
+  await import("./services/session/hand-off");
 
 const WORKSPACE = "ws-1";
 
@@ -550,6 +551,14 @@ describe("how far hand-offs reach", () => {
   });
 });
 
+describe("subfolderOf", () => {
+  it("turns git's prefix, written with / everywhere, into a native relative path", () => {
+    expect(subfolderOf("apps/site/")).toBe(path.join("apps", "site"));
+    expect(subfolderOf("apps/")).toBe("apps");
+    expect(subfolderOf("")).toBeNull();
+  });
+});
+
 describe("how the card reads a handed-off chat's ending", () => {
   it.each([
     ["reply", "done"],
@@ -830,7 +839,8 @@ describe("a hand-off's checkout is removed only when it is safe", () => {
       fs.writeFileSync(path.join(builtOnly.worktreePath!, dir, "f"), "x");
     }
     host.remove(builtOnly.id);
-    await settled(() => !fs.existsSync(builtOnly.worktreePath!));
+    // The branch goes last: waiting on it waits out the whole release.
+    await settled(() => !branches(folder).includes(builtOnly.worktreeBranch!));
     expect(fs.existsSync(builtOnly.worktreePath!)).toBe(false);
     expect(branches(folder)).not.toContain(builtOnly.worktreeBranch);
   });

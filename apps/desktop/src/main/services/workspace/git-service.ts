@@ -682,9 +682,11 @@ export class GitService {
       }
     }
     await this.removeManagedWorktree(workspacePath, managedRoot, checkout.path);
-    // A checkout already gone leaves git's record of it behind.
-    if (!present)
-      await git(workspacePath, "worktree", "prune").catch(() => undefined);
+    // Drop git's record of the checkout whichever way its folder went: a
+    // folder already gone, or `worktree remove` failing (a file held open on
+    // Windows) before the folder was deleted, leaves the record, and with it
+    // the branch counts as checked out and cannot be deleted.
+    await git(workspacePath, "worktree", "prune").catch(() => undefined);
     if (checkout.branch != null && tip != null && !dropBranch)
       return { kind: "kept-branch", branch: checkout.branch };
     if (dropBranch) {

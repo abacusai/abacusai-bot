@@ -2,6 +2,8 @@
  * `hand_off_session`'s rules, apart from ServiceHost: its caps, the note a
  * handed-off chat opens on, and how its last turn ended for the source's card.
  */
+import path from "node:path";
+
 import { appNoteTag } from "@abacus-ai/agent/user-text";
 import type { HandOffEnd } from "@abacus-ai/contract/contracts";
 
@@ -57,3 +59,12 @@ export const handOffEndOf = (end: TurnEnd): HandOffEnd =>
     : end === "stopped" || end === "app_closed"
       ? "stopped"
       : "failed";
+
+/**
+ * git's `--show-prefix` ("apps/site/", "/" on every platform) as a native
+ * relative path ("apps\site" on Windows); null at the repository's root.
+ */
+export const subfolderOf = (prefix: string): string | null => {
+  const parts = prefix.split("/").filter(Boolean);
+  return parts.length === 0 ? null : path.join(...parts);
+};
