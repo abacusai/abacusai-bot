@@ -66,6 +66,11 @@ const ALPHABETS = {
 /** A PEM armour line, built from parts so no key header sits in the source. */
 const pem = (edge: "BEGIN" | "END", kind: string): string =>
   ["-----", edge, " ", kind, kind ? " " : "", "PRIVATE KEY-----"].join("");
+/** A key half that mixes upper case, lower case and digits, as random keys do. */
+const mixed = (length: number): string =>
+  Array.from({ length }, (_, at) =>
+    fake([UPPER, LOWER, DIGITS][at % 3]!, 1)
+  ).join("");
 const fake = (alphabet: string, length: number): string =>
   Array.from(
     { length },
@@ -390,7 +395,7 @@ describe("checkDraft", () => {
       case: "a token in a URL's query",
       text: "The deploy hook is https://hooks.example.com/run?token=abc123def456&team=7 and posts to ops.",
       gone: ["abc123def456", "&team=7"],
-      kept: ["and posts to ops"],
+      kept: ["The deploy hook is https://hooks.example.com/run?token="],
     },
     {
       case: "a webhook secret in a URL's path",
@@ -488,6 +493,12 @@ describe("checkDraft", () => {
     expect(saved).toMatchObject({ withheld: 1 });
     // An update that carries a note's earlier placeholder withholds nothing new.
     expect(check((saved as Draft).body)).toMatchObject({ withheld: 0 });
+    const pin = check("Shop admin PIN: 4821, changed monthly by the owner.");
+    expect(pin).toMatchObject({ withheld: 1 });
+    expect(check((pin as Draft).body)).toMatchObject({
+      body: (pin as Draft).body,
+      withheld: 0,
+    });
   });
 
   // Every shape a review found leaking past the withholding, and more: each is
@@ -748,6 +759,116 @@ describe("checkDraft", () => {
       })(),
       [],
     ],
+    [
+      "a key after a hyphen (aws-)",
+      (() => {
+        const k = `AKIA${fake(upper36, 16)}`;
+        return `Billing role uses aws-${k} for the uploads bucket|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a Slack token after a hyphen",
+      (() => {
+        const k = `xoxb-${fake(DIGITS, 5)}-${fake(base62, 10)}`;
+        return `Slack bot uses slack-${k} for the ops channel|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a project key after a hyphen",
+      (() => {
+        const k = `sk-${fake(base62, 20)}`;
+        return `Stripe test key test-${k} for the shop checkout|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a Google key after a hyphen",
+      (() => {
+        const k = `AIza${fake(base64url, 35)}`;
+        return `Google key maps-${k} for the store page|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a JWT after a hyphen",
+      (() => {
+        const k = `eyJ${fake(base64url, 16)}.${fake(base64url, 16)}.${fake(base64url, 6)}`;
+        return `JWT for staging is tok-${k} for the api tests|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a password written after a placeholder",
+      `password is ${SECRET_WITHHELD} hunter2 for the router in the hall`,
+      ["hunter2"],
+    ],
+    [
+      "a PIN written after a placeholder",
+      `PIN: ${SECRET_WITHHELD} 4821 for the debit card in the wallet`,
+      ["4821"],
+    ],
+    [
+      "a token written after a placeholder",
+      (() => {
+        const k = mixed(20);
+        return `token = ${SECRET_WITHHELD} ${k} for the router in the hall|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a key written in the sentence after a placeholder",
+      (() => {
+        const k = mixed(20);
+        return `api key: ${SECRET_WITHHELD}. The real one is ${k} for the router|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "an AWS pair split by words",
+      (() => {
+        const k = mixed(20);
+        return `AWS access key AKIA${fake(upper36, 16)} for the billing role, its secret being ${k} for uploads|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a key pair split across a long sentence",
+      (() => {
+        const k = mixed(20);
+        return `Stripe pk_live_${fake(base62, 18)} is the publishable one and the restricted one we got later is ${k} for uploads|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a key split by a zero-width space",
+      (() => {
+        const a = fake(base62, 20);
+        const b = fake(base62, 20);
+        return `OpenAI key sk-${a}​${b} for the router|${a}|${b}`;
+      })(),
+      [],
+    ],
+    [
+      "an AWS key split by a zero-width joiner",
+      (() => {
+        const a = fake(upper36, 8);
+        const b = fake(upper36, 8);
+        return `AWS AKIA${a}‍${b}|${a}‍${b}|${b}`;
+      })(),
+      [],
+    ],
+    [
+      "a label split by a zero-width space",
+      "pass​word is hunter2 for the router",
+      ["hunter2"],
+    ],
+    [
+      "a label in full-width letters",
+      "ｐａｓｓｗｏｒｄ: hunter2 for the router",
+      ["hunter2"],
+    ],
     ...["catch/123", "reset", "invite", "s", "download"].map(
       (path): [string, string, string[]] => {
         const k = fake(base62, 40);
@@ -832,6 +953,82 @@ describe("checkDraft", () => {
         }
         expect(now, `${name} ${length}`).toBeLessThanOrEqual(earlier);
       }
+  });
+
+  it.each([
+    "The SSH private key lives in ~/.ssh/id_ed25519 on the build box, used for deploys.",
+    "The SSH private key is stored in ~/.ssh/id_ed25519 on the build box.",
+    "Our API key is in the .env file on the server, never in git.",
+    "Project lives in src/components/Dashboard/Widgets/RevenueChart2/index.tsx and renders the main chart.",
+    "Release build is artifacts/desktop/AbacusAIBot-Setup-1.4.2-x64/win/unpacked/app.asar per CI.",
+  ])("keeps where a secret or a file lives: %s", (text) => {
+    expect(earlierGateRefuses(text)).toBe(false);
+    expect(check(text)).toMatchObject({ body: text, withheld: 0 });
+  });
+
+  it("finds everything the earlier patterns find, in fuzzed text", () => {
+    const pieces = [
+      "password",
+      "PIN",
+      "pin code",
+      "otp",
+      "token",
+      "secret",
+      "api key",
+      "access-key",
+      "passphrase",
+      "pass phrase",
+      "security code",
+      "passcode",
+      "passwd",
+      " is ",
+      " was ",
+      "=",
+      ":",
+      "-",
+      " - ",
+      '"',
+      "'",
+      "`",
+      " ",
+      "\n",
+      "abc",
+      "hunter2",
+      "sk-",
+      "ghp_",
+      "xoxb-",
+      "AKIA",
+      "eyJ",
+      "bearer ",
+      "Ab3Cd5Ef7Gh9Jk2Lm4Np",
+      "1234567890abcdef1234567890abcdef",
+      "_",
+      "é",
+      "—",
+      ".",
+      ",",
+      "(",
+      ")",
+      "/",
+      "+",
+      "%3D",
+      "​",
+      "IS",
+      "Password",
+      fake(upper36, 16),
+      fake(base62, 24),
+    ];
+    for (let n = 0; n < 20_000; n += 1) {
+      const text = Array.from(
+        { length: 2 + Math.floor(random() * 8) },
+        () => pieces[Math.floor(random() * pieces.length)]
+      ).join("");
+      if (!earlierGateRefuses(text)) continue;
+      expect(looksSecret(text), JSON.stringify(text)).toBe(true);
+      expect(check(`Note about the router setup: ${text}`, true)).toMatch(
+        /password, key or code/
+      );
+    }
   });
 
   it("reads 100,000 characters of any shape in linear time", () => {

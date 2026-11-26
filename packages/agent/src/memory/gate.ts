@@ -32,11 +32,49 @@ const RELATED_OVERLAP = 0.2;
 export const SECRET_WITHHELD = "[secret withheld]";
 /** Past this a text is treated as secret without reading it: notes are far shorter. */
 const MAX_SCAN_CHARS = 100_000;
+/**
+ * An unbroken run of word characters or of spaces longer than this is treated
+ * as secret: no note has one, and it is where a pattern could slow to a crawl.
+ */
+const MAX_RUN_CHARS = 1_000;
+const LONG_RUN = new RegExp(
+  `[A-Za-z0-9_-]{${MAX_RUN_CHARS + 1}}|\\s{${MAX_RUN_CHARS + 1}}`
+);
 /** The longest value read after a label such as "password:". */
 const MAX_VALUE_CHARS = 300;
 
-/** Not inside a longer run: keeps each format from rescanning a run it already failed on. */
-const RUN_START = "(?<![A-Za-z0-9_-])";
+/** Characters that show nothing, so a key split by one still reads as one. */
+const INVISIBLE = /[​-‍⁠﻿]/g;
+/** Text as the checks read it: full-width and other compatibility forms folded, invisible characters dropped. */
+const fold = (text: string): string =>
+  text.normalize("NFKC").replace(INVISIBLE, "");
+
+/**
+ * The patterns the gate has always refused on, exactly as they were.
+ * `looksSecret` runs them unchanged, so the patterns below only add to them.
+ */
+const EARLIER_PATTERNS: readonly RegExp[] = [
+  /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/,
+  /\bgh[pousr]_[A-Za-z0-9]{20,}/,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\bAIza[0-9A-Za-z_-]{30,}/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/,
+  /\bbearer\s+[A-Za-z0-9._~+/-]{16,}/i,
+  // "my password is …", "PIN: 4821", "api key = …"
+  /\b(?:password|passwd|passcode|passphrase|pass phrase|pin|pin code|api[ _-]?key|access[ _-]?key|secret|token|otp|security code)\b\s*(?:is|was|=|:|-)\s*["'`]?[^\s"'`]{3,}/i,
+  // A long run of mixed letters and digits: keys, tokens, signed URLs.
+  /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z_-]*\d)(?=[0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/,
+];
+/** The earlier formats (all but the labelled value and the long run), to withhold what they find. */
+const EARLIER_FORMATS: readonly RegExp[] = EARLIER_PATTERNS.slice(0, 9).map(
+  (pattern) => new RegExp(pattern.source, `${pattern.flags}g`)
+);
+
+/** Where a word starts, as `\b` before a word character. */
+const RUN_START = "(?<![A-Za-z0-9_])";
 
 /** Formats issued by known providers, and key material: withheld whole. */
 const SECRET_FORMATS: RegExp[] = [
@@ -63,10 +101,21 @@ const SECRET_FORMATS: RegExp[] = [
   `-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----[\\s\\S]*?(?:-----END [A-Z ]*PRIVATE KEY(?: BLOCK)?-----|$)`,
   `${RUN_START}eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{5,}`,
   `\\bbearer\\s+[A-Za-z0-9._~+/-]{16,}`,
-  // 40+ characters of base64 with "+" or "/": an AWS secret key, a base64 key.
-  // Not from inside a URL or a path, whose segments the run rule below reads.
-  `(?<![A-Za-z0-9+/=.:])(?=[A-Za-z0-9+/]*[+/])(?=[A-Za-z0-9+/]*\\d)(?=[A-Za-z0-9+/]*[A-Z])(?=[A-Za-z0-9+/]*[a-z])[A-Za-z0-9+/]{40,}={0,2}`,
 ].map((source) => new RegExp(source, source.includes("bearer") ? "gi" : "g"));
+
+/**
+ * 40+ characters of base64 with "+" or "/": an AWS secret key, a base64 key.
+ * Not from inside a URL, whose segments the run rule reads.
+ */
+const BASE64_RUN =
+  /(?<![A-Za-z0-9+/=.:])(?=[A-Za-z0-9+/]*[+/])(?=[A-Za-z0-9+/]*\d)(?=[A-Za-z0-9+/]*[A-Z])(?=[A-Za-z0-9+/]*[a-z])[A-Za-z0-9+/]{40,}={0,2}/g;
+/** A run that names a file: it goes on to an extension (".../index.tsx") or starts at a root ("/", "~/", "./"). */
+const isPath = (run: string, at: number, text: string): boolean =>
+  /^\.[A-Za-z0-9]{1,8}(?![A-Za-z0-9])/.test(
+    text.slice(at + run.length, at + run.length + 10)
+  ) ||
+  run.startsWith("/") ||
+  /[~.]$/.test(text.slice(Math.max(0, at - 1), at));
 
 /** Words a secret is named by. A value after one, as in "PIN: 4821", is the secret. */
 const SECRET_LABEL =
@@ -77,32 +126,28 @@ const LABELLED_SECRET = new RegExp(
 );
 
 /**
- * Where a labelled value ends. A quoted value ends at its quote; one after
- * "=" at the next space, as in a URL or an env line; any other runs to the end
- * of its clause, so a passphrase with spaces is withheld whole.
+ * Where a labelled value ends. A quoted value ends at its quote; any other runs
+ * to the end of its clause, so a passphrase with spaces is withheld whole.
  */
-const valueEnd = (
-  text: string,
-  from: number,
-  gap: string
-): [number, number] => {
+const valueEnd = (text: string, from: number): [number, number] => {
   const limit = Math.min(text.length, from + MAX_VALUE_CHARS);
   const quote = text[from];
   if (quote === '"' || quote === "'" || quote === "`")
     for (let at = from + 1; at < limit && text[at] !== "\n"; at += 1)
       if (text[at] === quote) return [from + 1, at];
-  const viaEquals = gap.includes("=");
   for (let at = from; at < limit; at += 1) {
     const char = text[at]!;
     if (char === "\n") return [from, at];
     const spaceNext = at + 1 >= text.length || /\s/.test(text[at + 1]!);
-    if (viaEquals) {
-      if (/\s/.test(char)) return [from, at];
-    } else if ((char === "," || char === ";") && spaceNext) return [from, at];
-    else if (/[.!?]/.test(char) && spaceNext) return [from, at + 1];
+    if ((char === "," || char === ";") && spaceNext) return [from, at];
+    if (/[.!?]/.test(char) && spaceNext) return [from, at + 1];
   }
   return [from, limit];
 };
+
+/** Where a note says where a secret is kept rather than what it is: "is stored in ~/.ssh", "is kept in 1Password". */
+const KEPT_AT =
+  /^(?:(?:stored|kept|saved|held|located|lives?)\s+(?:in|at|on|under|inside)|in|inside|at|under)\s/i;
 
 /** Each value said after its label, withheld to the end of its clause. */
 const withholdLabelled = (text: string): { text: string; withheld: number } => {
@@ -116,11 +161,14 @@ const withholdLabelled = (text: string): { text: string; withheld: number } => {
     match = LABELLED_SECRET.exec(text)
   ) {
     const from = match.index + match[0].length;
-    if (text.startsWith(SECRET_WITHHELD, from)) continue;
-    const [start, end] = valueEnd(text, from, match[1]!);
+    if (KEPT_AT.test(text.slice(from, from + 30))) continue;
+    // A placeholder already there is withheld again with whatever follows it.
+    const [start, end] = valueEnd(text, from);
     out += text.slice(at, start) + SECRET_WITHHELD;
     at = end;
-    withheld += 1;
+    // A placeholder alone is one withheld before, not a new one.
+    if (text.slice(start, end).replace(/[.!?]+$/, "") !== SECRET_WITHHELD)
+      withheld += 1;
     LABELLED_SECRET.lastIndex = Math.max(end, LABELLED_SECRET.lastIndex);
   }
   return { text: out + text.slice(at), withheld };
@@ -133,13 +181,20 @@ const RUN = /[A-Za-z0-9_-]{32,}/g;
 export const withholdSecrets = (
   text: string
 ): { text: string; withheld: number } => {
+  if (text.length > MAX_SCAN_CHARS || LONG_RUN.test(text))
+    return { text: SECRET_WITHHELD, withheld: 1 };
   let withheld = 0;
-  let out = text;
-  for (const format of SECRET_FORMATS)
+  let out = fold(text);
+  for (const format of [...SECRET_FORMATS, ...EARLIER_FORMATS])
     out = out.replace(format, () => {
       withheld += 1;
       return SECRET_WITHHELD;
     });
+  out = out.replace(BASE64_RUN, (run, at: number, all: string) => {
+    if (isPath(run, at, all)) return run;
+    withheld += 1;
+    return SECRET_WITHHELD;
+  });
   const labelled = withholdLabelled(out);
   withheld += labelled.withheld;
   out = labelled.text.replace(RUN, (run) => {
@@ -150,47 +205,49 @@ export const withholdSecrets = (
   return { text: out, withheld };
 };
 
-/** Share of characters where the kind changes (lower, upper, digit, other): about 0.6 in a random key, low in words and paths. */
-const switchRate = (token: string): number => {
-  const kind = (char: string): number =>
-    /[a-z]/.test(char) ? 0 : /[A-Z]/.test(char) ? 1 : /\d/.test(char) ? 2 : 3;
-  let switches = 0;
-  for (let at = 1; at < token.length; at += 1)
-    if (kind(token[at]!) !== kind(token[at - 1]!)) switches += 1;
-  return switches / token.length;
+/**
+ * A token shaped like a random key: 12+ letters and digits, several of each,
+ * with little of it in lower-case runs of four or more, which words make.
+ */
+const MIN_RANDOM_LENGTH = 12;
+const MAX_WORDY_SHARE = 0.4;
+const randomLooking = (token: string): boolean => {
+  if (!/^[A-Za-z0-9+/=_-]+$/.test(token) || token.length < MIN_RANDOM_LENGTH)
+    return false;
+  if ((token.match(/\d/g)?.length ?? 0) < 2) return false;
+  if ((token.match(/[A-Za-z]/g)?.length ?? 0) < 4) return false;
+  const wordy = (token.match(/[a-z]{4,}/g) ?? []).join("").length;
+  return wordy / token.length <= MAX_WORDY_SHARE;
 };
-const MIN_KEY_SWITCH_RATE = 0.4;
-/** A token beside a withheld secret that is shaped like its other half (an AWS key's secret). */
-const CREDENTIAL_TOKEN = (token: string): boolean =>
-  /^[A-Za-z0-9+/=_-]{12,}$/.test(token) &&
-  /\d/.test(token) &&
-  /[A-Z]/.test(token) &&
-  /[a-z]/.test(token) &&
-  switchRate(token) >= MIN_KEY_SWITCH_RATE;
-const credentialBeside = (text: string): boolean => {
-  if (!text.includes(SECRET_WITHHELD)) return false;
-  const tokens = text
-    .replaceAll(SECRET_WITHHELD, " \u0000 ")
+/** A withheld value with a random-looking token in `text`, as a key pair's other half. */
+const randomBeside = (text: string): boolean =>
+  text.includes(SECRET_WITHHELD) &&
+  text
+    .replaceAll(SECRET_WITHHELD, " ")
     .split(/\s+/)
-    .map((token) => token.replace(/^[("'`[]+|[)"'`\],.;:!?]+$/g, ""));
-  return tokens.some(
-    (token, at) =>
-      token === "\u0000" &&
-      [at - 2, at - 1, at + 1, at + 2].some(
-        (near) => tokens[near] != null && CREDENTIAL_TOKEN(tokens[near]!)
-      )
-  );
-};
+    .map((token) => token.replace(/^[("'`[<]+|[)"'`\],.;:!?>]+$/g, ""))
+    .some(randomLooking);
+/** A sentence holding a withheld value and a random-looking token. */
+const credentialBeside = (text: string): boolean =>
+  text.includes(SECRET_WITHHELD) &&
+  text.split(/(?<=[.!?])\s+|\n+/).some(randomBeside);
 
 /**
- * Whether `text` holds a secret. A withheld placeholder is read as an empty
- * quoted value, so "PIN: [secret withheld]" is not taken for a new one.
+ * Whether `text` holds a secret: anything the earlier patterns find, read as
+ * written and folded, and anything the patterns above add. A withheld
+ * placeholder is read as nothing, so the value written after one is read as
+ * the value.
  */
 export const looksSecret = (text: string): boolean => {
-  if (text.length > MAX_SCAN_CHARS) return true;
+  if (text.length > MAX_SCAN_CHARS || LONG_RUN.test(text)) return true;
+  const plain = text.replaceAll(SECRET_WITHHELD, "");
+  const folded = fold(plain);
   return (
-    withholdSecrets(text.replaceAll(SECRET_WITHHELD, '"')).withheld > 0 ||
-    credentialBeside(text)
+    EARLIER_PATTERNS.some(
+      (pattern) => pattern.test(plain) || pattern.test(folded)
+    ) ||
+    withholdSecrets(folded).withheld > 0 ||
+    credentialBeside(fold(text))
   );
 };
 
@@ -311,6 +368,13 @@ export const withholdOrRefuse = (
     return result.text;
   });
   if (kept.some(looksSecret)) return null;
+  // A placeholder the model wrote itself may front a value it moved elsewhere
+  // in the note ("api key: [secret withheld]. The real one is …").
+  if (
+    texts.some((text) => text.includes(SECRET_WITHHELD)) &&
+    kept.some((text) => randomBeside(fold(text)))
+  )
+    return null;
   if (withheld > 0 && onlySecret(kept[0]!)) return null;
   return { texts: kept, withheld };
 };
@@ -376,8 +440,23 @@ export const checkDraft = (input: GateInput): Checked | string => {
     return `That is ${body.length} characters; a ${draft.type === "card" ? "project card" : "note"} holds ${sizeLimit(draft.type)}. Keep one fact per note, or split it.`;
 
   // The user's own edit is told; a model's note keeps everything but the secret.
+  // The text is also read as the earlier gate read it, description filled in,
+  // so nothing it refused is let through.
+  const earlierBody = redactIdNumbers(body);
+  const earlier = [
+    (description || firstSentence(earlierBody)).slice(0, MAX_DESCRIPTION_CHARS),
+    earlierBody,
+    keywords.slice(0, MAX_KEYWORDS_CHARS),
+  ].join("\n");
   let withheld = 0;
-  if (looksSecret(`${description}\n${body}\n${keywords}`)) {
+  // A placeholder in a model's text is checked like a secret: it may front a value.
+  const placeholder =
+    !byUser && `${description}\n${body}\n${keywords}`.includes(SECRET_WITHHELD);
+  if (
+    placeholder ||
+    looksSecret(`${description}\n${body}\n${keywords}`) ||
+    looksSecret(earlier)
+  ) {
     if (byUser)
       return "That looks like a password, key or code. Memory never keeps those; the vault is the place for them.";
     const kept = withholdOrRefuse([body, description, keywords]);
