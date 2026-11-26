@@ -239,7 +239,7 @@ describe("deleting a chat that owns a hand-off checkout", () => {
             worktreePath: "/w/notes",
             worktreeBranch: null,
             ownsWorktree: true,
-            ownedWorktreeBranch: "abacus/write-the-release-notes-1a2b",
+            ownedWorktreeBranches: ["abacus/write-the-release-notes-1a2b"],
           },
         ],
         workspaces: fixtureWorkspaces(),

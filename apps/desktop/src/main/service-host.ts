@@ -5772,17 +5772,19 @@ export class ServiceHost {
 
   removeAgentSession(workspaceId: string, sessionId: string): boolean {
     const record = this.agentSessionManagerService.get(sessionId);
-    // Passed to another chat still on it, or returned for removal.
-    const checkout =
-      this.agentSessionManagerService.leaveHandOffCheckout(sessionId);
+    // Each passed to another chat still on it, or returned for removal.
+    const checkouts =
+      record?.workspaceId === workspaceId
+        ? this.agentSessionManagerService.leaveHandOffCheckouts(sessionId)
+        : [];
     const removed = this.agentSessionManagerService.remove(
       workspaceId,
       sessionId
     );
     if (removed) {
       this.handOffTurns.delete(sessionId);
-      if (checkout != null && record?.workspaceId === workspaceId)
-        void this.releaseHandOffCheckout(workspaceId, checkout, record.label);
+      for (const checkout of checkouts)
+        void this.releaseHandOffCheckout(workspaceId, checkout, record!.label);
       this.sessionArtifactsService.removeForSession(sessionId);
       this.sessionTurnStateService.clearSession(sessionId);
       environmentNoticeService.forgetSession(sessionId);

@@ -392,13 +392,14 @@ export interface AgentSessionListItem {
    */
   continuationKind?: "handoff";
   /**
-   * This chat owns a checkout a hand-off made, whichever worktree it is on
-   * now: deleting the chat removes it, unless another chat still works in it
-   * or it holds work worth keeping. Switching worktrees never does.
+   * This chat owns a checkout a hand-off made (or several, inherited),
+   * whichever worktree it is on now: deleting the chat removes each, unless
+   * another chat still works in it or it holds work worth keeping.
+   * Switching worktrees never does.
    */
   ownsWorktree?: boolean;
-  /** That checkout's branch. */
-  ownedWorktreeBranch?: string | null;
+  /** Those checkouts' branches (a path for one with none): its own, and any it inherited. */
+  ownedWorktreeBranches?: string[];
   /**
    * The project's folder inside `worktreePath`, when the project is a
    * subfolder of its repository: the session works there. Absent: the root.
