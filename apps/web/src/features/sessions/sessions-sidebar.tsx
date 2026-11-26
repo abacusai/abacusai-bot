@@ -375,7 +375,7 @@ const SessionSidebarRow = ({
   query: string;
   workspaceLabel: string;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const db = useDb();
   const prefs = usePrefs();
   const navigate = useAppNavigate();
@@ -606,7 +606,10 @@ const SessionSidebarRow = ({
                 {session.ownsWorktree === true ? (
                   <p data-slot="delete-checkout">
                     {t("sessions.sidebar.deleteCheckout", {
-                      branch: (session.ownedWorktreeBranches ?? []).join(", "),
+                      count: session.ownedWorktreeBranches?.length ?? 1,
+                      branches: new Intl.ListFormat(i18n.language, {
+                        type: "conjunction",
+                      }).format(session.ownedWorktreeBranches ?? []),
                     })}
                   </p>
                 ) : null}

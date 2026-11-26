@@ -1889,7 +1889,8 @@
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
       "emptyDescription": "Start one with {{key}}, or drop a folder here.",
-      "deleteCheckout": "Sa copie {{branch}} est supprimée avec lui, sauf si un autre chat y travaille encore ou si elle contient du travail à garder (commits, modifications non commitées ou fichiers ignorés comme .env). Elle est alors conservée et vous êtes prévenu."
+      "deleteCheckout_one": "Sa copie {{branches}} est supprimée avec lui, sauf si un autre chat y travaille encore ou si elle contient du travail à garder (commits, modifications non commitées ou fichiers ignorés comme .env). Elle est alors conservée et vous êtes prévenu.",
+      "deleteCheckout_other": "Ses copies {{branches}} sont supprimées avec lui, sauf si un autre chat travaille encore dans l’une d’elles ou si l’une contient du travail à garder (commits, modifications non commitées ou fichiers ignorés comme .env). Celle-ci est alors conservée et vous êtes prévenu."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",

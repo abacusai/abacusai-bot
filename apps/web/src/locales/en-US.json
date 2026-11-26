@@ -1889,7 +1889,8 @@
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
       "emptyDescription": "Start one with {{key}}, or drop a folder here.",
-      "deleteCheckout": "Its checkout {{branch}} goes with it, unless another chat still works in it or it holds work you may want (commits, changes never committed, or ignored files like .env). Then it is kept, and you are told."
+      "deleteCheckout_one": "Its checkout {{branches}} goes with it, unless another chat still works in it or it holds work you may want (commits, changes never committed, or ignored files like .env). Then it is kept, and you are told.",
+      "deleteCheckout_other": "Its checkouts {{branches}} go with it, unless another chat still works in one or one holds work you may want (commits, changes never committed, or ignored files like .env). Then that one is kept, and you are told."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",

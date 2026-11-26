@@ -276,4 +276,40 @@ describe("deleting a chat that owns a hand-off checkout", () => {
     const plain = await open("Review my pull requests");
     expect(within(plain).queryByText(/goes with it/)).toBeNull();
   });
+
+  it("names two owned checkouts as a list, in the plural", async () => {
+    const base = fixtureSessions(NOW).find((s) => s.id === "review-prs")!;
+    app = await renderApp("/sessions/new", {
+      seed: {
+        prefs: fixturePrefs(),
+        sessions: [
+          ...fixtureSessions(NOW),
+          {
+            ...base,
+            id: "split",
+            label: "Write the release notes",
+            continuedFrom: "review-prs",
+            continuationKind: "handoff",
+            ownsWorktree: true,
+            ownedWorktreeBranches: ["abacus/notes-1a2b", "abacus/shots-3c4d"],
+          },
+        ],
+        workspaces: fixtureWorkspaces(),
+      },
+    });
+    const sidebar = within(
+      screen.getByRole("navigation", { name: "Sessions" })
+    );
+    await sidebar.findByText("Write the release notes");
+    fireEvent.click(
+      sidebar.getByRole("button", { name: /Write the release notes/ })
+    );
+    fireEvent.click(await screen.findByText("Delete session"));
+    const dialog = await screen.findByRole("alertdialog");
+    const line = dialog.querySelector('[data-slot="delete-checkout"]');
+    expect(line?.textContent).toMatch(
+      /^Its checkouts abacus\/notes-1a2b and abacus\/shots-3c4d go with it, unless another chat still works in one or one holds work you may want/
+    );
+    expect(line?.textContent).toContain("Then that one is kept");
+  });
 });

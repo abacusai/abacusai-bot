@@ -1889,7 +1889,8 @@
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
       "emptyDescription": "Start one with {{key}}, or drop a folder here.",
-      "deleteCheckout": "このチャットのチェックアウト {{branch}} も削除されます。ただし、別のチャットがまだ使っている場合や、残したい作業（コミット、未コミットの変更、.env などの無視されたファイル）がある場合は残し、お知らせします。"
+      "deleteCheckout_one": "このチャットのチェックアウト {{branches}} も削除されます。ただし、別のチャットがまだ使っている場合や、残したい作業（コミット、未コミットの変更、.env などの無視されたファイル）がある場合は残し、お知らせします。",
+      "deleteCheckout_other": "このチャットのチェックアウト {{branches}} も削除されます。ただし、別のチャットがまだ使っているものや、残したい作業（コミット、未コミットの変更、.env などの無視されたファイル）があるものは残し、お知らせします。"
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
