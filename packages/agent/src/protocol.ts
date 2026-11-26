@@ -574,6 +574,14 @@ export type PermissionRequest =
       inputSummary: string;
     })
   | (PermissionRequestBase & {
+      // hand_off_session: another chat's agent starts on this brief.
+      type: "hand_off";
+      title: string;
+      brief: string;
+      /** In a git project the new chat gets a checkout of its own; else it shares this folder. */
+      ownCheckout: boolean;
+    })
+  | (PermissionRequestBase & {
       type: "exit_plan_mode";
       planFilePath: string;
       planContent: string;

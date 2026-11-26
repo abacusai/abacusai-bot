@@ -2343,7 +2343,11 @@
       "starting": "正在啟動…",
       "ready": "已完成",
       "stopped": "已停止",
-      "deleted": "對話已刪除"
+      "deleted": "對話已刪除",
+      "keptBranchTitle": "已保留 {{branch}}",
+      "keptBranch": "它有自己的提交。不再需要時，請用 git 刪除該分支。",
+      "keptChangesTitle": "已保留「{{title}}」的檢出",
+      "keptChanges": "其中有尚未提交的變更，位於 {{path}}。"
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "資料夾以外",
         "plan": "核准計畫",
         "question": "回答問題",
-        "runCommand": "執行指令"
+        "runCommand": "執行指令",
+        "handOff": "新對話：{{title}}"
       },
       "notePlaceholder": "告訴 AI 代理應該改做什麼",
       "pending_one": "{{count}} 個要求等待處理",
@@ -3482,7 +3487,10 @@
         "runCommand": "要執行這個指令嗎？",
         "sandboxDenied": "沙箱拒絕了這個指令嘗試的某項動作",
         "sandboxDeniedDescription": "它嘗試了沙箱允許範圍以外的動作。",
-        "writeOutside": "要寫入資料夾以外的位置嗎？"
+        "writeOutside": "要寫入資料夾以外的位置嗎？",
+        "handOff": "開始新對話：{{title}}",
+        "handOffOwnCheckout": "它在自己的檢出中工作，以此對話的最新提交建立，使用相同的模型和模式。",
+        "handOffSharedFolder": "它與此對話同時在同一個資料夾中工作，使用相同的模型和模式。"
       },
       "verb": {
         "reach": "存取",

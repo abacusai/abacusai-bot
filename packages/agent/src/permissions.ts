@@ -445,6 +445,8 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
       return gateServe(tool, options);
     case "web_fetch":
       return gateWebFetch(tool, options);
+    case "hand_off_session":
+      return { kind: "ask", request: buildHandOffRequest(tool, options.cwd) };
     default:
       // Unknown mutating tools are caught by MUTATING_TOOLS; everything else
       // runs without a prompt, matching pi's own default.
@@ -957,6 +959,31 @@ function buildWriteRequest(tool: ToolRequest, cwd: string): PermissionRequest {
     originalContent: exists ? readFileSafe(absolute) : "",
     content: String(tool.input.content ?? ""),
     isNewFile: !exists,
+  };
+}
+
+/** Whether `dir` is inside a git checkout: a `.git` (folder, or a worktree's file) here or above. */
+function insideGitCheckout(dir: string): boolean {
+  for (let at = path.resolve(dir); ;) {
+    if (fs.existsSync(path.join(at, ".git"))) return true;
+    const parent = path.dirname(at);
+    if (parent === at) return false;
+    at = parent;
+  }
+}
+
+/** `hand_off_session`'s card: the new chat's title, its whole brief, and where it will work. */
+function buildHandOffRequest(
+  tool: ToolRequest,
+  cwd: string
+): PermissionRequest {
+  return {
+    type: "hand_off",
+    tool,
+    displayName: "Start a new chat",
+    title: String(tool.input.title ?? "").trim(),
+    brief: String(tool.input.prompt ?? "").trim(),
+    ownCheckout: insideGitCheckout(cwd),
   };
 }
 

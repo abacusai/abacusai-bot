@@ -391,6 +391,11 @@ export interface AgentSessionListItem {
    * chat while the first goes on; the sidebar nests a handoff under its source.
    */
   continuationKind?: "handoff";
+  /**
+   * The project's folder inside `worktreePath`, when the project is a
+   * subfolder of its repository: the session works there. Absent: the root.
+   */
+  worktreeSubdir?: string;
   /** A handed-off chat: how its last turn ended, for its source's card. Absent until one has. */
   handOffEnd?: HandOffEnd;
   /** The routine this session edits, when it is the editor turn behind a routine page. Hidden from lists. */

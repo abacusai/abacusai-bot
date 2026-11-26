@@ -118,17 +118,19 @@ const makeHost = (
     running?: Set<string>;
     creditWall?: boolean;
     sendFails?: boolean;
-    turns?: Map<string, string>;
+    /** Each chat's open turn; a chat not named has one of its own. */
+    turns?: Map<string, string | null>;
   } = {}
 ) => {
   const manager = new AgentSessionManagerService();
   manager.initialize([WORKSPACE]);
   const sent: Sent[] = [];
   const creditChecks: string[] = [];
+  const notices: Array<{ title: string; body: string }> = [];
   const self: Record<string, unknown> = {
     platform: options.platform ?? "desktop",
     agentSessionManagerService: manager,
-    handOffsStarting: new Set<string>(),
+    handOffsReserved: new Map(),
     handOffTurns: new Map(),
     hostedRunSessions: new Set<string>(),
     gitService: new GitService(),
@@ -140,20 +142,35 @@ const makeHost = (
     managedWorktreeRoot: () => path.join(tmp, "worktrees"),
     messagingGatewayService: {
       servesSession: (id: string) => options.gatewaySessions?.has(id) === true,
+      forgetSession: () => undefined,
     },
     sessionTurnStateService: {
       get: (_workspaceId: string, sessionId: string) => ({
         isBusy: options.busy?.has(sessionId) === true,
       }),
+      clearSession: () => undefined,
     },
     agentManagerService: {
       getSessionState: (_workspaceId: string, sessionId: string) => ({
         status: options.running?.has(sessionId) === true ? "running" : "idle",
       }),
+      stopSession: () => undefined,
     },
     turnLedger: {
-      openTurnId: (sessionId: string) => options.turns?.get(sessionId) ?? null,
+      openTurnId: (sessionId: string) =>
+        options.turns?.has(sessionId) === true
+          ? (options.turns.get(sessionId) ?? null)
+          : `turn-of-${sessionId}`,
     },
+    channelWordsNow: async () => ({
+      t: (key: string, values?: Record<string, string>) =>
+        `${key}${values == null ? "" : JSON.stringify(values)}`,
+    }),
+    userNotifier: (notice: { title: string; body: string }) =>
+      notices.push(notice),
+    sessionArtifactsService: { removeForSession: () => undefined },
+    transcriptService: { remove: () => undefined },
+    aguiRelay: { forgetThread: () => undefined },
     atCreditWall: async (model: string) => {
       creditChecks.push(model);
       return options.creditWall === true;
@@ -164,8 +181,6 @@ const makeHost = (
       sent.push(request);
       return options.sendFails !== true;
     },
-    removeAgentSession: (workspaceId: string, sessionId: string) =>
-      manager.remove(workspaceId, sessionId),
   };
   for (const name of [
     "isPlainAppChat",
@@ -180,6 +195,11 @@ const makeHost = (
     "localWorkspacePath",
     "materializeSessionWorktree",
     "updateAgentSessionLabel",
+    "removeAgentSession",
+    "releaseHandOffCheckout",
+    "sessionDirectory",
+    "resolveWorkspaceContextPath",
+    "settleHandOff",
   ])
     self[name] = proto[name]!.bind(self);
   self.worktreeMaterializer = new WorktreeMaterializer({
@@ -206,7 +226,16 @@ const makeHost = (
     manager,
     sent,
     creditChecks,
+    notices,
     handOff,
+    self,
+    remove: (id: string) =>
+      (self.removeAgentSession as (w: string, s: string) => boolean)(
+        WORKSPACE,
+        id
+      ),
+    directory: (id: string) =>
+      (self.sessionDirectory as (s: string) => string | null)(id),
     plain: self.isPlainAppChat as (id: string) => boolean,
     mayHandOff: self.mayHandOff as (id: string) => boolean,
   };
@@ -562,6 +591,183 @@ describe("chats that never hand off", () => {
     expect(hosted.plain(chat.id)).toBe(false);
     expect(await hosted.handOff(chat.id)).toHaveProperty("error");
     expect(host.sent).toEqual([]);
+  });
+});
+
+const commitIn = (dir: string, file: string) => {
+  fs.writeFileSync(path.join(dir, file), "x\n");
+  git(dir, "add", ".");
+  git(
+    dir,
+    "-c",
+    "user.email=t@example.com",
+    "-c",
+    "user.name=t",
+    "commit",
+    "-qm",
+    file
+  );
+};
+const branches = (dir: string) =>
+  git(dir, "branch", "--format=%(refname:short)").split("\n").filter(Boolean);
+/** Until the removal the chat's deletion set going has finished. */
+const settled = async (check: () => boolean) => {
+  for (let n = 0; n < 100 && !check(); n += 1)
+    await new Promise((resolve) => setTimeout(resolve, 20));
+};
+
+describe("a hand-off's checkout goes with its chat", () => {
+  it("deleting the chat removes the worktree it made and its empty branch", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = host.manager.get(
+      started(await host.handOff(host.manager.create(WORKSPACE).id)).sessionId
+    )!;
+    const branch = child.worktreeBranch!;
+    expect(branch).toMatch(/^abacus\//);
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(host.remove(child.id)).toBe(true);
+    await settled(() => !branches(folder).includes(branch));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(branches(folder)).toEqual(["main"]);
+    expect(host.notices).toEqual([]);
+  });
+
+  it("keeps a branch with commits of its own, and says so", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = host.manager.get(
+      started(await host.handOff(host.manager.create(WORKSPACE).id)).sessionId
+    )!;
+    commitIn(child.worktreePath!, "work.txt");
+    host.remove(child.id);
+    await settled(() => !fs.existsSync(child.worktreePath!));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    await settled(() => host.notices.length > 0);
+    expect(branches(folder)).toContain(child.worktreeBranch);
+    expect(host.notices[0]!.title).toContain("keptBranchTitle");
+    expect(host.notices[0]!.title).toContain(child.worktreeBranch!);
+  });
+
+  it("keeps a checkout with changes never committed, whole, and says so", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = host.manager.get(
+      started(await host.handOff(host.manager.create(WORKSPACE).id)).sessionId
+    )!;
+    fs.writeFileSync(path.join(child.worktreePath!, "draft.md"), "half done");
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(path.join(child.worktreePath!, "draft.md"))).toBe(
+      true
+    );
+    expect(branches(folder)).toContain(child.worktreeBranch);
+    expect(host.notices[0]!.title).toContain("keptChangesTitle");
+  });
+
+  it("never takes a worktree it did not make: deleting a chat on the user's own worktree leaves it", async () => {
+    const folder = project("git");
+    const own = path.join(tmp, "worktrees", "mine");
+    git(folder, "worktree", "add", "-q", "-b", "mine", own);
+    const host = makeHost({ folder });
+    const chat = host.manager.create(WORKSPACE);
+    host.manager.updateWorktree(WORKSPACE, chat.id, {
+      id: "mine",
+      path: own,
+      branch: "mine",
+    });
+    host.remove(chat.id);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(fs.existsSync(own)).toBe(true);
+    expect(branches(folder)).toContain("mine");
+  });
+
+  it("a start that fails after its checkout was made leaves no worktree, branch or chat", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder, sendFails: true });
+    const source = host.manager.create(WORKSPACE);
+    const before = host.manager.list(WORKSPACE).length;
+    expect(await host.handOff(source.id)).toHaveProperty("error");
+    expect(host.manager.list(WORKSPACE)).toHaveLength(before);
+    expect(branches(folder)).toEqual(["main"]);
+    const root = path.join(tmp, "worktrees");
+    expect(fs.existsSync(root) ? fs.readdirSync(root) : []).toEqual([]);
+  });
+
+  it("a project in a subfolder of its repository: the new chat starts in that subfolder of its worktree", async () => {
+    const repo = project("git");
+    const folder = path.join(repo, "apps", "site");
+    fs.mkdirSync(folder, { recursive: true });
+    commitIn(folder, "index.html");
+    const host = makeHost({ folder });
+    const source = host.manager.create(WORKSPACE);
+    const child = host.manager.get(
+      started(await host.handOff(source.id)).sessionId
+    )!;
+    expect(child.worktreeSubdir).toBe(path.join("apps", "site"));
+    const dir = host.directory(child.id)!;
+    expect(dir).toBe(path.join(child.worktreePath!, "apps", "site"));
+    expect(fs.existsSync(path.join(dir, "index.html"))).toBe(true);
+    expect(host.directory(source.id)).toBe(folder);
+    // A worktree changed by hand drops the subfolder.
+    host.manager.updateWorktree(WORKSPACE, child.id, null);
+    expect(host.manager.get(child.id)).not.toHaveProperty("worktreeSubdir");
+  });
+
+  it("tells the new chat its checkout has no installed dependencies", async () => {
+    const host = makeHost({ folder: project("git") });
+    started(await host.handOff(host.manager.create(WORKSPACE).id));
+    expect(host.sent[0]!.message).toMatch(
+      /install them before the first build/
+    );
+  });
+});
+
+describe("the per-message count and the working slots", () => {
+  it("two running plus three parallel calls: never more than three working", async () => {
+    const busy = new Set<string>();
+    const turns = new Map<string, string | null>();
+    const host = makeHost({ folder: project("git"), busy, turns });
+    const source = host.manager.create(WORKSPACE);
+    for (let n = 0; n < 2; n += 1) {
+      turns.set(source.id, `turn-${n}`);
+      busy.add(started(await host.handOff(source.id, `Task ${n}`)).sessionId);
+    }
+    turns.set(source.id, "turn-3");
+    const results = await Promise.all(
+      [1, 2, 3].map((n) => host.handOff(source.id, `Parallel ${n}`))
+    );
+    expect(results.filter((result) => "sessionId" in result)).toHaveLength(1);
+    expect((host.self.handOffsReserved as Map<string, number>).size).toBe(0);
+  });
+
+  it("refuses with no message open, never counting it under a shared key", async () => {
+    const turns = new Map<string, string | null>();
+    const host = makeHost({ folder: project("plain"), turns });
+    const source = host.manager.create(WORKSPACE);
+    turns.set(source.id, null);
+    const result = await host.handOff(source.id);
+    expect("error" in result && result.error).toContain("while answering");
+    expect((host.self.handOffTurns as Map<string, unknown>).size).toBe(0);
+  });
+
+  it("the count goes when the message ends and when the chat is deleted", async () => {
+    const host = makeHost({ folder: project("plain") });
+    const counts = host.self.handOffTurns as Map<string, unknown>;
+    const settle = host.self.settleHandOff as (record: {
+      sessionId: string;
+      kind: string;
+    }) => void;
+    const first = host.manager.create(WORKSPACE);
+    started(await host.handOff(first.id));
+    expect(counts.has(first.id)).toBe(true);
+    settle({ sessionId: first.id, kind: "reply" });
+    expect(counts.has(first.id)).toBe(false);
+    const second = host.manager.create(WORKSPACE);
+    started(await host.handOff(second.id));
+    expect(counts.has(second.id)).toBe(true);
+    host.remove(second.id);
+    expect(counts.has(second.id)).toBe(false);
   });
 });
 

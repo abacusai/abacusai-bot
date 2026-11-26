@@ -655,13 +655,39 @@ describe("hand_off_session", () => {
     ).toBe(kind);
   });
 
-  it("names the tool on its approval card", () => {
-    const gate = gateToolCall(handOff, options());
-    expect(
-      gate.kind === "ask" && gate.request.type === "generic"
-        ? gate.request.toolName
-        : null
-    ).toBe("hand_off_session");
+  it("asks on its own card: the title, the whole brief, and where it will work", () => {
+    const brief = "Write the release notes. ".repeat(60).trim();
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-plain-"));
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-git-"));
+    fs.mkdirSync(path.join(repo, ".git"));
+    fs.mkdirSync(path.join(repo, "apps", "site"), { recursive: true });
+    try {
+      const card = (cwd: string) => {
+        const gate = gateToolCall(
+          call("hand_off_session", { title: " Release notes ", prompt: brief }),
+          options({ cwd })
+        );
+        return gate.kind === "ask" ? gate.request : null;
+      };
+      expect(card(plain)).toMatchObject({
+        type: "hand_off",
+        title: "Release notes",
+        brief,
+        ownCheckout: false,
+      });
+      // The brief is whole, never cut to a summary.
+      expect(card(plain)?.type === "hand_off" && card(plain)).toHaveProperty(
+        "brief",
+        brief
+      );
+      expect(card(repo)).toMatchObject({ ownCheckout: true });
+      expect(card(path.join(repo, "apps", "site"))).toMatchObject({
+        ownCheckout: true,
+      });
+    } finally {
+      fs.rmSync(plain, { recursive: true, force: true });
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
   });
 });
 

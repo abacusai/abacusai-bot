@@ -2343,7 +2343,11 @@
       "starting": "Starten…",
       "ready": "Klaar",
       "stopped": "Gestopt",
-      "deleted": "Chat verwijderd"
+      "deleted": "Chat verwijderd",
+      "keptBranchTitle": "{{branch}} bewaard",
+      "keptBranch": "Deze branch heeft eigen commits. Verwijder hem met git als je hem niet meer nodig hebt.",
+      "keptChangesTitle": "Checkout van ‘{{title}}’ bewaard",
+      "keptChanges": "Er staan wijzigingen in die nooit zijn gecommit, in {{path}}."
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "Buiten de map",
         "plan": "Plan goedkeuren",
         "question": "Vraag beantwoorden",
-        "runCommand": "Opdracht uitvoeren"
+        "runCommand": "Opdracht uitvoeren",
+        "handOff": "Nieuwe chat: {{title}}"
       },
       "notePlaceholder": "Vertel de agent wat hij in plaats daarvan moet doen",
       "pending_one": "{{count}} verzoek wacht",
@@ -3482,7 +3487,10 @@
         "runCommand": "Deze opdracht uitvoeren?",
         "sandboxDenied": "De sandbox heeft iets geweigerd wat deze opdracht probeerde",
         "sandboxDeniedDescription": "De opdracht probeerde iets wat de sandbox niet toestaat.",
-        "writeOutside": "Buiten de map schrijven?"
+        "writeOutside": "Buiten de map schrijven?",
+        "handOff": "Nieuwe chat starten: {{title}}",
+        "handOffOwnCheckout": "Hij werkt in een eigen checkout, gemaakt van de laatste commit van deze chat, met hetzelfde model en dezelfde modus.",
+        "handOffSharedFolder": "Hij werkt in dezelfde map, tegelijk met deze chat, met hetzelfde model en dezelfde modus."
       },
       "verb": {
         "reach": "bereiken",

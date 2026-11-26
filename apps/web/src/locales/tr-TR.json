@@ -2343,7 +2343,11 @@
       "starting": "Başlatılıyor…",
       "ready": "Bitti",
       "stopped": "Durduruldu",
-      "deleted": "Sohbet silindi"
+      "deleted": "Sohbet silindi",
+      "keptBranchTitle": "{{branch}} saklandı",
+      "keptBranch": "Kendi commit’leri var. Artık gerekmediğinde dalı git ile silin.",
+      "keptChangesTitle": "“{{title}}” kopyası saklandı",
+      "keptChanges": "Commit edilmemiş değişiklikleri var: {{path}}."
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "Klasörün dışında",
         "plan": "Planı onayla",
         "question": "Bir soruyu yanıtla",
-        "runCommand": "Komutu çalıştır"
+        "runCommand": "Komutu çalıştır",
+        "handOff": "Yeni sohbet: {{title}}"
       },
       "notePlaceholder": "Ajana bunun yerine ne yapacağını söyle",
       "pending_one": "{{count}} istek bekliyor",
@@ -3482,7 +3487,10 @@
         "runCommand": "Bu komut çalıştırılsın mı?",
         "sandboxDenied": "Korumalı alan bu komutun denediği bir şeyi reddetti",
         "sandboxDeniedDescription": "Komut, korumalı alanın izin verdiklerinin dışında bir şey denedi.",
-        "writeOutside": "Klasörün dışına yazılsın mı?"
+        "writeOutside": "Klasörün dışına yazılsın mı?",
+        "handOff": "Yeni sohbet başlat: {{title}}",
+        "handOffOwnCheckout": "Bu sohbetin son commit’inden oluşturulan kendi kopyasında, aynı model ve modla çalışır.",
+        "handOffSharedFolder": "Bu sohbetle aynı anda, aynı klasörde, aynı model ve modla çalışır."
       },
       "verb": {
         "reach": "eriş",

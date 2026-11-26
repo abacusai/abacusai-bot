@@ -2343,7 +2343,11 @@
       "starting": "Iniciando…",
       "ready": "Pronto",
       "stopped": "Interrompido",
-      "deleted": "Chat excluído"
+      "deleted": "Chat excluído",
+      "keptBranchTitle": "{{branch}} mantido",
+      "keptBranch": "Ele tem commits próprios. Exclua o branch com git quando não precisar mais.",
+      "keptChangesTitle": "Cópia de “{{title}}” mantida",
+      "keptChanges": "Ela tem alterações nunca commitadas, em {{path}}."
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Novo chat: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3482,7 +3487,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Iniciar um novo chat: {{title}}",
+        "handOffOwnCheckout": "Ele trabalha em uma cópia própria, criada a partir do último commit deste chat, com o mesmo modelo e modo.",
+        "handOffSharedFolder": "Ele trabalha nesta mesma pasta, ao mesmo tempo que este chat, com o mesmo modelo e modo."
       },
       "verb": {
         "reach": "reach",

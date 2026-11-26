@@ -828,6 +828,8 @@ describe("C-T7 through ServiceHost", () => {
     internals.agentCommunicationService = { resetConversation: vi.fn() };
     internals.agentManagerService = { stopSession: vi.fn() };
     internals.agentSessionManagerService = {
+      get: () => null,
+      handOffCheckout: () => null,
       remove: () => true,
       removeAllForWorkspace: () => ["s1", "s2"],
     };

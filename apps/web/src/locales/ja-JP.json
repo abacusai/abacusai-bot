@@ -2343,7 +2343,11 @@
       "starting": "開始しています…",
       "ready": "完了",
       "stopped": "停止しました",
-      "deleted": "チャットは削除されました"
+      "deleted": "チャットは削除されました",
+      "keptBranchTitle": "{{branch}} を残しました",
+      "keptBranch": "独自のコミットがあります。不要になったら git でブランチを削除してください。",
+      "keptChangesTitle": "「{{title}}」のチェックアウトを残しました",
+      "keptChanges": "コミットされていない変更があります（{{path}}）。"
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "新しいチャット: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3482,7 +3487,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "新しいチャットを開始: {{title}}",
+        "handOffOwnCheckout": "このチャットの最新コミットから作った専用のチェックアウトで、同じモデルとモードで作業します。",
+        "handOffSharedFolder": "このチャットと同時に同じフォルダーで、同じモデルとモードで作業します。"
       },
       "verb": {
         "reach": "reach",

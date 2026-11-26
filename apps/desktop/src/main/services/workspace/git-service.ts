@@ -565,6 +565,57 @@ export class GitService {
   }
 
   /**
+   * Takes away a worktree the app made for one chat (a hand-off's): the
+   * checkout, then its branch while that is still on `base`. A checkout with
+   * changes never committed is kept whole; a branch with commits of its own
+   * is kept. Says which.
+   */
+  async releaseWorktree(
+    workspacePath: string,
+    managedRoot: string,
+    checkout: { path: string; branch: string | null; base: string }
+  ): Promise<"removed" | "kept-branch" | "kept-changes" | "not-managed"> {
+    // Only a checkout under the app's own root is ever taken away.
+    if (!isPathInside(managedRoot, checkout.path)) return "not-managed";
+    const changes = await execFileAsync("git", [
+      "-C",
+      checkout.path,
+      "status",
+      "--porcelain",
+    ]).then(
+      ({ stdout }) => stdout.trim() !== "",
+      // Gone already, or no longer a checkout: nothing in it to keep.
+      () => false
+    );
+    if (changes) return "kept-changes";
+    const tip =
+      checkout.branch == null
+        ? null
+        : await execFileAsync("git", [
+            "-C",
+            workspacePath,
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            `refs/heads/${checkout.branch}`,
+          ]).then(
+            ({ stdout }) => stdout.trim() || null,
+            () => null
+          );
+    await this.removeManagedWorktree(workspacePath, managedRoot, checkout.path);
+    if (checkout.branch == null || tip == null) return "removed";
+    if (tip !== checkout.base) return "kept-branch";
+    await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "branch",
+      "-D",
+      checkout.branch,
+    ]);
+    return "removed";
+  }
+
+  /**
    * `fingerprints`: also compute each change's fingerprints (spec 04 §26.4
    * b), for the new renderer's `gitState` rows; the legacy runtime asks for
    * them only while those rows are read.

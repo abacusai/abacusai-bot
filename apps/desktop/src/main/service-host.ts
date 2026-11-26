@@ -683,6 +683,7 @@ import {
   HANDOFFS_WORKING_MAX,
   handOffEndOf,
   handOffNote,
+  type HandOffCheckout,
   type HandOffResult,
 } from "./services/session/hand-off";
 import { IdleAgentReaper } from "./services/session/idle-agent-reaper";
@@ -733,7 +734,10 @@ import {
   githubRoutineLine,
   localDay,
 } from "./services/workspace/github-watch";
-import { resolveSessionWorkspacePath } from "./services/workspace/session-workspace-context";
+import {
+  resolveSessionWorkspacePath,
+  sessionCheckoutDirectory,
+} from "./services/workspace/session-workspace-context";
 import { SkillsService } from "./services/workspace/skills-service";
 import { TerminalSessionService } from "./services/workspace/terminal-session-service";
 import {
@@ -3929,7 +3933,7 @@ export class ServiceHost {
         session?.workspaceId === workspaceId &&
         session.worktreePath != null
       ) {
-        return session.worktreePath;
+        return sessionCheckoutDirectory(session);
       }
       const workspace = this.workspaceService
         .getWorkspaces()
@@ -5184,6 +5188,14 @@ export class ServiceHost {
         error:
           "This chat was handed off from another, and a handed-off chat does not hand off again. Do the work here.",
       };
+    // Counted against the message that asked: there is always one while the
+    // agent calls a tool, and without one nothing is started.
+    const turnId = this.turnLedger.openTurnId(source.id);
+    if (turnId == null)
+      return {
+        error:
+          "Hand work off only while answering the user's message. Do the work here.",
+      };
     const handOffs = this.agentSessionManagerService
       .list(source.workspaceId)
       .filter(
@@ -5191,7 +5203,6 @@ export class ServiceHost {
           session.continuedFrom === source.id &&
           session.continuationKind === "handoff"
       );
-    const turnId = this.turnLedger.openTurnId(source.id) ?? "";
     const thisTurn = this.handOffTurns.get(source.id);
     const inTurn = thisTurn?.turnId === turnId ? thisTurn.count : 0;
     if (inTurn >= HANDOFFS_PER_TURN_MAX)
@@ -5206,55 +5217,57 @@ export class ServiceHost {
       return {
         error: `${today} chats were handed off from this one in the last day, the most it may start. Do this here.`,
       };
-    const working = handOffs.filter(
-      (session) =>
-        this.handOffsStarting.has(session.id) ||
-        this.sessionTurnStateService.get(session.workspaceId, session.id).isBusy
-    ).length;
+    // Hand-offs still being set up hold a slot, so parallel calls cannot pass the cap.
+    const reserved = this.handOffsReserved.get(source.id) ?? 0;
+    const working =
+      reserved +
+      handOffs.filter(
+        (session) =>
+          this.sessionTurnStateService.get(session.workspaceId, session.id)
+            .isBusy
+      ).length;
     if (working >= HANDOFFS_WORKING_MAX)
       return {
         error: `${working} chats handed off from this one are still working. Do this here, or wait for one to finish.`,
       };
-    // Counted before anything awaits, so parallel calls in one turn see it.
+    // Both taken before anything awaits; given back if nothing starts.
     this.handOffTurns.set(source.id, { turnId, count: inTurn + 1 });
-    const refund = () => {
-      const counted = this.handOffTurns.get(source.id);
-      if (counted?.turnId === turnId)
-        this.handOffTurns.set(source.id, {
-          turnId,
-          count: Math.max(0, counted.count - 1),
-        });
-    };
-    // A paid run is started only where the user's own send would run.
-    if (await this.atCreditWall(source.model ?? OPENLLM_ID)) {
-      refund();
-      return {
-        error:
-          "The account is out of credits, so no chat was started. Tell the user, and do not try again until they have credits.",
-      };
-    }
-    const checkout =
-      source.worktreePath ?? this.localWorkspacePath(source.workspaceId);
-    const base =
-      checkout == null ? null : await this.gitService.headCommit(checkout);
-    const session = this.createAgentSession(
-      source.workspaceId,
-      null,
-      null,
-      undefined,
-      {
-        model: source.model,
-        mode: source.mode,
-        continuedFrom: { sessionId: source.id, kind: "handoff" },
-      }
-    );
-    this.handOffsStarting.add(session.id);
-    const fail = (error: string): HandOffResult => {
+    this.handOffsReserved.set(source.id, reserved + 1);
+    let started = false;
+    let session: AgentSessionListItem | null = null;
+    let checkout: HandOffCheckout | null = null;
+    // Nothing of a start that failed stays: its checkout and branch, then the chat.
+    const fail = async (error: string): Promise<HandOffResult> => {
+      if (session == null) return { error };
+      if (checkout != null)
+        await this.releaseHandOffCheckout(session.workspaceId, checkout, null);
       this.removeAgentSession(session.workspaceId, session.id);
-      refund();
       return { error };
     };
     try {
+      // A paid run is started only where the user's own send would run.
+      if (await this.atCreditWall(source.model ?? OPENLLM_ID))
+        return await fail(
+          "The account is out of credits, so no chat was started. Tell the user, and do not try again until they have credits."
+        );
+      const sourceDir = this.sessionDirectory(source.id);
+      const base =
+        sourceDir == null ? null : await this.gitService.headCommit(sourceDir);
+      const location =
+        base == null || sourceDir == null
+          ? null
+          : await this.gitService.repositoryLocation(sourceDir);
+      session = this.createAgentSession(
+        source.workspaceId,
+        null,
+        null,
+        undefined,
+        {
+          model: source.model,
+          mode: source.mode,
+          continuedFrom: { sessionId: source.id, kind: "handoff" },
+        }
+      );
       if (base != null) {
         const made = await this.materializeSessionWorktree({
           workspaceId: session.workspaceId,
@@ -5263,10 +5276,22 @@ export class ServiceHost {
           name: task.title,
           operationId: randomUUID(),
         });
-        if (!made.success)
-          return fail(
+        if (!made.success || made.worktree == null)
+          return await fail(
             "A checkout for the new chat could not be made. Do this here."
           );
+        checkout = {
+          path: made.worktree.path,
+          branch: made.worktree.branch,
+          base,
+        };
+        // Its own record of what it made, which its removal takes away.
+        this.agentSessionManagerService.setHandOffCheckout(
+          session.id,
+          checkout,
+          // A project in a subfolder of its repository starts there.
+          location?.prefix.replace(/\/+$/, "") || null
+        );
       }
       this.updateAgentSessionLabel(session.workspaceId, session.id, task.title);
       const note = handOffNote(source.label, base != null, task.prompt);
@@ -5281,18 +5306,73 @@ export class ServiceHost {
           },
         },
       });
-      if (!sent) return fail("The new chat could not start. Do this here.");
-      return {
-        sessionId: session.id,
-        sharedFolder: base == null,
-      };
+      if (!sent)
+        return await fail("The new chat could not start. Do this here.");
+      started = true;
+      return { sessionId: session.id, sharedFolder: base == null };
     } finally {
-      this.handOffsStarting.delete(session.id);
+      const left = (this.handOffsReserved.get(source.id) ?? 1) - 1;
+      if (left > 0) this.handOffsReserved.set(source.id, left);
+      else this.handOffsReserved.delete(source.id);
+      if (!started) {
+        const counted = this.handOffTurns.get(source.id);
+        if (counted?.turnId === turnId)
+          this.handOffTurns.set(source.id, {
+            turnId,
+            count: Math.max(0, counted.count - 1),
+          });
+      }
     }
   }
 
-  /** A handed-off chat's turn ended: its source's card reads how. */
+  /**
+   * Takes away the checkout a hand-off made (never one of the user's): its
+   * worktree, and its branch while that has no commit past where it began.
+   * A branch with commits, or a checkout with changes never committed, is
+   * kept, and the user is told why. `label` null: a start rolled back, which
+   * made nothing worth telling.
+   */
+  private async releaseHandOffCheckout(
+    workspaceId: string,
+    checkout: HandOffCheckout,
+    label: string | null
+  ): Promise<void> {
+    const repo = this.localWorkspacePath(workspaceId);
+    if (repo == null) return;
+    const outcome = await this.gitService
+      .releaseWorktree(repo, this.managedWorktreeRoot(workspaceId), checkout)
+      .catch((error: unknown) => {
+        console.warn(`[hand-off] releasing ${checkout.path}: ${String(error)}`);
+        return null;
+      });
+    if (
+      label == null ||
+      outcome == null ||
+      outcome === "removed" ||
+      outcome === "not-managed"
+    )
+      return;
+    const { t } = await this.channelWordsNow();
+    this.userNotifier?.({
+      ...(outcome === "kept-branch"
+        ? {
+            title: t("sessions.handoff.keptBranchTitle", {
+              branch: checkout.branch ?? "",
+            }),
+            body: t("sessions.handoff.keptBranch"),
+          }
+        : {
+            title: t("sessions.handoff.keptChangesTitle", { title: label }),
+            body: t("sessions.handoff.keptChanges", { path: checkout.path }),
+          }),
+      dedupeKey: `hand-off-kept:${checkout.path}`,
+    });
+  }
+
+  /** A turn ended: its hand-off count goes, and a handed-off chat's source card reads how it ended. */
   private settleHandOff(record: TurnRecord): void {
+    // The message that counted this chat's hand-offs is over.
+    this.handOffTurns.delete(record.sessionId);
     if (
       !this.agentSessionManagerService.setHandOffEnd(
         record.sessionId,
@@ -5664,11 +5744,16 @@ export class ServiceHost {
   }
 
   removeAgentSession(workspaceId: string, sessionId: string): boolean {
+    const record = this.agentSessionManagerService.get(sessionId);
+    const checkout = this.agentSessionManagerService.handOffCheckout(sessionId);
     const removed = this.agentSessionManagerService.remove(
       workspaceId,
       sessionId
     );
     if (removed) {
+      this.handOffTurns.delete(sessionId);
+      if (checkout != null && record?.workspaceId === workspaceId)
+        void this.releaseHandOffCheckout(workspaceId, checkout, record.label);
       this.sessionArtifactsService.removeForSession(sessionId);
       this.sessionTurnStateService.clearSession(sessionId);
       environmentNoticeService.forgetSession(sessionId);
@@ -7300,8 +7385,8 @@ export class ServiceHost {
   >();
   /** Hosted routine runs on this computer: routine runs, though not stamped with a routine. */
   private readonly hostedRunSessions = new Set<string>();
-  /** Handed-off chats minted but not yet sent their task: they count as working. */
-  private readonly handOffsStarting = new Set<string>();
+  /** Per source chat: hand-offs still being set up, each holding a working slot. */
+  private readonly handOffsReserved = new Map<string, number>();
   /** Per source chat: how many hand-offs its open turn has started. */
   private readonly handOffTurns = new Map<
     string,

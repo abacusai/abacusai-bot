@@ -540,6 +540,7 @@
       "deleteFile",
       "editFile",
       "generic",
+      "handOff",
       "outside",
       "plan",
       "question",
@@ -566,6 +567,9 @@
       "guard_power",
       "guard_privileged",
       "guard_systemDelete",
+      "handOff",
+      "handOffOwnCheckout",
+      "handOffSharedFolder",
       "networkHost",
       "networkHostDescription",
       "notebook.delete",
@@ -1915,5 +1919,15 @@
       "../../desktop/src/main/services/workspace/github-watch.ts",
       "../../desktop/src/main/service-host.ts"
     ]
+  },
+  {
+    "prefix": "sessions.handoff.",
+    "values": [
+      "keptBranchTitle",
+      "keptBranch",
+      "keptChangesTitle",
+      "keptChanges"
+    ],
+    "sources": ["../../desktop/src/main/service-host.ts"]
   }
 ]

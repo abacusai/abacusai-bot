@@ -25,6 +25,7 @@ import {
   readSessionStash,
   writeSessionStash,
 } from "./account-session-stash";
+import type { HandOffCheckout } from "./hand-off";
 import { workspaceStore } from "./workspace-store";
 
 type SessionRecord = {
@@ -82,6 +83,10 @@ type SessionRecord = {
   continuationKind?: "handoff";
   /** A handoff's last turn's ending. See AgentSessionListItem.handOffEnd. */
   handOffEnd?: HandOffEnd;
+  /** The checkout a hand-off made for this chat; removed with it. See ServiceHost.releaseHandOffCheckout. */
+  handOffCheckout?: HandOffCheckout;
+  /** See AgentSessionListItem.worktreeSubdir; dropped when the worktree changes. */
+  worktreeSubdir?: string;
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
   /** Folders the user added to this chat beyond its own, real paths. See addFolder. */
@@ -151,6 +156,9 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
     ? { continuationKind: record.continuationKind }
     : {}),
   ...(record.handOffEnd != null ? { handOffEnd: record.handOffEnd } : {}),
+  ...(record.worktreeSubdir != null && record.worktreePath != null
+    ? { worktreeSubdir: record.worktreeSubdir }
+    : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
   owner: record.owner ?? null,
@@ -463,6 +471,38 @@ export class AgentSessionManagerService {
     return true;
   }
 
+  /**
+   * The checkout a hand-off made for this chat, on the worktree attached to
+   * it, and the project's subfolder inside it. Only a handed-off chat on
+   * that very worktree takes it.
+   */
+  setHandOffCheckout(
+    sessionId: string,
+    checkout: HandOffCheckout,
+    subdir: string | null
+  ): boolean {
+    const session = this.sessions.get(sessionId);
+    if (
+      session?.continuationKind !== "handoff" ||
+      session.worktreePath !== checkout.path
+    )
+      return false;
+    session.handOffCheckout = checkout;
+    if (subdir != null && subdir !== "") session.worktreeSubdir = subdir;
+    else delete session.worktreeSubdir;
+    this.persist();
+    return true;
+  }
+
+  /** The checkout a hand-off made for this chat while it is still on it; null otherwise. */
+  handOffCheckout(sessionId: string): HandOffCheckout | null {
+    const session = this.sessions.get(sessionId);
+    const checkout = session?.handOffCheckout;
+    return checkout != null && session?.worktreePath === checkout.path
+      ? checkout
+      : null;
+  }
+
   /** A handed-off chat's turn ended: its source's card shows how. True when it changed. */
   setHandOffEnd(sessionId: string, end: HandOffEnd): boolean {
     const session = this.sessions.get(sessionId);
@@ -705,6 +745,8 @@ export class AgentSessionManagerService {
   ): boolean {
     const session = this.sessions.get(sessionId);
     if (session == null || session.workspaceId !== workspaceId) return false;
+    if (session.worktreePath !== (worktree?.path ?? null))
+      delete session.worktreeSubdir;
     session.worktreeId = worktree?.id ?? null;
     session.worktreePath = worktree?.path ?? null;
     session.worktreeBranch = worktree?.branch ?? null;

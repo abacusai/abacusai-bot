@@ -2343,7 +2343,11 @@
       "starting": "Memulai…",
       "ready": "Selesai",
       "stopped": "Dihentikan",
-      "deleted": "Chat dihapus"
+      "deleted": "Chat dihapus",
+      "keptBranchTitle": "{{branch}} disimpan",
+      "keptBranch": "Branch ini punya commit sendiri. Hapus dengan git jika sudah tidak diperlukan.",
+      "keptChangesTitle": "Checkout “{{title}}” disimpan",
+      "keptChanges": "Ada perubahan yang belum di-commit, di {{path}}."
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Chat baru: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3482,7 +3487,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Mulai chat baru: {{title}}",
+        "handOffOwnCheckout": "Chat ini bekerja di checkout sendiri, dibuat dari commit terakhir chat ini, dengan model dan mode yang sama.",
+        "handOffSharedFolder": "Chat ini bekerja di folder yang sama, bersamaan dengan chat ini, dengan model dan mode yang sama."
       },
       "verb": {
         "reach": "reach",

@@ -2365,7 +2365,11 @@
       "starting": "Uruchamianie…",
       "ready": "Gotowe",
       "stopped": "Zatrzymano",
-      "deleted": "Czat usunięty"
+      "deleted": "Czat usunięty",
+      "keptBranchTitle": "Zachowano {{branch}}",
+      "keptBranch": "Gałąź ma własne commity. Usuń ją przez git, gdy nie będzie już potrzebna.",
+      "keptChangesTitle": "Zachowano kopię „{{title}}”",
+      "keptChanges": "Zawiera niezacommitowane zmiany, w {{path}}."
     }
   },
   "terminalShells": {
@@ -3489,7 +3493,8 @@
         "outside": "Poza folderem",
         "plan": "Zatwierdź plan",
         "question": "Odpowiedz na pytanie",
-        "runCommand": "Uruchom polecenie"
+        "runCommand": "Uruchom polecenie",
+        "handOff": "Nowy czat: {{title}}"
       },
       "notePlaceholder": "Powiedz agentowi, co ma zrobić zamiast tego",
       "pending_one": "{{count}} prośba czeka",
@@ -3536,7 +3541,10 @@
         "runCommand": "Uruchomić to polecenie?",
         "sandboxDenied": "Sandbox zablokował jedną z akcji tego polecenia",
         "sandboxDeniedDescription": "Polecenie próbowało zrobić coś, na co sandbox nie pozwala.",
-        "writeOutside": "Zapisać poza folderem?"
+        "writeOutside": "Zapisać poza folderem?",
+        "handOff": "Rozpocznij nowy czat: {{title}}",
+        "handOffOwnCheckout": "Pracuje we własnej kopii utworzonej z ostatniego commita tego czatu, z tym samym modelem i trybem.",
+        "handOffSharedFolder": "Pracuje w tym samym folderze, równocześnie z tym czatem, z tym samym modelem i trybem."
       },
       "verb": {
         "reach": "połączyć się",

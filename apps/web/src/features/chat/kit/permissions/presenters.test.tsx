@@ -230,6 +230,18 @@ const REQUESTS: Array<[PermissionRequest, RegExp | string, string[]]> = [
   ],
   [
     {
+      type: "hand_off",
+      title: "Release notes",
+      brief: "Write the notes",
+      ownCheckout: true,
+      tool,
+      displayName: "",
+    } as PermissionRequest,
+    "handOff",
+    ["accept", "reject"],
+  ],
+  [
+    {
       type: "exit_plan_mode",
       planFilePath: "p.md",
       planContent: "1. a",
@@ -319,6 +331,33 @@ describe("R2-T23 presenters", () => {
         (a) => a.id
       )
     ).toEqual(["accept", "reject"]);
+  });
+});
+
+describe("the hand-off card", () => {
+  it("names the new chat, shows the whole brief, and says where it works", () => {
+    const brief = "Write the release notes. ".repeat(60).trim();
+    const card = (ownCheckout: boolean) =>
+      present({
+        type: "hand_off",
+        title: "Release notes",
+        brief,
+        ownCheckout,
+        tool,
+        displayName: "",
+      } as PermissionRequest);
+    expect(card(true)).toMatchObject({
+      title: "handOff",
+      titleValues: { title: "Release notes" },
+      reasons: ["handOffOwnCheckout"],
+      body: { kind: "plan", markdown: brief },
+      chip: "handOff",
+    });
+    expect(card(false).reasons).toEqual(["handOffSharedFolder"]);
+    expect(card(true).actions.map((action) => action.label)).toEqual([
+      "allow",
+      "deny",
+    ]);
   });
 });
 

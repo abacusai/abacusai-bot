@@ -14,6 +14,14 @@ export const HANDOFFS_PER_TURN_MAX = 3;
 /** How many chats one chat may hand work off to in a day. */
 export const HANDOFFS_PER_DAY_MAX = 10;
 
+/** The checkout a hand-off made for its chat, which goes when the chat does. */
+export interface HandOffCheckout {
+  path: string;
+  branch: string | null;
+  /** The commit it was made from: a branch still on it has nothing of its own. */
+  base: string;
+}
+
 /** What `hand_off_session` started, or why it did not. */
 export type HandOffResult =
   | {
@@ -35,7 +43,7 @@ export const handOffNote = (
   [
     `${appNoteTag("handed off")} The user's chat "${from}" handed this task off to you, to run here beside it. Its agent wrote the brief below; it is not the user's own message.`,
     ownCheckout
-      ? "You work in a checkout of your own, made from that chat's last commit: its uncommitted changes are not here."
+      ? "You work in a checkout of your own, made from that chat's last commit: its uncommitted changes are not here, and neither are installed dependencies or build output (node_modules, virtual environments and the like), so install them before the first build or test."
       : "That chat's agent works in the same folder at the same time: do not edit or delete files it may be working on, and say so here if the work overlaps.",
     "Do not hand this task off again. Ask the user here if anything is unclear.",
     "",

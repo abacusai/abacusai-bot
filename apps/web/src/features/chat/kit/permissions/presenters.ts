@@ -405,6 +405,19 @@ export const present = (request: PermissionRequest): CardModel => {
         chip: "generic",
         chipValues: { tool: request.toolName },
       };
+    case "hand_off":
+      return {
+        title: "handOff",
+        titleValues: { title: request.title },
+        reasons: [
+          request.ownCheckout ? "handOffOwnCheckout" : "handOffSharedFolder",
+        ],
+        body: { kind: "plan", markdown: request.brief },
+        actions: [{ ...allowOnce(), label: "allow" }, deny()],
+        note: false,
+        chip: "handOff",
+        chipValues: { title: request.title },
+      };
     case "exit_plan_mode":
       return {
         title: "exitPlan",

@@ -2343,7 +2343,11 @@
       "starting": "正在启动…",
       "ready": "已完成",
       "stopped": "已停止",
-      "deleted": "对话已删除"
+      "deleted": "对话已删除",
+      "keptBranchTitle": "已保留 {{branch}}",
+      "keptBranch": "它有自己的提交。不再需要时，请用 git 删除该分支。",
+      "keptChangesTitle": "已保留“{{title}}”的检出",
+      "keptChanges": "其中有未提交的更改，位于 {{path}}。"
     }
   },
   "terminalShells": {
@@ -3437,7 +3441,8 @@
         "outside": "文件夹之外",
         "plan": "批准计划",
         "question": "回答问题",
-        "runCommand": "运行命令"
+        "runCommand": "运行命令",
+        "handOff": "新对话：{{title}}"
       },
       "notePlaceholder": "告诉智能体应该改做什么",
       "pending_one": "{{count}} 个请求等待处理",
@@ -3482,7 +3487,10 @@
         "runCommand": "运行此命令？",
         "sandboxDenied": "沙盒拒绝了此命令尝试的某项操作",
         "sandboxDeniedDescription": "它尝试了沙盒允许范围之外的操作。",
-        "writeOutside": "要写入文件夹之外的位置吗？"
+        "writeOutside": "要写入文件夹之外的位置吗？",
+        "handOff": "开始新对话：{{title}}",
+        "handOffOwnCheckout": "它在自己的检出中工作，基于此对话的最新提交创建，使用相同的模型和模式。",
+        "handOffSharedFolder": "它与此对话同时在同一文件夹中工作，使用相同的模型和模式。"
       },
       "verb": {
         "reach": "访问",
