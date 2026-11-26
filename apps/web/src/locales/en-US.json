@@ -2350,10 +2350,12 @@
       "keptChangesTitle": "Kept the checkout of “{{title}}”",
       "keptChanges": "It has changes that were never committed, in {{path}}.",
       "keptBranchUndeletable": "git would not delete it. Delete it with git when you no longer need it.",
-      "keptIgnored": "It has ignored files you may want, like .env, in {{path}}.",
+      "keptIgnored": "It has ignored files you may want, like {{file}}, in {{path}}.",
       "keptUnreadable": "git could not read it, so nothing in it was removed: {{path}}.",
       "keptBranchMoved": "The chat's checkout had moved to this branch, so it was kept. Delete it with git when you no longer need it.",
-      "keptCommits": "It has commits that are on no branch, in {{path}}."
+      "keptCommits": "It has commits that are on no branch, in {{path}}.",
+      "keptIgnoredCleaned": "It has ignored files you may want, like {{file}}, in {{path}}. Its installed dependencies and caches were deleted to save space.",
+      "keptNoHistory": "git kept no history of it and its HEAD moved, so commits may be only there: {{path}}."
     }
   },
   "terminalShells": {

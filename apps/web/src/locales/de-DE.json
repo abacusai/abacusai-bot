@@ -2350,10 +2350,12 @@
       "keptChangesTitle": "Checkout von „{{title}}“ behalten",
       "keptChanges": "Er enthält nicht committete Änderungen, in {{path}}.",
       "keptBranchUndeletable": "git konnte den Branch nicht löschen. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
-      "keptIgnored": "Er enthält ignorierte Dateien, die du vielleicht brauchst, etwa .env, in {{path}}.",
+      "keptIgnored": "Er enthält ignorierte Dateien, die du vielleicht brauchst, etwa {{file}}, in {{path}}.",
       "keptUnreadable": "git konnte ihn nicht lesen, daher wurde nichts darin entfernt: {{path}}.",
       "keptBranchMoved": "Der Checkout des Chats war auf diesen Branch gewechselt, daher wurde er behalten. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
-      "keptCommits": "Er enthält Commits, die auf keinem Branch liegen, in {{path}}."
+      "keptCommits": "Er enthält Commits, die auf keinem Branch liegen, in {{path}}.",
+      "keptIgnoredCleaned": "Er enthält ignorierte Dateien, die du vielleicht brauchst, etwa {{file}}, in {{path}}. Installierte Abhängigkeiten und Caches darin wurden gelöscht, um Platz zu sparen.",
+      "keptNoHistory": "git hat keinen Verlauf dazu geführt und HEAD wurde verschoben, daher liegen Commits womöglich nur dort: {{path}}."
     }
   },
   "terminalShells": {

@@ -2372,10 +2372,12 @@
       "keptChangesTitle": "Zachowano kopię „{{title}}”",
       "keptChanges": "Zawiera niezacommitowane zmiany, w {{path}}.",
       "keptBranchUndeletable": "git nie mógł usunąć gałęzi. Usuń ją przez git, gdy nie będzie już potrzebna.",
-      "keptIgnored": "Zawiera ignorowane pliki, które mogą Ci się przydać, np. .env, w {{path}}.",
+      "keptIgnored": "Zawiera ignorowane pliki, które mogą Ci się przydać, np. {{file}}, w {{path}}.",
       "keptUnreadable": "git nie mógł jej odczytać, więc nic nie zostało usunięte: {{path}}.",
       "keptBranchMoved": "Kopia czatu została przełączona na tę gałąź, więc ją zachowano. Usuń ją przez git, gdy nie będzie już potrzebna.",
-      "keptCommits": "Zawiera commity, których nie ma w żadnej gałęzi, w {{path}}."
+      "keptCommits": "Zawiera commity, których nie ma w żadnej gałęzi, w {{path}}.",
+      "keptIgnoredCleaned": "Zawiera ignorowane pliki, które mogą Ci się przydać, np. {{file}}, w {{path}}. Zainstalowane zależności i pamięć podręczną usunięto, aby oszczędzić miejsce.",
+      "keptNoHistory": "git nie prowadził jej historii, a HEAD się przesunął, więc commity mogą być tylko tam: {{path}}."
     }
   },
   "terminalShells": {

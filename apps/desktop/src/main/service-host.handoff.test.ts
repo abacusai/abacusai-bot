@@ -220,6 +220,7 @@ const makeHost = (
     "resolveWorkspaceContextPath",
     "settleHandOff",
     "removeWorkspace",
+    "moveSessionWorktree",
   ])
     self[name] = proto[name]!.bind(self);
   self.worktreeMaterializer = new WorktreeMaterializer({
@@ -254,6 +255,14 @@ const makeHost = (
         WORKSPACE,
         id
       ),
+    moveTo: (id: string, worktreeId: string | null) =>
+      (
+        self.setSessionWorktree as (r: {
+          workspaceId: string;
+          sessionId: string;
+          worktreeId: string | null;
+        }) => Promise<{ success: boolean }>
+      )({ workspaceId: WORKSPACE, sessionId: id, worktreeId }),
     removeProject: async () => {
       workspaceStatus.value = "deleted";
       return (self.removeWorkspace as (w: string) => Promise<unknown>)(
@@ -941,6 +950,152 @@ describe("a hand-off's checkout is removed only when it is safe", () => {
     expect(host.notices.map((notice) => notice.body)).toEqual([
       expect.stringContaining("keptChanges"),
     ]);
+  });
+});
+
+describe("hand-off checkouts: what a release keeps and frees", () => {
+  const childOf = async (host: ReturnType<typeof makeHost>) =>
+    host.manager.get(
+      started(await host.handOff(host.manager.create(WORKSPACE).id)).sessionId
+    )!;
+  /** Bytes under `dir`, read with node so it runs on Windows too. */
+  const du = (dir: string): number =>
+    fs.existsSync(dir)
+      ? fs
+          .readdirSync(dir, { recursive: true, withFileTypes: true })
+          .filter((entry) => entry.isFile())
+          .reduce(
+            (sum, entry) =>
+              sum + fs.statSync(path.join(entry.parentPath, entry.name)).size,
+            0
+          )
+      : 0;
+
+  it("with reflogs off, keeps a checkout whose HEAD moved, since its history cannot be checked", async () => {
+    const folder = project("git");
+    git(folder, "config", "core.logAllRefUpdates", "false");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    expect(
+      git(child.worktreePath!, "reflog", "show", "--format=%H", "HEAD")
+    ).toBe("");
+    git(child.worktreePath!, "checkout", "-q", "--detach");
+    commitIn(child.worktreePath!, "lost.txt");
+    git(child.worktreePath!, "checkout", "-q", child.worktreeBranch!);
+    // The detached commit is gone from every list git keeps; HEAD is back
+    // on the branch, but no longer on its start.
+    commitIn(child.worktreePath!, "on-branch.txt");
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(host.notices[0]!.body).toContain("keptNoHistory");
+  });
+
+  it("with reflogs off, still removes a checkout that never left its start", async () => {
+    const folder = project("git");
+    git(folder, "config", "core.logAllRefUpdates", "false");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    host.remove(child.id);
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(branches(folder)).toEqual(["main"]);
+    expect(host.notices).toEqual([]);
+  });
+
+  it("kept for ignored files alone: deletes dependencies and caches, keeps dist/ and out/, and names the file", async () => {
+    const folder = project("git");
+    fs.writeFileSync(
+      path.join(folder, ".gitignore"),
+      "node_modules/\n.next/\n.cache/\ndist/\nout/\n"
+    );
+    commitIn(folder, "keep.txt");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    const at = (file: string) => path.join(child.worktreePath!, file);
+    for (const file of [
+      "node_modules/react/index.js",
+      "packages/ui/node_modules/x/index.js",
+      ".next/cache/a",
+      ".cache/b",
+      "dist/app.js",
+      "out/report.pdf",
+    ]) {
+      fs.mkdirSync(path.dirname(at(file)), { recursive: true });
+      fs.writeFileSync(at(file), "x".repeat(4096));
+    }
+    const before = du(child.worktreePath!);
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    // Only the four freed files' bytes go: dist/ and out/ stay whole.
+    expect(before - du(child.worktreePath!)).toBe(4 * 4096);
+    expect(fs.existsSync(at("dist/app.js"))).toBe(true);
+    expect(fs.existsSync(at("out/report.pdf"))).toBe(true);
+    for (const gone of [
+      "node_modules",
+      "packages/ui/node_modules",
+      ".next",
+      ".cache",
+    ])
+      expect(fs.existsSync(at(gone))).toBe(false);
+    expect(host.notices[0]!.body).toContain("keptIgnoredCleaned");
+    expect(host.notices[0]!.body).toMatch(/"file":"(dist|out)\/"/);
+  });
+
+  it("names .env when that is what keeps it, and deletes nothing when there is nothing to free", async () => {
+    const folder = project("git");
+    fs.writeFileSync(path.join(folder, ".gitignore"), ".env\n");
+    commitIn(folder, "keep.txt");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    fs.writeFileSync(path.join(child.worktreePath!, ".env"), "KEY=x");
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(host.notices[0]!.body).toContain("sessions.handoff.keptIgnored{");
+    expect(host.notices[0]!.body).toContain('"file":".env"');
+  });
+
+  it("OS clutter alone (.DS_Store, Thumbs.db) does not keep a checkout", async () => {
+    const folder = project("git");
+    fs.writeFileSync(path.join(folder, ".gitignore"), ".DS_Store\nThumbs.db\n");
+    commitIn(folder, "keep.txt");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    fs.writeFileSync(path.join(child.worktreePath!, ".DS_Store"), "x");
+    fs.mkdirSync(path.join(child.worktreePath!, "img"));
+    fs.writeFileSync(path.join(child.worktreePath!, "img", "Thumbs.db"), "x");
+    host.remove(child.id);
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(host.notices).toEqual([]);
+  });
+
+  it("a chat moved by hand off its checkout releases it the safe way, unless another chat is still on it", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const alone = await childOf(host);
+    expect((await host.moveTo(alone.id, null)).success).toBe(true);
+    await settled(() => !branches(folder).includes(alone.worktreeBranch!));
+    expect(fs.existsSync(alone.worktreePath!)).toBe(false);
+    expect(branches(folder)).not.toContain(alone.worktreeBranch);
+    expect(host.manager.get(alone.id)).not.toHaveProperty("ownsWorktree");
+
+    const shared = await childOf(host);
+    const other = host.manager.create(WORKSPACE);
+    host.manager.updateWorktree(WORKSPACE, other.id, {
+      id: shared.worktreeId!,
+      path: shared.worktreePath!,
+      branch: shared.worktreeBranch,
+    });
+    expect((await host.moveTo(shared.id, null)).success).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(fs.existsSync(shared.worktreePath!)).toBe(true);
+    expect(host.manager.get(other.id)?.ownsWorktree).toBe(true);
+
+    // Moving back does not make it the owner again: the other chat is.
+    const back = await host.handOff(host.manager.create(WORKSPACE).id);
+    void back;
+    expect(host.manager.get(shared.id)).not.toHaveProperty("ownsWorktree");
   });
 });
 

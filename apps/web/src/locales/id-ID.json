@@ -2350,10 +2350,12 @@
       "keptChangesTitle": "Checkout “{{title}}” disimpan",
       "keptChanges": "Ada perubahan yang belum di-commit, di {{path}}.",
       "keptBranchUndeletable": "git tidak bisa menghapus branch ini. Hapus dengan git jika sudah tidak diperlukan.",
-      "keptIgnored": "Ada file yang diabaikan yang mungkin Anda perlukan, seperti .env, di {{path}}.",
+      "keptIgnored": "Ada file yang diabaikan yang mungkin Anda perlukan, seperti {{file}}, di {{path}}.",
       "keptUnreadable": "git tidak bisa membacanya, jadi tidak ada yang dihapus: {{path}}.",
       "keptBranchMoved": "Checkout chat ini sudah pindah ke branch ini, jadi branch disimpan. Hapus dengan git jika sudah tidak diperlukan.",
-      "keptCommits": "Ada commit yang tidak berada di branch mana pun, di {{path}}."
+      "keptCommits": "Ada commit yang tidak berada di branch mana pun, di {{path}}.",
+      "keptIgnoredCleaned": "Ada file yang diabaikan yang mungkin Anda perlukan, seperti {{file}}, di {{path}}. Dependensi terpasang dan cache di dalamnya dihapus untuk menghemat ruang.",
+      "keptNoHistory": "git tidak menyimpan riwayatnya dan HEAD-nya berpindah, jadi mungkin ada commit yang hanya ada di sana: {{path}}."
     }
   },
   "terminalShells": {

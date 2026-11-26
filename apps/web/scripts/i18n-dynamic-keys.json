@@ -1931,7 +1931,9 @@
       "keptIgnored",
       "keptUnreadable",
       "keptBranchMoved",
-      "keptCommits"
+      "keptCommits",
+      "keptIgnoredCleaned",
+      "keptNoHistory"
     ],
     "sources": ["../../desktop/src/main/service-host.ts"]
   }

@@ -511,21 +511,23 @@ export class AgentSessionManagerService {
    * The checkout this chat owns, now that the chat goes. Another chat still
    * on that worktree (a continuation on another model, a chat that picked it)
    * takes it over, so the last chat on it is the one whose removal takes it
-   * away: then it is returned, for the caller to remove. Read before `remove`.
+   * away: then it is returned, for the caller to remove. Read before
+   * `remove`; for a chat moved off it, pass what it owned before the move.
    */
-  leaveHandOffCheckout(sessionId: string): HandOffCheckout | null {
-    const checkout = this.handOffCheckout(sessionId);
-    if (checkout == null) return null;
-    const heir = [...this.sessions.values(), ...this.orphanedRecords].find(
-      (record) =>
-        record.id !== sessionId && record.worktreePath === checkout.path
-    );
-    if (heir == null) return checkout;
-    heir.handOffCheckout = checkout;
+  leaveHandOffCheckout(
+    sessionId: string,
+    /** What it owned, read before a move off it; else what it owns now. */
+    owned: HandOffCheckout | null = this.handOffCheckout(sessionId)
+  ): HandOffCheckout | null {
+    if (owned == null) return null;
     const owner = this.sessions.get(sessionId);
     if (owner != null) delete owner.handOffCheckout;
+    const heir = [...this.sessions.values(), ...this.orphanedRecords].find(
+      (record) => record.id !== sessionId && record.worktreePath === owned.path
+    );
+    if (heir != null) heir.handOffCheckout = owned;
     this.persist();
-    return null;
+    return heir == null ? owned : null;
   }
 
   /**

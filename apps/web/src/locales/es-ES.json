@@ -2350,10 +2350,12 @@
       "keptChangesTitle": "Se ha conservado la copia de «{{title}}»",
       "keptChanges": "Tiene cambios sin hacer commit, en {{path}}.",
       "keptBranchUndeletable": "git no ha podido borrar la rama. Bórrala con git cuando ya no la necesites.",
-      "keptIgnored": "Tiene archivos ignorados que quizá quieras, como .env, en {{path}}.",
+      "keptIgnored": "Tiene archivos ignorados que quizá quieras, como {{file}}, en {{path}}.",
       "keptUnreadable": "git no ha podido leerla, así que no se ha eliminado nada: {{path}}.",
       "keptBranchMoved": "La copia del chat se había cambiado a esta rama, así que se ha conservado. Bórrala con git cuando ya no la necesites.",
-      "keptCommits": "Tiene commits que no están en ninguna rama, en {{path}}."
+      "keptCommits": "Tiene commits que no están en ninguna rama, en {{path}}.",
+      "keptIgnoredCleaned": "Tiene archivos ignorados que quizá quieras, como {{file}}, en {{path}}. Se han borrado sus dependencias instaladas y cachés para ahorrar espacio.",
+      "keptNoHistory": "git no ha guardado su historial y su HEAD ha cambiado, así que puede haber commits solo ahí: {{path}}."
     }
   },
   "terminalShells": {
