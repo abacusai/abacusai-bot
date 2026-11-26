@@ -1315,6 +1315,140 @@ describe("checkDraft", () => {
     }
   });
 
+  it.each([
+    [
+      "Gmail password: hunter2. Work email password is Sunshine2 for the office laptop",
+      ["hunter2", "Sunshine2"],
+    ],
+    [
+      "Gmail password: hunter2. Backup password Tr0ub4dor for the family account",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2. Bank PIN 9932 for the family account",
+      ["hunter2", "9932"],
+    ],
+    [
+      "Gmail password: hunter2. The bank one: Tr0ub4dor for the family account",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2. Also Tr0ub4dor&3 for the work laptop",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2, work laptop uses Tr0ub4dor for login",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2; bank: Tr0ub4dor for the family account",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2\nBank: Tr0ub4dor for the family account",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2. Netflix: Sunshine99 for the family account",
+      ["hunter2", "Sunshine99"],
+    ],
+    [
+      "Gmail password: hunter2. Tr0ub4dor is the backup for the family account",
+      ["hunter2", "Tr0ub4dor"],
+    ],
+    [
+      "Gmail password: hunter2. Sunshine is the backup for the family account",
+      ["hunter2", "Sunshine"],
+    ],
+    [
+      "Router PIN: 4821. Card PIN 9932 for the family account",
+      ["4821", "9932"],
+    ],
+    [
+      `AWS key AKIA${fake(upper36, 16)} paired with qwertyuiopasdfghjklz for the uploads bucket`,
+      ["qwertyuiopasdfghjklz"],
+    ],
+  ])(
+    "never stores a second secret beside a withheld one: %s",
+    (text, values) => {
+      for (const byUser of [false, true]) {
+        const result = check(text, byUser);
+        if (typeof result === "string") continue;
+        for (const value of values)
+          expect(fieldsOf(result)).not.toContain(value);
+      }
+    }
+  );
+
+  it.each([
+    [
+      "Clients/Acme/Contracts/2026/Signed/FinalVersions holds the signed contracts.",
+      null,
+    ],
+    [
+      `Clients/Acme/${mixed(28)}/Contracts holds the billing files.`,
+      "Clients/Acme/",
+    ],
+    [
+      `Clients/Acme/Q757/${mixed(20)}/${mixed(22)} holds the billing files.`,
+      "Clients/Acme/Q757/",
+    ],
+  ])(
+    "keeps a folder path, withholding only a key-like segment: %s",
+    (text, kept) => {
+      const result = check(text) as Draft;
+      expect(typeof result).toBe("object");
+      if (kept == null) expect(result.body).toBe(text);
+      else {
+        expect(result.body).toContain(kept);
+        expect(result.body).toContain(SECRET_WITHHELD);
+        expect(result.body).toContain("holds the billing files.");
+      }
+    }
+  );
+
+  it("never stores either of two secrets in one note, however it is phrased", () => {
+    const labelled = [
+      "Gmail password: hunter2.",
+      "Router PIN is 4821.",
+      `Stripe key ${stripeLive}.`,
+      "Wifi passphrase: purple monkey dishwasher.",
+    ];
+    const second = (): string =>
+      [
+        () => `${fake(UPPER, 1)}${fake(LOWER, 5)}${fake(DIGITS, 2)}`,
+        () =>
+          `${fake(LOWER, 6)}${fake(DIGITS, 1)}${"&!#$"[Math.floor(random() * 4)]}`,
+        () => fake(DIGITS, 4 + Math.floor(random() * 5)),
+      ][Math.floor(random() * 3)]!();
+    const phrasings = [
+      (v: string) => `Backup password ${v} for the family account.`,
+      (v: string) => `The bank one: ${v} for the family account.`,
+      (v: string) => `Also ${v} for the work laptop.`,
+      (v: string) => `Work laptop uses ${v} for login.`,
+      (v: string) => `Bank PIN ${v} for the family account.`,
+      (v: string) => `Netflix: ${v} for the family account.`,
+      (v: string) => `${v} is the backup for the family account.`,
+    ];
+    const joins = [" ", "\n", "; ", ", "];
+    for (let n = 0; n < 400; n += 1) {
+      const first = labelled[Math.floor(random() * labelled.length)]!;
+      const value = second();
+      const phrase = phrasings[Math.floor(random() * phrasings.length)]!(value);
+      const text = `${first}${joins[Math.floor(random() * joins.length)]}${phrase}`;
+      if (!earlierGateRefuses(text)) continue;
+      for (const byUser of [false, true]) {
+        const result = check(text, byUser);
+        if (typeof result === "string") continue;
+        expect(fieldsOf(result), text).not.toMatch(
+          /hunter2|4821|sk_live_|monkey/
+        );
+        if (!/^\d+$/.test(value) || /PIN|pin/.test(phrase))
+          expect(fieldsOf(result), text).not.toContain(value);
+      }
+    }
+  });
+
   it("finds everything the earlier patterns find, in fuzzed text", () => {
     const pieces = [
       "password",

@@ -174,6 +174,31 @@ const isPath = (run: string, at: number, text: string): boolean => {
   return parts.length >= 3 && parts.every((part) => FOLDER.test(part));
 };
 
+/**
+ * Base64 runs, withheld whole, except a run of folder names with a key-like
+ * segment in it ("Clients/Acme/<random>/Contracts"): only that segment goes.
+ */
+const base64Spans = (view: string): { spans: Span[]; found: number } => {
+  const spans: Span[] = [];
+  for (const match of view.matchAll(BASE64_RUN)) {
+    const run = match[0];
+    if (isPath(run, match.index, view)) continue;
+    const parts = run.split("/");
+    const folders = parts.filter((part) => FOLDER.test(part)).length;
+    if (parts.length >= 3 && folders * 2 >= parts.length) {
+      let at = match.index;
+      for (const part of parts) {
+        if (!FOLDER.test(part) && part.length > 0)
+          spans.push([at, at + part.length]);
+        at += part.length + 1;
+      }
+      continue;
+    }
+    spans.push([match.index, match.index + run.length]);
+  }
+  return { spans, found: spans.length };
+};
+
 /** Words a secret is named by. A value after one, as in "PIN: 4821", is the secret. */
 /** Label words may be split by spaces, a line break or "_"/"-" ("api\nkey", "secret_access_key"). */
 const SECRET_LABEL = [
@@ -248,6 +273,53 @@ const KEPT_AT =
   /^(?:(?:stored|kept|saved|held|located|lives?)\s+(?:in|at|on|under|inside)|in|inside|at|under)\s/i;
 
 type Span = [number, number];
+
+/**
+ * A token shaped like a credential: 6+ characters with a password symbol in
+ * it ("Tr0ub4dor&3"), or a piece of 4+ mixing letters and digits ("hunter2",
+ * "Sunshine99"). Paths, URLs, emails, dates and version numbers are not, nor a
+ * name whose pieces are words or numbers ("x86_64", "Setup-1.4.2").
+ */
+const credentialToken = (token: string): boolean =>
+  token.length >= 6 &&
+  /\p{L}/u.test(token) &&
+  !/[/\\@]|:\/\/|^www\./i.test(token) &&
+  !/^v?\d+(?:\.\d+)+[a-z]?$/i.test(token) &&
+  !/^\d{4}-\d{2}(?:-\d{2})?/.test(token) &&
+  (/[&!#$%*+=?^~|]/.test(token) ||
+    token
+      .split(/[-_.]/)
+      .some(
+        (piece) => piece.length >= 4 && /\d/.test(piece) && /\p{L}/u.test(piece)
+      ));
+/** A 4–8 digit number within three words of a word for a code ("Bank PIN 9932"). */
+const CODE_NUMBER =
+  /\b(?:pin|pins|code|codes|pass\w*|otp|cvv|cvc)\b(?:\W+\w+){0,3}?\W+\d{4,8}\b|\b\d{4,8}\b(?:\W+\w+){0,3}?\W+(?:pin|code|pass\w*|otp|cvv|cvc)\b/i;
+/** A word a note names as another secret right after a withheld one ("[…]. Sunshine is the backup"). */
+const NAMED_BACKUP = new RegExp(
+  `${SECRET_WITHHELD.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[.!?;,]?\\s+\\p{Lu}\\p{L}*\\s+(?:is|was)\\s+(?:the|my|our|a|an)\\s+(?:backup|other|second|old|new|spare|recovery)`,
+  "u"
+);
+/**
+ * Whether a note with something withheld still holds a credential: a
+ * credential-shaped token, a code number beside its word, a word it names as
+ * another secret, or after a withheld key, a long run of letters (its other
+ * half). Withholding is for a note with one secret in it; one with more is
+ * refused, as the earlier gate refused it.
+ */
+const credentialLeft = (text: string, afterKey: boolean): boolean => {
+  const plain = text.replaceAll(SECRET_WITHHELD, " ").replaceAll("\u2029", " ");
+  // A label's own "=" or ":" is not part of a token ("DB_PASSWORD=").
+  const tokens = tokensOf(plain)
+    .map((token) => token.replace(/[=:]+$/, ""))
+    .filter((token) => token.length > 0);
+  return (
+    tokens.some(credentialToken) ||
+    CODE_NUMBER.test(plain) ||
+    NAMED_BACKUP.test(text) ||
+    (afterKey && tokens.some((token) => /^[A-Za-z]{16,}$/.test(token)))
+  );
+};
 
 /**
  * Between the parts of a note read as one (description, body, keywords): a
@@ -372,9 +444,11 @@ const merge = (spans: Span[]): Span[] => {
 };
 
 /** Where the secrets in `text` are, as written, and how many were new. */
-const secretSpans = (text: string): { spans: Span[]; withheld: number } => {
+const secretSpans = (
+  text: string
+): { spans: Span[]; withheld: number; keys: number } => {
   if (text.length > MAX_SCAN_CHARS)
-    return { spans: [[0, text.length]], withheld: 1 };
+    return { spans: [[0, text.length]], withheld: 1, keys: 1 };
   const read = fold(text);
   let spans: Span[] = [];
   let withheld = 0;
@@ -403,10 +477,13 @@ const secretSpans = (text: string): { spans: Span[]; withheld: number } => {
     const found = jwtSpans(view);
     return { spans: found, found: found.length };
   });
-  pass(matches(BASE64_RUN, isPath));
+  pass(base64Spans);
+  const keysBefore = withheld;
   pass(labelledSpans);
+  const labelled = withheld - keysBefore;
   pass(matches(RUN, (run) => !/\d/.test(run) || !/[A-Za-z]/.test(run)));
   return {
+    keys: withheld - labelled,
     spans: spans.map(([start, end]): Span => [
       read.from[start]!,
       read.from[end]!,
@@ -445,8 +522,16 @@ export const withholdSecrets = (
 const MIN_RANDOM_LENGTH = 12;
 const MAX_WORDY_SHARE = 0.4;
 const KEY_TOKEN = /^[A-Za-z0-9+/=_-]+$/;
+/** Folder names joined by "/" ("Clients/Acme/Q757/"): a path, not a key. */
+const folderPath = (token: string): boolean =>
+  token.includes("/") &&
+  token
+    .split("/")
+    .filter((part) => part.length > 0)
+    .every((part) => FOLDER.test(part));
 const randomLooking = (token: string): boolean => {
   if (!KEY_TOKEN.test(token) || token.length < MIN_RANDOM_LENGTH) return false;
+  if (folderPath(token)) return false;
   if ((token.match(/\d/g)?.length ?? 0) < 2) return false;
   if ((token.match(/[A-Za-z]/g)?.length ?? 0) < 4) return false;
   const wordy = (token.match(/[a-z]{4,}/g) ?? []).join("").length;
@@ -455,6 +540,7 @@ const randomLooking = (token: string): boolean => {
 /** A token that could be a key's other half: 12+ letters and digits, or 16+ base32 or hex. */
 const keyShaped = (token: string): boolean =>
   KEY_TOKEN.test(token) &&
+  !folderPath(token) &&
   ((token.length >= MIN_RANDOM_LENGTH &&
     /\d/.test(token) &&
     /[A-Za-z]/.test(token)) ||
@@ -636,7 +722,11 @@ export const withholdOrRefuse = (
     offset = end + PART_BREAK.length;
   }
   if (looksSecret(kept.join(PART_BREAK))) return null;
-  if (found.withheld > 0 && onlySecret(kept.slice(0, 2).join("\n")))
+  if (
+    found.withheld > 0 &&
+    (onlySecret(kept.slice(0, 2).join("\n")) ||
+      credentialLeft(kept.join(PART_BREAK), found.keys > 0))
+  )
     return null;
   return { texts: kept, withheld: found.withheld };
 };
