@@ -388,11 +388,14 @@ setBringToFront(() => {
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running. A
-// shell never ends by itself, so it holds only the restart nobody asked for.
+// shell never ends by itself and a restart ends it with all it holds (jobs,
+// scrollback, folder, environment), so any live one holds the restart nobody
+// asked for; the update offer names them and the user restarts when ready.
 const updateService = new UpdateService({
   isSafeToRestart: ({ requested }) =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
     (requested || !workspaceServiceHost.hasLiveTerminalSessions()),
+  openTerminals: () => workspaceServiceHost.openTerminals(),
 });
 /** Set by the app's own Restart: the quit relaunches once it goes through. */
 let relaunchAfterQuit = false;
@@ -460,7 +463,8 @@ let lastRendererActivity = 0;
 /**
  * Swap to a newly activated renderer bundle at the first quiet moment. The
  * gates: an agent mid-turn would lose a reply that exists nowhere else yet, a
- * terminal's scrollback lives in the renderer, and recent input defers it.
+ * live terminal's screen (modes, a Clear, the alternate screen) would be
+ * rebuilt from raw scrollback, and recent input defers it.
  */
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.

@@ -18,6 +18,7 @@ it("a stalled terminal iterator sends only its credit window and resumes after J
   const deps = fakeDeps({
     bus,
     serviceHost: {
+      canonicalTerminalKey: (key: string) => key,
       terminalOutputState: () => ({ data: "", offset: 0, from: 0 }),
     },
   });

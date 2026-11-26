@@ -156,6 +156,7 @@ it("returns a pending channel URL through the real host socket", async () => {
 
 it("caps terminal scrollback iterator snapshots with a defined size error", async () => {
   const { server, socket } = await setup({
+    canonicalTerminalKey: (key: string) => key,
     terminalOutputState: () => ({
       data: "x".repeat(2 * 1024 * 1024),
       offset: 2 * 1024 * 1024,

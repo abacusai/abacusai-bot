@@ -116,9 +116,14 @@ export const retainTerminalStart = (key: string, id: string): (() => void) => {
     released = true;
     entry.owners--;
     queueMicrotask(() => {
-      if (entry.owners || pending?.get(ref) !== entry) return;
-      pending.delete(ref);
-      if (!pending.size) pendingTerminalStarts.delete(key);
+      if (entry.owners) return;
+      // Wherever the tab lives now: a new chat's tab moves to its chat
+      // (promoteTabs) while its start is on its way.
+      for (const [owner, starts] of pendingTerminalStarts)
+        if (starts.get(ref) === entry) {
+          starts.delete(ref);
+          if (!starts.size) pendingTerminalStarts.delete(owner);
+        }
     });
   };
 };
@@ -221,6 +226,17 @@ export const rememberTerminalShell = (
         }
       : s
   );
+/** A terminal's tab name, as its tab shows it (kept across restarts too). */
+export const terminalTabTitle = (
+  key: string,
+  terminalId: string
+): string | undefined => {
+  const ref = `terminal:${terminalId}`;
+  return (
+    panelTabsStore.state[key]?.tabs.find((tab) => tab.ref === ref)?.title ??
+    savedTerminals.state[key]?.tabs.find((tab) => tab.ref === ref)?.title
+  );
+};
 export const terminalExited = (key: string, ref: string): boolean =>
   exitedTerminals.has(`${key} ${ref}`);
 export const closeTab = (key: string, ref: string): string | undefined => {
@@ -302,12 +318,61 @@ export const reconcileTerminals = (
       });
   updateTabs(key, (s) => ({ ...s, last: previousLast ?? s.last }));
 };
-export const promoteTabs = (from: string, to: string): void =>
+/**
+ * A new chat's tabs become its chat's, with what is known of their shells
+ * (one still starting, one exited): main keeps them as the chat's from its
+ * promotion on, so the chat's tabs and shells match one to one.
+ */
+/**
+ * A deleted workspace's chats keep no terminal tabs, whether a chat was on
+ * screen or not: main ended their shells, and a restored workspace's chats
+ * open new ones from the panel. Returns the conversations it cleared.
+ */
+export const forgetWorkspaceTerminals = (workspaceId: string): string[] => {
+  const keys = [
+    ...new Set([
+      ...Object.keys(panelTabsStore.state),
+      ...Object.keys(savedTerminals.state),
+    ]),
+  ].filter(
+    (key) =>
+      conversationRefFromKey(key as ConversationKey)?.workspaceId ===
+      workspaceId
+  );
+  for (const key of keys) {
+    const refs = (panelTabsStore.state[key]?.tabs ?? [])
+      .map((tab) => tab.ref)
+      .filter(isTerminal);
+    pendingTerminalStarts.delete(key);
+    for (const ref of refs) exitedTerminals.delete(`${key} ${ref}`);
+    if (refs.length) updateTabs(key, (s) => removeRefs(s, refs));
+  }
+  savedTerminals.setState((saved) => {
+    const next = { ...saved };
+    for (const key of keys) delete next[key];
+    return next;
+  });
+  return keys;
+};
+export const promoteTabs = (from: string, to: string): void => {
+  const pending = pendingTerminalStarts.get(from);
+  if (pending) {
+    pendingTerminalStarts.delete(from);
+    const target = pendingTerminalStarts.get(to) ?? new Map();
+    for (const [ref, entry] of pending) target.set(ref, entry);
+    pendingTerminalStarts.set(to, target);
+  }
+  for (const mark of exitedTerminals)
+    if (mark.startsWith(`${from} `)) {
+      exitedTerminals.delete(mark);
+      exitedTerminals.add(`${to} ${mark.slice(from.length + 1)}`);
+    }
   panelTabsStore.setState((s) => {
     const next = { ...s, [to]: s[from] ?? s[to] ?? EMPTY_TABS };
     delete next[from];
     return next;
   });
+};
 
 export const reopenTab = (key: string): string | null => {
   const tab = panelTabsStore.state[key]?.closed?.at(-1);

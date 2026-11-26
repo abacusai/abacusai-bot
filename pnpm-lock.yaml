@@ -249,7 +249,7 @@ overrides:
 
 patchedDependencies:
   app-builder-lib@26.18.0: b975641aeb66e33d958845728eca59a6da3ad9acb2d6e4db8a448528f71375f1
-  ghostty-web@0.4.0: 7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331
+  ghostty-web@0.4.0: dde4fb5f386f8a0b2265e8d368c379326b1097642104042e23af21e5fa8675c5
 
 importers:
 
@@ -426,7 +426,7 @@ importers:
         version: 2.3.2
       ghostty-web:
         specifier: 0.4.0
-        version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
+        version: 0.4.0(patch_hash=dde4fb5f386f8a0b2265e8d368c379326b1097642104042e23af21e5fa8675c5)
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@2.3.0)
@@ -695,7 +695,7 @@ importers:
         version: 8.4.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       ghostty-web:
         specifier: 0.4.0
-        version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
+        version: 0.4.0(patch_hash=dde4fb5f386f8a0b2265e8d368c379326b1097642104042e23af21e5fa8675c5)
       i18next:
         specifier: ^25.8.7
         version: 25.10.10(typescript@7.0.2)
@@ -941,7 +941,7 @@ importers:
         version: 0.36.0(@opentelemetry/api@1.9.0)(zod@4.6.7)
       ghostty-web:
         specifier: 0.4.0
-        version: 0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331)
+        version: 0.4.0(patch_hash=dde4fb5f386f8a0b2265e8d368c379326b1097642104042e23af21e5fa8675c5)
       marked:
         specifier: 18.0.5
         version: 18.0.5
@@ -11937,7 +11937,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  ghostty-web@0.4.0(patch_hash=7903af744239c921b1885caca9fc5f78622e69ae32990e9ab0513d0fa11db331): {}
+  ghostty-web@0.4.0(patch_hash=dde4fb5f386f8a0b2265e8d368c379326b1097642104042e23af21e5fa8675c5): {}
 
   glob-parent@5.1.2:
     dependencies:

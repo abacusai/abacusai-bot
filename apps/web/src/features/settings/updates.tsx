@@ -36,6 +36,11 @@ import {
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 
+import {
+  terminalInChat,
+  terminalList,
+  terminalName,
+} from "../sessions/terminal/terminal-names";
 import { LicenseSection } from "./license-section";
 /**
  * What an install failure adds under its title: the service's own words
@@ -48,6 +53,36 @@ export const installNote = (
   installError != null && installError !== t("phase5.updates.installFailed")
     ? installError
     : null;
+/**
+ * The terminals a restart would close, which keep it from happening by
+ * itself: named on the offer, so the restart is the user's call.
+ */
+export const terminalsNote = (
+  status: UpdateStatus | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string | null => {
+  // How many first, so a clamped line never hides it; then a running
+  // program's terminal, and the rest by their tabs and chats.
+  const open = [...(status?.openTerminals ?? [])].sort(
+    (a, b) => Number(b.program != null) - Number(a.program != null)
+  );
+  const list = terminalList(
+    open,
+    t,
+    (terminal) => {
+      const name = terminalName(terminal, t);
+      return terminalInChat(
+        terminal,
+        terminal.program ? `${name} (${terminal.program})` : name,
+        t
+      );
+    },
+    3
+  );
+  return list == null
+    ? null
+    : t("updateBanner.closesTerminals", { count: open.length, list });
+};
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false
@@ -515,11 +550,21 @@ export const UpdatePillButton = ({
       data-slot={compact ? "rail-update" : undefined}
       title={
         compact
-          ? t(label, { percent: Math.round(status.progress?.percent ?? 0) })
+          ? [
+              t(label, { percent: Math.round(status.progress?.percent ?? 0) }),
+              install ? terminalsNote(status, t) : null,
+            ]
+              .filter(Boolean)
+              .join("\n")
           : install
-            ? t("phase5.updates.downloaded", {
-                version: status.updateInfo?.version,
-              })
+            ? [
+                t("phase5.updates.downloaded", {
+                  version: status.updateInfo?.version,
+                }),
+                terminalsNote(status, t),
+              ]
+                .filter(Boolean)
+                .join("\n")
             : manual
               ? t("phase5.updates.manualInstall")
               : undefined

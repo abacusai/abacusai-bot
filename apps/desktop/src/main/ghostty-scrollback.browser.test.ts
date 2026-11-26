@@ -281,6 +281,69 @@ const LAYOUT_SCRIPT = `(async () => {
   return report;
 })()`;
 
+/**
+ * The frame loop off screen (the patch's third change): counted through the
+ * renderer while shown, hidden by `display: none` (another tab, a closed
+ * panel), shown again, and taken out of the page.
+ */
+const OFFSCREEN_SCRIPT = `(async () => {
+  const { init, Terminal } = window.__ghostty;
+  await init();
+  const host = document.getElementById("host");
+  const term = new Terminal({ cols: 80, rows: 24, cursorBlink: true });
+  term.open(host);
+  let renders = 0;
+  let forced = 0;
+  const render = term.renderer.render.bind(term.renderer);
+  term.renderer.render = (buffer, force, ...rest) => {
+    renders += 1;
+    if (force) forced += 1;
+    return render(buffer, force, ...rest);
+  };
+  const frames = (count) =>
+    new Promise((resolve) => {
+      let seen = 0;
+      const step = () =>
+        (seen += 1) >= count ? resolve() : requestAnimationFrame(step);
+      requestAnimationFrame(step);
+    });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 250));
+
+  await frames(10);
+  const visible = renders;
+
+  host.style.display = "none";
+  await settle();
+  renders = 0;
+  term.write("written while hidden\\r\\n");
+  await frames(20);
+  const hidden = renders;
+
+  const forcedBefore = forced;
+  host.style.display = "";
+  await settle();
+  await frames(5);
+  const shown = renders;
+  const redrawnWhole = forced - forcedBefore;
+
+  host.remove();
+  await settle();
+  renders = 0;
+  await frames(20);
+  const detached = renders;
+
+  term.dispose();
+  return { visible, hidden, shown, redrawnWhole, detached };
+})()`;
+
+interface OffscreenReport {
+  visible: number;
+  hidden: number;
+  shown: number;
+  redrawnWhole: number;
+  detached: number;
+}
+
 interface ViewportReport {
   atBottom: number;
   scrolledBack: number;
@@ -362,6 +425,23 @@ describe.skipIf(!availability.usable)(
         `renderer said ${JSON.stringify(layout.renderer)}`
       ).toBe(800);
       expect(layout.widthAfterColumnChange).toBe(800);
+    });
+
+    it("draws no frame off screen, and the whole screen when shown again", () => {
+      const loop = runSnapshotFixtures(OFFSCREEN_SCRIPT, {
+        offscreen: FIXTURE,
+      }).offscreen as unknown as OffscreenReport;
+      const said = JSON.stringify(loop);
+
+      // On screen it draws every frame; the counter is wired.
+      expect(loop.visible, said).toBeGreaterThan(0);
+      // Hidden or out of the page, nothing: unpatched, a frame per frame.
+      expect(loop.hidden, said).toBe(0);
+      expect(loop.detached, said).toBe(0);
+      // Back on screen: drawn whole once (what was written meanwhile too),
+      // then the loop runs again.
+      expect(loop.redrawnWhole, said).toBeGreaterThanOrEqual(1);
+      expect(loop.shown, said).toBeGreaterThan(1);
     });
 
     it("keeps scrolling while a selection is dragged off the top", () => {

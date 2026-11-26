@@ -9,6 +9,10 @@ import {
   updateTab,
   focusTab,
   reconcileTerminals,
+  openTerminalTab,
+  promoteTabs,
+  retainTerminalStart,
+  forgetWorkspaceTerminals,
 } from "./panel-tabs-store";
 it("preview eviction repairs last while keeping the most recent 50 previews", () => {
   const key = "eviction";
@@ -95,4 +99,44 @@ it("reopens closed browser metadata without reviving its closed native resource"
     url: "https://example.test",
   });
   expect(reopenTab(key)).toBeNull();
+});
+it("a new chat's terminal opened while it hands off stays the chat's tab", async () => {
+  const draft = "promote-draft";
+  const chat = "promote-chat";
+  // Opened on the new-chat page while the first turn hands off: its shell is
+  // still starting when the chat takes the page's tabs.
+  openTerminalTab(draft, { ref: "terminal:late", title: "Terminal" });
+  const started = retainTerminalStart(draft, "late");
+  promoteTabs(draft, chat);
+  expect(panelTabsStore.state[draft]).toBeUndefined();
+  reconcileTerminals(chat, []);
+  expect(panelTabsStore.state[chat]!.tabs.map((tab) => tab.ref)).toEqual([
+    "terminal:late",
+  ]);
+  // The start settles in the new-chat page's tab: the mark goes from the
+  // chat, where the tab now lives, so main's word decides again.
+  started();
+  await Promise.resolve();
+  reconcileTerminals(chat, []);
+  expect(panelTabsStore.state[chat]!.tabs).toEqual([]);
+});
+it("a deleted workspace's chats keep no terminal tabs, shown or not, and other workspaces keep theirs", () => {
+  const shown = '["conversation",1,"gone","session","a"]';
+  const hidden = '["conversation",1,"gone","session","b"]';
+  const other = '["conversation",1,"kept","session","c"]';
+  openTab(shown, { ref: "terminal:1", title: "Terminal" });
+  openTab(shown, { ref: "files", title: "Files" });
+  openTab(hidden, { ref: "terminal:2", title: "Terminal" });
+  openTab(other, { ref: "terminal:3", title: "Terminal" });
+
+  expect(forgetWorkspaceTerminals("gone").sort()).toEqual(
+    [shown, hidden].sort()
+  );
+  expect(panelTabsStore.state[shown]!.tabs.map((tab) => tab.ref)).toEqual([
+    "files",
+  ]);
+  expect(panelTabsStore.state[hidden]!.tabs).toEqual([]);
+  expect(panelTabsStore.state[other]!.tabs.map((tab) => tab.ref)).toEqual([
+    "terminal:3",
+  ]);
 });

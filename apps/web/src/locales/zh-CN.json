@@ -2157,6 +2157,12 @@
       "busyTitle": "停止 {{program}}？",
       "busyBody": "{{program}} 仍在此终端中运行。关闭终端会停止它。",
       "busyConfirm": "关闭终端",
+      "deleteSessionStops": "删除此会话会停止其终端中正在运行的内容：{{list}}。",
+      "deleteSessionCloses": "删除此会话会关闭其打开的终端：{{list}}。",
+      "deleteWorkspaceStops": "删除此工作区会停止其终端中正在运行的内容：{{list}}。",
+      "deleteWorkspaceCloses": "删除此工作区会关闭其打开的终端：{{list}}。",
+      "andMore": "{{list}} 等另外 {{count}} 个",
+      "inChat": "{{chat}} 中的 {{terminal}}",
       "folderMissing": "此聊天的文件夹已不存在：{{path}}。请放回原处，然后按“重启”。",
       "folderDenied": "你没有打开此聊天文件夹的权限：{{path}}。请修正权限，然后按“重启”。",
       "signalled": "进程已停止（信号 {{signal}}）"
@@ -2426,6 +2432,8 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "重新启动会关闭 {{count}} 个终端：{{list}}。",
+    "closesTerminals_other": "重新启动会关闭 {{count}} 个终端：{{list}}。",
     "dismiss": "关闭",
     "stalled": "无法自动重启。请退出并重新打开应用以完成更新。",
     "subtitle": "重新启动即可获得最新改进和修复。",

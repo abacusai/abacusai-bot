@@ -137,4 +137,6 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   # The Windows installer's differential-aware archive settings (see the patch).
   app-builder-lib@26.18.0: patches/app-builder-lib@26.18.0.patch
+  # The terminal: its canvas fills the panel, a scrolled-back view keeps its
+  # place as output arrives, and no frame is drawn while it is off screen.
   ghostty-web@0.4.0: patches/ghostty-web@0.4.0.patch

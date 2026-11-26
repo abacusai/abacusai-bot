@@ -9,6 +9,9 @@ import { renderApp } from "#renderer/test-support/app-harness";
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("../terminal/terminal-registry", () => ({
   getTerminalView: mocks.get,
+  peekTerminalView: mocks.get,
+  closeTerminalView: vi.fn(async () => {}),
+  disposeConversationViews: vi.fn(),
   disposeTerminalView: vi.fn(),
 }));
 // The terminal adapter is deferred; the dock, initializer, router and RPC are real.

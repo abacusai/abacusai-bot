@@ -2181,6 +2181,12 @@
       "busyTitle": "Zatrzymać {{program}}?",
       "busyBody": "{{program}} nadal działa w tym terminalu. Zamknięcie terminala go zatrzyma.",
       "busyConfirm": "Zamknij terminal",
+      "deleteSessionStops": "Usunięcie tej sesji zatrzyma to, co działa w jej terminalach: {{list}}.",
+      "deleteSessionCloses": "Usunięcie tej sesji zamknie jej otwarte terminale: {{list}}.",
+      "deleteWorkspaceStops": "Usunięcie tego obszaru roboczego zatrzyma to, co działa w jego terminalach: {{list}}.",
+      "deleteWorkspaceCloses": "Usunięcie tego obszaru roboczego zamknie jego otwarte terminale: {{list}}.",
+      "andMore": "{{list}} i jeszcze {{count}}",
+      "inChat": "{{terminal}} w {{chat}}",
       "folderMissing": "Folderu tego czatu już nie ma: {{path}}. Przywróć go, a potem naciśnij Uruchom ponownie.",
       "folderDenied": "Nie masz uprawnień do otwarcia folderu tego czatu: {{path}}. Popraw uprawnienia, a potem naciśnij Uruchom ponownie.",
       "signalled": "Proces zatrzymany (sygnał {{signal}})"
@@ -2450,6 +2456,10 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "Ponowne uruchomienie zamknie {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Ponowne uruchomienie zamknie {{count}} terminali: {{list}}.",
+    "closesTerminals_few": "Ponowne uruchomienie zamknie {{count}} terminale: {{list}}.",
+    "closesTerminals_many": "Ponowne uruchomienie zamknie {{count}} terminali: {{list}}.",
     "dismiss": "Zamknij",
     "stalled": "Nie udało się automatycznie uruchomić ponownie. Zamknij i otwórz aplikację, aby dokończyć aktualizację.",
     "subtitle": "Uruchom ponownie, aby otrzymać najnowsze ulepszenia i poprawki.",

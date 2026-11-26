@@ -72,6 +72,7 @@ import {
   openStartDraft,
   startDraftStore,
 } from "./start/start-session";
+import { BusyTerminalsNote } from "./terminal/busy-terminals-note";
 
 export interface SessionGroups {
   pinned: SessionRow[];
@@ -614,6 +615,12 @@ const SessionSidebarRow = ({
                   </p>
                 ) : null}
               </AlertDialogDescription>
+              {remove ? (
+                <BusyTerminalsNote
+                  workspaceId={session.workspaceId}
+                  sessionId={session.id}
+                />
+              ) : null}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>

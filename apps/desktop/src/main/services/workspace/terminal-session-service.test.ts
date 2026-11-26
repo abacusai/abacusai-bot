@@ -24,6 +24,7 @@ const resolveShell = vi.fn((id: TerminalShellId) => ({
 vi.mock("./terminal-shells", () => ({
   resolveTerminalShell: (id: TerminalShellId) => resolveShell(id),
   preferredTerminalShell: () => storedShell(),
+  learnTerminalShell: async () => {},
 }));
 
 vi.mock("@lydell/node-pty", () => ({
@@ -311,4 +312,118 @@ describe("conversation terminal session service", () => {
       expect(terminals.busyProgram(draft.conversationKey, "idle")).toBeNull();
     }
   );
+
+  it.skipIf(process.platform === "win32")(
+    "names what deleting would stop: a program, not a shell at its prompt",
+    async () => {
+      const terminals = service();
+      const draft = draftRequest();
+      ptySpawn
+        .mockReturnValueOnce(fakePty("-system"))
+        .mockReturnValueOnce(fakePty("python3"));
+      await terminals.startSession({ ...draft, terminalId: "idle" });
+      await terminals.startSession({ ...draft, terminalId: "server" });
+
+      expect(terminals.stoppable(() => true)).toEqual([
+        {
+          key: draft.conversationKey,
+          terminalId: "server",
+          program: "python3",
+        },
+      ]);
+      expect(terminals.stoppable(() => false)).toEqual([]);
+    }
+  );
+
+  it("on Windows, which can't tell a program from a prompt, names every open terminal", async () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    Object.defineProperty(process, "platform", { value: "win32" });
+    try {
+      const terminals = service();
+      const draft = draftRequest();
+      await terminals.startSession({ ...draft, terminalId: "idle" });
+      expect(terminals.stoppable(() => true)).toEqual([
+        { key: draft.conversationKey, terminalId: "idle", program: null },
+      ]);
+    } finally {
+      Object.defineProperty(process, "platform", platform);
+    }
+  });
+
+  it("ends a deleted chat's shells, those its new-chat page left too", async () => {
+    const terminals = service();
+    const drafted = fakePty();
+    const chat = fakePty();
+    const other = fakePty();
+    ptySpawn
+      .mockReturnValueOnce(drafted)
+      .mockReturnValueOnce(chat)
+      .mockReturnValueOnce(other);
+    const draftRef = draftConversationRef("workspace-1", "chat-1");
+    const chatRef = sessionConversationRef("workspace-1", "chat-1");
+    const otherRef = sessionConversationRef("workspace-1", "chat-2");
+    for (const conversation of [draftRef, chatRef, otherRef])
+      await terminals.startSession({
+        conversation,
+        conversationKey: conversationKey(conversation),
+        generation: null,
+        cols: 80,
+        rows: 24,
+      });
+
+    terminals.disposeConversation("workspace-1", "chat-1");
+    expect(drafted.kill).toHaveBeenCalledOnce();
+    expect(chat.kill).toHaveBeenCalledOnce();
+    expect(other.kill).not.toHaveBeenCalled();
+
+    terminals.disposeWorkspace("workspace-1");
+    expect(other.kill).toHaveBeenCalledOnce();
+    expect(terminals.hasLiveSessions()).toBe(false);
+  });
+
+  it("closes by key, a tab's shell or all of a conversation's, with no generation", async () => {
+    const terminals = service();
+    const ptys = [fakePty(), fakePty(), fakePty()];
+    for (const pty of ptys) ptySpawn.mockReturnValueOnce(pty);
+    const draft = draftRequest();
+    await terminals.startSession({ ...draft, terminalId: "a" });
+    await terminals.startSession({ ...draft, terminalId: "b" });
+    await terminals.startSession({ ...draft, terminalId: "c" });
+    expect(terminals.close(draft.conversationKey, "a")).toBe(true);
+    expect(ptys[0]!.kill).toHaveBeenCalledOnce();
+    expect(ptys[1]!.kill).not.toHaveBeenCalled();
+    expect(terminals.close(draft.conversationKey)).toBe(true);
+    expect(ptys[1]!.kill).toHaveBeenCalledOnce();
+    expect(ptys[2]!.kill).toHaveBeenCalledOnce();
+    expect(terminals.hasLiveSessions()).toBe(false);
+  });
+
+  it("answers a start for a shell that already ended with a quiet code, not a failure", async () => {
+    const terminals = service();
+    const draft = draftRequest();
+    const { state } = await terminals.startSession(draft);
+    terminals.close(draft.conversationKey);
+    const stale = await terminals.startSession({
+      ...draft,
+      generation: state.generation,
+    });
+    expect(stale).toMatchObject({ success: false, error: "generation-stale" });
+  });
+
+  it("starts no shell in a deleted workspace, whoever asks", async () => {
+    const terminals = new TerminalSessionService({
+      resolveWorkspacePath: () => workspace,
+      isWorkspaceDeleted: (id) => id === "workspace-1",
+      emitTerminalOutput: () => {},
+      emitTerminalExit: () => {},
+      emitTerminalState: () => {},
+    });
+    const refused = await terminals.startSession(draftRequest());
+    expect(refused).toMatchObject({
+      success: false,
+      error: "workspace-deleted",
+    });
+    expect(ptySpawn).not.toHaveBeenCalled();
+    expect(terminals.hasLiveSessions()).toBe(false);
+  });
 });

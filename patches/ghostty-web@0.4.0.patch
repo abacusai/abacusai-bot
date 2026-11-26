@@ -1,5 +1,23 @@
+ghostty-web 0.4.0, patched where the package has no option for it. Three changes:
+1. The canvas fills its container's width (Renderer `targetWidth`), and
+   Terminal.resize/fit leave the canvas size to the renderer.
+2. Output that arrives while the view is scrolled back keeps the view where
+   it is (`writeInternal` anchors `viewportY`) instead of snapping down.
+3. No frame is drawn while the terminal is off screen: `observeVisibility`
+   watches the element with an IntersectionObserver, stops the
+   requestAnimationFrame loop when it leaves the screen and draws it whole
+   when it returns; `startRenderLoop` runs only while `onScreen` is not false.
+   0.4.0 has no public way to pause the loop, and only it knows its frames.
+
+Re-porting after a bump: the dist file is bundled, not minified (method names
+survive, locals are single letters). Find `open(`, `startRenderLoop()`,
+`dispose()`, `resize(`, `writeInternal(` in dist/ghostty-web.js, apply the
+same edits with `pnpm patch ghostty-web@<version>`, then `pnpm patch-commit`
+and copy this header back. src/main/ghostty-scrollback.browser.test.ts
+(apps/desktop) fails if any of the three stops working.
+
 diff --git a/dist/ghostty-web.js b/dist/ghostty-web.js
-index a4ca427b95288e70c782ce303013cd644893dcec..d5cfa5fbf22d88cd5e250f34e3f254fce2917b59 100644
+index a4ca427b95288e70c782ce303013cd644893dcec..aef5e9a286cc0b96c992267c83191eb89e519aa7 100644
 --- a/dist/ghostty-web.js
 +++ b/dist/ghostty-web.js
 @@ -1381,11 +1381,23 @@ class $ {
@@ -46,6 +64,15 @@ index a4ca427b95288e70c782ce303013cd644893dcec..d5cfa5fbf22d88cd5e250f34e3f254fc
    }
    /**
     * Parse a CSS color string to 0xRRGGBB format.
+@@ -2370,7 +2381,7 @@ class IA {
+         E.preventDefault(), E.stopPropagation();
+         const C = (I = E.clipboardData) == null ? void 0 : I.getData("text");
+         C && this.paste(C);
+-      }), this.linkDetector = new v(this), this.linkDetector.registerProvider(new X(this)), this.linkDetector.registerProvider(new _(this)), A.addEventListener("mousedown", this.handleMouseDown, { capture: !0 }), A.addEventListener("mousemove", this.handleMouseMove), A.addEventListener("mouseleave", this.handleMouseLeave), A.addEventListener("click", this.handleClick), document.addEventListener("mouseup", this.handleMouseUp), A.addEventListener("wheel", this.handleWheel, { passive: !1, capture: !0 }), this.renderer.render(this.wasmTerm, !0, this.viewportY, this, this.scrollbarOpacity), this.startRenderLoop(), this.focus();
++      }), this.linkDetector = new v(this), this.linkDetector.registerProvider(new X(this)), this.linkDetector.registerProvider(new _(this)), A.addEventListener("mousedown", this.handleMouseDown, { capture: !0 }), A.addEventListener("mousemove", this.handleMouseMove), A.addEventListener("mouseleave", this.handleMouseLeave), A.addEventListener("click", this.handleClick), document.addEventListener("mouseup", this.handleMouseUp), A.addEventListener("wheel", this.handleWheel, { passive: !1, capture: !0 }), this.renderer.render(this.wasmTerm, !0, this.viewportY, this, this.scrollbarOpacity), this.observeVisibility(A), this.startRenderLoop(), this.focus();
+     } catch (B) {
+       throw this.isOpen = !1, this.cleanupComponents(), new Error(`Failed to open terminal: ${B}`);
+     }
 @@ -2387,7 +2398,13 @@ class IA {
     */
    writeInternal(A, B) {
@@ -98,3 +125,38 @@ index a4ca427b95288e70c782ce303013cd644893dcec..d5cfa5fbf22d88cd5e250f34e3f254fc
    }
    /**
     * Smoothly scroll to a target viewport position
+@@ -2624,7 +2640,7 @@ class IA {
+    */
+   dispose() {
+     if (!this.isDisposed) {
+-      this.isDisposed = !0, this.isOpen = !1, this.animationFrameId && (cancelAnimationFrame(this.animationFrameId), this.animationFrameId = void 0), this.scrollAnimationFrame && (cancelAnimationFrame(this.scrollAnimationFrame), this.scrollAnimationFrame = void 0), this.mouseMoveThrottleTimeout && (clearTimeout(this.mouseMoveThrottleTimeout), this.mouseMoveThrottleTimeout = void 0), this.pendingMouseMove = void 0;
++      this.isDisposed = !0, this.isOpen = !1, this.visibilityObserver && (this.visibilityObserver.disconnect(), this.visibilityObserver = void 0), this.animationFrameId && (cancelAnimationFrame(this.animationFrameId), this.animationFrameId = void 0), this.scrollAnimationFrame && (cancelAnimationFrame(this.scrollAnimationFrame), this.scrollAnimationFrame = void 0), this.mouseMoveThrottleTimeout && (clearTimeout(this.mouseMoveThrottleTimeout), this.mouseMoveThrottleTimeout = void 0), this.pendingMouseMove = void 0;
+       for (const A of this.addons)
+         A.dispose();
+       this.addons = [], this.cleanupComponents(), this.dataEmitter.dispose(), this.resizeEmitter.dispose(), this.bellEmitter.dispose(), this.selectionChangeEmitter.dispose(), this.keyEmitter.dispose(), this.titleChangeEmitter.dispose(), this.scrollEmitter.dispose(), this.renderEmitter.dispose(), this.cursorMoveEmitter.dispose();
+@@ -2633,12 +2649,24 @@ class IA {
+   // ==========================================================================
+   // Private Methods
+   // ==========================================================================
++  /**
++   * Draw only while on screen: a terminal behind another tab, in a closed
++   * panel or taken out of the page stops its frame loop, and is drawn whole
++   * again when it comes back (what was written meanwhile included).
++   */
++  observeVisibility(A) {
++    typeof IntersectionObserver > "u" || (this.visibilityObserver = new IntersectionObserver((B) => {
++      const g = B[B.length - 1].isIntersecting;
++      g !== this.onScreen && (this.onScreen = g, g ? (this.renderer.render(this.wasmTerm, !0, this.viewportY, this, this.scrollbarOpacity), this.startRenderLoop()) : this.animationFrameId && (cancelAnimationFrame(this.animationFrameId), this.animationFrameId = void 0));
++    }), this.visibilityObserver.observe(A));
++  }
+   /**
+    * Start the render loop
+    */
+   startRenderLoop() {
++    this.animationFrameId && cancelAnimationFrame(this.animationFrameId);
+     const A = () => {
+-      if (!this.isDisposed && this.isOpen) {
++      if (!this.isDisposed && this.isOpen && this.onScreen !== !1) {
+         this.renderer.render(this.wasmTerm, !1, this.viewportY, this, this.scrollbarOpacity);
+         const B = this.wasmTerm.getCursor();
+         B.y !== this.lastCursorY && (this.lastCursorY = B.y, this.cursorMoveEmitter.fire()), this.animationFrameId = requestAnimationFrame(A);

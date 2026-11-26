@@ -29,6 +29,12 @@ export const terminalRouter = impl.terminal.router({
   hide: impl.terminal.hide.handler(({ input, context }) =>
     context.deps.serviceHost.hideTerminalSession(input)
   ),
+  close: impl.terminal.close.handler(({ input, context }) =>
+    context.deps.serviceHost.closeTerminal(input)
+  ),
+  busyIn: impl.terminal.busyIn.handler(({ input, context }) =>
+    context.deps.serviceHost.busyTerminalsIn(input)
+  ),
   busy: impl.terminal.busy.handler(({ input, context }) => ({
     program: context.deps.serviceHost.terminalBusyProgram(input),
   })),
@@ -37,7 +43,7 @@ export const terminalRouter = impl.terminal.router({
   ),
   shell: {
     get: impl.terminal.shell.get.handler(({ context }) =>
-      context.deps.serviceHost.getTerminalShellState()
+      context.deps.serviceHost.terminalShellState()
     ),
     set: impl.terminal.shell.set.handler(({ input, context }) =>
       context.deps.serviceHost.setTerminalShell(input.shell)
@@ -53,6 +59,10 @@ export const terminalRouter = impl.terminal.router({
   output: impl.terminal.output.handler(({ input, context, signal }) => {
     const terminalId = input.terminalId ?? DEFAULT_TERMINAL_ID;
     const { serviceHost } = context.deps;
+    // A promoted draft's terminals are its chat's: their events carry its key.
+    const conversationKey = serviceHost.canonicalTerminalKey(
+      input.conversationKey
+    );
     let offset = 0;
     let endStream = (): void => undefined;
 
@@ -66,7 +76,7 @@ export const terminalRouter = impl.terminal.router({
           "terminal-retired",
           (event) => {
             if (
-              event.conversationKey !== input.conversationKey ||
+              event.conversationKey !== conversationKey ||
               event.terminalId !== terminalId ||
               event.generation !== input.generation
             )
@@ -79,7 +89,7 @@ export const terminalRouter = impl.terminal.router({
           (event) =>
             (event.type === "terminal-output" ||
               event.type === "terminal-exited") &&
-            event.conversationKey === input.conversationKey &&
+            event.conversationKey === conversationKey &&
             event.terminalId === terminalId &&
             event.generation === input.generation,
           (event) => {
@@ -103,7 +113,7 @@ export const terminalRouter = impl.terminal.router({
       },
       initial: () => {
         const state = serviceHost.terminalOutputState({
-          conversationKey: input.conversationKey,
+          conversationKey,
           terminalId,
           generation: input.generation,
           ...(input.fromOffset == null ? {} : { fromOffset: input.fromOffset }),
@@ -130,7 +140,10 @@ export const terminalRouter = impl.terminal.router({
     });
   }),
   events: impl.terminal.events.handler(({ input, context, signal }) => {
-    const key = input?.conversationKey;
+    const key =
+      input?.conversationKey == null
+        ? undefined
+        : context.deps.serviceHost.canonicalTerminalKey(input.conversationKey);
     return stream<TerminalEvent>({
       path: "terminal.events",
       context,

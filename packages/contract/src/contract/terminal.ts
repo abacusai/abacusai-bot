@@ -7,6 +7,7 @@ import type {
 } from "../contracts";
 import {
   TERMINAL_SHELLS,
+  type TerminalInUse,
   type TerminalShellId,
   type TerminalShellState,
 } from "../terminal-shells";
@@ -110,6 +111,29 @@ export const terminal = {
     .input(ResizeTerminalSessionRequestSchema)
     .output(type<number | false>()),
   hide: mutation.input(TerminalRuntimeRequestSchema).output(type<boolean>()),
+  /**
+   * Ends a tab's shell, or every shell of the conversation when no tab is
+   * named, whatever generation it reached (one still starting included).
+   * Main owns the shells: closing needs no screen in the window.
+   */
+  close: mutation
+    .input(
+      v.object({
+        conversationKey: ConversationKeySchema,
+        terminalId: v.optional(TerminalId),
+      })
+    )
+    .output(type<boolean>()),
+  /**
+   * What deleting a chat, or a whole workspace, would stop in its terminals:
+   * those running a program, or on Windows, which can't tell a program from
+   * a prompt, every open one (`program` null).
+   */
+  busyIn: query
+    .input(
+      v.object({ workspaceId: v.string(), sessionId: v.optional(v.string()) })
+    )
+    .output(type<TerminalInUse[]>()),
   /**
    * The program running in place of the shell's prompt (a dev server, an
    * editor), or null at the prompt or where the platform can't tell. Closing

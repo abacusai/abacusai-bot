@@ -2157,6 +2157,12 @@
       "busyTitle": "{{program}} beenden?",
       "busyBody": "{{program}} läuft noch in diesem Terminal. Wenn du das Terminal schließt, wird es beendet.",
       "busyConfirm": "Terminal schließen",
+      "deleteSessionStops": "Wenn Sie diese Sitzung löschen, wird beendet, was in ihren Terminals läuft: {{list}}.",
+      "deleteSessionCloses": "Wenn Sie diese Sitzung löschen, werden ihre offenen Terminals geschlossen: {{list}}.",
+      "deleteWorkspaceStops": "Wenn Sie diesen Arbeitsbereich löschen, wird beendet, was in seinen Terminals läuft: {{list}}.",
+      "deleteWorkspaceCloses": "Wenn Sie diesen Arbeitsbereich löschen, werden seine offenen Terminals geschlossen: {{list}}.",
+      "andMore": "{{list}} und noch {{count}}",
+      "inChat": "{{terminal}} in {{chat}}",
       "folderMissing": "Der Ordner dieses Chats ist nicht mehr da: {{path}}. Stell ihn wieder her und drück dann auf „Neu starten“.",
       "folderDenied": "Du hast keine Berechtigung, den Ordner dieses Chats zu öffnen: {{path}}. Korrigiere die Berechtigungen und drück dann auf „Neu starten“.",
       "signalled": "Prozess gestoppt (Signal {{signal}})"
@@ -2426,6 +2432,8 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "Ein Neustart schließt {{count}} Terminal: {{list}}.",
+    "closesTerminals_other": "Ein Neustart schließt {{count}} Terminals: {{list}}.",
     "dismiss": "Entlassen",
     "stalled": "Automatischer Neustart nicht möglich. Beenden Sie die App und öffnen Sie sie erneut, um das Update abzuschließen.",
     "subtitle": "Starten Sie neu, um die neuesten Verbesserungen und Korrekturen zu erhalten.",

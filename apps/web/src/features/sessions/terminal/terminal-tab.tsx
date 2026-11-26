@@ -5,6 +5,10 @@ import {
   sessionConversationRef,
   type ConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
+import {
+  TERMINAL_GENERATION_STALE,
+  TERMINAL_WORKSPACE_DELETED,
+} from "@abacus-ai/contract/terminal-shells";
 import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
 import { ClipboardPaste, Copy, Eraser, RotateCcw } from "lucide-react";
@@ -52,6 +56,7 @@ import { pumpOutput, type OutputView } from "./output-pump";
 import {
   clearTerminal,
   getTerminalView,
+  peekTerminalView,
   type TerminalView,
 } from "./terminal-registry";
 /** Why a hosted computer refused the terminal on this plan, if it did. */
@@ -219,6 +224,10 @@ export const TerminalTab = ({
   /** The shell being started, while it has printed nothing (PowerShell takes seconds). */
   const [starting, setStarting] = useState<string | null>(null);
   const [run, setRun] = useState(0);
+  // A tab's shell starts the first time the tab is on screen: a restored tab
+  // behind another, or in a closed panel, runs nothing until it is shown.
+  const [shown, setShown] = useState(visible);
+  if (visible && !shown) setShown(true);
   const bindings = useContext(TerminalActionBindingsContext);
   const handleKey = useEffectEvent(
     (
@@ -233,6 +242,7 @@ export const TerminalTab = ({
   const shellToStart = useEffectEvent(() => shell);
   const close = useEffectEvent(onClose);
   useEffect(() => {
+    if (!shown) return;
     const abort = new AbortController();
     const finishStart = retainTerminalStart(key, id);
     let starting = false;
@@ -277,15 +287,26 @@ export const TerminalTab = ({
           setExited(true);
         } else {
           starting = true;
-          const start = await transport.client.terminal.start({
-            terminalId: id,
-            conversationKey: key,
-            conversation: conversationRefFromKey(key)!,
-            generation: view.generation,
-            ...(shellToStart() ? { shell: shellToStart() } : {}),
-            cols: view.term.cols || 80,
-            rows: view.term.rows || 24,
-          });
+          const startShell = () =>
+            transport.client.terminal.start({
+              terminalId: id,
+              conversationKey: key,
+              conversation: conversationRefFromKey(key)!,
+              generation: view.generation,
+              ...(shellToStart() ? { shell: shellToStart() } : {}),
+              cols: view.term.cols || 80,
+              rows: view.term.rows || 24,
+            });
+          let start = await startShell();
+          // Its shell ended while this screen was away (its workspace was
+          // deleted, then restored): a new one, as Restart starts, under the
+          // old output. Expected, so nothing is reported.
+          if (start.error === TERMINAL_GENERATION_STALE) {
+            view.generation = null;
+            view.offset = undefined;
+            view.term.write(`\r${"\n".repeat(view.term.rows)}\x1b[H\x1b[?25h`);
+            start = await startShell();
+          }
           if (!start.success || !start.state)
             throw new Error(start.error ?? "Terminal failed");
           view.generation = start.state.generation;
@@ -598,7 +619,11 @@ export const TerminalTab = ({
                 ? t("sessions.terminal.folderMissing", { path: missing })
                 : denied != null
                   ? t("sessions.terminal.folderDenied", { path: denied })
-                  : failureText(e)
+                  : // Its workspace was deleted: no shell starts there, and
+                    // that is a state, not a failure.
+                    message === TERMINAL_WORKSPACE_DELETED
+                    ? t("sessions.missing.folder")
+                    : failureText(e)
         );
       })
       .finally(finishStart);
@@ -607,7 +632,7 @@ export const TerminalTab = ({
       if (!starting) finishStart();
       cleanup();
     };
-  }, [transport, key, id, t, run]);
+  }, [transport, key, id, t, run, shown]);
   const [selection, setSelection] = useState(false);
   /** Runs on this tab's terminal, then gives it the keyboard back. */
   const withTerm = (fn: (term: TerminalView["term"]) => unknown) =>
@@ -634,8 +659,12 @@ export const TerminalTab = ({
   };
   useEffect(() => {
     let live = true;
-    void getTerminalView(`${key}:${id}`)
-      .then((view) => {
+    // Hidden before it was ever shown: no screen, no shell, nothing to tell.
+    const view = visible
+      ? getTerminalView(`${key}:${id}`)
+      : peekTerminalView(`${key}:${id}`);
+    void view
+      ?.then((view) => {
         if (!live) return;
         if (visible) {
           view.refit?.();

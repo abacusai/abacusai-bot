@@ -190,6 +190,10 @@ const makeHost = (
     },
     transcriptService: { remove: () => undefined },
     aguiRelay: { forgetThread: () => undefined },
+    terminalSessionService: {
+      disposeConversation: () => undefined,
+      disposeWorkspace: () => undefined,
+    },
     atCreditWall: async (model: string) => {
       creditChecks.push(model);
       return options.creditWall === true;

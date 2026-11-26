@@ -8,6 +8,7 @@ import electronUpdater, {
 } from "electron-updater";
 
 const { autoUpdater, DebUpdater } = electronUpdater;
+import type { TerminalInUse } from "@abacus-ai/contract/terminal-shells";
 import type {
   UpdateFailedPhase,
   UpdateStatus,
@@ -144,6 +145,8 @@ const manualInstallCommand = (packagePath: string): string =>
  */
 export interface UpdateServiceDeps {
   isSafeToRestart?: (context: { requested: boolean }) => boolean;
+  /** The terminals a restart would end, named in the restart offer. */
+  openTerminals?: () => TerminalInUse[];
 }
 
 const initialStatus = (): UpdateStatus => ({
@@ -403,9 +406,16 @@ export class UpdateService {
     const running =
       this.status.downloaded &&
       this.deps.isSafeToRestart?.({ requested: true }) === false;
-    if (running === this.status.workRunning) return false;
+    const terminals = this.status.downloaded
+      ? (this.deps.openTerminals?.() ?? [])
+      : [];
+    const changed =
+      running !== this.status.workRunning ||
+      JSON.stringify(terminals) !==
+        JSON.stringify(this.status.openTerminals ?? []);
     this.status.workRunning = running;
-    return true;
+    this.status.openTerminals = terminals;
+    return changed;
   }
 
   private endRestartRequest(): void {

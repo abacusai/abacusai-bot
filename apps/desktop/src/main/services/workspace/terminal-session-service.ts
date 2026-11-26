@@ -13,12 +13,18 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import {
   conversationKey,
+  draftConversationKey,
   draftConversationRef,
+  sessionConversationKey,
   sessionConversationRef,
   type ConversationKey,
   type ConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
-import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
+import {
+  TERMINAL_GENERATION_STALE,
+  TERMINAL_WORKSPACE_DELETED,
+  type TerminalShellId,
+} from "@abacus-ai/contract/terminal-shells";
 
 import {
   ConversationTerminalRuntimeRegistry,
@@ -29,6 +35,7 @@ import {
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
 import {
+  learnTerminalShell,
   preferredTerminalShell,
   resolveTerminalShell,
 } from "./terminal-shells";
@@ -103,6 +110,8 @@ type TerminalSessionServiceOptions = {
     workspaceId: string,
     sessionId?: string
   ) => string | null;
+  /** A deleted workspace (a tombstone) starts no shell, whoever asks. */
+  isWorkspaceDeleted?: (workspaceId: string) => boolean;
   emitTerminalOutput: (event: {
     terminalId: string;
     conversationKey: ConversationKey;
@@ -200,6 +209,8 @@ export class TerminalSessionService {
   constructor(private readonly options: TerminalSessionServiceOptions) {
     this.registry = new ConversationTerminalRuntimeRegistry({
       createPty: async ({ scope, cols, rows, shell: requested }) => {
+        if (options.isWorkspaceDeleted?.(scope.workspaceId) === true)
+          throw new Error(TERMINAL_WORKSPACE_DELETED);
         const workspacePath = options.resolveWorkspacePath(
           scope.workspaceId,
           scope.kind === "session" ? scope.sessionId : undefined
@@ -302,6 +313,45 @@ export class TerminalSessionService {
     return this.registry.hasLiveRuntimes();
   }
 
+  /**
+   * What ending these terminals would stop, for a question that names it:
+   * the ones running a program, or on Windows, where the foreground program
+   * cannot be told from a prompt, every live one (`program` null).
+   */
+  stoppable(
+    keep: (key: ConversationKey) => boolean
+  ): { key: ConversationKey; terminalId: string; program: string | null }[] {
+    if (process.platform !== "win32")
+      return this.busyTerminals().filter(({ key }) => keep(key));
+    return this.registry
+      .listAll()
+      .filter(({ key }) => keep(key))
+      .map(({ key, terminalId }) => ({ key, terminalId, program: null }));
+  }
+
+  /** A tab's shell, or all of a conversation's, ended whatever its generation. */
+  close(key: ConversationKey, terminalId?: string): boolean {
+    return terminalId == null
+      ? this.registry.disposeScope(key)
+      : this.registry.close(key, undefined, terminalId);
+  }
+
+  /** A deleted chat's terminals end, and any its new-chat page left. */
+  disposeConversation(workspaceId: string, sessionId: string): void {
+    this.registry.disposeScope(sessionConversationKey(workspaceId, sessionId));
+    this.registry.disposeScope(draftConversationKey(workspaceId, sessionId));
+  }
+
+  /** A removed workspace's terminals end, in every chat of it. */
+  disposeWorkspace(workspaceId: string): void {
+    this.registry.disposeWorkspace(workspaceId);
+  }
+
+  /** The key a conversation's terminals live under (a promoted draft's chat). */
+  canonicalKey(key: ConversationKey): ConversationKey {
+    return this.registry.canonicalKey(key);
+  }
+
   async startSession(
     request: StartTerminalSessionRequest
   ): Promise<StartTerminalSessionResult> {
@@ -316,11 +366,11 @@ export class TerminalSessionService {
               request.generation,
               terminalId
             );
-      if (request.generation != null && attachment == null) {
-        throw new Error("Terminal generation is stale.");
-      }
+      if (request.generation != null && attachment == null)
+        throw new Error(TERMINAL_GENERATION_STALE);
       let created = false;
       if (attachment == null) {
+        await learnTerminalShell(requestedShell(request.shell));
         const started = await this.registry.start({
           terminalId,
           scope: registryScope(request.conversation),
@@ -362,7 +412,9 @@ export class TerminalSessionService {
         success: false,
         error:
           message.startsWith(FOLDER_MISSING) ||
-          message.startsWith(FOLDER_DENIED)
+          message.startsWith(FOLDER_DENIED) ||
+          message === TERMINAL_GENERATION_STALE ||
+          message === TERMINAL_WORKSPACE_DELETED
             ? message
             : `Terminal backend unavailable: ${message}`,
         created: false,

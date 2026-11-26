@@ -88,6 +88,35 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
   }
   return view;
 };
+/** The view a tab already has, without making one (a hidden tab has none). */
+export const peekTerminalView = (key: string): Promise<TerminalView> | null =>
+  views.get(key) ?? null;
+/** A conversation that is gone (a deleted chat, a pruned draft): its screens go. */
+export const disposeConversationViews = (conversationKey: string): void => {
+  const prefix = `${conversationKey}:`;
+  for (const key of views.keys())
+    if (key.startsWith(prefix)) disposeTerminalView(key);
+};
+/**
+ * A new chat became its chat: its screens move with its tabs, so what they
+ * show (a full-screen app, the scrollback, its modes) stays as it was. The
+ * chat's tab attaches to the shell main moved, and resumes its output from
+ * where the screen is.
+ */
+export const moveConversationViews = (from: string, to: string): void => {
+  const prefix = `${from}:`;
+  for (const [key, view] of views)
+    if (key.startsWith(prefix)) {
+      views.delete(key);
+      views.set(
+        `${to}:${key.slice(prefix.length)}`,
+        view.then((moved) => {
+          moved.generation = null;
+          return moved;
+        })
+      );
+    }
+};
 export const disposeTerminalView = (key: string): void => {
   const view = views.get(key);
   views.delete(key);
@@ -113,6 +142,7 @@ if (import.meta.env.VITE_UI_GALLERY === "1") {
         offset: view.offset,
         generation: view.generation,
         lines: buffer.length,
+        screen: buffer.type,
         text: Array.from(
           { length: buffer.length },
           (_, i) => buffer.getLine(i)?.translateToString(true) ?? ""

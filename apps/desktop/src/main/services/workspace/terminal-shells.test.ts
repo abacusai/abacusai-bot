@@ -20,10 +20,18 @@ vi.mock("#main/resources", () => ({
   agentVendorDir: () => vendor,
 }));
 
+const execFile = vi.fn();
+vi.mock("node:child_process", () => ({
+  execFile: (...args: unknown[]) => execFile(...args) as unknown,
+}));
+
 const {
   defaultWindowsShell,
   effectiveTerminalShell,
+  learnTerminalShell,
+  learnTerminalShells,
   resetBusyboxForTesting,
+  resetWslForTesting,
   resolveTerminalShell,
   terminalShellStatuses,
 } = await import("./terminal-shells");
@@ -47,6 +55,8 @@ beforeEach(() => {
   fs.mkdirSync(binDir, { recursive: true });
   resolvePosixShell.mockReset();
   resetBusyboxForTesting();
+  resetWslForTesting();
+  execFile.mockReset();
 });
 
 afterEach(() => {
@@ -238,6 +248,40 @@ describe("terminal shells on Windows", () => {
     );
     put("pwsh.exe");
     expect(defaultWindowsShell({ PATH: binDir, PATHEXT: ".EXE" })).toBe("pwsh");
+  });
+
+  it("asks the registry for WSL off the main thread, once, and only when the roster is wanted", async () => {
+    const systemRoot = path.join(root, "Windows");
+    fs.mkdirSync(path.join(systemRoot, "System32"), { recursive: true });
+    fs.writeFileSync(path.join(systemRoot, "System32", "wsl.exe"), "");
+    const options = {
+      platform: "win32" as const,
+      env: { SystemRoot: systemRoot, PATH: binDir, ComSpec: put("cmd.exe") },
+    };
+    let answer: (() => void) | undefined;
+    execFile.mockImplementation(
+      (_file: string, _args: string[], _options: unknown, done: Function) => {
+        answer = () =>
+          done(null, "HKEY_CURRENT_USER\\...\\Lxss\\{0a1b2c3d}\r\n");
+      }
+    );
+    const wsl = () =>
+      terminalShellStatuses(options).find((status) => status.id === "wsl")
+        ?.available;
+
+    // Opening a chat or a terminal of another shell asks nothing.
+    expect(wsl()).toBe(false);
+    await learnTerminalShell("powershell", "win32");
+    expect(execFile).not.toHaveBeenCalled();
+
+    const first = learnTerminalShells("win32");
+    const second = learnTerminalShell("wsl", "win32");
+    expect(execFile).toHaveBeenCalledOnce();
+    answer!();
+    await Promise.all([first, second]);
+    expect(wsl()).toBe(true);
+    await learnTerminalShells("win32");
+    expect(execFile).toHaveBeenCalledOnce();
   });
 
   it("offers WSL only with a Linux installed, Git Bash only where Git is", () => {

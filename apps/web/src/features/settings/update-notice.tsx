@@ -8,6 +8,7 @@ import { Button } from "#renderer/ui/button";
 import {
   installNote,
   ManualInstallSteps,
+  terminalsNote,
   UpdatePillButton,
   updateVisible,
   useUpdateStatus,
@@ -66,8 +67,12 @@ export const UpdateNotice = ({
                 : t(`phase5.updates.${update.phase}`, { version, percent })}
             </p>
             {ready && (
-              <p className="text-muted-foreground text-xs">
-                {t("updateBanner.subtitle")}
+              // Two lines at most beside Restart; the whole list on hover.
+              <p
+                className="text-muted-foreground line-clamp-2 text-xs"
+                title={terminalsNote(update.status, t) ?? undefined}
+              >
+                {terminalsNote(update.status, t) ?? t("updateBanner.subtitle")}
               </p>
             )}
             {manual != null && (

@@ -1,3 +1,5 @@
+import type { TerminalInUse } from "./terminal-shells";
+
 export interface UpdateProgress {
   percent: number;
   bytesPerSecond: number;
@@ -50,6 +52,12 @@ export interface UpdateStatus {
    * restart offer steps aside until the work ends. Absent from older shells.
    */
   workRunning?: boolean;
+  /**
+   * The terminals a restart would end, which hold the silent restart: the
+   * offer names them. A program is named where the platform tells it.
+   * Absent from older shells.
+   */
+  openTerminals?: TerminalInUse[];
 }
 
 export interface UpdateManualInstall {

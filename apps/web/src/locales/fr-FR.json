@@ -2157,6 +2157,12 @@
       "busyTitle": "Arrêter {{program}} ?",
       "busyBody": "{{program}} tourne encore dans ce terminal. Fermer le terminal l’arrête.",
       "busyConfirm": "Fermer le terminal",
+      "deleteSessionStops": "Supprimer cette session arrête ce qui s'exécute dans ses terminaux : {{list}}.",
+      "deleteSessionCloses": "Supprimer cette session ferme ses terminaux ouverts : {{list}}.",
+      "deleteWorkspaceStops": "Supprimer cet espace de travail arrête ce qui s'exécute dans ses terminaux : {{list}}.",
+      "deleteWorkspaceCloses": "Supprimer cet espace de travail ferme ses terminaux ouverts : {{list}}.",
+      "andMore": "{{list}} et {{count}} de plus",
+      "inChat": "{{terminal}} dans {{chat}}",
       "folderMissing": "Le dossier de cette discussion n’existe plus : {{path}}. Remettez-le en place, puis appuyez sur Redémarrer.",
       "folderDenied": "Vous n’avez pas la permission d’ouvrir le dossier de cette discussion : {{path}}. Corrigez ses droits, puis appuyez sur Redémarrer.",
       "signalled": "Processus arrêté (signal {{signal}})"
@@ -2426,6 +2432,8 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "Le redémarrage ferme {{count}} terminal : {{list}}.",
+    "closesTerminals_other": "Le redémarrage ferme {{count}} terminaux : {{list}}.",
     "dismiss": "Rejeter",
     "stalled": "Redémarrage automatique impossible. Quittez l'application et rouvrez-la pour terminer la mise à jour.",
     "subtitle": "Relancez pour obtenir les dernières améliorations et correctifs.",

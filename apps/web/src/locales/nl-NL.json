@@ -2157,6 +2157,12 @@
       "busyTitle": "{{program}} stoppen?",
       "busyBody": "{{program}} draait nog in deze terminal. Als je de terminal sluit, stopt het.",
       "busyConfirm": "Terminal sluiten",
+      "deleteSessionStops": "Als je deze sessie verwijdert, stopt wat er in de terminals draait: {{list}}.",
+      "deleteSessionCloses": "Als je deze sessie verwijdert, worden de open terminals gesloten: {{list}}.",
+      "deleteWorkspaceStops": "Als je deze werkruimte verwijdert, stopt wat er in de terminals draait: {{list}}.",
+      "deleteWorkspaceCloses": "Als je deze werkruimte verwijdert, worden de open terminals gesloten: {{list}}.",
+      "andMore": "{{list}} en nog {{count}}",
+      "inChat": "{{terminal}} in {{chat}}",
       "folderMissing": "De map van deze chat is er niet meer: {{path}}. Zet hem terug en druk dan op Herstarten.",
       "folderDenied": "Je hebt geen toestemming om de map van deze chat te openen: {{path}}. Pas de rechten aan en druk dan op Herstarten.",
       "signalled": "Proces gestopt (signaal {{signal}})"
@@ -2426,6 +2432,8 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "Opnieuw starten sluit {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Opnieuw starten sluit {{count}} terminals: {{list}}.",
     "dismiss": "Sluiten",
     "stalled": "Automatisch herstarten is mislukt. Sluit de app en open hem opnieuw om de update te voltooien.",
     "subtitle": "Start opnieuw voor de nieuwste verbeteringen en oplossingen.",

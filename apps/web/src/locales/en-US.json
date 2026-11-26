@@ -2157,6 +2157,12 @@
       "busyTitle": "Stop {{program}}?",
       "busyBody": "{{program}} is still running in this terminal. Closing the terminal stops it.",
       "busyConfirm": "Close terminal",
+      "deleteSessionStops": "Deleting this session stops what's running in its terminals: {{list}}.",
+      "deleteSessionCloses": "Deleting this session closes its open terminals: {{list}}.",
+      "deleteWorkspaceStops": "Deleting this workspace stops what's running in its terminals: {{list}}.",
+      "deleteWorkspaceCloses": "Deleting this workspace closes its open terminals: {{list}}.",
+      "andMore": "{{list}} and {{count}} more",
+      "inChat": "{{terminal}} in {{chat}}",
       "folderMissing": "This chat's folder isn't there any more: {{path}}. Put it back, then press Restart.",
       "folderDenied": "You don't have permission to open this chat's folder: {{path}}. Fix its permissions, then press Restart.",
       "signalled": "Process stopped (signal {{signal}})"
@@ -2426,6 +2432,8 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "Restarting closes {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Restarting closes {{count}} terminals: {{list}}.",
     "dismiss": "Dismiss",
     "stalled": "Couldn't restart automatically. Quit and reopen the app to finish updating.",
     "subtitle": "Relaunch to get the latest improvements and fixes.",

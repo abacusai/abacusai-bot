@@ -2157,6 +2157,12 @@
       "busyTitle": "{{program}} durdurulsun mu?",
       "busyBody": "{{program}} bu terminalde hâlâ çalışıyor. Terminali kapatmak onu durdurur.",
       "busyConfirm": "Terminali kapat",
+      "deleteSessionStops": "Bu oturumu silmek, terminallerinde çalışanları durdurur: {{list}}.",
+      "deleteSessionCloses": "Bu oturumu silmek, açık terminallerini kapatır: {{list}}.",
+      "deleteWorkspaceStops": "Bu çalışma alanını silmek, terminallerinde çalışanları durdurur: {{list}}.",
+      "deleteWorkspaceCloses": "Bu çalışma alanını silmek, açık terminallerini kapatır: {{list}}.",
+      "andMore": "{{list}} ve {{count}} tane daha",
+      "inChat": "{{chat}} içindeki {{terminal}}",
       "folderMissing": "Bu sohbetin klasörü artık yok: {{path}}. Geri koyun, ardından Yeniden başlat’a basın.",
       "folderDenied": "Bu sohbetin klasörünü açma izniniz yok: {{path}}. İzinlerini düzeltin, ardından Yeniden başlat’a basın.",
       "signalled": "İşlem durduruldu (sinyal {{signal}})"
@@ -2426,6 +2432,8 @@
     }
   },
   "updateBanner": {
+    "closesTerminals_one": "Yeniden başlatma {{count}} terminali kapatır: {{list}}.",
+    "closesTerminals_other": "Yeniden başlatma {{count}} terminali kapatır: {{list}}.",
     "dismiss": "Kapat",
     "stalled": "Otomatik olarak yeniden başlatılamadı. Güncellemeyi tamamlamak için uygulamadan çıkıp yeniden aç.",
     "subtitle": "En son iyileştirmeleri ve düzeltmeleri almak için yeniden başlat.",

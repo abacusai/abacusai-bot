@@ -252,6 +252,7 @@ import type { StatusDetail } from "@abacus-ai/contract/status";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
 import type {
   TerminalShellId,
+  TerminalInUse,
   TerminalShellState,
 } from "@abacus-ai/contract/terminal-shells";
 import { TimeoutError } from "@abacus-ai/contract/timeout-error";
@@ -743,6 +744,7 @@ import { SkillsService } from "./services/workspace/skills-service";
 import { TerminalSessionService } from "./services/workspace/terminal-session-service";
 import {
   effectiveTerminalShell,
+  learnTerminalShells,
   preferredTerminalShell,
   terminalShellStatuses,
 } from "./services/workspace/terminal-shells";
@@ -3640,6 +3642,7 @@ export class ServiceHost {
         workspaceId,
         ...(sessionId != null ? { sessionId } : {}),
       }),
+    isWorkspaceDeleted: (workspaceId) => this.isWorkspaceDeleted(workspaceId),
     emitTerminalOutput: (event) => {
       this.emitEvent({
         type: "terminal-output",
@@ -4260,9 +4263,84 @@ export class ServiceHost {
     }));
   }
 
-  /** True while any terminal PTY (user shell or preview server) is alive. */
+  /**
+   * True while any terminal PTY is alive: a restart ends every shell with its
+   * jobs, scrollback, folder and environment, so only the user takes one.
+   */
   hasLiveTerminalSessions(): boolean {
     return this.terminalSessionService.hasLiveSessions();
+  }
+
+  /** Main owns the shells: a tab, or a whole conversation, closes by key. */
+  closeTerminal(request: {
+    conversationKey: ConversationKey;
+    terminalId?: string;
+  }): boolean {
+    return this.terminalSessionService.close(
+      request.conversationKey,
+      request.terminalId
+    );
+  }
+
+  /**
+   * What deleting a chat, or a workspace, would stop in its terminals: the
+   * programs running in them (every terminal on Windows, which cannot tell).
+   */
+  busyTerminalsIn(scope: {
+    workspaceId: string;
+    sessionId?: string;
+  }): TerminalInUse[] {
+    return this.terminalsInUse(
+      this.terminalSessionService.stoppable((key) => {
+        const ref = conversationRefFromKey(key);
+        if (ref == null || ref.workspaceId !== scope.workspaceId) return false;
+        const id = ref.kind === "session" ? ref.sessionId : ref.draftId;
+        return scope.sessionId == null || id === scope.sessionId;
+      })
+    );
+  }
+
+  /**
+   * What an update restart would end, for the offer that names it. Asked
+   * every poll while an update waits, so nothing is built with no terminal.
+   */
+  openTerminals(): TerminalInUse[] {
+    if (!this.terminalSessionService.hasLiveSessions()) return [];
+    return this.terminalsInUse(
+      this.terminalSessionService
+        .listStates()
+        .map(({ conversationKey: key, terminalId }) => ({
+          key,
+          terminalId,
+          program: this.terminalSessionService.busyProgram(key, terminalId),
+        }))
+    );
+  }
+
+  /** With each terminal's chat name; the window adds the tab's own name. */
+  private terminalsInUse(
+    terminals: {
+      key: ConversationKey;
+      terminalId: string;
+      program: string | null;
+    }[]
+  ): TerminalInUse[] {
+    if (terminals.length === 0) return [];
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return terminals.map(({ key, terminalId, program }) => {
+      const ref = conversationRefFromKey(key);
+      return {
+        conversationKey: key,
+        terminalId,
+        program,
+        chat:
+          ref?.kind === "session"
+            ? (labels.get(ref.sessionId)?.trim() ?? "")
+            : "",
+      };
+    });
   }
 
   /** Every agent process this run, as the log dump wants it. */
@@ -4776,6 +4854,11 @@ export class ServiceHost {
       return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
+    // Its shells end at the first delete, with its agents: a deleted
+    // workspace's chats can't be opened, so its terminals could be neither
+    // shown nor closed, yet would hold the update. Restoring it points it at a
+    // folder again; its chats' terminals start there when shown.
+    this.terminalSessionService.disposeWorkspace(workspaceId);
     if (workspace.status !== "deleted") {
       for (const session of this.agentSessionManagerService.list(workspaceId)) {
         this.agentManagerService.stopSession(workspaceId, session.id);
@@ -5030,6 +5113,11 @@ export class ServiceHost {
         label: chat ? `${program} · ${chat}` : program,
       };
     });
+  }
+
+  /** The key a conversation's terminals live under (a promoted draft's chat). */
+  canonicalTerminalKey(key: ConversationKey): ConversationKey {
+    return this.terminalSessionService.canonicalKey(key);
   }
 
   /** Running terminals' states, for `terminal.events`' opening snapshot. */
@@ -5793,6 +5881,7 @@ export class ServiceHost {
       this.transcriptService.remove(sessionId);
       this.aguiRelay.forgetThread(sessionId);
       this.agentManagerService.stopSession(workspaceId, sessionId);
+      this.terminalSessionService.disposeConversation(workspaceId, sessionId);
       this.emitEvent({
         type: "local-cli-session-removed",
         workspaceId,
@@ -10645,6 +10734,15 @@ export class ServiceHost {
       effective: resolveBackend(stored),
       statuses: backendStatuses(),
     };
+  }
+
+  /**
+   * The roster, once what takes a process to learn is known (WSL's
+   * distributions, asked of the registry off the main thread).
+   */
+  async terminalShellState(): Promise<TerminalShellState> {
+    await learnTerminalShells();
+    return this.getTerminalShellState();
   }
 
   /** The shell roster for the settings pane and the terminal panel's `+` menu. */

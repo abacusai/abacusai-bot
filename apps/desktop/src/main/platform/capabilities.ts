@@ -205,6 +205,8 @@ export const WEB_HOST_ALLOWED = [
   "terminal.resize",
   "terminal.hide",
   "terminal.busy",
+  "terminal.busyIn",
+  "terminal.close",
   "terminal.promoteScope",
   "terminal.shell.get",
   "terminal.shell.set",
