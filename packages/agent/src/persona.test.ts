@@ -124,7 +124,7 @@ describe("questions about the app itself", () => {
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/follow the facts rule above/);
     expect(DELIVERABLE_QUALITY_PROMPT).not.toMatch(/invented data/i);
     // What the user gave is kept whole; facts are sourced; a remark is weighed.
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/owns every line of that list/);
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/applies to the whole block/);
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/keep both and ask in one line/);
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/re-read every input/);
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
