@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Opnieuw starten sluit {{list}}.",
+    "closesTerminals_one": "Opnieuw starten sluit {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Opnieuw starten sluit {{count}} terminals: {{list}}.",
     "dismiss": "Sluiten",
     "stalled": "Automatisch herstarten is mislukt. Sluit de app en open hem opnieuw om de update te voltooien.",
     "subtitle": "Start opnieuw voor de nieuwste verbeteringen en oplossingen.",

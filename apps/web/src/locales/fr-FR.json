@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Le redémarrage ferme {{list}}.",
+    "closesTerminals_one": "Le redémarrage ferme {{count}} terminal : {{list}}.",
+    "closesTerminals_other": "Le redémarrage ferme {{count}} terminaux : {{list}}.",
     "dismiss": "Rejeter",
     "stalled": "Redémarrage automatique impossible. Quittez l'application et rouvrez-la pour terminer la mise à jour.",
     "subtitle": "Relancez pour obtenir les dernières améliorations et correctifs.",

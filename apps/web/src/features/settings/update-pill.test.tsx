@@ -90,7 +90,7 @@ it("a manual .deb install pill leads to the steps and is inert without them", as
   );
   expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
 });
-it("a ready update names a terminal by its tab and chat, a running program first, then counts the rest", async () => {
+it("a ready update says how many terminals close first, then names them by tab and chat, a running program first", async () => {
   await initI18n();
   const { UpdateNotice } = await import("./update-notice");
   const { openTab } = await import("../sessions/dock/panel-tabs-store");
@@ -132,7 +132,7 @@ it("a ready update names a terminal by its tab and chat, a running program first
   // Four shells, four counted: none folded into another.
   expect(
     screen.getByText(
-      "Restarting closes Terminal (sleep) in Fix the login page and 3 more."
+      "Restarting closes 4 terminals: Terminal (sleep) in Fix the login page, Terminal in Write release notes, Terminal in Plan the launch and 1 more."
     )
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button"));

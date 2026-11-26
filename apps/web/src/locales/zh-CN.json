@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "重新启动会关闭：{{list}}。",
+    "closesTerminals_one": "重新启动会关闭 {{count}} 个终端：{{list}}。",
+    "closesTerminals_other": "重新启动会关闭 {{count}} 个终端：{{list}}。",
     "dismiss": "关闭",
     "stalled": "无法自动重启。请退出并重新打开应用以完成更新。",
     "subtitle": "重新启动即可获得最新改进和修复。",

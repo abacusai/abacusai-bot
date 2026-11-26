@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Al reiniciar se cierra {{list}}.",
+    "closesTerminals_one": "Al reiniciar se cierra {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Al reiniciar se cierran {{count}} terminales: {{list}}.",
     "dismiss": "Descartar",
     "stalled": "No se pudo reiniciar automáticamente: cierra la app y vuelve a abrirla para completar la actualización.",
     "subtitle": "Reinicie para obtener las últimas mejoras y correcciones.",

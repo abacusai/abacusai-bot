@@ -136,3 +136,20 @@ it("a shell that ended while its screen was away starts again, with nothing repo
   expect(mounted.queryByRole("alert")).toBeNull();
   mounted.unmount();
 });
+
+it("a chat whose workspace was deleted starts no shell and says the workspace is missing", async () => {
+  mocks.get.mockReset();
+  mocks.start.mockReset();
+  mocks.peek.mockReset();
+  mocks.get.mockResolvedValue(makeView());
+  mocks.start.mockResolvedValue({ success: false, error: "workspace-deleted" });
+  const mounted = render(<TerminalTab {...props} />);
+  await waitFor(() =>
+    expect(mounted.getByRole("alert").textContent).toBe(
+      "sessions.missing.folder"
+    )
+  );
+  expect(mocks.start).toHaveBeenCalledOnce();
+  expect(mounted.queryByText("sessions.terminal.restart")).toBeNull();
+  mounted.unmount();
+});

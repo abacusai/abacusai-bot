@@ -5,7 +5,10 @@ import {
   sessionConversationRef,
   type ConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
-import { TERMINAL_GENERATION_STALE } from "@abacus-ai/contract/terminal-shells";
+import {
+  TERMINAL_GENERATION_STALE,
+  TERMINAL_WORKSPACE_DELETED,
+} from "@abacus-ai/contract/terminal-shells";
 import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
 import { ClipboardPaste, Copy, Eraser, RotateCcw } from "lucide-react";
@@ -616,7 +619,11 @@ export const TerminalTab = ({
                 ? t("sessions.terminal.folderMissing", { path: missing })
                 : denied != null
                   ? t("sessions.terminal.folderDenied", { path: denied })
-                  : failureText(e)
+                  : // Its workspace was deleted: no shell starts there, and
+                    // that is a state, not a failure.
+                    message === TERMINAL_WORKSPACE_DELETED
+                    ? t("sessions.missing.folder")
+                    : failureText(e)
         );
       })
       .finally(finishStart);

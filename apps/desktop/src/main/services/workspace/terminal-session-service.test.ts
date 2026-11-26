@@ -409,4 +409,21 @@ describe("conversation terminal session service", () => {
     });
     expect(stale).toMatchObject({ success: false, error: "generation-stale" });
   });
+
+  it("starts no shell in a deleted workspace, whoever asks", async () => {
+    const terminals = new TerminalSessionService({
+      resolveWorkspacePath: () => workspace,
+      isWorkspaceDeleted: (id) => id === "workspace-1",
+      emitTerminalOutput: () => {},
+      emitTerminalExit: () => {},
+      emitTerminalState: () => {},
+    });
+    const refused = await terminals.startSession(draftRequest());
+    expect(refused).toMatchObject({
+      success: false,
+      error: "workspace-deleted",
+    });
+    expect(ptySpawn).not.toHaveBeenCalled();
+    expect(terminals.hasLiveSessions()).toBe(false);
+  });
 });

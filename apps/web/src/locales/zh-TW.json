@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "重新啟動會關閉：{{list}}。",
+    "closesTerminals_one": "重新啟動會關閉 {{count}} 個終端機：{{list}}。",
+    "closesTerminals_other": "重新啟動會關閉 {{count}} 個終端機：{{list}}。",
     "dismiss": "關閉",
     "stalled": "無法自動重新啟動。請結束並重新開啟應用程式以完成更新。",
     "subtitle": "重新啟動就能取得最新的改善和修正。",

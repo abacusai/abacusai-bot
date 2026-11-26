@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Reiniciar fecha {{list}}.",
+    "closesTerminals_one": "Reiniciar fecha {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Reiniciar fecha {{count}} terminais: {{list}}.",
     "dismiss": "Dispensar",
     "stalled": "Não foi possível reiniciar automaticamente. Feche o app e abra novamente para concluir a atualização.",
     "subtitle": "Reinicie para obter as melhorias e correções mais recentes.",

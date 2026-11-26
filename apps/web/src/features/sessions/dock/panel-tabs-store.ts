@@ -323,6 +323,37 @@ export const reconcileTerminals = (
  * (one still starting, one exited): main keeps them as the chat's from its
  * promotion on, so the chat's tabs and shells match one to one.
  */
+/**
+ * A deleted workspace's chats keep no terminal tabs, whether a chat was on
+ * screen or not: main ended their shells, and a restored workspace's chats
+ * open new ones from the panel. Returns the conversations it cleared.
+ */
+export const forgetWorkspaceTerminals = (workspaceId: string): string[] => {
+  const keys = [
+    ...new Set([
+      ...Object.keys(panelTabsStore.state),
+      ...Object.keys(savedTerminals.state),
+    ]),
+  ].filter(
+    (key) =>
+      conversationRefFromKey(key as ConversationKey)?.workspaceId ===
+      workspaceId
+  );
+  for (const key of keys) {
+    const refs = (panelTabsStore.state[key]?.tabs ?? [])
+      .map((tab) => tab.ref)
+      .filter(isTerminal);
+    pendingTerminalStarts.delete(key);
+    for (const ref of refs) exitedTerminals.delete(`${key} ${ref}`);
+    if (refs.length) updateTabs(key, (s) => removeRefs(s, refs));
+  }
+  savedTerminals.setState((saved) => {
+    const next = { ...saved };
+    for (const key of keys) delete next[key];
+    return next;
+  });
+  return keys;
+};
 export const promoteTabs = (from: string, to: string): void => {
   const pending = pendingTerminalStarts.get(from);
   if (pending) {

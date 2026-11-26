@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Ein Neustart schließt {{list}}.",
+    "closesTerminals_one": "Ein Neustart schließt {{count}} Terminal: {{list}}.",
+    "closesTerminals_other": "Ein Neustart schließt {{count}} Terminals: {{list}}.",
     "dismiss": "Entlassen",
     "stalled": "Automatischer Neustart nicht möglich. Beenden Sie die App und öffnen Sie sie erneut, um das Update abzuschließen.",
     "subtitle": "Starten Sie neu, um die neuesten Verbesserungen und Korrekturen zu erhalten.",

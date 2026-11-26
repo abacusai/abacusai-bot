@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Memulai ulang akan menutup {{list}}.",
+    "closesTerminals_one": "Memulai ulang menutup {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Memulai ulang menutup {{count}} terminal: {{list}}.",
     "dismiss": "Singkirkan",
     "stalled": "Tidak dapat memulai ulang secara otomatis. Tutup aplikasi lalu buka kembali untuk menyelesaikan pembaruan.",
     "subtitle": "Luncurkan kembali untuk mendapatkan peningkatan dan perbaikan terbaru.",

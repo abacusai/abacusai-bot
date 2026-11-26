@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "다시 시작하면 닫힙니다: {{list}}.",
+    "closesTerminals_one": "다시 시작하면 터미널 {{count}}개가 닫힙니다: {{list}}.",
+    "closesTerminals_other": "다시 시작하면 터미널 {{count}}개가 닫힙니다: {{list}}.",
     "dismiss": "닫기",
     "stalled": "자동으로 다시 시작하지 못했습니다. 업데이트를 완료하려면 앱을 종료한 후 다시 여세요.",
     "subtitle": "최신 개선 사항과 수정 사항을 얻으려면 다시 시작하세요.",

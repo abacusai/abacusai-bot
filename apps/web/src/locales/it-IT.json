@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Il riavvio chiude {{list}}.",
+    "closesTerminals_one": "Il riavvio chiude {{count}} terminale: {{list}}.",
+    "closesTerminals_other": "Il riavvio chiude {{count}} terminali: {{list}}.",
     "dismiss": "Ignora",
     "stalled": "Riavvio automatico non riuscito: chiudi l'app e riaprila per completare l'aggiornamento.",
     "subtitle": "Riavviare per ottenere gli ultimi miglioramenti e correzioni.",

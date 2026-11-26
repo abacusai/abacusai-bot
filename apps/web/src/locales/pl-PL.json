@@ -2453,7 +2453,10 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Ponowne uruchomienie zamknie: {{list}}.",
+    "closesTerminals_one": "Ponowne uruchomienie zamknie {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Ponowne uruchomienie zamknie {{count}} terminali: {{list}}.",
+    "closesTerminals_few": "Ponowne uruchomienie zamknie {{count}} terminale: {{list}}.",
+    "closesTerminals_many": "Ponowne uruchomienie zamknie {{count}} terminali: {{list}}.",
     "dismiss": "Zamknij",
     "stalled": "Nie udało się automatycznie uruchomić ponownie. Zamknij i otwórz aplikację, aby dokończyć aktualizację.",
     "subtitle": "Uruchom ponownie, aby otrzymać najnowsze ulepszenia i poprawki.",

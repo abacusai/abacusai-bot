@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "再起動すると閉じます：{{list}}。",
+    "closesTerminals_one": "再起動でターミナル {{count}} 個が閉じます：{{list}}。",
+    "closesTerminals_other": "再起動でターミナル {{count}} 個が閉じます：{{list}}。",
     "dismiss": "解雇する",
     "stalled": "自動的に再起動できませんでした。アップデートを完了するには、アプリを終了してから再度開いてください。",
     "subtitle": "再起動して最新の改善点と修正を入手してください。",

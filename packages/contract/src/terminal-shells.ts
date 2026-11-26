@@ -119,3 +119,9 @@ export interface TerminalInUse {
  * workspace deleted and restored): not a failure, the tab starts a new one.
  */
 export const TERMINAL_GENERATION_STALE = "generation-stale";
+
+/**
+ * A start's error for a chat whose workspace was deleted (a tombstone): no
+ * shell starts there, and the tab says the workspace is missing.
+ */
+export const TERMINAL_WORKSPACE_DELETED = "workspace-deleted";

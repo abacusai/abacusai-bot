@@ -17,7 +17,9 @@ import {
 import { Button } from "#renderer/ui/button";
 
 import { useSessionsTransport } from "../data/queries";
+import { forgetWorkspaceTerminals } from "../dock/panel-tabs-store";
 import { BusyTerminalsNote } from "../terminal/busy-terminals-note";
+import { disposeConversationViews } from "../terminal/terminal-registry";
 
 export const WorkspaceMissing = ({
   workspaceId,
@@ -48,6 +50,9 @@ export const WorkspaceMissing = ({
     await (async () => {
       try {
         await db.collections.workspaces.delete(workspaceId).isPersisted.promise;
+        // Its shells ended with it: their tabs and screens go too.
+        for (const key of forgetWorkspaceTerminals(workspaceId))
+          disposeConversationViews(key);
         removed();
       } catch (e) {
         setError(failureText(e));

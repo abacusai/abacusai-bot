@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Yeniden başlatma şunları kapatır: {{list}}.",
+    "closesTerminals_one": "Yeniden başlatma {{count}} terminali kapatır: {{list}}.",
+    "closesTerminals_other": "Yeniden başlatma {{count}} terminali kapatır: {{list}}.",
     "dismiss": "Kapat",
     "stalled": "Otomatik olarak yeniden başlatılamadı. Güncellemeyi tamamlamak için uygulamadan çıkıp yeniden aç.",
     "subtitle": "En son iyileştirmeleri ve düzeltmeleri almak için yeniden başlat.",

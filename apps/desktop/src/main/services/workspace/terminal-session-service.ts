@@ -22,6 +22,7 @@ import {
 } from "@abacus-ai/contract/conversation-scope";
 import {
   TERMINAL_GENERATION_STALE,
+  TERMINAL_WORKSPACE_DELETED,
   type TerminalShellId,
 } from "@abacus-ai/contract/terminal-shells";
 
@@ -109,6 +110,8 @@ type TerminalSessionServiceOptions = {
     workspaceId: string,
     sessionId?: string
   ) => string | null;
+  /** A deleted workspace (a tombstone) starts no shell, whoever asks. */
+  isWorkspaceDeleted?: (workspaceId: string) => boolean;
   emitTerminalOutput: (event: {
     terminalId: string;
     conversationKey: ConversationKey;
@@ -206,6 +209,8 @@ export class TerminalSessionService {
   constructor(private readonly options: TerminalSessionServiceOptions) {
     this.registry = new ConversationTerminalRuntimeRegistry({
       createPty: async ({ scope, cols, rows, shell: requested }) => {
+        if (options.isWorkspaceDeleted?.(scope.workspaceId) === true)
+          throw new Error(TERMINAL_WORKSPACE_DELETED);
         const workspacePath = options.resolveWorkspacePath(
           scope.workspaceId,
           scope.kind === "session" ? scope.sessionId : undefined
@@ -408,7 +413,8 @@ export class TerminalSessionService {
         error:
           message.startsWith(FOLDER_MISSING) ||
           message.startsWith(FOLDER_DENIED) ||
-          message === TERMINAL_GENERATION_STALE
+          message === TERMINAL_GENERATION_STALE ||
+          message === TERMINAL_WORKSPACE_DELETED
             ? message
             : `Terminal backend unavailable: ${message}`,
         created: false,

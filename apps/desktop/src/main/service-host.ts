@@ -3642,6 +3642,7 @@ export class ServiceHost {
         workspaceId,
         ...(sessionId != null ? { sessionId } : {}),
       }),
+    isWorkspaceDeleted: (workspaceId) => this.isWorkspaceDeleted(workspaceId),
     emitTerminalOutput: (event) => {
       this.emitEvent({
         type: "terminal-output",

@@ -61,8 +61,8 @@ export const terminalsNote = (
   status: UpdateStatus | undefined,
   t: (key: string, options?: Record<string, unknown>) => string
 ): string | null => {
-  // One named (a running program first), the rest counted: with its chat's
-  // name that stays within two lines beside the Restart button.
+  // How many first, so a clamped line never hides it; then a running
+  // program's terminal, and the rest by their tabs and chats.
   const open = [...(status?.openTerminals ?? [])].sort(
     (a, b) => Number(b.program != null) - Number(a.program != null)
   );
@@ -77,9 +77,11 @@ export const terminalsNote = (
         t
       );
     },
-    1
+    3
   );
-  return list == null ? null : t("updateBanner.closesTerminals", { list });
+  return list == null
+    ? null
+    : t("updateBanner.closesTerminals", { count: open.length, list });
 };
 export const updatePhase = (
   status: UpdateStatus | undefined,

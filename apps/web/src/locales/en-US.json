@@ -2431,7 +2431,8 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Restarting closes {{list}}.",
+    "closesTerminals_one": "Restarting closes {{count}} terminal: {{list}}.",
+    "closesTerminals_other": "Restarting closes {{count}} terminals: {{list}}.",
     "dismiss": "Dismiss",
     "stalled": "Couldn't restart automatically. Quit and reopen the app to finish updating.",
     "subtitle": "Relaunch to get the latest improvements and fixes.",
