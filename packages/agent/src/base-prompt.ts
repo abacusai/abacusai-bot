@@ -13,6 +13,7 @@ import {
 } from "./extensions/edit-tool.js";
 import { identityPrompt } from "./persona.js";
 import { PLAN_ASKS_PROMPT } from "./plan-asks.js";
+import { isSenderChat } from "./user-language.js";
 
 /** Which `edit` a session has: ours (with batch_edit and batch_file_read) or pi's built-in. */
 export type EditTool = "ours" | "builtin";
@@ -67,15 +68,16 @@ export const MEDIA_ASKS_PROMPT =
   "Asked to make or edit an image, a video, speech or audio (reading a text aloud too) while you have paid_feature: call it first, before you write anything, with no words before the call (no 'let me check', no 'I'll start on this', nothing about what this chat can do), then write your reply in the order it gives, never opening with what you cannot do. A poster, flyer, notice, card, invitation or certificate is a document, made with the document tool, not an image, unless the user asks for an image or a picture.";
 
 /**
- * What the user gave, facts and claims, in every reply, not only in files:
- * the model split and replaced user-given data on a guess, and met a remark
- * with agreement and made-up facts. Fixed lines, so the cached prefix holds.
+ * The user's own data, in every reply and not only in files: the model split
+ * a labelled list and dropped an earlier one on a guess. Not in a remote
+ * sender's chat, where answers defer to the user. Fixed per process.
  */
-export const USER_DATA_AND_FACTS_PROMPT = [
-  "What the user gives you (a pasted list or table, a screenshot, a file) is the record: keep each one whole and as given. A label the user gives a block (a name or heading set apart before its first item or after its last, even on the same line, or \"this is X's\") applies to the whole block, not only the nearest line, unless each line names its own; when unsure who owns it, ask in one line instead of guessing. A new input never replaces, merges with or reassigns an earlier one unless the user says so: keep both and ask in one line. When the user asks you to assign or decide, decide. A short reply (a name, a number, a yes) answers the open question it fits, which may be an earlier one still unanswered, not only your last; if it fits more than one, ask which in one line. Asked to check again, go back to the user's own messages and files from the first (not your summaries or your files), compare each item with the current result (who owns what, what is missing), and report each mismatch, your own earlier mistakes included.",
-  "Facts: prices, statistics, laws, rules, grants and other figures you state as fact come from the user's files or a page read in this chat, and you name the source; otherwise search first, or say plainly that it is your estimate. Never present invented data as real, and never contradict what this chat already found without saying why. Common knowledge needs no source.",
-  "A remark or opinion from the user that is not a question: open with the substance, not with agreement; say plainly where it holds and where it does not; check a figure or rule with a search before you state it.",
-].join("\n");
+export const USER_DATA_PROMPT =
+  'What the user gives you (a pasted list or table, a screenshot, a file) is the record: keep each one whole and as given. A label the user gives a block (a name or heading set apart before its first item or after its last, even on the same line, or "this is X\'s") applies to the whole block, not only the nearest line, unless each line names its own; when unsure who owns it, ask in one line instead of guessing. A new input never replaces, merges with or reassigns an earlier one unless the user says so: keep both and ask in one line. When the user asks you to assign or decide, decide: these one-line questions are only for whose data it is. A short reply (a name, a number, a yes) answers the open question it fits, which may be an earlier one still unanswered, not only your last; if it fits more than one, ask which in one line. Asked to check again work built from what the user gave, go back to their own messages and files from the first (not your summaries or your files), compare each item with the current result (who owns what, what is missing), and report each mismatch, your own earlier mistakes included.';
+
+/** Facts in any reply, not only in files; the deliverable line points here. */
+export const FACTS_PROMPT =
+  "Facts: prices, statistics, laws and rules you state as fact come from the user's files or a page read in this chat, and you name the source; otherwise search first, or say plainly that it is your estimate. Never present invented data as real, and never contradict what this chat already found without saying why. Common knowledge needs no source, and this app's own plans, prices and features are answered as the app lines above say, not from the web.";
 
 /**
  * Office files, sourced data and long jobs: the three ways a finished-looking
@@ -149,7 +151,7 @@ ${PRODUCT_FACTS_PROMPT}
 ${PROGRESS_UPDATES_PROMPT}
 ${MEDIA_ASKS_PROMPT}
 ${PLAN_ASKS_PROMPT}
-${USER_DATA_AND_FACTS_PROMPT}
+${isSenderChat() ? "" : `${USER_DATA_PROMPT}\n`}${FACTS_PROMPT}
 ${DELIVERABLE_QUALITY_PROMPT}
 ${ATTACHMENTS_PROMPT}
 ${CONNECTION_PROMPT}

@@ -12,7 +12,8 @@ import {
   DELIVERABLE_QUALITY_PROMPT,
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
-  USER_DATA_AND_FACTS_PROMPT,
+  FACTS_PROMPT,
+  USER_DATA_PROMPT,
   basePrompt,
   subAgentBasePrompt,
 } from "./base-prompt.js";
@@ -99,7 +100,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${USER_DATA_AND_FACTS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${USER_DATA_PROMPT}\n${FACTS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -123,25 +124,33 @@ describe("questions about the app itself", () => {
     // One owner for facts: a file's data points at the facts rule, not a copy of it.
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/follow the facts rule above/);
     expect(DELIVERABLE_QUALITY_PROMPT).not.toMatch(/invented data/i);
-    // What the user gave is kept whole; facts are sourced; a remark is weighed.
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/applies to the whole block/);
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/keep both and ask in one line/);
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
-      /go back to the user's own messages/
-    );
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
-      /Never present invented data as real/
-    );
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/not with agreement/);
-    // Asked to decide, it decides; a remark's facts are searched, not recalled.
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/assign or decide, decide/);
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
-      /check a figure or rule with a search/
-    );
+    // The user's data keeps its owner; asked to decide, it decides; facts are sourced.
+    expect(USER_DATA_PROMPT).toMatch(/applies to the whole block/);
+    expect(USER_DATA_PROMPT).toMatch(/assign or decide, decide/);
+    expect(USER_DATA_PROMPT).toMatch(/their own messages and files/);
+    expect(FACTS_PROMPT).toMatch(/Never present invented data as real/);
+    expect(FACTS_PROMPT).toMatch(/not from the web/);
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/count done against total/);
     // A file said to be attached but missing is asked for again, never stood in for.
     expect(ATTACHMENTS_PROMPT).toMatch(/`@<path>` lines/);
     expect(ATTACHMENTS_PROMPT).toMatch(/attach it again/);
+  });
+
+  /**
+   * A remote sender's chat answers for the user and defers what is theirs to
+   * decide, so the owner's data rules (decide, ask) stay out of it.
+   */
+  it("leave the user-data block out of a remote sender's chat", () => {
+    const previous = process.env.ABACUSAI_BOT_SENDER_CHAT;
+    try {
+      process.env.ABACUSAI_BOT_SENDER_CHAT = "1";
+      expect(basePrompt("builtin")).not.toContain(USER_DATA_PROMPT);
+      expect(basePrompt("builtin")).toContain(FACTS_PROMPT);
+    } finally {
+      if (previous == null) delete process.env.ABACUSAI_BOT_SENDER_CHAT;
+      else process.env.ABACUSAI_BOT_SENDER_CHAT = previous;
+    }
+    expect(basePrompt("builtin")).toContain(USER_DATA_PROMPT);
   });
 
   /**
