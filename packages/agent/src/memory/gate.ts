@@ -23,8 +23,38 @@ const DUPLICATE_OVERLAP = 0.6;
 const RELATED_OVERLAP = 0.2;
 
 // ── secrets ────────────────────────────────────────────────────────────────
+//
+// A note that holds a secret is refused whole. `looksSecret` runs the patterns
+// the gate has always refused on, unchanged in what they match, on the text as
+// written, and adds to them on the text folded: more provider formats, labels
+// written in full-width or split by invisible characters, and secrets a person
+// chose (a password, a PIN, a recovery phrase).
 
-const SECRET_PATTERNS: RegExp[] = [
+/** Past this a text is treated as secret without reading it: notes are far shorter. */
+const MAX_SCAN_CHARS = 100_000;
+
+/** Characters that show nothing, so a key or a label split by one still reads as one. */
+const INVISIBLE = /\p{Default_Ignorable_Code_Point}/u;
+/** Hyphens that stand in for "-" ("sk‐…"). Em and en dashes are prose and stay. */
+const DASH = /[‐‑−﹣－]/u;
+/** Text as the added patterns read it: full-width and other compatibility forms folded, invisible characters dropped. */
+const folded = (text: string): string => {
+  let out = "";
+  for (const char of text)
+    out += INVISIBLE.test(char)
+      ? ""
+      : DASH.test(char)
+        ? "-"
+        : char.normalize("NFKC");
+  return out;
+};
+
+/**
+ * The patterns the gate has always refused on. Two are read run by run
+ * (`EARLIER_RUN`, `hasJwt`): the same matches, without rescanning a long run
+ * once per position. gate.test.ts checks nothing they found is missed.
+ */
+const EARLIER_PATTERNS: readonly RegExp[] = [
   /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/,
   /\bgh[pousr]_[A-Za-z0-9]{20,}/,
   /\bgithub_pat_[A-Za-z0-9_]{20,}/,
@@ -32,16 +62,174 @@ const SECRET_PATTERNS: RegExp[] = [
   /\bAKIA[0-9A-Z]{16}\b/,
   /\bAIza[0-9A-Za-z_-]{30,}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/,
   /\bbearer\s+[A-Za-z0-9._~+/-]{16,}/i,
   // "my password is …", "PIN: 4821", "api key = …"
   /\b(?:password|passwd|passcode|passphrase|pass phrase|pin|pin code|api[ _-]?key|access[ _-]?key|secret|token|otp|security code)\b\s*(?:is|was|=|:|-)\s*["'`]?[^\s"'`]{3,}/i,
-  // A long run of mixed letters and digits: keys, tokens, signed URLs.
-  /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z_-]*\d)(?=[0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/,
 ];
+/** The earlier long-run pattern, read run by run: it can only match inside one run of 32+ holding letters and digits. */
+const EARLIER_RUN =
+  /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z_-]*\d)(?=[0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/;
+/** As /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/: three dot-joined runs, the first ending in "eyJ" and 10+ more. */
+const EARLIER_JWT_START = /\beyJ[A-Za-z0-9_-]{10,}$/;
+const hasJwt = (text: string): boolean => {
+  const runs = [...text.matchAll(/[A-Za-z0-9_-]+/g)];
+  return runs.some((first, i) => {
+    const second = runs[i + 1];
+    const third = runs[i + 2];
+    if (second == null || third == null) return false;
+    const firstEnd = first.index + first[0].length;
+    const secondEnd = second.index + second[0].length;
+    return (
+      text[firstEnd] === "." &&
+      second.index === firstEnd + 1 &&
+      second[0].length >= 10 &&
+      text[secondEnd] === "." &&
+      third.index === secondEnd + 1 &&
+      third[0].length >= 5 &&
+      EARLIER_JWT_START.test(first[0])
+    );
+  });
+};
+/** The earlier long-run pattern over each run of 32+ that holds letters and digits. */
+const longRunFinds = (text: string): boolean =>
+  (text.match(/[A-Za-z0-9_-]{32,}/g) ?? []).some(
+    (run) => /\d/.test(run) && /[A-Za-z]/.test(run) && EARLIER_RUN.test(run)
+  );
+const earlierFinds = (text: string): boolean =>
+  EARLIER_PATTERNS.some((pattern) => pattern.test(text)) ||
+  hasJwt(text) ||
+  longRunFinds(text);
 
-export const looksSecret = (text: string): boolean =>
-  SECRET_PATTERNS.some((pattern) => pattern.test(text));
+/** Where a word starts, as `\b` before a word character. */
+const RUN_START = "(?<![A-Za-z0-9_])";
+
+/** Formats issued by known providers, and key material. */
+const SECRET_FORMATS: readonly RegExp[] = [
+  `${RUN_START}(?:sk|pk|rk)[-_][A-Za-z0-9_-]{16,}`,
+  `${RUN_START}glpat-[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}xapp-\\d-[A-Za-z0-9-]{10,}`,
+  `${RUN_START}AKIA[0-9A-Z]{16}(?![0-9A-Z])`,
+  `${RUN_START}GOCSPX-[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}ya29\\.[A-Za-z0-9._-]{20,}`,
+  `(?<![A-Za-z0-9/])1//0[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}SG\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}`,
+  `${RUN_START}(?:whsec|npm|hf|shpat|shpss|shpca|dop_v1|glsa|pypi)_[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}sq0(?:atp|csp)-[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}\\d{8,10}:AA[A-Za-z0-9_-]{30,}`,
+  `(?<![A-Za-z0-9_-])[MNO][A-Za-z0-9_-]{23,}\\.[A-Za-z0-9_-]{6}\\.[A-Za-z0-9_-]{27,}`,
+  `AccountKey=[A-Za-z0-9+/]{20,}={0,2}`,
+  // Webhook URLs whose path is the credential.
+  `hooks\\.slack\\.com/services/[A-Za-z0-9/]{20,}`,
+  `maker\\.ifttt\\.com/[^\\s]{0,100}/key/[A-Za-z0-9_-]{16,}`,
+  `-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----`,
+].map((source) => new RegExp(source));
+
+/**
+ * 40+ characters of base64 with "+" or "/": an AWS secret key, a base64 key.
+ * Not from inside a URL, whose segments the run rule reads.
+ */
+const BASE64_RUN =
+  /(?<![A-Za-z0-9+/=.:])(?=[A-Za-z0-9+/]*[+/])(?=[A-Za-z0-9+/]*\d)(?=[A-Za-z0-9+/]*[A-Z])(?=[A-Za-z0-9+/]*[a-z])[A-Za-z0-9+/]{40,}={0,2}/g;
+/** A folder name: words, a year or a short code ("Contracts", "2026", "ROG2026", "Q1"). */
+const FOLDER =
+  /^(?:[A-Z]?[a-z]{2,}(?:[A-Z][a-z]+)*\d{0,4}|\d{1,4}|[A-Z]{1,4}\d{0,4})$/;
+/**
+ * A run that names a file or folder, not a key: it goes on to an extension
+ * (".../index.tsx"), starts at a root ("/", "~/", "./"), or is mostly folder
+ * names with no segment long enough for the run rule ("Clients/Acme/<id>/Contracts").
+ */
+const isPath = (run: string, at: number, text: string): boolean => {
+  if (
+    /^\.[A-Za-z0-9]{1,8}(?![A-Za-z0-9])/.test(
+      text.slice(at + run.length, at + run.length + 10)
+    ) ||
+    run.startsWith("/") ||
+    /[~.]$/.test(text.slice(Math.max(0, at - 1), at))
+  )
+    return true;
+  const parts = run.split("/");
+  const folders = parts.filter((part) => FOLDER.test(part)).length;
+  return (
+    parts.length >= 3 &&
+    folders * 2 >= parts.length &&
+    parts.every((part) => part.length < 32)
+  );
+};
+const base64Finds = (text: string): boolean =>
+  [...text.matchAll(BASE64_RUN)].some(
+    (match) => !isPath(match[0], match.index, text)
+  );
+
+/**
+ * Words a secret is named by. A value after one, as in "PIN: 4821", is the
+ * secret. Label words may be split by spaces, a line break or "_"/"-"
+ * ("api\nkey", "secret_access_key").
+ */
+const SECRET_LABEL = [
+  "password",
+  "passwd",
+  "passcode",
+  "passphrase",
+  "pass phrase",
+  "pin code",
+  "pin",
+  "otp",
+  "security code",
+  "cvv",
+  "cvc",
+  "recovery phrase",
+  "recovery code",
+  "seed phrase",
+  "seed words",
+  "backup code",
+  "api key",
+  "access key",
+  "secret access key",
+  "client secret",
+  "auth token",
+  "private key",
+  "secret",
+  "token",
+]
+  .map((label) => label.replaceAll(" ", "[\\s_-]{0,3}"))
+  .join("|");
+/** Labels the earlier patterns did not have: a dash after one is prose ("the private key - ed25519 - is …"). */
+const ADDED_LABEL =
+  /^(?:secret[\s_-]*access[\s_-]*key|client[\s_-]*secret|auth[\s_-]*token|private[\s_-]*key)$/i;
+const LABELLED_SECRET = new RegExp(
+  `(?<![A-Za-z])(${SECRET_LABEL})(?![A-Za-z])(\\s*(?:is|was|=|:|-)\\s*)(?=["'\`]?[^\\s"'\`]{3,})`,
+  "gi"
+);
+/** Where a note says where a secret is kept rather than what it is: "is stored in ~/.ssh", "is in the .env file". */
+const KEPT_AT =
+  /^(?:(?:stored|kept|saved|held|located|lives?)\s+(?:in|at|on|under|inside)|in|inside|at|under)\s/i;
+/** Whether a value is said after its label. */
+const labelledFinds = (text: string): boolean => {
+  for (const match of text.matchAll(LABELLED_SECRET)) {
+    if (ADDED_LABEL.test(match[1]!) && match[2]!.includes("-")) continue;
+    const from = match.index + match[0].length;
+    if (KEPT_AT.test(text.slice(from, from + 30))) continue;
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Whether `text` holds a secret: anything the earlier patterns find in the
+ * text as written, and anything the added patterns find in it folded.
+ */
+export const looksSecret = (text: string): boolean => {
+  if (text.length > MAX_SCAN_CHARS) return true;
+  if (earlierFinds(text)) return true;
+  const read = folded(text);
+  return (
+    SECRET_FORMATS.some((pattern) => pattern.test(read)) ||
+    hasJwt(read) ||
+    base64Finds(read) ||
+    labelledFinds(read) ||
+    longRunFinds(read)
+  );
+};
 
 // ── claims that must not be saved ──────────────────────────────────────────
 
