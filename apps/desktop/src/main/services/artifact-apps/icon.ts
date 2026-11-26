@@ -103,3 +103,14 @@ export const pngToIco = (png: Buffer): Buffer => {
   header.writeUInt32LE(22, 18); // offset
   return Buffer.concat([header, png]);
 };
+
+/** One 256px PNG in an ICNS container ('ic08'), for a macOS launcher. */
+export const pngToIcns = (png: Buffer): Buffer => {
+  const entry = Buffer.alloc(8);
+  entry.write("ic08", 0, "ascii");
+  entry.writeUInt32BE(8 + png.length, 4);
+  const header = Buffer.alloc(8);
+  header.write("icns", 0, "ascii");
+  header.writeUInt32BE(16 + png.length, 4);
+  return Buffer.concat([header, entry, png]);
+};

@@ -91,12 +91,21 @@ ${body}
 `;
 
 export const artifactSlug = (title: string): string =>
-  title
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "artifact";
+  Array.from(
+    title
+      // Accents off Latin letters ("café" is "cafe"); other scripts keep
+      // their own letters and signs, so a Hindi or Persian title names its
+      // own folder instead of every one landing on "artifact".
+      .normalize("NFKD")
+      .replace(/(\p{Script=Latin})\p{M}+/gu, "$1")
+      .normalize("NFC")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+  )
+    .slice(0, 60)
+    .join("")
+    .replace(/-+$/, "") || "artifact";
 
 const pagePath = (root: string, slug: string): string =>
   path.join(root, ARTIFACTS_DIR, slug, "index.html");

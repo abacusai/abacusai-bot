@@ -4494,7 +4494,11 @@
       "allowed": "Autorisé",
       "blocked": "Bloqué",
       "signOut": "Se déconnecter"
-    }
+    },
+    "installApp": "Installer comme app",
+    "uninstallApp": "Désinstaller l'app",
+    "installedApp": "Installée. Elle est maintenant dans ton menu d'apps.",
+    "openApp": "Ouvrir l'app"
   },
   "browserPermission": {
     "allow": "Autoriser",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "Enregistrer une copie",
     "saveCopiesTo": "Choisir un dossier de destination",
-    "saveHere": "Enregistrer ici"
+    "saveHere": "Enregistrer ici",
+    "installedAppMenu": "App",
+    "installedAppEditInChat": "Modifier dans un chat",
+    "installedAppUndo": "Annuler la dernière modification",
+    "installedAppExport": "Exporter les données…",
+    "installedAppReload": "Recharger",
+    "installedAppUninstallMenu": "Désinstaller…",
+    "installedAppUninstall": "Désinstaller",
+    "installedAppCancel": "Annuler",
+    "installedAppUninstallQuestion": "Désinstaller « {{name}} » ?",
+    "installedAppUninstallDetail": "Sa fenêtre et son raccourci sont supprimés. Ses données restent sur cet ordinateur, sauf si tu les supprimes aussi.",
+    "installedAppDeleteData": "Supprimer aussi ses données",
+    "installedAppExportTitle": "Exporter les données",
+    "installedAppExportFile": "Données {{name}}",
+    "installedAppExportCsv": "Tableur (CSV)",
+    "installedAppTooBig": "Cette app dépasse 100 Mo (ou 5 000 fichiers), elle ne peut donc pas être installée. Demande à l'agent de la réduire ou de la mettre dans son propre dossier.",
+    "installedAppCannotInstall": "Cette page ne peut pas être installée comme app.",
+    "installedAppMissing": "Les fichiers de cette app sont introuvables. Désinstalle-la puis réinstalle-la depuis son chat.",
+    "installedAppTooBroad": "Le dossier de cette page ne peut pas être installé : c'est ton dossier personnel, ou il est hors du dossier de ce chat. Demande à l'agent de mettre l'app dans son propre dossier dans ce chat."
   },
   "channels": {
     "sidebar": {

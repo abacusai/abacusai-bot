@@ -111,22 +111,26 @@ export const systemRouter = impl.system.router({
       ({ context }) => context.deps.app.artifactApps?.list() ?? []
     ),
     status: impl.system.artifactApps.status.handler(
-      ({ input, context }) =>
-        context.deps.app.artifactApps?.status(input.path) ?? {
+      async ({ input, context }) =>
+        (await context.deps.app.artifactApps?.status(input.target)) ?? {
           installable: false,
           installedId: null,
         }
     ),
-    install: impl.system.artifactApps.install.handler(({ input, context }) => {
-      requireMainRenderer(context);
-      const apps = context.deps.app.artifactApps;
-      if (!apps) throw forbidden("Installing apps needs the desktop app.");
-      return apps.install(input.path, input.title);
-    }),
-    uninstall: impl.system.artifactApps.uninstall.handler(
-      ({ input, context }) => {
+    install: impl.system.artifactApps.install.handler(
+      async ({ input, context }) => {
         requireMainRenderer(context);
-        context.deps.app.artifactApps?.uninstall(input.path);
+        const apps = context.deps.app.artifactApps;
+        if (!apps) throw forbidden("Installing apps needs the desktop app.");
+        return await apps.install(input.target, input.sessionId);
+      }
+    ),
+    uninstall: impl.system.artifactApps.uninstall.handler(
+      async ({ input, context }) => {
+        requireMainRenderer(context);
+        return (
+          (await context.deps.app.artifactApps?.uninstall(input.id)) ?? false
+        );
       }
     ),
     open: impl.system.artifactApps.open.handler(({ input, context }) => {

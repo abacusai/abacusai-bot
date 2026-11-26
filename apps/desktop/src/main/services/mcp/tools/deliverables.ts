@@ -38,6 +38,20 @@ const FILE_CHECK = [
   "workbook, unfilled blanks) is listed. A translated strings file is compared with its",
   "source: give translatedFrom. Fix what it lists before you call the work done.",
 ].join("\n");
+/**
+ * A page that keeps what people enter: the app backs its localStorage with a
+ * store on the user's disk, shared by the preview and the installed app
+ * (artifact-apps/store.ts), and it starts empty.
+ */
+const KEEPS_DATA = [
+  "A page that keeps what people enter (a tracker, ledger, list, planner, a game's",
+  "progress) saves it with localStorage: read on load, write on every change, keep the",
+  "same keys across edits. The app keeps it on the user's computer, the same in the",
+  "preview and in the installed app. It starts with no rows: no sample, example or demo",
+  "entries, not even ones dated today; the empty state says how to add the first. Only a",
+  "form's date may start as today.",
+].join("\n");
+
 export const DELIVERABLES_TOOLS: ToolDefinition[] = [
   {
     name: "artifact",
@@ -56,13 +70,7 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
       "Every action saves a new version and returns the page's path. Hand that path to",
       "present_deliverable to show it.",
       "",
-      "A page that keeps what people enter (a tracker, a list, a planner) saves it in",
-      "`window.abacus.store`: async get(key), set(key, value), keys(); values are JSON. Read",
-      "on load, write on every change, keep the same keys across edits. It starts with no",
-      "rows at all: no sample, example or demo entries, not even ones dated today; the empty",
-      "state says how to add the first. Only the form's date may start as today. Without the",
-      "store, keep data in memory; never localStorage. Reports and other pages that take no",
-      "input do not use it.",
+      KEEPS_DATA,
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -118,6 +126,8 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
               "in prose is not previewed and not recorded. The URL opens on this computer only. A",
               "page meant to be seen by others is best one html file, its styles and scripts inside.",
             ]),
+        "",
+        KEEPS_DATA,
         "",
         "Actions:",
         '  "start": serve a directory (directory). Serving it again returns the same URL.',

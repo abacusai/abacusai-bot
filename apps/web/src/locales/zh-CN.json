@@ -4494,7 +4494,11 @@
       "allowed": "允许",
       "blocked": "阻止",
       "signOut": "退出登录"
-    }
+    },
+    "installApp": "安装为应用",
+    "uninstallApp": "卸载应用",
+    "installedApp": "已安装，现在可以在应用菜单中找到它。",
+    "openApp": "打开应用"
   },
   "browserPermission": {
     "allow": "允许",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "保存副本",
     "saveCopiesTo": "选择保存位置",
-    "saveHere": "保存到此处"
+    "saveHere": "保存到此处",
+    "installedAppMenu": "应用",
+    "installedAppEditInChat": "在聊天中编辑",
+    "installedAppUndo": "撤销上一次更改",
+    "installedAppExport": "导出数据…",
+    "installedAppReload": "重新加载",
+    "installedAppUninstallMenu": "卸载…",
+    "installedAppUninstall": "卸载",
+    "installedAppCancel": "取消",
+    "installedAppUninstallQuestion": "要卸载“{{name}}”吗？",
+    "installedAppUninstallDetail": "它的窗口和快捷方式会被删除。除非你一起删除，它的数据会保留在这台电脑上。",
+    "installedAppDeleteData": "同时删除它的数据",
+    "installedAppExportTitle": "导出数据",
+    "installedAppExportFile": "{{name}} 数据",
+    "installedAppExportCsv": "电子表格 (CSV)",
+    "installedAppTooBig": "这个应用超过 100 MB（或超过 5,000 个文件），无法安装。请让智能体把它变小，或放进单独的文件夹。",
+    "installedAppCannotInstall": "这个页面无法安装为应用。",
+    "installedAppMissing": "这个应用的文件不见了。请卸载后从它的聊天中重新安装。",
+    "installedAppTooBroad": "无法安装这个页面的文件夹：它是你的主文件夹，或不在这个聊天的文件夹里。请让智能体把应用放进这个聊天中的单独文件夹。"
   },
   "channels": {
     "sidebar": {

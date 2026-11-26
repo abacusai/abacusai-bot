@@ -122,15 +122,18 @@ import { ServiceHost } from "./service-host";
 import { revivePreview } from "./services/agent-tools/served-previews";
 import { isSiteExport } from "./services/agent-tools/site-pack";
 import {
+  appStatus,
   artifactAppLinkId,
   artifactAppLinkInArgv,
-  installArtifactApp,
+  flushAllStores,
+  installApp,
   installedApps,
-  isArtifactPageUrl,
-  isToolArtifact,
-  openArtifactApp,
-  serveArtifactStore,
-  uninstallArtifactApp,
+  isPagePreviewUrl,
+  openInstalledAppWindow,
+  relabelAppWindows,
+  servePageStore,
+  startInstalledApps,
+  uninstallApp,
 } from "./services/artifact-apps/artifact-apps";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
@@ -1092,9 +1095,9 @@ async function createWindow(restored?: RecreatedWindowState) {
       delete params.preload;
       delete params.nodeintegration;
       delete params.nodeintegrationinsubframes;
-      // An artifact page's preview gets only its saved data, the same store
-      // its installed window uses (artifact-apps.ts).
-      if (isArtifactPageUrl(params.src ?? "")) {
+      // A page the agent made gets only its saved data, the same store its
+      // installed app uses (artifact-apps.ts).
+      if (isPagePreviewUrl(params.src ?? "")) {
         webPreferences.preload = join(
           import.meta.dirname,
           "../preload/index.cjs"
@@ -1104,7 +1107,7 @@ async function createWindow(restored?: RecreatedWindowState) {
       }
     });
     contents.on("did-attach-webview", (_event, webview) =>
-      serveArtifactStore(webview)
+      servePageStore(webview)
     );
 
     // A reload of the live renderer must dispose its browser views first, or
@@ -1393,8 +1396,10 @@ function updateApplicationMenu(): void {
 /** Loads the app's language for native words and relabels the menu when it changed. */
 async function applyNativeLanguage(): Promise<void> {
   try {
-    if (await setNativeLanguage(appLanguage(prefsStore.get().language).ui))
+    if (await setNativeLanguage(appLanguage(prefsStore.get().language).ui)) {
       updateApplicationMenu();
+      relabelAppWindows();
+    }
   } catch (error) {
     console.error(
       "[i18n] native language failed; keeping the current one",
@@ -1782,13 +1787,10 @@ const appOperations: AppOperations = {
   takeOpenLink: () => openLinks.take(),
   artifactApps: {
     list: () => installedApps(),
-    status: (path) => ({
-      installable: isToolArtifact(path),
-      installedId: installedApps().find((a) => a.path === path)?.id ?? null,
-    }),
-    install: (path, title) => ({ id: installArtifactApp(path, title).id }),
-    uninstall: (path) => uninstallArtifactApp(path),
-    open: (id) => void openInstalledApp(id),
+    status: (target) => appStatus(target),
+    install: (target, sessionId) => installApp(target, sessionId),
+    uninstall: (id) => uninstallApp(id),
+    open: (id) => void openInstalledApp(id, "chat"),
   },
 
   markRendererActivity() {
@@ -1997,13 +1999,31 @@ function takeStartHiddenForApp(): boolean {
   startHiddenForApp = false;
   return hidden;
 }
-function openInstalledApp(id: string): boolean {
-  return openArtifactApp(id, () => {
+function openInstalledApp(
+  id: string,
+  source: "launcher" | "chat" | "list" = "launcher"
+): boolean {
+  return openInstalledAppWindow(id, source);
+}
+function startApps(): void {
+  startInstalledApps({
+    workspaceOf: (sessionId) =>
+      workspaceServiceHost.workspaceOfSession(sessionId),
+    funnel: (step, detail) => {
+      if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+    },
+    openChat: (sessionId) =>
+      receiveOpenLink(
+        `abacusaibot://open?session=${encodeURIComponent(sessionId)}&src=app_edit`
+      ),
     // The last app window closed with the main window hidden: quit, as
     // closing the main window does on Windows and Linux.
-    if (process.platform !== "darwin" && !aliveMainWindow()?.isVisible())
-      app.quit();
+    onAllClosed: () => {
+      if (process.platform !== "darwin" && !aliveMainWindow()?.isVisible())
+        app.quit();
+    },
   });
+  app.on("will-quit", flushAllStores);
 }
 const openLinks = new OpenLinkInbox({
   reveal: revealOnRelaunch,
@@ -2271,7 +2291,10 @@ app
       console.error("[experience] runtime failed to initialize", error);
     }
   })
-  .then(() => createWindow())
+  .then(() => {
+    startApps();
+    return createWindow();
+  })
   .then(async () => {
     const launchedApp = artifactAppLinkInArgv(process.argv);
     if (launchedApp != null && !openInstalledApp(launchedApp))

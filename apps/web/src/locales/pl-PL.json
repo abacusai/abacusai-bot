@@ -4638,7 +4638,11 @@
       "allowed": "Dozwolone",
       "blocked": "Zablokowane",
       "signOut": "Wyloguj"
-    }
+    },
+    "installApp": "Zainstaluj jako aplikację",
+    "uninstallApp": "Odinstaluj aplikację",
+    "installedApp": "Zainstalowano. Jest teraz w menu aplikacji.",
+    "openApp": "Otwórz aplikację"
   },
   "browserPermission": {
     "allow": "Zezwól",
@@ -5731,7 +5735,25 @@
     "morePeople_many": "jeszcze {{count}}",
     "saveCopy": "Zapisz kopię",
     "saveCopiesTo": "Wybierz folder do zapisu",
-    "saveHere": "Zapisz tutaj"
+    "saveHere": "Zapisz tutaj",
+    "installedAppMenu": "Aplikacja",
+    "installedAppEditInChat": "Edytuj w czacie",
+    "installedAppUndo": "Cofnij ostatnią zmianę",
+    "installedAppExport": "Eksportuj dane…",
+    "installedAppReload": "Odśwież",
+    "installedAppUninstallMenu": "Odinstaluj…",
+    "installedAppUninstall": "Odinstaluj",
+    "installedAppCancel": "Anuluj",
+    "installedAppUninstallQuestion": "Odinstalować „{{name}}”?",
+    "installedAppUninstallDetail": "Okno i skrót zostaną usunięte. Dane zostaną na tym komputerze, chyba że też je usuniesz.",
+    "installedAppDeleteData": "Usuń też dane",
+    "installedAppExportTitle": "Eksportuj dane",
+    "installedAppExportFile": "Dane {{name}}",
+    "installedAppExportCsv": "Arkusz (CSV)",
+    "installedAppTooBig": "Ta aplikacja ma ponad 100 MB (lub ponad 5000 plików), więc nie da się jej zainstalować. Poproś agenta, żeby ją zmniejszył albo umieścił w osobnym folderze.",
+    "installedAppCannotInstall": "Tej strony nie da się zainstalować jako aplikacji.",
+    "installedAppMissing": "Brakuje plików tej aplikacji. Odinstaluj ją i zainstaluj ponownie z jej czatu.",
+    "installedAppTooBroad": "Nie można zainstalować folderu tej strony: to twój folder domowy albo leży poza folderem tego czatu. Poproś agenta, żeby umieścił aplikację w osobnym folderze w tym czacie."
   },
   "channels": {
     "sidebar": {

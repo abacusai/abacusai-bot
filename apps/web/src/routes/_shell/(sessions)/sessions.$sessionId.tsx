@@ -505,6 +505,7 @@ const SessionRoute = () => {
   };
   const deliverableOptions: SessionDeliverablesOptions = {
     workspaceRoot: root,
+    sessionId,
     onOpenFile: openFile,
     onOpenUrl: openUrl,
     onOpenExternal: (url) =>

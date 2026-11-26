@@ -4494,7 +4494,11 @@
       "allowed": "Permitido",
       "blocked": "Bloqueado",
       "signOut": "Sair"
-    }
+    },
+    "installApp": "Instalar como app",
+    "uninstallApp": "Desinstalar app",
+    "installedApp": "Instalado. Agora está no seu menu de apps.",
+    "openApp": "Abrir app"
   },
   "browserPermission": {
     "allow": "Permitir",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "Salvar uma cópia",
     "saveCopiesTo": "Escolha uma pasta para salvar",
-    "saveHere": "Salvar aqui"
+    "saveHere": "Salvar aqui",
+    "installedAppMenu": "App",
+    "installedAppEditInChat": "Editar em um chat",
+    "installedAppUndo": "Desfazer última alteração",
+    "installedAppExport": "Exportar dados…",
+    "installedAppReload": "Recarregar",
+    "installedAppUninstallMenu": "Desinstalar…",
+    "installedAppUninstall": "Desinstalar",
+    "installedAppCancel": "Cancelar",
+    "installedAppUninstallQuestion": "Desinstalar \"{{name}}\"?",
+    "installedAppUninstallDetail": "A janela e o atalho são removidos. Os dados ficam neste computador, a menos que você também os apague.",
+    "installedAppDeleteData": "Apagar também os dados",
+    "installedAppExportTitle": "Exportar dados",
+    "installedAppExportFile": "Dados de {{name}}",
+    "installedAppExportCsv": "Planilha (CSV)",
+    "installedAppTooBig": "Este app tem mais de 100 MB (ou mais de 5.000 arquivos), então não pode ser instalado. Peça ao agente para deixá-lo menor ou colocá-lo em uma pasta própria.",
+    "installedAppCannotInstall": "Esta página não pode ser instalada como app.",
+    "installedAppMissing": "Os arquivos deste app sumiram. Desinstale e instale de novo pelo chat dele.",
+    "installedAppTooBroad": "A pasta desta página não pode ser instalada: é sua pasta pessoal ou fica fora da pasta deste chat. Peça ao agente para colocar o app em uma pasta própria neste chat."
   },
   "channels": {
     "sidebar": {

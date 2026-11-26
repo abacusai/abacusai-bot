@@ -72,8 +72,57 @@ const writePreviews = (previews: ServedPreview[]): void => {
   );
 };
 
+/**
+ * Each port `serve` ever used, to the folder it served, or "*" once two
+ * folders had it: a port's origin keeps one localStorage for every server
+ * that ever had it, so a folder may take that over only when it was the
+ * only one (artifact-apps.ts).
+ */
+const PORTS_FILE = "served-ports.json";
+const portsPath = (): string => path.join(abacusBotHome(), PORTS_FILE);
+
+const readPorts = (): Record<string, string> => {
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(portsPath(), "utf8"));
+    return parsed != null && typeof parsed === "object"
+      ? (parsed as Record<string, string>)
+      : {};
+  } catch {
+    return {};
+  }
+};
+
+const notePort = (directory: string, port: number): void => {
+  const ports = readPorts();
+  const before = ports[String(port)];
+  if (before === directory || before === "*") return;
+  ports[String(port)] = before == null ? directory : "*";
+  try {
+    writeFileAtomicSync(portsPath(), `${JSON.stringify(ports)}\n`);
+  } catch (error) {
+    console.warn(
+      `[serve] ${PORTS_FILE} not written: ${(error as Error).message}`
+    );
+  }
+};
+
+/**
+ * Whether `serve` only ever gave `url`'s port to `directory`. A port from
+ * before this record was kept has only its served-previews entry to go by.
+ */
+export const portOnlyServed = (url: string, directory: string): boolean => {
+  const port = Number(new URL(url).port);
+  const root = path.resolve(directory);
+  const noted = readPorts()[String(port)];
+  if (noted != null) return noted === root;
+  return (
+    readPreviews().find((entry) => entry.port === port)?.directory === root
+  );
+};
+
 /** `directory` is now served on `port`: the newest entry, and the only one for either. */
 const remember = (directory: string, port: number): void => {
+  notePort(directory, port);
   const others = readPreviews().filter(
     (entry) => entry.directory !== directory && entry.port !== port
   );
@@ -88,6 +137,7 @@ export const servePreview = async (
   const before = readPreviews().find((entry) => entry.directory === root);
   const served = await serveDirectory(root, before?.port);
   if (before?.port !== served.port) remember(served.directory, served.port);
+  else notePort(served.directory, served.port);
   return served;
 };
 
@@ -143,3 +193,18 @@ export const previewDirectory = (url: string): string | null => {
     null
   );
 };
+
+/** The folder `serve` is serving on `url`'s loopback port right now, or null. */
+export const servedDirectoryNow = (url: string): string | null => {
+  if (!isLoopbackUrl(url)) return null;
+  const port = Number(new URL(url).port);
+  return listServed().find((served) => served.port === port)?.directory ?? null;
+};
+
+/**
+ * Whether `url` is a page `serve` is serving right now: a static server over
+ * the agent's own folder, on loopback. The agent's browser may open it to
+ * check its own work, whether or not the user wrote the address.
+ */
+export const isServedNow = (url: string): boolean =>
+  servedDirectoryNow(url) != null;

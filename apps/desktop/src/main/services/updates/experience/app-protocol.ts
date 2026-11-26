@@ -72,6 +72,12 @@ export const registerAppScheme = (): void => {
       },
       scheme,
     },
+    // An installed app's window (artifact-apps.ts): its own origin, so its
+    // pages get storage and fetch like a site's. Only one call is allowed.
+    {
+      privileges: { secure: true, standard: true, supportFetchAPI: true },
+      scheme: "abacus-app",
+    },
   ]);
 };
 

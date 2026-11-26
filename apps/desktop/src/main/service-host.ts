@@ -409,6 +409,7 @@ import { nextUptime, probeSite } from "./services/agent-tools/uptime-check";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
 import { AguiRelayService } from "./services/agui/relay-service";
+import { agentBrowserRunListener } from "./services/artifact-apps/agent-runs";
 import {
   botAccounts,
   botCreatedDetail,
@@ -1156,6 +1157,8 @@ export class ServiceHost {
     );
     // What each running turn did, for the success pitch at its close.
     this.onAgentEvent(successPitchListener(this.successPitch));
+    // The agent testing a page that saves data: its test rows are not kept.
+    this.onAgentEvent(agentBrowserRunListener());
   }
 
   /** MCP connects through the web host's own `/mcp/*` routes; null on the desktop. */
@@ -6335,6 +6338,11 @@ export class ServiceHost {
    * The directory a session's agent runs in (its worktree, else its local
    * workspace), which its relative paths mean; null for an unknown or remote one.
    */
+  /** The folder a chat works in, or null when it has none here. */
+  workspaceOfSession(sessionId: string): string | null {
+    return this.sessionDirectory(sessionId);
+  }
+
   private sessionDirectory(sessionId: string): string | null {
     const workspaceId =
       this.agentSessionManagerService.get(sessionId)?.workspaceId;

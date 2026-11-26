@@ -65,6 +65,8 @@ export const deliverablesAfter = (
 
 export interface SessionDeliverablesOptions {
   workspaceRoot: string | null;
+  /** The chat the card is in: an app installed from it can be edited there. */
+  sessionId?: string;
   /** Open a file (absolute) in the right-panel preview. */
   onOpenFile(absPath: string): void;
   /** Open a URL in the panel's browser tab. */
@@ -103,7 +105,12 @@ export const sessionDeliverablesCard = (
         />
       }
       rowAction={(item) =>
-        item.isUrl ? null : (
+        item.isUrl ? (
+          <InstallAppRowButton
+            target={item.path}
+            sessionId={options.sessionId ?? null}
+          />
+        ) : (
           <>
             <SaveRowButton
               path={resolve(item.path)}
@@ -111,7 +118,10 @@ export const sessionDeliverablesCard = (
             />
             <LookRowButton path={resolve(item.path)} />
             <ShareRowButton path={resolve(item.path)} />
-            <InstallAppRowButton path={resolve(item.path)} />
+            <InstallAppRowButton
+              target={resolve(item.path)}
+              sessionId={options.sessionId ?? null}
+            />
           </>
         )
       }

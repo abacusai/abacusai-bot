@@ -4494,7 +4494,11 @@
       "allowed": "Permitido",
       "blocked": "Bloqueado",
       "signOut": "Cerrar sesión"
-    }
+    },
+    "installApp": "Instalar como app",
+    "uninstallApp": "Desinstalar app",
+    "installedApp": "Instalada. Ya está en tu menú de apps.",
+    "openApp": "Abrir app"
   },
   "browserPermission": {
     "allow": "Permitir",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "Guardar una copia",
     "saveCopiesTo": "Elegir una carpeta para guardar",
-    "saveHere": "Guardar aquí"
+    "saveHere": "Guardar aquí",
+    "installedAppMenu": "App",
+    "installedAppEditInChat": "Editar en un chat",
+    "installedAppUndo": "Deshacer el último cambio",
+    "installedAppExport": "Exportar datos…",
+    "installedAppReload": "Recargar",
+    "installedAppUninstallMenu": "Desinstalar…",
+    "installedAppUninstall": "Desinstalar",
+    "installedAppCancel": "Cancelar",
+    "installedAppUninstallQuestion": "¿Desinstalar \"{{name}}\"?",
+    "installedAppUninstallDetail": "Se quitan su ventana y su acceso directo. Sus datos se quedan en este ordenador, a menos que también los borres.",
+    "installedAppDeleteData": "Borrar también sus datos",
+    "installedAppExportTitle": "Exportar datos",
+    "installedAppExportFile": "Datos de {{name}}",
+    "installedAppExportCsv": "Hoja de cálculo (CSV)",
+    "installedAppTooBig": "Esta app ocupa más de 100 MB (o tiene más de 5.000 archivos), así que no se puede instalar. Pide al agente que la haga más pequeña o que la ponga en una carpeta propia.",
+    "installedAppCannotInstall": "Esta página no se puede instalar como app.",
+    "installedAppMissing": "Faltan los archivos de esta app. Desinstálala y vuelve a instalarla desde su chat.",
+    "installedAppTooBroad": "La carpeta de esta página no se puede instalar: es tu carpeta personal o está fuera de la carpeta de este chat. Pide al agente que ponga la app en una carpeta propia en este chat."
   },
   "channels": {
     "sidebar": {

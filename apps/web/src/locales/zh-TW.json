@@ -4494,7 +4494,11 @@
       "allowed": "允許",
       "blocked": "封鎖",
       "signOut": "登出"
-    }
+    },
+    "installApp": "安裝為應用程式",
+    "uninstallApp": "解除安裝應用程式",
+    "installedApp": "已安裝，現在可以在應用程式選單中找到它。",
+    "openApp": "開啟應用程式"
   },
   "browserPermission": {
     "allow": "允許",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "儲存副本",
     "saveCopiesTo": "選擇儲存位置",
-    "saveHere": "儲存到這裡"
+    "saveHere": "儲存到這裡",
+    "installedAppMenu": "應用程式",
+    "installedAppEditInChat": "在聊天中編輯",
+    "installedAppUndo": "復原上一次變更",
+    "installedAppExport": "匯出資料…",
+    "installedAppReload": "重新載入",
+    "installedAppUninstallMenu": "解除安裝…",
+    "installedAppUninstall": "解除安裝",
+    "installedAppCancel": "取消",
+    "installedAppUninstallQuestion": "要解除安裝「{{name}}」嗎？",
+    "installedAppUninstallDetail": "它的視窗和捷徑會被移除。除非你一併刪除，它的資料會保留在這台電腦上。",
+    "installedAppDeleteData": "同時刪除它的資料",
+    "installedAppExportTitle": "匯出資料",
+    "installedAppExportFile": "{{name}} 資料",
+    "installedAppExportCsv": "試算表 (CSV)",
+    "installedAppTooBig": "這個應用程式超過 100 MB（或超過 5,000 個檔案），無法安裝。請讓代理把它縮小，或放進專用的資料夾。",
+    "installedAppCannotInstall": "這個頁面無法安裝為應用程式。",
+    "installedAppMissing": "找不到這個應用程式的檔案。請解除安裝後，從它的聊天重新安裝。",
+    "installedAppTooBroad": "無法安裝這個頁面的資料夾：它是你的主資料夾，或不在這個聊天的資料夾內。請讓代理把應用程式放進這個聊天中的專用資料夾。"
   },
   "channels": {
     "sidebar": {

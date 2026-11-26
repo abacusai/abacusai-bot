@@ -4494,7 +4494,11 @@
       "allowed": "Toegestaan",
       "blocked": "Geblokkeerd",
       "signOut": "Afmelden"
-    }
+    },
+    "installApp": "Installeren als app",
+    "uninstallApp": "App verwijderen",
+    "installedApp": "Geïnstalleerd. Hij staat nu in je appmenu.",
+    "openApp": "App openen"
   },
   "browserPermission": {
     "allow": "Toestaan",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "nog {{count}}",
     "saveCopy": "Kopie opslaan",
     "saveCopiesTo": "Kies een map om in op te slaan",
-    "saveHere": "Hier opslaan"
+    "saveHere": "Hier opslaan",
+    "installedAppMenu": "App",
+    "installedAppEditInChat": "Bewerken in een chat",
+    "installedAppUndo": "Laatste wijziging ongedaan maken",
+    "installedAppExport": "Gegevens exporteren…",
+    "installedAppReload": "Opnieuw laden",
+    "installedAppUninstallMenu": "Verwijderen…",
+    "installedAppUninstall": "Verwijderen",
+    "installedAppCancel": "Annuleren",
+    "installedAppUninstallQuestion": "\"{{name}}\" verwijderen?",
+    "installedAppUninstallDetail": "Het venster en de snelkoppeling worden verwijderd. De gegevens blijven op deze computer, tenzij je ze ook verwijdert.",
+    "installedAppDeleteData": "Ook de gegevens verwijderen",
+    "installedAppExportTitle": "Gegevens exporteren",
+    "installedAppExportFile": "Gegevens {{name}}",
+    "installedAppExportCsv": "Spreadsheet (CSV)",
+    "installedAppTooBig": "Deze app is groter dan 100 MB (of heeft meer dan 5.000 bestanden) en kan dus niet worden geïnstalleerd. Vraag de agent om hem kleiner te maken of in een eigen map te zetten.",
+    "installedAppCannotInstall": "Deze pagina kan niet als app worden geïnstalleerd.",
+    "installedAppMissing": "De bestanden van deze app ontbreken. Verwijder hem en installeer hem opnieuw vanuit de chat.",
+    "installedAppTooBroad": "De map van deze pagina kan niet worden geïnstalleerd: het is je thuismap, of hij staat buiten de map van deze chat. Vraag de agent om de app in een eigen map in deze chat te zetten."
   },
   "channels": {
     "sidebar": {

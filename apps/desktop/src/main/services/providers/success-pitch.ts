@@ -84,6 +84,8 @@ interface TurnFacts {
   delivered: Delivered | null;
   /** The folder of the site it built, when known. */
   siteDir: string | null;
+  /** The `artifact` tool made or changed a page this turn. */
+  artifact: boolean;
   lead: SuccessPitchLead | null;
   /** Settled tool calls that went through. */
   tools: number;
@@ -228,6 +230,7 @@ export class SuccessPitchWatch {
         praise: false,
         delivered: null,
         siteDir: null,
+        artifact: false,
         lead: null,
         tools: 0,
         troubled: false,
@@ -370,6 +373,7 @@ export class SuccessPitchWatch {
       };
       return;
     }
+    if (isTool(name, "artifact")) facts.artifact = true;
     if (isTool(name, "serve") && input.action === "start") {
       facts.delivered = "site";
       const directory = String(input.directory ?? "").trim();
@@ -422,16 +426,17 @@ export class SuccessPitchWatch {
     const where =
       record.channel == null ? "app" : record.channel.owner ? "chat" : null;
     if (where == null) return Promise.resolve();
-    if (facts.delivered != null)
-      this.deps.funnel(
-        "result_made",
-        clean ? facts.delivered : `${facts.delivered}_rough`
-      );
+    // A page from the `artifact` tool apart from a served or hand-written one.
+    const made =
+      facts.delivered === "site" && facts.artifact
+        ? "artifact"
+        : facts.delivered;
+    if (made != null)
+      this.deps.funnel("result_made", clean ? made : `${made}_rough`);
     if (settled)
       this.markKeep(record.sessionId, record.turnId, this.keepOf(facts));
     const nextStep = this.deps.nextStep();
-    if (clean && facts.delivered != null)
-      this.deps.funnel("result_delivered", facts.delivered);
+    if (clean && made != null) this.deps.funnel("result_delivered", made);
     const signals: Signal[] = [];
     if (settled && where === "app") {
       // A served site is mostly a preview: only a server or a routine is offered.

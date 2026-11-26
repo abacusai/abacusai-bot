@@ -18,7 +18,7 @@ on. A short answer stays in the chat.
 | dashboard | Numbers people scan | Three or four key numbers, then charts |
 | page | One-pagers, invites, landing pages | The one thing the reader should do |
 | diagram | How something works | The picture, with short labels |
-| tool | Calculators, planners, checklists | A working example already filled in |
+| tool | Calculators, trackers, planners, checklists | What it does, ready to use |
 
 ## What the shell gives you
 
@@ -48,7 +48,13 @@ the stats. Put the number first in each `.stat`.
   version on `https://cdnjs.cloudflare.com`.
 - Scripts are for tools. A report, dashboard, page or diagram needs none.
 - Keep real figures real. Sample data says it is sample data, on the page.
-- A tool opens with a filled-in example, never an empty form.
+- A calculator opens with example inputs already in, so it shows a result.
+- A tool that keeps what people enter (a tracker, ledger, list, planner, a
+  game's progress) saves it with `localStorage`: read on load, write on every
+  change, keep the same keys across edits. The app keeps it on the user's
+  computer, the same in the preview and in the installed app. It starts with
+  no rows: no sample, example or demo entries, not even ones dated today. The
+  empty state says how to add the first; only a form's date may start as today.
 - Give the page a real name: a short noun phrase, not a sentence.
 - Never add a password field. Never ask for a card number or a login.
 - Lay out with flex or grid and `gap`. Nothing may scroll sideways at phone

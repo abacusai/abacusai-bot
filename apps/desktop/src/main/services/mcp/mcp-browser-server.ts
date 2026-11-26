@@ -17,6 +17,7 @@ import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { emitHostEvent } from "#main/rpc/emit";
 
 import { abacusBotHome } from "../../paths";
+import { isServedNow } from "../agent-tools/served-previews";
 import {
   chooseOption,
   globToRegexSource,
@@ -4764,9 +4765,15 @@ export class McpBrowserServer extends McpHttpServer {
 
   /** Whether the user's own words, as the runtime stamped them on this call, open `url`. */
   private userOpens(args: Record<string, unknown>, url: string): boolean {
-    return userOpensLocal(
-      readUserGrant(args.user_grant, this.options.checkoutToken),
-      url
+    return (
+      userOpensLocal(
+        readUserGrant(args.user_grant, this.options.checkoutToken),
+        url
+      ) ||
+      // The agent's own page from `serve`: a browser_task that named it only
+      // in its task text was refused, and the agent spent the turn testing
+      // with a headless Chrome of its own instead.
+      isServedNow(url)
     );
   }
 

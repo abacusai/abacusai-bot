@@ -1,11 +1,9 @@
 /**
- * "Install as app" on a files card row: a page the `artifact` tool made gets
- * a launcher entry of its own and opens in its own window (desktop only).
- * Decks, PDFs, links, other files and pages written by hand never offer it
- * (the host checks for the tool's versions folder). Once installed, the row
- * offers to open it.
+ * "Install as app" on a files card row: a page the agent made (a served
+ * URL or an html file) gets a launcher entry and opens in a window of its own
+ * (desktop only). The host decides what can be installed; decks, PDFs, other
+ * files and sites elsewhere never offer it. Once installed, the row opens it.
  */
-import { isArtifactPage } from "@abacus-ai/contract/share";
 import { AppWindow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,7 +13,18 @@ import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
-const InstallApp = ({ path }: { path: string }) => {
+const PAGE = /\.html?$/i;
+/** Every row of the same page (its URL and its file) follows an install. */
+const CHANGED = "abacus-installed-apps-changed";
+const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i;
+
+interface Props {
+  /** The row's absolute path, or its URL. */
+  target: string;
+  sessionId: string | null;
+}
+
+const InstallApp = ({ target, sessionId }: Props) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const apps = transport.client.system.artifactApps;
@@ -24,18 +33,22 @@ const InstallApp = ({ path }: { path: string }) => {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let live = true;
-    void apps
-      .status({ path })
-      .then((status) => {
-        if (!live) return;
-        setInstallable(status.installable);
-        setInstalledId(status.installedId);
-      })
-      .catch(() => undefined);
+    const refresh = () =>
+      void apps
+        .status({ target })
+        .then((status) => {
+          if (!live) return;
+          setInstallable(status.installable);
+          setInstalledId(status.installedId);
+        })
+        .catch(() => undefined);
+    refresh();
+    window.addEventListener(CHANGED, refresh);
     return () => {
       live = false;
+      window.removeEventListener(CHANGED, refresh);
     };
-  }, [apps, path]);
+  }, [apps, target]);
   const run = () => {
     setBusy(true);
     const done = () => setBusy(false);
@@ -47,15 +60,23 @@ const InstallApp = ({ path }: { path: string }) => {
       return;
     }
     void apps
-      .install({ path, title: "" })
+      .install({ target, sessionId })
       .then(({ id }) => {
         setInstalledId(id);
+        window.dispatchEvent(new Event(CHANGED));
         showInfo(t("phase5.installedApp"));
+        return apps.open({ id });
       })
-      .catch(() => showError(t("phase5.failed")))
+      // The host's reason (too big, ...) is written for the user.
+      .catch((error: unknown) =>
+        showError(
+          error instanceof Error && error.message !== ""
+            ? error.message
+            : t("phase5.failed")
+        )
+      )
       .finally(done);
   };
-  // Only a page the `artifact` tool made (or one already installed).
   if (!installable && installedId == null) return null;
   return (
     <Button
@@ -72,5 +93,7 @@ const InstallApp = ({ path }: { path: string }) => {
   );
 };
 
-export const InstallAppRowButton = ({ path }: { path: string }) =>
-  IS_ELECTRON && isArtifactPage(path) ? <InstallApp path={path} /> : null;
+export const InstallAppRowButton = (props: Props) =>
+  IS_ELECTRON && (PAGE.test(props.target) || LOCAL_URL.test(props.target)) ? (
+    <InstallApp {...props} />
+  ) : null;

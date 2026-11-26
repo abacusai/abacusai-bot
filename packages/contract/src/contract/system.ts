@@ -201,28 +201,30 @@ export const system = {
    */
   takeOpenLink: mutation.input(NoInput).output(type<OpenLink | null>()),
   /**
-   * "Install as app" (spike): an artifact page gets a launcher entry of its
-   * own that opens it in its own window. Desktop only.
+   * "Install as app": a page the agent made in a chat (a served URL, an html
+   * file) gets a launcher entry and a window of its own. Desktop only.
    */
   artifactApps: {
     list: query
       .input(NoInput)
-      .output(type<Array<{ id: string; path: string; title: string }>>()),
-    /** Whether a page can be installed, and its app's id when it is. */
+      .output(type<Array<{ id: string; title: string }>>()),
+    /** Whether a presented page (URL or path) can be installed, and its app's id when it is. */
     status: query
-      .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
+      .input(v.object({ target: v.pipe(v.string(), v.nonEmpty()) }))
       .output(type<{ installable: boolean; installedId: string | null }>()),
+    /** Installs it, or returns the app it already is. */
     install: mutation
       .input(
         v.object({
-          path: v.pipe(v.string(), v.nonEmpty()),
-          title: v.pipe(v.string(), v.maxLength(120)),
+          target: v.pipe(v.string(), v.nonEmpty()),
+          sessionId: v.nullable(v.pipe(v.string(), v.maxLength(200))),
         })
       )
-      .output(type<{ id: string }>()),
+      .output(type<{ id: string; title: string }>()),
+    /** Asks the user first; false when they cancelled. */
     uninstall: mutation
-      .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
-      .output(type<void>()),
+      .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
+      .output(type<boolean>()),
     open: mutation
       .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
       .output(type<void>()),

@@ -143,11 +143,53 @@ Var abacusBaseDir
 
 !endif
 
+; Pages installed as apps (artifact-apps.ts): their Start menu and desktop
+; shortcuts open abacusaibot:// links, dead once the app is gone. The app
+; lists every one in shortcuts.txt, one path per line. Their data stays, as
+; the app's own does.
+!macro abacusRemoveAppShortcuts
+  Push $0
+  Push $1
+  Push $2
+  ClearErrors
+  FileOpen $0 "$PROFILE\.abacusai-bot\installed-apps\shortcuts.txt" r
+  ${IfNot} ${Errors}
+    ${Do}
+      ClearErrors
+      FileRead $0 $1
+      ${If} ${Errors}
+        ${ExitDo}
+      ${EndIf}
+      ; Drop the line's \r\n.
+      ${Do}
+        StrCpy $2 $1 1 -1
+        ${If} $2 == "$\n"
+        ${OrIf} $2 == "$\r"
+          StrCpy $1 $1 -1
+        ${Else}
+          ${ExitDo}
+        ${EndIf}
+      ${Loop}
+      ; Only a shortcut: the list is the app's, but never trust it further.
+      StrCpy $2 $1 4 -4
+      ${If} $2 == ".lnk"
+        Delete "$1"
+      ${EndIf}
+    ${Loop}
+    FileClose $0
+  ${EndIf}
+  RMDir "$APPDATA\Microsoft\Windows\Start Menu\Programs\AbacusAI Bot apps"
+  Pop $2
+  Pop $1
+  Pop $0
+!macroend
+
 ; The link scheme goes with the app: the install's hive, and the per-user key
 ; the app itself writes at every launch. An update keeps both.
 !macro customUnInstall
   ${IfNot} ${isUpdated}
     DeleteRegKey SHELL_CONTEXT "Software\Classes\abacusaibot"
     DeleteRegKey HKCU "Software\Classes\abacusaibot"
+    !insertmacro abacusRemoveAppShortcuts
   ${EndIf}
 !macroend

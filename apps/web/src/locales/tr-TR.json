@@ -4494,7 +4494,11 @@
       "allowed": "İzin verildi",
       "blocked": "Engellendi",
       "signOut": "Oturumu kapat"
-    }
+    },
+    "installApp": "Uygulama olarak yükle",
+    "uninstallApp": "Uygulamayı kaldır",
+    "installedApp": "Yüklendi. Artık uygulamalar menünde.",
+    "openApp": "Uygulamayı aç"
   },
   "browserPermission": {
     "allow": "İzin ver",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "Kopyasını Kaydet",
     "saveCopiesTo": "Kaydedilecek Klasörü Seç",
-    "saveHere": "Buraya Kaydet"
+    "saveHere": "Buraya Kaydet",
+    "installedAppMenu": "Uygulama",
+    "installedAppEditInChat": "Bir sohbette düzenle",
+    "installedAppUndo": "Son değişikliği geri al",
+    "installedAppExport": "Verileri dışa aktar…",
+    "installedAppReload": "Yeniden yükle",
+    "installedAppUninstallMenu": "Kaldır…",
+    "installedAppUninstall": "Kaldır",
+    "installedAppCancel": "İptal",
+    "installedAppUninstallQuestion": "\"{{name}}\" kaldırılsın mı?",
+    "installedAppUninstallDetail": "Penceresi ve kısayolu kaldırılır. Verileri, sen de silmedikçe bu bilgisayarda kalır.",
+    "installedAppDeleteData": "Verilerini de sil",
+    "installedAppExportTitle": "Verileri dışa aktar",
+    "installedAppExportFile": "{{name}} verileri",
+    "installedAppExportCsv": "Tablo (CSV)",
+    "installedAppTooBig": "Bu uygulama 100 MB'den (ya da 5.000 dosyadan) büyük, bu yüzden yüklenemiyor. Ajandan onu küçültmesini ya da kendi klasörüne koymasını iste.",
+    "installedAppCannotInstall": "Bu sayfa uygulama olarak yüklenemez.",
+    "installedAppMissing": "Bu uygulamanın dosyaları eksik. Kaldırıp sohbetinden yeniden yükle.",
+    "installedAppTooBroad": "Bu sayfanın klasörü yüklenemez: ana klasörün ya da bu sohbetin klasörünün dışında. Ajandan uygulamayı bu sohbette kendi klasörüne koymasını iste."
   },
   "channels": {
     "sidebar": {

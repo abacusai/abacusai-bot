@@ -31,6 +31,9 @@ const mocks = vi.hoisted(() => {
       this.zoomFactor = factor;
     });
     readonly setWindowOpenHandler = vi.fn();
+    /** A page the agent made gets its saved data on the view's own IPC. */
+    readonly once = vi.fn();
+    readonly ipc = { on: vi.fn(), handle: vi.fn() };
     /**
      * As Chromium answers: never, to a view that has not navigated yet; a
      * new-document script runs only once Page.enable was sent; a read is

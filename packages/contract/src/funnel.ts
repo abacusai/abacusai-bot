@@ -174,6 +174,17 @@ export const FUNNEL_STEPS = [
   "deliverable_offer_shown",
   "deliverable_offer_clicked",
   "deliverable_offer_dismissed",
+  // "Install as app" (artifact-apps.ts): installed (detail: artifact, site or
+  // file), refused (too_big), opened (launcher, chat or list), a change the
+  // agent made seen in the window, undone, data exported (csv or json), and
+  // uninstalled (keep_data or delete_data). No names, paths or data.
+  "installed_app_install",
+  "installed_app_refused",
+  "installed_app_open",
+  "installed_app_edit_seen",
+  "installed_app_undo",
+  "installed_app_export",
+  "installed_app_uninstall",
   // Google cut a reply off on a model the user picked (the cut-off card);
   // the card's detail is its state: credits, out, held or paid.
   "cutoff_card_shown",

@@ -4494,7 +4494,11 @@
       "allowed": "許可",
       "blocked": "ブロック",
       "signOut": "サインアウト"
-    }
+    },
+    "installApp": "アプリとしてインストール",
+    "uninstallApp": "アプリをアンインストール",
+    "installedApp": "インストールしました。アプリメニューから開けます。",
+    "openApp": "アプリを開く"
   },
   "browserPermission": {
     "allow": "許可",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "コピーを保存",
     "saveCopiesTo": "保存先のフォルダーを選択",
-    "saveHere": "ここに保存"
+    "saveHere": "ここに保存",
+    "installedAppMenu": "アプリ",
+    "installedAppEditInChat": "チャットで編集",
+    "installedAppUndo": "最後の変更を元に戻す",
+    "installedAppExport": "データをエクスポート…",
+    "installedAppReload": "再読み込み",
+    "installedAppUninstallMenu": "アンインストール…",
+    "installedAppUninstall": "アンインストール",
+    "installedAppCancel": "キャンセル",
+    "installedAppUninstallQuestion": "「{{name}}」をアンインストールしますか？",
+    "installedAppUninstallDetail": "ウィンドウとショートカットが削除されます。データは削除しない限りこのコンピューターに残ります。",
+    "installedAppDeleteData": "データも削除する",
+    "installedAppExportTitle": "データをエクスポート",
+    "installedAppExportFile": "{{name}} データ",
+    "installedAppExportCsv": "スプレッドシート (CSV)",
+    "installedAppTooBig": "このアプリは 100 MB（または 5,000 ファイル）を超えているため、インストールできません。エージェントに小さくするか、専用のフォルダーに入れるよう頼んでください。",
+    "installedAppCannotInstall": "このページはアプリとしてインストールできません。",
+    "installedAppMissing": "このアプリのファイルが見つかりません。アンインストールして、チャットからもう一度インストールしてください。",
+    "installedAppTooBroad": "このページのフォルダーはインストールできません。ホームフォルダーか、このチャットのフォルダーの外にあります。エージェントに、このチャット内の専用フォルダーにアプリを入れるよう頼んでください。"
   },
   "channels": {
     "sidebar": {

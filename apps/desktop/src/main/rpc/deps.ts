@@ -158,12 +158,17 @@ export interface AppOperations {
   markRendererActivity(): void;
   /** The `abacusaibot://` link waiting for the renderer, once (desktop only). */
   takeOpenLink?(): OpenLink | null;
-  /** Artifacts installed as apps (artifact-apps.ts); desktop only. */
+  /** Pages installed as apps (artifact-apps.ts); desktop only. */
   artifactApps?: {
-    list(): Array<{ id: string; path: string; title: string }>;
-    status(path: string): { installable: boolean; installedId: string | null };
-    install(path: string, title: string): { id: string };
-    uninstall(path: string): void;
+    list(): Array<{ id: string; title: string }>;
+    status(
+      target: string
+    ): Promise<{ installable: boolean; installedId: string | null }>;
+    install(
+      target: string,
+      sessionId: string | null
+    ): Promise<{ id: string; title: string }>;
+    uninstall(id: string): Promise<boolean>;
     open(id: string): void;
   };
 }

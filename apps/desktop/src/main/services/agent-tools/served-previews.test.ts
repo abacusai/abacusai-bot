@@ -13,7 +13,12 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { revivePreview, servePreview, stopPreview } from "./served-previews";
+import {
+  isServedNow,
+  revivePreview,
+  servePreview,
+  stopPreview,
+} from "./served-previews";
 import { listServed, stopAllServed } from "./static-server";
 
 let home: string;
@@ -132,5 +137,18 @@ describe("what is never brought back", () => {
     ])
       expect(await revivePreview(url)).toBe(url);
     expect(listServed()).toEqual([]);
+  });
+});
+
+describe("what the agent's browser may open as its own page", () => {
+  it("a page serve is serving now, and nothing else on this computer", async () => {
+    const served = await servePreview(site("game"));
+    await occupy(0);
+    const other = (strangers[0]!.address() as AddressInfo).port;
+    expect(isServedNow(new URL("/index.html", served.url).href)).toBe(true);
+    expect(isServedNow(`http://127.0.0.1:${other}/`)).toBe(false);
+    expect(isServedNow("http://192.168.1.1/")).toBe(false);
+    stopPreview(served.directory);
+    expect(isServedNow(served.url)).toBe(false);
   });
 });

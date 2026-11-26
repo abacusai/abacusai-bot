@@ -1,6 +1,5 @@
 import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
-import { isArtifactPage } from "@abacus-ai/contract/share";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSearch } from "@tanstack/react-router";
 import { Ellipsis } from "lucide-react";
@@ -168,26 +167,37 @@ export const ArtifactsPage = ({
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const saver = useSaveFiles();
-  // Pages the `artifact` tool made, and which of them are installed as apps
-  // (desktop only), by page path. The host decides what is installable.
-  const [installed, setInstalled] = useState<Set<string>>(new Set());
+  // Pages the agent made, and which of them are installed as apps (desktop
+  // only), by page path: the app's id. The host decides what is installable.
+  const [installed, setInstalled] = useState<Map<string, string>>(new Map());
   const [installable, setInstallable] = useState<Set<string>>(new Set());
   const pagePaths = rows
-    .filter((a) => a.kind === "file" && isArtifactPage(a.location))
+    .filter((a) =>
+      a.kind === "file"
+        ? /\.html?$/i.test(a.location)
+        : /^https?:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(a.location)
+    )
     .map((a) => a.location)
     .join("\n");
   const refreshInstalled = () => {
     if (!IS_ELECTRON || pagePaths === "") return;
     const paths = pagePaths.split("\n");
     void Promise.all(
-      paths.map((path) => transport.client.system.artifactApps.status({ path }))
+      paths.map((target) =>
+        transport.client.system.artifactApps.status({ target })
+      )
     )
       .then((statuses) => {
         setInstallable(
           new Set(paths.filter((_, i) => statuses[i]!.installable))
         );
         setInstalled(
-          new Set(paths.filter((_, i) => statuses[i]!.installedId != null))
+          new Map(
+            paths.flatMap((path, i) => {
+              const id = statuses[i]!.installedId;
+              return id == null ? [] : [[path, id] as const];
+            })
+          )
         );
       })
       .catch(() => undefined);
@@ -268,32 +278,48 @@ export const ArtifactsPage = ({
             .then(() => showInfo(t("phase5.copied")))
             .catch(() => showError(t("phase5.failed"))),
       },
-      ...(installable.has(a.location) || installed.has(a.location)
-        ? installed.has(a.location)
+      ...(installed.has(a.location)
+        ? [
+            {
+              label: t("phase5.openApp"),
+              run: () =>
+                void transport.client.system.artifactApps
+                  .open({ id: installed.get(a.location)! })
+                  .catch(() => showError(t("phase5.failed"))),
+            },
+            {
+              label: t("phase5.uninstallApp"),
+              run: () =>
+                void transport.client.system.artifactApps
+                  .uninstall({ id: installed.get(a.location)! })
+                  .then(refreshInstalled)
+                  .catch(() => showError(t("phase5.failed"))),
+            },
+          ]
+        : installable.has(a.location)
           ? [
-              {
-                label: t("phase5.uninstallApp"),
-                run: () =>
-                  void transport.client.system.artifactApps
-                    .uninstall({ path: a.location })
-                    .then(refreshInstalled)
-                    .catch(() => showError(t("phase5.failed"))),
-              },
-            ]
-          : [
               {
                 label: t("phase5.installApp"),
                 run: () =>
                   void transport.client.system.artifactApps
-                    .install({ path: a.location, title: a.title })
+                    .install({
+                      target: a.location,
+                      sessionId: a.sessionId,
+                    })
                     .then(() => {
                       refreshInstalled();
                       showInfo(t("phase5.installedApp"));
                     })
-                    .catch(() => showError(t("phase5.failed"))),
+                    .catch((error: unknown) =>
+                      showError(
+                        error instanceof Error && error.message !== ""
+                          ? error.message
+                          : t("phase5.failed")
+                      )
+                    ),
               },
             ]
-        : []),
+          : []),
       ...(target
         ? [
             {

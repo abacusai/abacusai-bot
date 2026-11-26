@@ -22,7 +22,6 @@ import {
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import { ForbiddenError } from "@abacus-ai/contract/forbidden";
-import { isArtifactPage } from "@abacus-ai/contract/share";
 import {
   app,
   BaseWindow,
@@ -35,7 +34,7 @@ import {
 
 import { publishIpcEvent } from "#main/rpc/emit";
 
-import { serveArtifactStore } from "../artifact-apps/artifact-apps";
+import { servePageStore } from "../artifact-apps/artifact-apps";
 import { sameSite } from "../vault/site";
 import {
   BrowserRuntimeRegistry,
@@ -910,19 +909,23 @@ export class ElectronBrowserRuntime {
         focusOnNavigation: false,
         // Chromium's PDF viewer is a plugin.
         ...(localFile != null && { plugins: true }),
-        // An artifact page gets its saved data, the same store as its
-        // installed window (artifact-apps.ts), and nothing else.
-        ...(localFile != null &&
-          isArtifactPage(localFile.file) && {
-            preload: path.join(import.meta.dirname, "../preload/index.cjs"),
-            additionalArguments: ["--abacus-window=artifact-app"],
-          }),
+        // A page the agent made (an html file here, or a folder `serve`
+        // put on this computer) gets its saved data, the same store as its
+        // installed app (artifact-apps.ts), and nothing else. The preload
+        // does nothing on any other origin, and main hands a store only to
+        // a top frame whose URL is such a page; an imported profile's tabs
+        // never get it.
+        ...((localFile != null
+          ? /\.html?$/i.test(localFile.file)
+          : options?.profileId == null) && {
+          preload: path.join(import.meta.dirname, "../preload/index.cjs"),
+          additionalArguments: ["--abacus-window=artifact-app"],
+        }),
       },
     });
     if (localFile != null)
       this.lockToLocalFile(view, localFile, partitionSession);
-    if (localFile != null && isArtifactPage(localFile.file))
-      serveArtifactStore(view.webContents);
+    servePageStore(view.webContents, localFile == null);
     view.setBounds(PARKED_BOUNDS);
     this.park(view);
     this.currentLease.set(view, lease);

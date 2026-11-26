@@ -4494,7 +4494,11 @@
       "allowed": "Erlaubt",
       "blocked": "Gesperrt",
       "signOut": "Abmelden"
-    }
+    },
+    "installApp": "Als App installieren",
+    "uninstallApp": "App deinstallieren",
+    "installedApp": "Installiert. Sie ist jetzt in deinem App-Menü.",
+    "openApp": "App öffnen"
   },
   "browserPermission": {
     "allow": "Zulassen",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "Kopie speichern",
     "saveCopiesTo": "Ordner zum Speichern auswählen",
-    "saveHere": "Hier speichern"
+    "saveHere": "Hier speichern",
+    "installedAppMenu": "App",
+    "installedAppEditInChat": "In einem Chat bearbeiten",
+    "installedAppUndo": "Letzte Änderung rückgängig",
+    "installedAppExport": "Daten exportieren…",
+    "installedAppReload": "Neu laden",
+    "installedAppUninstallMenu": "Deinstallieren…",
+    "installedAppUninstall": "Deinstallieren",
+    "installedAppCancel": "Abbrechen",
+    "installedAppUninstallQuestion": "„{{name}}“ deinstallieren?",
+    "installedAppUninstallDetail": "Fenster und Starter werden entfernt. Die Daten bleiben auf diesem Computer, außer du löschst sie auch.",
+    "installedAppDeleteData": "Auch die Daten löschen",
+    "installedAppExportTitle": "Daten exportieren",
+    "installedAppExportFile": "{{name}} Daten",
+    "installedAppExportCsv": "Tabelle (CSV)",
+    "installedAppTooBig": "Diese App ist größer als 100 MB (oder hat über 5.000 Dateien) und kann nicht installiert werden. Bitte den Agenten, sie kleiner zu machen oder in einen eigenen Ordner zu legen.",
+    "installedAppCannotInstall": "Diese Seite kann nicht als App installiert werden.",
+    "installedAppMissing": "Die Dateien dieser App fehlen. Deinstalliere sie und installiere sie erneut aus ihrem Chat.",
+    "installedAppTooBroad": "Der Ordner dieser Seite kann nicht installiert werden: Es ist dein Benutzerordner oder er liegt außerhalb des Ordners dieses Chats. Bitte den Agenten, die App in einen eigenen Ordner in diesem Chat zu legen."
   },
   "channels": {
     "sidebar": {

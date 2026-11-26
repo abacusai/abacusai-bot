@@ -1,50 +1,153 @@
 /**
- * "Install as app" (spike): an artifact page opened from the OS launcher in a
- * window of its own. Installing writes a launcher entry that starts this app
- * with `abacusaibot://app?id=<id>`; the window shows the artifact's own
- * index.html (its CSP: no network), reloads when the agent edits it, and keeps
- * what the user enters in a small store of its own (`window.abacus.store`).
+ * "Install as app": a page the agent made in a chat (a served folder, an html
+ * file, an `artifact` page) gets its own launcher entry and window.
  *
- * Registry and data live under `<userData>/artifact-apps/`:
- *   registry.json            { [id]: { id, path, title, installedAt } }
- *   <id>/icon.png, icon.ico  the launcher icon
- *   <id>/store.json          the app's saved data
+ * Installing copies the page's folder into the app's own place, so the app
+ * keeps working when the chat's folder is cleaned up or its server is gone:
+ * the window serves the copy itself (`abacus-app://<id>/`), offline, with the
+ * bot's main window closed and nobody signed in. When the agent changes the
+ * source folder, a new copy (a version) is made and the window reloads; the
+ * last versions are kept for "Undo last change". The data the page saves
+ * lives apart from the code (store.ts) and is shared with the chat preview.
+ *
+ * Under `<profile base>/installed-apps/` (one place for every account here):
+ *   registry.json           { [id]: InstalledApp }
+ *   shortcuts.txt           Windows: every launcher path, for the uninstaller
+ *   <id>/versions/<n>/      copies of the page's folder
+ *   <id>/icon.png|ico       the launcher icon
+ *   <id>/data/              the saved data (store.ts)
  */
 import { createHash } from "node:crypto";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
+  rmdirSync,
   rmSync,
+  statSync,
   watch,
   writeFileSync,
   type FSWatcher,
 } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  basename,
+  dirname,
+  join,
+  parse,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { isLoopbackUrl } from "@abacus-ai/agent/deliverable-url";
+import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import { isArtifactPage } from "@abacus-ai/contract/share";
 import {
-  app,
   BaseWindow,
+  dialog,
+  Menu,
+  net,
   session,
   shell,
+  webContents,
   WebContentsView,
+  type MenuItemConstructorOptions,
   type WebContents,
 } from "electron";
 
-import { appIconPng, pngToIco } from "./icon";
+import { profileBaseDir } from "../../profile-home";
+import {
+  portOnlyServed,
+  previewDirectory,
+  revivePreview,
+  servedDirectoryNow,
+} from "../agent-tools/served-previews";
+import { htmlPagesIn } from "../agent-tools/static-server";
+import { BROWSER_PARTITION } from "../browser/connected-sites";
+import { nativeT } from "../config/native-language";
+import { appUserModelId, removeLaunchers, writeLaunchers } from "./launchers";
+import {
+  agentBrowserRunEnded,
+  agentBrowserRunStarted,
+  deleteStore,
+  exportCsv,
+  exportJson,
+  flushAllStores,
+  importLocalStorage,
+  markImported,
+  serveStore,
+  setStoreRoot,
+  wasImported,
+  writeAtomic,
+} from "./store";
+
+export { agentBrowserRunEnded, agentBrowserRunStarted, flushAllStores };
+
+export const APP_SCHEME = "abacus-app";
 
 export interface InstalledApp {
   id: string;
-  /** The artifact's index.html. */
-  path: string;
   title: string;
+  /** The folder the agent made the page in, and the page in it. */
+  dir: string;
+  entry: string;
+  /** Made by the `artifact` tool: its versions folder is not copied. */
+  artifact: boolean;
+  /**
+   * Where its saved data lives: one store per source folder, as the folder's
+   * pages share one localStorage when served. Absent: the app's own id.
+   */
+  dataId?: string;
+  /** "page": a page with no files of its own beside it, copied alone. */
+  copies?: "page" | "folder";
+  /** The chat it was made in, for "Edit in a chat". */
+  sessionId: string | null;
   installedAt: string;
+  versions: number[];
+  current: number;
+  /** The source folder as the newest version copied it. */
+  sourceSig: string;
+  /** The newest version a window showed (for installed_app_edit_seen). */
+  seen: number;
+  /** When the agent's last change was copied (ms). */
+  updatedAt?: number;
+  launchers: string[];
 }
+
+export interface AppsDeps {
+  /** The folder a chat works in, or null. */
+  workspaceOf(sessionId: string): string | null;
+  funnel(step: string, detail?: string): void;
+  /** Opens a chat in the main window. */
+  openChat(sessionId: string): void;
+  /** The last app window closed. */
+  onAllClosed(): void;
+}
+
+let deps: AppsDeps = {
+  workspaceOf: () => null,
+  funnel: () => undefined,
+  openChat: () => undefined,
+  onAllClosed: () => undefined,
+};
+
+const KEEP_VERSIONS = 5;
+/** Changes this close together are one change: the agent edits in steps. */
+const ONE_CHANGE_MS = 3 * 60 * 1000;
+const MAX_BYTES = 100 * 1024 * 1024;
+const MAX_FILES = 5000;
+
+const root = (): string => join(profileBaseDir(), "installed-apps");
+const registryFile = (): string => join(root(), "registry.json");
+const appDir = (id: string): string => join(root(), id);
+const versionDir = (id: string, n: number): string =>
+  join(appDir(id), "versions", String(n));
 
 const APP_LINK = /^abacusaibot:\/\/app\/?\?id=([a-f0-9]{16})$/i;
 
@@ -55,311 +158,745 @@ export const artifactAppLinkId = (raw: string | null): string | null =>
 export const artifactAppLinkInArgv = (argv: readonly string[]): string | null =>
   argv.map(artifactAppLinkId).find((id) => id != null) ?? null;
 
-const root = (): string => join(app.getPath("userData"), "artifact-apps");
-const registryFile = (): string => join(root(), "registry.json");
-const appDir = (id: string): string => join(root(), id);
+const realDir = (dir: string): string => {
+  try {
+    return realpathSync(resolve(dir));
+  } catch {
+    // A deleted folder keeps the id of the path it had.
+    return resolve(dir);
+  }
+};
+
+/** `inner` is `outer` or inside it. */
+const within = (outer: string, inner: string): boolean =>
+  inner === outer || inner.startsWith(`${outer}${sep}`);
+
+const hash16 = (text: string): string =>
+  createHash("sha256").update(text).digest("hex").slice(0, 16);
 
 /**
- * One id per artifact page, from its real path: the installed window and the
- * chat's side panel reach the page by different routes and must share a store.
+ * A folder's saved data: the chat preview (served or as a file) and the
+ * installed window reach a page by different routes and share one store, as
+ * the folder's pages share one localStorage when served.
  */
-const appIdFor = (path: string): string => {
-  let real = path;
-  try {
-    real = realpathSync(path);
-  } catch {
-    // A deleted page keeps the id of the path it had.
-  }
-  return createHash("sha256").update(real).digest("hex").slice(0, 16);
-};
+const dataIdFor = (dir: string): string => hash16(realDir(dir));
 
-/** The artifact page a view shows, or null when it shows anything else. */
-const artifactPageOf = (url: string): string | null => {
-  if (!url.startsWith("file:")) return null;
-  try {
-    const path = fileURLToPath(url.split("#")[0]!.split("?")[0]!);
-    return isArtifactPage(path) ? path : null;
-  } catch {
-    return null;
-  }
-};
+/**
+ * An app is one page: chats share a workspace, and two of them can put
+ * their pages in one folder ("game/index.html", "game/puppies.html").
+ */
+const appIdFor = (dir: string, entry: string): string =>
+  entry === "index.html" ? dataIdFor(dir) : hash16(`${realDir(dir)}\0${entry}`);
 
-/** Whether a <webview> about to load `src` shows an artifact page. */
-export const isArtifactPageUrl = (src: string): boolean =>
-  artifactPageOf(src) != null;
+const dataOf = (app: InstalledApp): string => app.dataId ?? app.id;
 
-const writeAtomic = (file: string, data: string | Buffer): void => {
-  mkdirSync(dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, data);
-  renameSync(tmp, file);
-};
+// ---- Registry ----------------------------------------------------------------
+
+let registryCache: Record<string, InstalledApp> | null = null;
 
 const readRegistry = (): Record<string, InstalledApp> => {
+  if (registryCache) return registryCache;
   try {
-    return JSON.parse(readFileSync(registryFile(), "utf8")) as Record<
+    registryCache = JSON.parse(readFileSync(registryFile(), "utf8")) as Record<
       string,
       InstalledApp
     >;
   } catch {
-    return {};
+    registryCache = {};
   }
+  return registryCache;
 };
 
-const writeRegistry = (registry: Record<string, InstalledApp>): void =>
+const saveRegistry = (): void => {
+  const registry = readRegistry();
   writeAtomic(registryFile(), JSON.stringify(registry, null, 2));
+  if (process.platform === "win32")
+    writeAtomic(
+      join(root(), "shortcuts.txt"),
+      `${Object.values(registry)
+        .flatMap((a) => a.launchers)
+        .join("\r\n")}\r\n`
+    );
+};
 
 export const installedApps = (): InstalledApp[] =>
   Object.values(readRegistry());
 
-// ---- Launcher entries ------------------------------------------------------
+// ---- What a page is ----------------------------------------------------------
 
-/** How the OS starts this app: the exe, plus the app folder in a dev run. */
-const launchCommand = (): string[] => {
-  if (process.env.APPIMAGE) return [process.env.APPIMAGE];
-  return process.defaultApp
-    ? [process.execPath, app.getAppPath()]
-    : [process.execPath];
-};
+interface Source {
+  dir: string;
+  entry: string;
+  artifact: boolean;
+  /** The served URL it was presented as, when it was. */
+  url: string | null;
+}
 
-const linuxDesktopFile = (id: string): string =>
-  join(
-    process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"),
-    "applications",
-    `abacusai-bot-app-${id}.desktop`
-  );
+const HTML = /\.html?$/i;
 
-const windowsShortcut = (entry: InstalledApp): string =>
-  join(
-    app.getPath("appData"),
-    "Microsoft",
-    "Windows",
-    "Start Menu",
-    "Programs",
-    `${entry.title.replace(/[<>:"/\\|?*]/g, " ").trim() || "App"}.lnk`
-  );
-
-/** Each app its own taskbar identity on Windows. */
-const appUserModelId = (id: string): string => `ai.abacus.bot.app.${id}`;
-
-// The .desktop spec: quote arguments holding spaces; escape `"`, `` ` ``, `$`, `\`.
-const desktopQuote = (arg: string): string =>
-  /[\s"`$\\]/.test(arg) ? `"${arg.replace(/(["`$\\])/g, "\\$1")}"` : arg;
-
-const writeLauncher = (entry: InstalledApp): void => {
-  const png = appIconPng(entry.title, entry.id);
-  writeAtomic(join(appDir(entry.id), "icon.png"), png);
-  const link = `abacusaibot://app?id=${entry.id}`;
-  if (process.platform === "win32") {
-    const ico = join(appDir(entry.id), "icon.ico");
-    writeAtomic(ico, pngToIco(png));
-    const [target, ...args] = launchCommand();
-    shell.writeShortcutLink(windowsShortcut(entry), "create", {
-      target: target!,
-      args: [...args.map((a) => `"${a}"`), link].join(" "),
-      icon: ico,
-      iconIndex: 0,
-      appUserModelId: appUserModelId(entry.id),
-      description: entry.title,
-    });
-    return;
-  }
-  if (process.platform === "linux") {
-    const exec = [...launchCommand(), link].map(desktopQuote).join(" ");
-    writeAtomic(
-      linuxDesktopFile(entry.id),
-      [
-        "[Desktop Entry]",
-        "Type=Application",
-        `Name=${entry.title.replace(/[\r\n]/g, " ")}`,
-        `Exec=${exec}`,
-        `Icon=${join(appDir(entry.id), "icon.png")}`,
-        "Terminal=false",
-        "Categories=Utility;",
-        `StartupWMClass=abacusai-bot-app-${entry.id}`,
-        "",
-      ].join("\n")
+/** The page a presented URL or file stands for, or null when none can be installed. */
+const sourceOf = async (target: string): Promise<Source | null> => {
+  if (isLoopbackUrl(target)) {
+    const dir = previewDirectory(target);
+    if (dir == null || !existsSync(dir)) return null;
+    let entry = decodeURIComponent(new URL(target).pathname).replace(
+      /^\/+/,
+      ""
     );
-    return;
+    const full = resolve(dir, entry);
+    if (full !== dir && !full.startsWith(`${dir}${sep}`)) return null;
+    if (
+      entry === "" ||
+      statSync(full, { throwIfNoEntry: false })?.isDirectory()
+    ) {
+      const page = (await htmlPagesIn(full))[0];
+      if (page == null) return null;
+      entry = relative(dir, join(full, page));
+    }
+    if (!HTML.test(entry) || !existsSync(join(dir, entry))) return null;
+    return {
+      dir,
+      entry: entry.split(sep).join("/"),
+      artifact: false,
+      url: target,
+    };
   }
-  // macOS: needs a small .app in ~/Applications (Info.plist, a launcher
-  // running `open abacusaibot://app?id=...`, an .icns). Not built in the spike.
-  throw new Error(
-    "Installing an artifact as an app is not built for macOS yet."
-  );
+  const path = target.startsWith("file:") ? fileURLToPath(target) : target;
+  if (!HTML.test(path) || !existsSync(path)) return null;
+  return {
+    dir: dirname(path),
+    entry: basename(path),
+    artifact:
+      isArtifactPage(path) && existsSync(join(dirname(path), "versions")),
+    url: null,
+  };
 };
 
-const removeLauncher = (entry: InstalledApp): void => {
-  if (process.platform === "win32")
-    rmSync(windowsShortcut(entry), { force: true });
-  if (process.platform === "linux")
-    rmSync(linuxDesktopFile(entry.id), { force: true });
+/**
+ * The installed app a page file belongs to: under the folder of its entry
+ * page (the deepest one), never in node_modules. A page nobody installed has
+ * no store: a file saved into the same tree later (a fetched page, a repo's
+ * docs) must not read the app's data.
+ */
+const installedAppFor = (path: string): InstalledApp | null => {
+  if (/[\\/]node_modules[\\/]/.test(path)) return null;
+  const real = join(realDir(dirname(path)), basename(path));
+  let best: { app: InstalledApp; base: string } | null = null;
+  for (const app of installedApps()) {
+    const base = realDir(join(app.dir, dirname(app.entry)));
+    if (!real.startsWith(`${base}${sep}`)) continue;
+    if (best == null || base.length > best.base.length) best = { app, base };
+  }
+  return best?.app ?? null;
 };
 
-/** The page's own <title>: the artifact's name, where the row only has "index.html". */
+/** The file a served URL shows, for a folder `serve` is serving now. */
+const servedFile = (url: string): { dir: string; file: string } | null => {
+  const dir = servedDirectoryNow(url);
+  if (dir == null) return null;
+  const file = resolve(dir, `.${decodeURIComponent(new URL(url).pathname)}`);
+  if (file !== dir && !file.startsWith(`${dir}${sep}`)) return null;
+  return {
+    dir,
+    file: statSync(file, { throwIfNoEntry: false })?.isDirectory()
+      ? join(file, "index.html")
+      : file,
+  };
+};
+
+/**
+ * The store a page shown at `url` keeps its data in, or null when it has
+ * none: an installed app's window, or a preview of a page of an installed
+ * app (as a file, or from a folder `serve` is serving right now: a port
+ * remembered from before may be another program's by now).
+ */
+export const storeIdForUrl = (url: string): string | null => {
+  try {
+    if (url.startsWith(`${APP_SCHEME}://`)) {
+      const app = readRegistry()[new URL(url).hostname];
+      return app ? dataOf(app) : null;
+    }
+    if (url.startsWith("file:")) {
+      const path = fileURLToPath(url.split("#")[0]!.split("?")[0]!);
+      const app = HTML.test(path) ? installedAppFor(path) : null;
+      return app ? dataOf(app) : null;
+    }
+    if (isLoopbackUrl(url)) {
+      const served = servedFile(url);
+      const app = served ? installedAppFor(served.file) : null;
+      return app ? dataOf(app) : null;
+    }
+  } catch {
+    // Not a URL we serve.
+  }
+  return null;
+};
+
+/**
+ * Whether what this origin's own localStorage holds may be read into the
+ * store: a loopback origin is every server that ever had its port, so only
+ * when `serve` has only ever given that port to this page's folder.
+ */
+const mayImport = (url: string): boolean => {
+  if (!isLoopbackUrl(url)) return true;
+  const served = servedFile(url);
+  return served != null && portOnlyServed(url, served.dir);
+};
+
+/** Whether a <webview> or preview about to load `src` is a page with a store. */
+export const isPagePreviewUrl = (src: string): boolean =>
+  src.startsWith("file:") && storeIdForUrl(src) != null;
+
+/**
+ * Gives a view's page its saved data (store.ts), when the page has one.
+ * `agentCanDrive`: the chat's browser, where the agent tests pages too.
+ */
+export const servePageStore = (
+  contents: WebContents,
+  agentCanDrive = false
+): void => serveStore(contents, storeIdForUrl, mayImport, agentCanDrive);
+
+// ---- Copies ----------------------------------------------------------------
+
+/** Worded for the user: the app shows it as it is (rpc/errors.ts). */
+export class AppInstallError extends InvalidInputError {}
+
+interface SourceFile {
+  rel: string;
+  size: number;
+  mtimeMs: number;
+}
+
+/**
+ * Files a page loads from beside it: a src/href, a CSS url(), an import or
+ * fetch, or an asset name in a script ("sprite.png"). None: the page is
+ * whole on its own, and only it is copied, not the folder it shares. Case
+ * matters: `url(` is CSS, `URL(` a script.
+ */
+const LOCAL_REF =
+  /(?:\b(?:src|href|data|poster)\s*=\s*["']|url\(\s*["']?|\bimport\s*\(?\s*(?:[^'"]*\bfrom\s*)?["']|fetch\(\s*["'])(?!https?:|data:|blob:|mailto:|tel:|javascript:|#|\/\/|about:)[^"')\s]+|["'][^"'\s:]+\.(?:png|jpe?g|gif|webp|svg|ico|mp3|wav|ogg|m4a|mp4|webm|json|js|mjs|css|woff2?|ttf|otf|glb|gltf)["']/;
+
+const usesFilesBeside = (page: string): boolean => {
+  try {
+    return LOCAL_REF.test(readFileSync(page, "utf8"));
+  } catch {
+    return true;
+  }
+};
+
+/** The files a copy takes: no dot files, node_modules, or an artifact's versions. */
+const listFiles = (
+  dir: string,
+  artifact: boolean,
+  onlyPage: string | null = null
+): SourceFile[] => {
+  const files: SourceFile[] = [];
+  let bytes = 0;
+  if (onlyPage != null) {
+    const stat = statSync(join(dir, onlyPage));
+    return [{ rel: onlyPage, size: stat.size, mtimeMs: stat.mtimeMs }];
+  }
+  const walk = (at: string): void => {
+    for (const item of readdirSync(at, { withFileTypes: true })) {
+      if (item.name.startsWith(".") || item.name === "node_modules") continue;
+      const full = join(at, item.name);
+      const rel = relative(dir, full);
+      if (artifact && rel === "versions") continue;
+      if (item.isDirectory()) walk(full);
+      else if (item.isFile()) {
+        const stat = statSync(full);
+        bytes += stat.size;
+        files.push({ rel, size: stat.size, mtimeMs: stat.mtimeMs });
+        if (bytes > MAX_BYTES || files.length > MAX_FILES)
+          throw new AppInstallError(nativeT("installedAppTooBig"));
+      }
+    }
+  };
+  walk(dir);
+  return files;
+};
+
+const signature = (files: SourceFile[]): string =>
+  createHash("sha256")
+    .update(
+      files
+        .map((f) => `${f.rel}\0${f.size}\0${Math.round(f.mtimeMs)}`)
+        .sort()
+        .join("\n")
+    )
+    .digest("hex");
+
+const copyVersion = (
+  id: string,
+  n: number,
+  dir: string,
+  files: SourceFile[]
+): void => {
+  const target = versionDir(id, n);
+  const part = `${target}.part`;
+  rmSync(part, { recursive: true, force: true });
+  mkdirSync(part, { recursive: true });
+  for (const file of files) {
+    const to = join(part, file.rel);
+    mkdirSync(dirname(to), { recursive: true });
+    copyFileSync(join(dir, file.rel), to);
+  }
+  rmSync(target, { recursive: true, force: true });
+  renameSync(part, target);
+};
+
+/** The page's own <title>, else null. */
 const pageTitle = (path: string): string | null => {
-  const match = /<title>([^<]{1,120})<\/title>/i.exec(
-    readFileSync(path, "utf8")
-  );
-  const text = match?.[1]
+  let html: string;
+  try {
+    html = readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+  const text = /<title[^>]*>([^<]{1,120})<\/title>/i
+    .exec(html)?.[1]
     ?.replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
     .trim();
   return text || null;
 };
 
+/** A name no other installed app has: launchers side by side stay apart. */
+const uniqueTitle = (wanted: string, id: string): string => {
+  const taken = new Set(
+    installedApps()
+      .filter((a) => a.id !== id)
+      .map((a) => a.title.toLocaleLowerCase())
+  );
+  let title = wanted;
+  for (let n = 2; taken.has(title.toLocaleLowerCase()); n++)
+    title = `${wanted} (${n})`;
+  return title;
+};
+
 /**
- * A page the `artifact` tool made: its path shape and the versions folder
- * only that tool writes. A file the agent wrote by hand in the same place is
- * not one (no versions, no edit action behind it).
+ * What a served page had kept in its own localStorage (the in-app browser's,
+ * per origin), read at its first install; the preview's preload does the same
+ * whenever the page is shown there first.
  */
-export const isToolArtifact = (path: string): boolean =>
-  isArtifactPage(path) && existsSync(join(dirname(path), "versions"));
-
-export const installArtifactApp = (
-  path: string,
-  title: string
-): InstalledApp => {
-  if (!isToolArtifact(path) || !existsSync(path))
-    throw new Error("Only an artifact page can be installed as an app.");
-  const id = appIdFor(path);
-  const registry = readRegistry();
-  const entry: InstalledApp = {
-    id,
-    path,
-    title: pageTitle(path) ?? (title.trim() || basename(dirname(path))),
-    installedAt: registry[id]?.installedAt ?? new Date().toISOString(),
-  };
-  writeLauncher(entry);
-  registry[id] = entry;
-  writeRegistry(registry);
-  return entry;
-};
-
-/** Removes the launcher entry and icon; keeps the saved data unless asked. */
-export const uninstallArtifactApp = (path: string): void => {
-  const id = appIdFor(path);
-  const registry = readRegistry();
-  const entry = registry[id];
-  if (!entry) return;
-  windows.get(id)?.close();
-  removeLauncher(entry);
-  rmSync(join(appDir(id), "icon.png"), { force: true });
-  rmSync(join(appDir(id), "icon.ico"), { force: true });
-  delete registry[id];
-  writeRegistry(registry);
-};
-
-// ---- Saved data ------------------------------------------------------------
-
-const MAX_KEY = 200;
-const MAX_STORE_BYTES = 5 * 1024 * 1024;
-
-const storeFile = (id: string): string => join(appDir(id), "store.json");
-
-const readStore = (id: string): Record<string, unknown> => {
+const readServedLocalStorage = async (
+  url: string
+): Promise<Record<string, string> | null> => {
+  const origin = new URL(await revivePreview(url)).origin;
+  const view = new WebContentsView({
+    webPreferences: {
+      partition: BROWSER_PARTITION,
+      sandbox: true,
+      contextIsolation: true,
+    },
+  });
+  const contents = view.webContents;
   try {
-    return JSON.parse(readFileSync(storeFile(id), "utf8")) as Record<
-      string,
-      unknown
-    >;
-  } catch {
-    return {};
+    // A path nothing answers: the origin's storage without the page's scripts.
+    await contents
+      .loadURL(`${origin}/.abacus-read-storage`)
+      .catch(() => undefined);
+    const text = (await contents.executeJavaScript(
+      "JSON.stringify(Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)])))"
+    )) as string;
+    return JSON.parse(text) as Record<string, string>;
+  } finally {
+    contents.close();
   }
 };
 
-const validKey = (key: unknown): string => {
-  if (typeof key !== "string" || key.length === 0 || key.length > MAX_KEY)
-    throw new Error("A store key is a string of 1 to 200 characters.");
-  return key;
+// ---- Install, update, undo, uninstall ---------------------------------------
+
+export const appStatus = async (
+  target: string
+): Promise<{ installable: boolean; installedId: string | null }> => {
+  const source = await sourceOf(target).catch(() => null);
+  if (source == null) return { installable: false, installedId: null };
+  const id = appIdFor(source.dir, source.entry);
+  return { installable: true, installedId: readRegistry()[id] ? id : null };
 };
 
-/** Every view showing an artifact page, by store id. */
-const viewers = new Map<string, Set<WebContents>>();
-const served = new WeakSet<WebContents>();
+export const installApp = async (
+  target: string,
+  sessionId: string | null
+): Promise<{ id: string; title: string }> => {
+  const source = await sourceOf(target);
+  if (source == null)
+    throw new AppInstallError(nativeT("installedAppCannotInstall"));
+  const id = appIdFor(source.dir, source.entry);
+  const dataId = dataIdFor(source.dir);
+  const registry = readRegistry();
+  const existing = registry[id];
+  if (existing) return { id, title: existing.title };
+
+  const copies = usesFilesBeside(join(source.dir, source.entry))
+    ? "folder"
+    : "page";
+  // Only what the chat made: never the home folder (or above it) copied
+  // whole, nor anything outside the chat's own folder.
+  const workspace = sessionId == null ? null : deps.workspaceOf(sessionId);
+  const real = realDir(source.dir);
+  const home = realDir(homedir());
+  if (
+    workspace == null ||
+    !within(realDir(workspace), real) ||
+    (copies === "folder" && (real === parse(real).root || within(real, home)))
+  ) {
+    deps.funnel("installed_app_refused", "too_broad");
+    throw new AppInstallError(nativeT("installedAppTooBroad"));
+  }
+  let files: SourceFile[];
+  try {
+    files = listFiles(
+      source.dir,
+      source.artifact,
+      copies === "page" ? source.entry : null
+    );
+  } catch (error) {
+    deps.funnel("installed_app_refused", "too_big");
+    throw error;
+  }
+  copyVersion(id, 1, source.dir, files);
+
+  if (source.url != null && !wasImported(dataId))
+    try {
+      // The port's origin is every server that ever had it: only its data
+      // when it only ever served this folder.
+      if (portOnlyServed(source.url, source.dir))
+        importLocalStorage(
+          dataId,
+          await readServedLocalStorage(source.url),
+          null
+        );
+      markImported(dataId);
+    } catch (error) {
+      console.warn("[installed-app] could not read the page's old data", error);
+    }
+
+  const entry: InstalledApp = {
+    id,
+    title: uniqueTitle(
+      pageTitle(join(source.dir, source.entry)) ?? basename(source.dir),
+      id
+    ),
+    dir: source.dir,
+    entry: source.entry,
+    artifact: source.artifact,
+    dataId,
+    copies,
+    sessionId,
+    installedAt: new Date().toISOString(),
+    versions: [1],
+    current: 1,
+    sourceSig: signature(files),
+    seen: 0,
+    launchers: [],
+  };
+  try {
+    entry.launchers = writeLaunchers(entry, appDir(id));
+  } catch (error) {
+    rmSync(join(appDir(id), "versions"), { recursive: true, force: true });
+    throw error;
+  }
+  registry[id] = entry;
+  saveRegistry();
+  watchSource(entry);
+  // Previews of it open now were loaded without a store: they use it from now on.
+  for (const contents of webContents.getAllWebContents())
+    if (storeIdForUrl(contents.getURL()) === dataId) contents.reload();
+  deps.funnel(
+    "installed_app_install",
+    source.artifact ? "artifact" : source.url != null ? "site" : "file"
+  );
+  return { id, title: entry.title };
+};
+
+/** Copies the source folder again when the agent changed it. True when it did. */
+const updateFromSource = (id: string): boolean => {
+  const entry = readRegistry()[id];
+  if (!entry || !existsSync(join(entry.dir, entry.entry))) return false;
+  let files: SourceFile[];
+  try {
+    files = listFiles(
+      entry.dir,
+      entry.artifact,
+      entry.copies === "page" ? entry.entry : null
+    );
+  } catch (error) {
+    console.warn("[installed-app] not updated:", (error as Error).message);
+    return false;
+  }
+  const sig = signature(files);
+  if (sig === entry.sourceSig) return false;
+  // The agent's steps on one request make one version, so "Undo last change"
+  // goes back to before the request, not before its last step.
+  const newest = Math.max(...entry.versions);
+  const sameChange =
+    entry.versions.length > 1 &&
+    entry.current === newest &&
+    Date.now() - (entry.updatedAt ?? 0) < ONE_CHANGE_MS;
+  const n = sameChange ? newest : newest + 1;
+  copyVersion(id, n, entry.dir, files);
+  if (!sameChange) entry.versions.push(n);
+  entry.current = n;
+  entry.sourceSig = sig;
+  entry.updatedAt = Date.now();
+  for (const old of entry.versions.splice(
+    0,
+    Math.max(0, entry.versions.length - KEEP_VERSIONS)
+  ))
+    rmSync(versionDir(id, old), { recursive: true, force: true });
+  saveRegistry();
+  reloadWindow(id);
+  return true;
+};
+
+/** Back to the version before the current one; the newer copy goes. */
+export const undoLastChange = (id: string): boolean => {
+  const entry = readRegistry()[id];
+  if (!entry) return false;
+  const at = entry.versions.indexOf(entry.current);
+  if (at <= 0) return false;
+  const dropped = entry.current;
+  entry.versions.splice(at, 1);
+  entry.current = entry.versions[at - 1]!;
+  entry.seen = entry.current;
+  saveRegistry();
+  rmSync(versionDir(id, dropped), { recursive: true, force: true });
+  reloadWindow(id);
+  return true;
+};
 
 /**
- * The page's saved data, on the view's own IPC (no other page can reach it).
- * The store follows the page the view shows now, so the chat's side panel
- * and the installed window share one store per artifact, and a page that is
- * not an artifact gets none. Pages read their data on load, so a write
- * reloads the other views of the same artifact: neither keeps a stale copy
- * that would overwrite the other's rows.
+ * Asks, then removes the app's window, launchers and code; its data too
+ * when the user ticks it. False when they cancelled.
  */
-export const serveArtifactStore = (contents: WebContents): void => {
-  if (served.has(contents)) return;
-  served.add(contents);
-  let current: string | null = null;
-  const track = (): void => {
-    const page = artifactPageOf(contents.getURL());
-    const id = page == null ? null : appIdFor(page);
-    if (id === current) return;
-    if (current != null) viewers.get(current)?.delete(contents);
-    current = id;
-    if (id != null) {
-      if (!viewers.has(id)) viewers.set(id, new Set());
-      viewers.get(id)!.add(contents);
-    }
+export const uninstallApp = async (
+  id: string,
+  parent?: BaseWindow
+): Promise<boolean> => {
+  const entry = readRegistry()[id];
+  if (!entry) return false;
+  const options: Electron.MessageBoxOptions = {
+    type: "question",
+    buttons: [nativeT("installedAppUninstall"), nativeT("installedAppCancel")],
+    defaultId: 0,
+    cancelId: 1,
+    message: nativeT("installedAppUninstallQuestion", { name: entry.title }),
+    detail: nativeT("installedAppUninstallDetail"),
+    checkboxLabel: nativeT("installedAppDeleteData"),
+    checkboxChecked: false,
   };
-  contents.on("did-navigate", track);
-  contents.once("destroyed", () => {
-    if (current != null) viewers.get(current)?.delete(contents);
+  const answer = await (parent
+    ? dialog.showMessageBox(parent, options)
+    : dialog.showMessageBox(options));
+  if (answer.response !== 0) return false;
+  windows.get(id)?.close();
+  watchers.get(id)?.close();
+  watchers.delete(id);
+  removeLaunchers(entry.launchers);
+  delete readRegistry()[id];
+  for (const name of ["versions", "icon.png", "icon.ico"])
+    rmSync(join(appDir(id), name), { recursive: true, force: true });
+  // Its folder's data, unless another installed page of that folder uses it.
+  const dataId = dataOf(entry);
+  if (
+    answer.checkboxChecked &&
+    !installedApps().some((other) => dataOf(other) === dataId)
+  ) {
+    deleteStore(dataId);
+    rmSync(appDir(dataId), { recursive: true, force: true });
+  }
+  // A folder left with nothing in it goes too.
+  try {
+    rmdirSync(appDir(id));
+  } catch {
+    // Its data is still there.
+  }
+  saveRegistry();
+  deps.funnel(
+    "installed_app_uninstall",
+    answer.checkboxChecked ? "delete_data" : "keep_data"
+  );
+  return true;
+};
+
+/** Saves the app's data where the user picks, as a CSV table or JSON. */
+const exportData = async (id: string, parent: BaseWindow): Promise<void> => {
+  const entry = readRegistry()[id];
+  if (!entry) return;
+  const name = entry.title.replace(/[<>:"/\\|?*]/g, " ").trim() || "App";
+  const { canceled, filePath } = await dialog.showSaveDialog(parent, {
+    title: nativeT("installedAppExportTitle"),
+    defaultPath: `${nativeT("installedAppExportFile", { name })}.csv`,
+    filters: [
+      { name: nativeT("installedAppExportCsv"), extensions: ["csv"] },
+      { name: "JSON", extensions: ["json"] },
+    ],
   });
-  track();
-  const idOf = (): string => {
-    const page = artifactPageOf(contents.getURL());
-    if (page == null) throw new Error("Not an artifact page.");
-    return appIdFor(page);
+  if (canceled || !filePath) return;
+  const json = /\.json$/i.test(filePath);
+  writeFileSync(
+    filePath,
+    json ? exportJson(dataOf(entry)) : exportCsv(dataOf(entry))
+  );
+  deps.funnel("installed_app_export", json ? "json" : "csv");
+};
+
+// ---- Watching the source ----------------------------------------------------
+
+const watchers = new Map<string, FSWatcher>();
+
+const watchSource = (entry: InstalledApp): void => {
+  if (watchers.has(entry.id) || !existsSync(entry.dir)) return;
+  let timer: NodeJS.Timeout | undefined;
+  const changed = (_event: string, name: string | Buffer | null): void => {
+    const file = String(name ?? "");
+    if (/(^|[\\/])(\.|node_modules([\\/]|$))/.test(file)) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      try {
+        updateFromSource(entry.id);
+      } catch (error) {
+        console.warn("[installed-app] update failed", entry.id, error);
+      }
+    }, 1000);
   };
-  contents.ipc.handle("artifact-app:store-get", (_event, key: unknown) => {
-    const value = readStore(idOf())[validKey(key)];
-    return value === undefined ? null : value;
-  });
-  contents.ipc.handle("artifact-app:store-keys", () =>
-    Object.keys(readStore(idOf()))
-  );
-  contents.ipc.handle(
-    "artifact-app:store-set",
-    (_event, key: unknown, value: unknown) => {
-      const id = idOf();
-      const store = readStore(id);
-      const before = JSON.stringify(store);
-      if (value === null || value === undefined) delete store[validKey(key)];
-      else store[validKey(key)] = JSON.parse(JSON.stringify(value)) as unknown;
-      const text = JSON.stringify(store);
-      // A page that saves on load writes what is already there: no reload,
-      // or two open views would reload each other forever.
-      if (text === before) return;
-      if (Buffer.byteLength(text) > MAX_STORE_BYTES)
-        throw new Error("This page's saved data is over 5 MB.");
-      writeAtomic(storeFile(id), text);
-      for (const other of viewers.get(id) ?? [])
-        if (other !== contents && !other.isDestroyed()) other.reload();
+  try {
+    const watcher = watch(entry.dir, { recursive: true }, changed);
+    watcher.on("error", () => {
+      watcher.close();
+      watchers.delete(entry.id);
+    });
+    watchers.set(entry.id, watcher);
+  } catch (error) {
+    console.warn("[installed-app] cannot watch", entry.dir, error);
+  }
+};
+
+/** At start: catch up on edits made while the app was closed, then watch. */
+export const startInstalledApps = (appDeps: AppsDeps): void => {
+  deps = appDeps;
+  setStoreRoot(root());
+  for (const entry of installedApps()) {
+    try {
+      updateFromSource(entry.id);
+    } catch (error) {
+      console.warn("[installed-app] update failed", entry.id, error);
     }
-  );
+    watchSource(entry);
+  }
 };
 
 // ---- The window --------------------------------------------------------------
 
 const windows = new Map<string, BaseWindow>();
+const views = new Map<string, WebContents>();
 
 export const artifactAppWindowCount = (): number => windows.size;
+
+const reloadWindow = (id: string): void => {
+  const contents = views.get(id);
+  if (contents && !contents.isDestroyed()) contents.reload();
+  refreshMenu(id);
+};
+
+const pageUrl = (entry: InstalledApp): string =>
+  `${APP_SCHEME}://${entry.id}/${entry.entry
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+
+/** Serves the current copy of app `id` on its own partition. */
+const handleScheme = (appSession: Electron.Session, id: string): void => {
+  if (appSession.protocol.isProtocolHandled(APP_SCHEME)) return;
+  appSession.protocol.handle(APP_SCHEME, (request) => {
+    const url = new URL(request.url);
+    const entry = readRegistry()[url.hostname];
+    if (url.hostname !== id || !entry)
+      return new Response("Not found", { status: 404 });
+    const base = versionDir(id, entry.current);
+    let file: string;
+    try {
+      file = resolve(base, `.${decodeURIComponent(url.pathname)}`);
+    } catch {
+      return new Response("Bad request", { status: 400 });
+    }
+    if (!file.startsWith(`${base}${sep}`))
+      return new Response("Not found", { status: 404 });
+    if (statSync(file, { throwIfNoEntry: false })?.isDirectory())
+      file = join(file, "index.html");
+    if (!existsSync(file)) return new Response("Not found", { status: 404 });
+    return net.fetch(pathToFileURL(file).href);
+  });
+};
+
+const menuItems = (id: string): MenuItemConstructorOptions[] => {
+  const entry = readRegistry()[id];
+  const window = windows.get(id);
+  if (!entry || !window) return [];
+  return [
+    {
+      label: nativeT("installedAppEditInChat"),
+      enabled: entry.sessionId != null,
+      click: () => {
+        if (entry.sessionId) deps.openChat(entry.sessionId);
+      },
+    },
+    {
+      label: nativeT("installedAppUndo"),
+      enabled: entry.versions.indexOf(entry.current) > 0,
+      click: () => {
+        if (undoLastChange(id)) deps.funnel("installed_app_undo");
+      },
+    },
+    { type: "separator" },
+    {
+      label: nativeT("installedAppExport"),
+      click: () => void exportData(id, window),
+    },
+    { label: nativeT("installedAppReload"), click: () => reloadWindow(id) },
+    { type: "separator" },
+    {
+      label: nativeT("installedAppUninstallMenu"),
+      click: () => void uninstallApp(id, window),
+    },
+  ];
+};
+
+const refreshMenu = (id: string): void => {
+  const window = windows.get(id);
+  if (!window || window.isDestroyed() || process.platform === "darwin") return;
+  window.setMenu(
+    Menu.buildFromTemplate([
+      { label: nativeT("installedAppMenu"), submenu: menuItems(id) },
+    ])
+  );
+};
 
 const missingPage = (title: string): string =>
   `data:text/html;charset=utf-8,${encodeURIComponent(
     `<!doctype html><meta charset="utf-8"><title>${title.replace(/</g, "&lt;")}</title>` +
-      `<body style="font:15px system-ui;padding:32px">This app's page was deleted. ` +
-      `Uninstall it from the Artifacts list.</body>`
+      `<body style="font:15px system-ui;padding:32px">${nativeT("installedAppMissing").replace(/</g, "&lt;")}</body>`
   )}`;
 
+/** The app windows' menus, again in the language just loaded. */
+export const relabelAppWindows = (): void => {
+  for (const id of windows.keys()) refreshMenu(id);
+};
+
 /** Opens (or focuses) the window of an installed app. False when unknown. */
-export const openArtifactApp = (
+export const openInstalledAppWindow = (
   id: string,
-  onAllClosed: () => void
+  source: "launcher" | "chat" | "list"
 ): boolean => {
   const entry = readRegistry()[id];
   if (!entry) return false;
+  deps.funnel("installed_app_open", source);
   const open = windows.get(id);
   if (open && !open.isDestroyed()) {
     if (open.isMinimized()) open.restore();
@@ -367,15 +904,21 @@ export const openArtifactApp = (
     open.focus();
     return true;
   }
+  try {
+    updateFromSource(id);
+  } catch (error) {
+    console.warn("[installed-app] update failed", id, error);
+  }
 
   const partition = `persist:artifact-app-${id}`;
   const appSession = session.fromPartition(partition);
-  // Today's sandbox: no permissions (camera, notifications, ...), no downloads.
+  // No powers in v1: no permissions (camera, notifications, ...), no downloads.
   appSession.setPermissionRequestHandler((_wc, _perm, callback) =>
     callback(false)
   );
   appSession.setPermissionCheckHandler(() => false);
   appSession.on("will-download", (event) => event.preventDefault());
+  handleScheme(appSession, id);
 
   const window = new BaseWindow({
     width: 1040,
@@ -391,7 +934,8 @@ export const openArtifactApp = (
       appId: appUserModelId(id),
       appIconPath: join(appDir(id), "icon.ico"),
     });
-  window.setMenuBarVisibility(false);
+  windows.set(id, window);
+  refreshMenu(id);
   const view = new WebContentsView({
     webPreferences: {
       partition,
@@ -413,54 +957,71 @@ export const openArtifactApp = (
   window.on("resize", fit);
 
   const contents = view.webContents;
-  serveArtifactStore(contents);
-  const pageUrl = `file://${entry.path}`;
-  // The page stays itself: no navigation away, no new windows. Web links go to
-  // the user's browser.
+  views.set(id, contents);
+  servePageStore(contents);
+  const origin = `${APP_SCHEME}://${id}`;
+  // The app's own pages only; web links go to the user's browser, but only
+  // right after a click or key press, and not more than one every 2 seconds:
+  // a page cannot open tabs (with its data in the URL) on its own.
+  // Pages keep the network (CDN libraries, fonts): a v1 choice.
+  let lastInput = 0;
+  let lastOpened = 0;
+  contents.on("input-event", (_event, input) => {
+    if (/^(mouseDown|keyDown|rawKeyDown|gestureTap)$/.test(input.type))
+      lastInput = Date.now();
+  });
+  const openOutside = (url: string): void => {
+    const now = Date.now();
+    if (!/^https?:\/\//.test(url) || now - lastInput > 1500) return;
+    if (now - lastOpened < 2000) return;
+    lastOpened = now;
+    void shell.openExternal(url);
+  };
   contents.on("will-navigate", (event, url) => {
-    if (url.split("#")[0] === pageUrl) return;
+    if (url.startsWith(`${origin}/`)) return;
     event.preventDefault();
-    if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+    openOutside(url);
   });
   contents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+    openOutside(url);
     return { action: "deny" };
   });
   contents.on("page-title-updated", (event) => {
     event.preventDefault();
     window.setTitle(entry.title);
   });
+  contents.on("context-menu", (_event, params) => {
+    const edit: MenuItemConstructorOptions[] = params.isEditable
+      ? [
+          { role: "cut" },
+          { role: "copy" },
+          { role: "paste" },
+          { type: "separator" },
+        ]
+      : params.selectionText
+        ? [{ role: "copy" }, { type: "separator" }]
+        : [];
+    Menu.buildFromTemplate([...edit, ...menuItems(id)]).popup();
+  });
+  contents.on("did-finish-load", () => {
+    const now = readRegistry()[id];
+    if (!now || now.current <= now.seen) return;
+    if (now.seen > 0) deps.funnel("installed_app_edit_seen");
+    now.seen = now.current;
+    saveRegistry();
+  });
 
-  const load = (): void => {
-    if (existsSync(entry.path)) void contents.loadFile(entry.path);
-    else void contents.loadURL(missingPage(entry.title));
-  };
-  load();
+  if (existsSync(join(versionDir(id, entry.current), entry.entry)))
+    void contents.loadURL(pageUrl(entry));
+  else void contents.loadURL(missingPage(entry.title));
   contents.once("did-finish-load", () => window.show());
 
-  // The agent rewrites index.html in place; reload on any change in the folder
-  // (debounced: a save is a write plus a version file).
-  let reloadTimer: NodeJS.Timeout | undefined;
-  let watcher: FSWatcher | undefined;
-  try {
-    watcher = watch(dirname(entry.path), (_event, name) => {
-      if (name !== null && name !== basename(entry.path)) return;
-      clearTimeout(reloadTimer);
-      reloadTimer = setTimeout(() => {
-        if (!contents.isDestroyed()) load();
-      }, 300);
-    });
-  } catch (error) {
-    console.warn("[artifact-app] cannot watch", entry.path, error);
-  }
-
-  windows.set(id, window);
   window.on("closed", () => {
-    watcher?.close();
-    clearTimeout(reloadTimer);
     if (!contents.isDestroyed()) contents.close();
     windows.delete(id);
-    if (windows.size === 0) onAllClosed();
+    views.delete(id);
+    flushAllStores();
+    if (windows.size === 0) deps.onAllClosed();
   });
   return true;
 };

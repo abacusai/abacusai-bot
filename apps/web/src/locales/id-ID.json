@@ -4494,7 +4494,11 @@
       "allowed": "Diizinkan",
       "blocked": "Diblokir",
       "signOut": "Keluar"
-    }
+    },
+    "installApp": "Pasang sebagai aplikasi",
+    "uninstallApp": "Copot aplikasi",
+    "installedApp": "Terpasang. Sekarang ada di menu aplikasimu.",
+    "openApp": "Buka aplikasi"
   },
   "browserPermission": {
     "allow": "Izinkan",
@@ -5551,7 +5555,25 @@
     "morePeople_other": "{{count}} more",
     "saveCopy": "Simpan Salinan",
     "saveCopiesTo": "Pilih Folder Tujuan",
-    "saveHere": "Simpan di Sini"
+    "saveHere": "Simpan di Sini",
+    "installedAppMenu": "Aplikasi",
+    "installedAppEditInChat": "Edit di chat",
+    "installedAppUndo": "Batalkan perubahan terakhir",
+    "installedAppExport": "Ekspor data…",
+    "installedAppReload": "Muat ulang",
+    "installedAppUninstallMenu": "Copot…",
+    "installedAppUninstall": "Copot",
+    "installedAppCancel": "Batal",
+    "installedAppUninstallQuestion": "Copot \"{{name}}\"?",
+    "installedAppUninstallDetail": "Jendela dan pintasannya dihapus. Datanya tetap ada di komputer ini, kecuali kamu juga menghapusnya.",
+    "installedAppDeleteData": "Hapus juga datanya",
+    "installedAppExportTitle": "Ekspor data",
+    "installedAppExportFile": "Data {{name}}",
+    "installedAppExportCsv": "Spreadsheet (CSV)",
+    "installedAppTooBig": "Aplikasi ini lebih dari 100 MB (atau lebih dari 5.000 file), jadi tidak bisa dipasang. Minta agen untuk memperkecilnya atau menaruhnya di folder sendiri.",
+    "installedAppCannotInstall": "Halaman ini tidak bisa dipasang sebagai aplikasi.",
+    "installedAppMissing": "File aplikasi ini tidak ada. Copot lalu pasang lagi dari chat-nya.",
+    "installedAppTooBroad": "Folder halaman ini tidak bisa dipasang: itu folder utamamu, atau berada di luar folder chat ini. Minta agen menaruh aplikasinya di folder sendiri di chat ini."
   },
   "channels": {
     "sidebar": {
