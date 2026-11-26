@@ -9,7 +9,12 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "../atomic-file.js";
-import { checkDraft } from "../memory/gate.js";
+import {
+  checkDraft,
+  type Draft,
+  SECRET_WITHHELD_NOTICE,
+  secretWithheld,
+} from "../memory/gate.js";
 import {
   commit,
   listNotes as listMemoryNotes,
@@ -174,14 +179,15 @@ export async function rememberFact(
   const now = new Date();
   const result = await commit({ by: "chat" }, () => {
     const siblings = listMemoryNotes(YOU);
+    const sent: Draft = {
+      name:
+        target?.name ?? noteName(content.split(/\s+/).slice(0, 6).join(" ")),
+      description: "",
+      type: target?.type ?? (options.userAsked === true ? "rule" : "fact"),
+      body: content,
+    };
     const draft = checkDraft({
-      draft: {
-        name:
-          target?.name ?? noteName(content.split(/\s+/).slice(0, 6).join(" ")),
-        description: "",
-        type: target?.type ?? (options.userAsked === true ? "rule" : "fact"),
-        body: content,
-      },
+      draft: sent,
       siblings,
       updating: target?.name ?? null,
       userWords: options.userAsked === true ? content : "",
@@ -206,12 +212,15 @@ export async function rememberFact(
           by: "chat",
         }),
       ],
-      value: null,
+      value: secretWithheld(sent),
     };
   });
-  return result.ok
-    ? { ok: true, message: target == null ? "Remembered." : "Updated." }
-    : { ok: false, message: result.message };
+  if (!result.ok) return { ok: false, message: result.message };
+  const done = target == null ? "Remembered." : "Updated.";
+  return {
+    ok: true,
+    message: result.value ? `${done} ${SECRET_WITHHELD_NOTICE}` : done,
+  };
 }
 
 export async function forgetFact(match: string): Promise<PhoneResult> {

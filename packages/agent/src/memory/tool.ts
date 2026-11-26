@@ -7,8 +7,11 @@ import { redactIdNumbers } from "../traveler/id-numbers.js";
 import { ageOf, ensureProject, projectSummary, withStatus } from "./core.js";
 import {
   checkDraft,
+  type Draft,
   contentWords,
-  SECRET_WITHHELD,
+  onlySecret,
+  SECRET_WITHHELD_NOTICE,
+  secretWithheld,
   withholdSecrets,
   MAX_CARD_CHARS,
   MAX_JOURNAL_CHARS,
@@ -258,20 +261,20 @@ export function buildMemoryTool(
         const replaced = siblings.find((note) => note.name === replaces);
         if (replaced != null && userWrote(replaced))
           return USER_WROTE(replaced.name);
+        const sent: Draft = {
+          name,
+          description: string(params.description) || current?.description || "",
+          type,
+          body: text.length > 0 ? text : (current?.body ?? ""),
+          ...(string(params.expires) || current?.expires
+            ? { expires: string(params.expires) || current!.expires! }
+            : {}),
+          ...(string(params.keywords) || current?.keywords
+            ? { keywords: string(params.keywords) || current!.keywords! }
+            : {}),
+        };
         const draft = checkDraft({
-          draft: {
-            name,
-            description:
-              string(params.description) || current?.description || "",
-            type,
-            body: text.length > 0 ? text : (current?.body ?? ""),
-            ...(string(params.expires) || current?.expires
-              ? { expires: string(params.expires) || current!.expires! }
-              : {}),
-            ...(string(params.keywords) || current?.keywords
-              ? { keywords: string(params.keywords) || current!.keywords! }
-              : {}),
-          },
+          draft: sent,
           siblings,
           updating: current?.name ?? (replaces || null),
           userWords: turn.userWords(),
@@ -296,20 +299,21 @@ export function buildMemoryTool(
         ];
         return {
           writes,
-          value: { note, related: relatedNotes(draft, siblings) },
+          value: {
+            note,
+            related: relatedNotes(draft, siblings),
+            withheld: secretWithheld(sent),
+          },
         };
       }
     );
     if (!result.ok) return reply(result.message, true);
     turn.saved();
-    const { note, related } = result.value;
+    const { note, related, withheld } = result.value;
     return reply(
       [
         `Saved "${note.name}" ${where(scope)}${updating ? " (updated)" : ""}${replaces ? `, replacing "${replaces}"` : ""}.`,
-        ...(note.body.split(SECRET_WITHHELD).length >
-        text.split(SECRET_WITHHELD).length
-          ? [WITHHELD_NOTICE]
-          : []),
+        ...(withheld ? [SECRET_WITHHELD_NOTICE] : []),
         ...(related.length > 0
           ? [
               "Related notes; if one now says something different, update or forget it:",
@@ -538,12 +542,12 @@ export function buildMemoryTool(
             true
           );
         // Secrets are withheld here as in notes (gate.ts); the rest of the line is kept.
-        const line = withholdSecrets(text);
-        if (line.text.replaceAll(SECRET_WITHHELD, "").trim().length < 3)
+        if (onlySecret(text))
           return reply(
             "That is a password, key or code and nothing else. Memory never keeps those.",
             true
           );
+        const line = withholdSecrets(text);
         const result = await commit({ by: authorOf(context) }, () => ({
           writes: [journalAppend(scope, line.text)],
           value: null,
@@ -551,7 +555,7 @@ export function buildMemoryTool(
         if (!result.ok) return reply(result.message, true);
         return reply(
           line.withheld > 0
-            ? `Noted in the journal. ${WITHHELD_NOTICE}`
+            ? `Noted in the journal. ${SECRET_WITHHELD_NOTICE}`
             : "Noted in the journal."
         );
       }
@@ -563,9 +567,6 @@ export function buildMemoryTool(
     },
   };
 }
-
-const WITHHELD_NOTICE =
-  "A password, key or code in it was withheld; suggest the user keeps it in the app's vault.";
 
 const authorOf = (context: MemoryContext): Note["by"] =>
   context.lane === "routine"
