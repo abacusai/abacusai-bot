@@ -371,6 +371,13 @@ describe("checkDraft", () => {
     expect(withholdSecrets(text)).toEqual({ text, withheld: 0 });
   });
 
+  it("reads a long run of punctuation after a label in linear time", () => {
+    const text = `password: x${"!".repeat(50_000)}y`;
+    const started = performance.now();
+    withholdSecrets(text);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
   it("keeps a long note and withholds only the key in it", () => {
     const flow =
       "The shop's order flow: a customer pays on the site, the order goes to the sheet, and the packer prints the label. ".repeat(

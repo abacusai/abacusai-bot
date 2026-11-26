@@ -67,7 +67,7 @@ const NOT_A_VALUE = new Set(
  * on to say where it is kept. A passphrase can have spaces.
  */
 const PHRASE_END =
-  /[,;](?=\s)|[.!?]+(?=\s|$)|\n|\s(?:in|inside|at|from|under|stored|saved|kept|on)\s/i;
+  /[,;](?=\s)|[.!?](?=\s|$)|\n|\s(?:in|inside|at|from|under|stored|saved|kept|on)\s/i;
 
 /** Where the value after a label starts and ends, or null when there is none. */
 const valueSpan = (
