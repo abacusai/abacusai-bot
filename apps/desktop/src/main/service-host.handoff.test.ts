@@ -958,11 +958,17 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
     host.manager.get(
       started(await host.handOff(host.manager.create(WORKSPACE).id)).sessionId
     )!;
+  /** Bytes under `dir`, read with node so it runs on Windows too. */
   const du = (dir: string): number =>
     fs.existsSync(dir)
-      ? Number(
-          execFileSync("du", ["-sk", dir], { encoding: "utf8" }).split("\t")[0]
-        )
+      ? fs
+          .readdirSync(dir, { recursive: true, withFileTypes: true })
+          .filter((entry) => entry.isFile())
+          .reduce(
+            (sum, entry) =>
+              sum + fs.statSync(path.join(entry.parentPath, entry.name)).size,
+            0
+          )
       : 0;
 
   it("with reflogs off, keeps a checkout whose HEAD moved, since its history cannot be checked", async () => {
@@ -1018,8 +1024,11 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
       fs.mkdirSync(path.dirname(at(file)), { recursive: true });
       fs.writeFileSync(at(file), "x".repeat(4096));
     }
+    const before = du(child.worktreePath!);
     host.remove(child.id);
     await settled(() => host.notices.length > 0);
+    // Only the four freed files' bytes go: dist/ and out/ stay whole.
+    expect(before - du(child.worktreePath!)).toBe(4 * 4096);
     expect(fs.existsSync(at("dist/app.js"))).toBe(true);
     expect(fs.existsSync(at("out/report.pdf"))).toBe(true);
     for (const gone of [
@@ -1031,7 +1040,6 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
       expect(fs.existsSync(at(gone))).toBe(false);
     expect(host.notices[0]!.body).toContain("keptIgnoredCleaned");
     expect(host.notices[0]!.body).toMatch(/"file":"(dist|out)\/"/);
-    expect(du(child.worktreePath!)).toBeGreaterThan(0);
   });
 
   it("names .env when that is what keeps it, and deletes nothing when there is nothing to free", async () => {
