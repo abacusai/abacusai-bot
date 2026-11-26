@@ -96,11 +96,9 @@ type SessionRecord = {
  * The chat a new one continues: a summary its first message carries (a move
  * to another model), or a handoff, whose first message is the task itself.
  */
-export interface SessionContinuedFrom {
-  sessionId: string;
-  summary?: string;
-  kind?: "handoff";
-}
+export type SessionContinuedFrom =
+  | { sessionId: string; summary: string }
+  | { sessionId: string; kind: "handoff" };
 
 // Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
@@ -145,6 +143,7 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
     : {}),
   ...(record.folders != null && record.folders.length > 0
     ? { folders: [...record.folders] }
+    : {}),
   ...(record.continuationKind != null
     ? { continuationKind: record.continuationKind }
     : {}),
@@ -233,10 +232,6 @@ export class AgentSessionManagerService {
       sponsoredUntil?: number;
       continuedFrom?: SessionContinuedFrom;
       chatAppSender?: boolean;
-      /** Its title from the start (a handoff's), so no auto-title replaces it. */
-      label?: string;
-      /** The worktree it runs in from the start (a handoff shares its source's). */
-      worktree?: { id: string; path: string; branch: string | null };
     } = {}
   ): AgentSessionListItem {
     if (
@@ -256,7 +251,7 @@ export class AgentSessionManagerService {
       runTrigger: routineId != null ? runTrigger : null,
       owner,
       botOwned: owner != null,
-      label: initial.label ?? "Untitled",
+      label: "Untitled",
       conversationId: null,
       createdAt: now,
       updatedAt: now,
@@ -264,9 +259,9 @@ export class AgentSessionManagerService {
       agentStatus: AgentStatus.Idle,
       model: initial.model ?? null,
       mode: initial.mode ?? null,
-      worktreeId: initial.worktree?.id ?? null,
-      worktreePath: initial.worktree?.path ?? null,
-      worktreeBranch: initial.worktree?.branch ?? null,
+      worktreeId: null,
+      worktreePath: null,
+      worktreeBranch: null,
       ...(initial.sponsoredUntil != null
         ? { sponsoredUntil: initial.sponsoredUntil }
         : {}),
@@ -317,8 +312,9 @@ export class AgentSessionManagerService {
     // The work goes on in the same folders.
     return {
       continuedFrom: source.id,
-      ...(from.summary != null ? { continuationSeed: from.summary } : {}),
-      ...(from.kind === "handoff" ? { continuationKind: "handoff" } : {}),
+      ...("kind" in from
+        ? { continuationKind: from.kind }
+        : { continuationSeed: from.summary }),
       ...(source.folders != null ? { folders: [...source.folders] } : {}),
       ...(source.attachedFiles != null
         ? { attachedFiles: [...source.attachedFiles] }

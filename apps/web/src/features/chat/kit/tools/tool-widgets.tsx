@@ -77,7 +77,7 @@ export const sessionToolWidgets = new Proxy(KNOWN_TOOL_WIDGETS, {
               ? MemoryToolLine
               : isHandOffTool(name)
                 ? HandOffCard
-              : (known[name] ?? GenericLine),
+                : (known[name] ?? GenericLine),
 }) as Record<string, Widget>;
 
 /** Bots: the inline approval card of the canvas BotApproval board. */

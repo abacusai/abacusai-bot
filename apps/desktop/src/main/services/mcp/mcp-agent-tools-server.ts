@@ -463,7 +463,9 @@ export interface McpAgentToolsServerOptions {
   handOffSession?: (
     fromSessionId: string,
     task: { title: string; prompt: string }
-  ) => { sessionId: string } | { error: string };
+  ) => Promise<{ sessionId: string } | { error: string }>;
+  /** ServiceHost.isPlainAppChat: the user's own app chat, for `appChatOnly` tools. */
+  isPlainAppChat?: (sessionId: string) => boolean;
   /** A run nobody is watching: it gets only the unattended allowlist. */
   isUnattended?: (sessionId: string) => boolean;
   /** What a bot-owned session is to its bot: its own chat, or one with someone else. */
@@ -1017,7 +1019,8 @@ export class McpAgentToolsServer extends McpHttpServer {
         !this.isHeld(callerSession) &&
         !this.isRoutineEditor(callerSession) &&
         !this.isPhoneCaller(callerSession) &&
-        this.options.channelForSession?.(callerSession) == null
+        this.options.channelForSession?.(callerSession) == null &&
+        this.options.isPlainAppChat?.(callerSession) === true
       );
     if (!("appBotChatOnly" in definition) || definition.appBotChatOnly !== true)
       return true;
@@ -4087,10 +4090,10 @@ export class McpAgentToolsServer extends McpHttpServer {
    * `hand_off_session`: the task moves to a new chat beside the caller's, on
    * the same folder, worktree, model and mode, and starts there now.
    */
-  handOffSession(
+  async handOffSession(
     args: Record<string, unknown>,
     callerSession?: string
-  ): ToolResult {
+  ): Promise<ToolResult> {
     const title = typeof args.title === "string" ? args.title.trim() : "";
     const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
     if (title === "" || prompt === "")
@@ -4099,13 +4102,15 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     if (callerSession == null || this.options.handOffSession == null)
       return this.err("This chat cannot hand work off. Do it here.");
-    const started = this.options.handOffSession(callerSession, {
-      title: title.slice(0, HAND_OFF_TITLE_MAX),
+    const name = title.slice(0, HAND_OFF_TITLE_MAX);
+    const started = await this.options.handOffSession(callerSession, {
+      title: name,
       prompt,
     });
     if ("error" in started) return this.err(started.error);
+    // The id goes first: the card reads the first `session:` of this text.
     return this.ok(
-      `Started “${title}” in a new chat (session: ${started.sessionId}). It runs on its own; the user follows it from the card here and the sidebar. Do not do that task here too.`
+      `Started a new chat (session: ${started.sessionId}) on “${name}”. It runs on its own; the user follows it from the card here and the sidebar. Do not do that task here too.`
     );
   }
 

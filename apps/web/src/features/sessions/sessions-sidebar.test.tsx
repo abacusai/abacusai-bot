@@ -15,7 +15,7 @@ import {
 } from "#renderer/data/fixture-db/rows";
 import { renderApp } from "#renderer/test-support/app-harness";
 
-import { groupSessions } from "./sessions-sidebar";
+import { groupSessions, nestHandoffs } from "./sessions-sidebar";
 
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
@@ -130,5 +130,93 @@ describe("SessionsSidebar", () => {
     expect(sidebar.queryByText("No sessions yet")).toBeNull();
     fireEvent.change(search, { target: { value: "" } });
     await sidebar.findByText("Review my pull requests");
+  });
+});
+
+describe("nestHandoffs", () => {
+  const base = fixtureSessions(NOW).find((s) => s.id === "review-prs")!;
+  const at = (minutes: number) =>
+    new Date(NOW + minutes * 60_000).toISOString();
+  const chat = (id: string, minutes: number, from?: string) => ({
+    ...base,
+    id,
+    label: id,
+    updatedAt: at(minutes),
+    ...(from != null
+      ? { continuedFrom: from, continuationKind: "handoff" as const }
+      : {}),
+  });
+
+  it("nests a hand-off and a hand-off of a hand-off under the first chat, newest first, where the newest member sits", () => {
+    const families = nestHandoffs([
+      chat("other", 5),
+      chat("source", 1),
+      chat("split-a", 2, "source"),
+      chat("split-b", 9, "source"),
+      chat("split-of-a", 3, "split-a"),
+    ]);
+    expect(
+      families.map((f) => [f.session.id, f.handoffs.map((h) => h.id)])
+    ).toEqual([
+      ["source", ["split-b", "split-of-a", "split-a"]],
+      ["other", []],
+    ]);
+  });
+
+  it("leaves a model-switch continuation and a hand-off whose source is elsewhere as rows of their own", () => {
+    const families = nestHandoffs([
+      chat("source", 1),
+      { ...chat("moved", 2), continuedFrom: "source" },
+      chat("orphan", 3, "pinned-elsewhere"),
+    ]);
+    expect(families.map((f) => f.session.id).toSorted()).toEqual([
+      "moved",
+      "orphan",
+      "source",
+    ]);
+    expect(families.every((f) => f.handoffs.length === 0)).toBe(true);
+  });
+
+  it("keeps the pinned list's own order", () => {
+    const families = nestHandoffs(
+      [chat("first", 1), chat("second", 9), chat("split", 10, "first")],
+      true
+    );
+    expect(families.map((f) => f.session.id)).toEqual(["first", "second"]);
+  });
+
+  it("draws a hand-off one step in under its source in the sidebar", async () => {
+    app = await renderApp("/sessions/new", {
+      seed: {
+        prefs: fixturePrefs(),
+        sessions: [
+          ...fixtureSessions(NOW),
+          {
+            ...base,
+            id: "split",
+            label: "Write the release notes",
+            updatedAt: at(30),
+            continuedFrom: "review-prs",
+            continuationKind: "handoff",
+          },
+        ],
+        workspaces: fixtureWorkspaces(),
+      },
+    });
+    const sidebar = within(
+      screen.getByRole("navigation", { name: "Sessions" })
+    );
+    const split = await sidebar.findByText("Write the release notes");
+    const source = sidebar.getByText("Review my pull requests");
+    const rows = sidebar
+      .getAllByRole("link")
+      .filter((link) => link.textContent !== "");
+    const order = rows.map((link) => link.textContent ?? "");
+    const sourceAt = order.findIndex((text) =>
+      text.includes("Review my pull requests")
+    );
+    expect(order[sourceAt + 1]).toContain("Write the release notes");
+    expect(split.closest("a")?.className).toContain("before:w-px");
+    expect(source.closest("a")?.className).not.toContain("before:w-px");
   });
 });

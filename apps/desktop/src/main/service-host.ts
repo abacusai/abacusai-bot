@@ -2107,6 +2107,7 @@ export class ServiceHost {
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
     handOffSession: (fromSessionId, task) =>
       this.handOffSession(fromSessionId, task),
+    isPlainAppChat: (sessionId) => this.isPlainAppChat(sessionId),
     isUnattended: (sessionId) => this.isUnattendedSession(sessionId),
     sessionRole: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.owner?.role ?? null,
@@ -5110,26 +5111,41 @@ export class ServiceHost {
   }
 
   /**
-   * `hand_off_session`: a task split off from a chat into a new one that runs
-   * beside it, on everything the chat runs on: its folder and worktree, its
-   * model and its mode. The task is the new chat's first message, sent now.
-   * Only a plain chat hands off (never a bot's, a routine's or a run nobody
-   * watches), and only a few at a time.
+   * The user's own chat in the app, with them at the keyboard: never a bot's,
+   * a chat app's (theirs or a stranger's), a routine's run or editor, a run
+   * nobody watches, or a chat on the hosted computer.
    */
-  handOffSession(
+  private isPlainAppChat(sessionId: string): boolean {
+    const session = this.agentSessionManagerService.get(sessionId);
+    return (
+      session != null &&
+      this.platform !== "web-host" &&
+      session.routineId == null &&
+      session.editorFor == null &&
+      !session.botOwned &&
+      session.owner == null &&
+      this.agentSessionManagerService.laneOf(sessionId) == null &&
+      !this.agentSessionManagerService.isChatAppSender(sessionId) &&
+      !this.messagingGatewayService.servesSession(sessionId) &&
+      !this.hostedRunSessions.has(sessionId) &&
+      !this.isUnattendedSession(sessionId)
+    );
+  }
+
+  /**
+   * `hand_off_session`: a task split off from a chat into a new one that runs
+   * beside it, on everything the chat runs on. It is minted as a continuation,
+   * which carries the chat's folders and attached files; its checkout is
+   * attached the way the start page attaches one; the task is its title and
+   * its first message, sent now. Only a plain chat hands off, and only a few
+   * at a time.
+   */
+  async handOffSession(
     fromSessionId: string,
     task: { title: string; prompt: string }
-  ): { sessionId: string } | { error: string } {
+  ): Promise<{ sessionId: string } | { error: string }> {
     const source = this.agentSessionManagerService.get(fromSessionId);
-    if (
-      source == null ||
-      source.routineId != null ||
-      source.editorFor != null ||
-      source.botOwned ||
-      source.owner != null ||
-      this.agentSessionManagerService.laneOf(fromSessionId) != null ||
-      this.isUnattendedSession(fromSessionId)
-    )
+    if (source == null || !this.isPlainAppChat(fromSessionId))
       return { error: "Only a chat in a project can hand work off." };
     const working = this.agentSessionManagerService
       .list(source.workspaceId)
@@ -5137,8 +5153,9 @@ export class ServiceHost {
         (session) =>
           session.continuedFrom === source.id &&
           session.continuationKind === "handoff" &&
-          this.sessionTurnStateService.get(session.workspaceId, session.id)
-            .isBusy
+          (this.handOffsStarting.has(session.id) ||
+            this.sessionTurnStateService.get(session.workspaceId, session.id)
+              .isBusy)
       ).length;
     if (working >= HANDOFFS_WORKING_MAX)
       return {
@@ -5152,24 +5169,34 @@ export class ServiceHost {
       {
         model: source.model,
         mode: source.mode,
-        label: task.title,
         continuedFrom: { sessionId: source.id, kind: "handoff" },
-        ...(source.worktreeId != null && source.worktreePath != null
-          ? {
-              worktree: {
-                id: source.worktreeId,
-                path: source.worktreePath,
-                branch: source.worktreeBranch,
-              },
-            }
-          : {}),
       }
     );
-    void this.sendAgentMessage({
-      workspaceId: session.workspaceId,
-      sessionId: session.id,
-      message: task.prompt,
-    });
+    this.handOffsStarting.add(session.id);
+    try {
+      if (source.worktreeId != null) {
+        const attached = await this.setSessionWorktree({
+          workspaceId: session.workspaceId,
+          sessionId: session.id,
+          worktreeId: source.worktreeId,
+        });
+        if (!attached.success) {
+          this.removeAgentSession(session.workspaceId, session.id);
+          return {
+            error:
+              "This chat's checkout could not be opened for a new chat. Do this here.",
+          };
+        }
+      }
+      this.updateAgentSessionLabel(session.workspaceId, session.id, task.title);
+      void this.sendAgentMessage({
+        workspaceId: session.workspaceId,
+        sessionId: session.id,
+        message: task.prompt,
+      });
+    } finally {
+      this.handOffsStarting.delete(session.id);
+    }
     return { sessionId: session.id };
   }
 
@@ -7162,6 +7189,8 @@ export class ServiceHost {
   >();
   /** Hosted routine runs on this computer: routine runs, though not stamped with a routine. */
   private readonly hostedRunSessions = new Set<string>();
+  /** Handed-off chats minted but not yet sent their task: they count as working. */
+  private readonly handOffsStarting = new Set<string>();
   /** Time routine runs spent waiting for the network; the reaper allows it. */
   private readonly routineNetworkWaits = new NetworkWaitClock();
 
