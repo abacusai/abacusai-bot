@@ -14,6 +14,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  conversationOf,
   FakeProvider,
   fakeProviderConfig,
 } from "@abacus-ai/test-support/fake-provider";
@@ -251,7 +252,10 @@ describe("the root a parent names", () => {
 describe("where a delegated run may look", () => {
   // Never created: the guard refuses before the tool runs.
   const elsewhere = path.join(os.homedir(), ".abacusai-bot-scope-probe", "n8n");
-  const asked = () => JSON.stringify(provider.calls.at(-1)?.messages ?? []);
+  const asked = () => {
+    const last = provider.calls.at(-1);
+    return last == null ? "" : conversationOf(last);
+  };
 
   it("is refused a checkout elsewhere in home, and the parent hears of it", async () => {
     provider.scriptSequence([

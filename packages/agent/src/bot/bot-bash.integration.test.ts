@@ -9,6 +9,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  conversationOf,
   FakeProvider,
   fakeProviderConfig,
 } from "@abacus-ai/test-support/fake-provider";
@@ -74,7 +75,8 @@ describe("a bot's shell", () => {
 
     const offered = provider.calls[0]?.tools ?? [];
     expect(offered.filter((name) => name === "bash")).toHaveLength(1);
-    expect(JSON.stringify(provider.calls[1]?.messages)).toContain(
+    const second = provider.calls[1];
+    expect(second == null ? "" : conversationOf(second)).toContain(
       "bot-shell-ok"
     );
   }, 60_000);

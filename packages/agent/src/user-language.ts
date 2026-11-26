@@ -148,6 +148,10 @@ function localeLanguageName(tag: string): string | null {
 export const isSenderChat = (): boolean =>
   (process.env.ABACUSAI_BOT_SENDER_CHAT ?? "").trim() === "1";
 
+/** A person on a chat app answered for the user: not a channel turn or another bot's ask. */
+export const isRemoteSenderChat = (): boolean =>
+  (process.env.ABACUSAI_BOT_REMOTE_SENDER ?? "").trim() === "1";
+
 /** The precedence above, from its inputs; see the module comment. */
 export function resolveReplyLanguage(
   saved: UserLanguage | null,

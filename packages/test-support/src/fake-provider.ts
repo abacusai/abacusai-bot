@@ -21,6 +21,13 @@ export interface RecordedCall {
 }
 
 /**
+ * A request's messages without its system prompt, as JSON: what the turn said.
+ * Match on this, never on the whole list, or a word in the prompt matches too.
+ */
+export const conversationOf = (call: RecordedCall): string =>
+  JSON.stringify(call.messages.filter((message) => message.role !== "system"));
+
+/**
  * What the fake model does with one request. It may return a promise, so a
  * test can hold a request until something else lands.
  */

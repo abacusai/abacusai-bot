@@ -445,6 +445,7 @@ import {
   removeSenderSession,
   senderSessionKey,
 } from "./services/bots/bot-store";
+import { isRemoteSenderOwner } from "./services/bots/sender-kind";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
 import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
@@ -10084,6 +10085,12 @@ export class ServiceHost {
       ...(sessionId != null &&
       this.agentSessionManagerService.get(sessionId)?.owner?.role === "sender"
         ? { ABACUSAI_BOT_SENDER_CHAT: "1" }
+        : {}),
+      // Only a person on a chat app goes without the owner's data rules; channel
+      // turns and bot asks are sender sessions the user reads.
+      ...(sessionId != null &&
+      isRemoteSenderOwner(this.agentSessionManagerService.get(sessionId)?.owner)
+        ? { ABACUSAI_BOT_REMOTE_SENDER: "1" }
         : {}),
       // The reply fallback; read at spawn, so a UI change reaches the next session.
       ABACUSAI_BOT_LOCALE: this.appLanguage(),

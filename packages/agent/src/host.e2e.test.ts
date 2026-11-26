@@ -18,6 +18,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  conversationOf,
   FakeProvider,
   fakeProviderConfig,
   type Reply,
@@ -826,7 +827,7 @@ describe("a message sent mid-turn", () => {
     const finished = "DONE-MARK";
 
     provider.script(async (call) => {
-      const seen = JSON.stringify(call.messages);
+      const seen = conversationOf(call);
 
       if (seen.includes("are you done")) {
         return { say: seen.includes(finished) ? "it passed" : "no idea" };
@@ -863,7 +864,8 @@ describe("a message sent mid-turn", () => {
     await host.waitFor(() => provider.calls.length > callsBefore, 45_000);
 
     // Their next message carries the output, once.
-    expect(JSON.stringify(provider.calls.at(-1)?.messages)).toContain(finished);
+    const last = provider.calls.at(-1);
+    expect(last == null ? "" : conversationOf(last)).toContain(finished);
     expect(host.agentEvents("error")).toEqual([]);
   }, 90_000);
 
@@ -874,7 +876,7 @@ describe("a message sent mid-turn", () => {
     const finished = "DONE-MARK";
 
     provider.script(async (call) => {
-      const seen = JSON.stringify(call.messages);
+      const seen = conversationOf(call);
 
       if (seen.includes(finished)) return { say: "that worked, all done" };
       if (!seen.includes("in the background")) {

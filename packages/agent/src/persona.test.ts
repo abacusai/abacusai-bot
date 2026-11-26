@@ -13,6 +13,8 @@ import {
   DELIVERABLE_QUALITY_PROMPT,
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
+  FACTS_PROMPT,
+  USER_DATA_PROMPT,
   basePrompt,
   subAgentBasePrompt,
 } from "./base-prompt.js";
@@ -26,14 +28,19 @@ import { PLAN_ASKS_PROMPT } from "./plan-asks.js";
 
 let dir: string;
 const previousEnv = process.env.ABACUSAI_BOT_PERSONA;
+const previousRemote = process.env.ABACUSAI_BOT_REMOTE_SENDER;
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "agent-persona-"));
+  // The prompt differs in a remote sender's chat: start every case as the owner's.
+  delete process.env.ABACUSAI_BOT_REMOTE_SENDER;
 });
 
 afterEach(() => {
   if (previousEnv == null) delete process.env.ABACUSAI_BOT_PERSONA;
   else process.env.ABACUSAI_BOT_PERSONA = previousEnv;
+  if (previousRemote == null) delete process.env.ABACUSAI_BOT_REMOTE_SENDER;
+  else process.env.ABACUSAI_BOT_REMOTE_SENDER = previousRemote;
 
   fs.rmSync(dir, { recursive: true, force: true });
 });
@@ -91,15 +98,15 @@ describe("questions about the app itself", () => {
   /**
    * From memory the model said routines run on a server and that outside
    * models cannot be added; bot_help reads the app instead. One fixed line
-   * right after who the agent is, the same for every session, so the cached
-   * prefix never changes.
+   * right after who the agent is, fixed for the life of a session, so the
+   * cached prefix never changes.
    */
   it("go to bot_help, in one fixed line after the identity block", () => {
     for (const edit of ["ours", "builtin"] as const) {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${USER_DATA_PROMPT}\n${FACTS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -120,10 +127,44 @@ describe("questions about the app itself", () => {
       /done only when it opens and nothing is left broken/
     );
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/it is sample data/);
+    // One owner for facts: a file's data points at the facts rule, not a copy of it.
+    expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/follow the facts rule above/);
+    expect(DELIVERABLE_QUALITY_PROMPT).not.toMatch(/invented data/i);
+    // The user's data keeps its owner; asked to decide, it decides; facts are sourced.
+    expect(USER_DATA_PROMPT).toMatch(/applies to the whole block/);
+    expect(USER_DATA_PROMPT).toMatch(/assign or decide, decide/);
+    expect(USER_DATA_PROMPT).toMatch(
+      /their own messages and files from the first/
+    );
+    expect(FACTS_PROMPT).toMatch(/Never present invented data as real/);
+    expect(FACTS_PROMPT).toMatch(/not from the web/);
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/count done against total/);
     // A file said to be attached but missing is asked for again, never stood in for.
     expect(ATTACHMENTS_PROMPT).toMatch(/`@<path>` lines/);
     expect(ATTACHMENTS_PROMPT).toMatch(/attach it again/);
+  });
+
+  /**
+   * A remote sender's chat answers for the user and defers what is theirs to
+   * decide, so the owner's data rules (decide, ask) stay out of it.
+   */
+  it("leave the user-data block out of a remote sender's chat", () => {
+    expect(basePrompt("builtin")).toContain(USER_DATA_PROMPT);
+    process.env.ABACUSAI_BOT_REMOTE_SENDER = "1";
+    expect(basePrompt("builtin")).not.toContain(USER_DATA_PROMPT);
+    expect(basePrompt("builtin")).toContain(FACTS_PROMPT);
+  });
+
+  /** Channel turns and bot asks are sender chats the user reads: they keep it. */
+  it("keep the user-data block in any other sender chat", () => {
+    const previous = process.env.ABACUSAI_BOT_SENDER_CHAT;
+    try {
+      process.env.ABACUSAI_BOT_SENDER_CHAT = "1";
+      expect(basePrompt("builtin")).toContain(USER_DATA_PROMPT);
+    } finally {
+      if (previous == null) delete process.env.ABACUSAI_BOT_SENDER_CHAT;
+      else process.env.ABACUSAI_BOT_SENDER_CHAT = previous;
+    }
   });
 
   /**
