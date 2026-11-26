@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
+      "deleted": "Este espaço de trabalho foi excluído. Adicione a pasta dele de novo para usá-lo.",
       "primary": "Use primary checkout",
       "choose": "Escolher pasta",
       "deleteWorkspace": "Excluir workspace",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Reiniciar fecha {{count}} terminal: {{list}}.",
-    "closesTerminals_other": "Reiniciar fecha {{count}} terminais: {{list}}.",
+    "closesTerminals_one": "Reiniciar fecha {{count}} terminal.",
+    "closesTerminals_other": "Reiniciar fecha {{count}} terminais.",
     "dismiss": "Dispensar",
     "stalled": "Não foi possível reiniciar automaticamente. Feche o app e abra novamente para concluir a atualização.",
     "subtitle": "Reinicie para obter as melhorias e correções mais recentes.",
     "title": "Uma nova versão está pronta",
-    "whatsChanged": "Veja o que mudou"
+    "whatsChanged": "Veja o que mudou",
+    "showTerminals": "Ver quais",
+    "terminalsTitle": "Terminais que o reinício fecha"
   },
   "updateCritical": {
     "body": "Esta versão corrige um problema crítico e precisa ser instalada antes de continuar. O aplicativo será reiniciado para aplicá-lo.",

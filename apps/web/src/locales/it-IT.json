@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
+      "deleted": "Questo spazio di lavoro è stato eliminato. Aggiungi di nuovo la sua cartella per usarlo.",
       "primary": "Use primary checkout",
       "choose": "Scegli cartella",
       "deleteWorkspace": "Elimina workspace",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Il riavvio chiude {{count}} terminale: {{list}}.",
-    "closesTerminals_other": "Il riavvio chiude {{count}} terminali: {{list}}.",
+    "closesTerminals_one": "Il riavvio chiude {{count}} terminale.",
+    "closesTerminals_other": "Il riavvio chiude {{count}} terminali.",
     "dismiss": "Ignora",
     "stalled": "Riavvio automatico non riuscito: chiudi l'app e riaprila per completare l'aggiornamento.",
     "subtitle": "Riavviare per ottenere gli ultimi miglioramenti e correzioni.",
     "title": "Una nuova versione è pronta",
-    "whatsChanged": "Guarda cosa è cambiato"
+    "whatsChanged": "Guarda cosa è cambiato",
+    "showTerminals": "Vedi quali",
+    "terminalsTitle": "Terminali chiusi dal riavvio"
   },
   "updateCritical": {
     "body": "Questa versione risolve un problema critico e deve essere installata prima di continuare. L'app si riavvierà per applicarla.",

@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "找不到工作樹資料夾。",
       "folder": "找不到工作區資料夾。",
+      "deleted": "此工作區已刪除。重新加入其資料夾即可使用。",
       "primary": "使用主要簽出",
       "choose": "選擇資料夾",
       "deleteWorkspace": "刪除工作區",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "重新啟動會關閉 {{count}} 個終端機：{{list}}。",
-    "closesTerminals_other": "重新啟動會關閉 {{count}} 個終端機：{{list}}。",
+    "closesTerminals_one": "重新啟動會關閉 {{count}} 個終端機。",
+    "closesTerminals_other": "重新啟動會關閉 {{count}} 個終端機。",
     "dismiss": "關閉",
     "stalled": "無法自動重新啟動。請結束並重新開啟應用程式以完成更新。",
     "subtitle": "重新啟動就能取得最新的改善和修正。",
     "title": "新版本已準備就緒",
-    "whatsChanged": "查看更新內容"
+    "whatsChanged": "查看更新內容",
+    "showTerminals": "查看是哪些",
+    "terminalsTitle": "重新啟動會關閉的終端機"
   },
   "updateCritical": {
     "body": "這個版本修正了一個嚴重問題，必須先安裝才能繼續。應用程式會重新啟動以完成套用。",

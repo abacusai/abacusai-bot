@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
+      "deleted": "このワークスペースは削除されました。使うにはフォルダをもう一度追加してください。",
       "primary": "Use primary checkout",
       "choose": "フォルダーを選択",
       "deleteWorkspace": "ワークスペースを削除",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "再起動でターミナル {{count}} 個が閉じます：{{list}}。",
-    "closesTerminals_other": "再起動でターミナル {{count}} 個が閉じます：{{list}}。",
+    "closesTerminals_one": "再起動でターミナル {{count}} 個が閉じます。",
+    "closesTerminals_other": "再起動でターミナル {{count}} 個が閉じます。",
     "dismiss": "解雇する",
     "stalled": "自動的に再起動できませんでした。アップデートを完了するには、アプリを終了してから再度開いてください。",
     "subtitle": "再起動して最新の改善点と修正を入手してください。",
     "title": "新しいバージョンが完成しました",
-    "whatsChanged": "何が変わったかを見る"
+    "whatsChanged": "何が変わったかを見る",
+    "showTerminals": "どれか見る",
+    "terminalsTitle": "再起動で閉じるターミナル"
   },
   "updateCritical": {
     "body": "このリリースでは重大な問題が修正されているため、続行する前にインストールする必要があります。適用するためにアプリが再起動されます。",

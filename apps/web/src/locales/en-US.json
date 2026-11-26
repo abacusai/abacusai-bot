@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
+      "deleted": "This workspace was deleted. Add its folder again to use it.",
       "primary": "Use primary checkout",
       "choose": "Choose folder",
       "deleteWorkspace": "Delete workspace",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Restarting closes {{count}} terminal: {{list}}.",
-    "closesTerminals_other": "Restarting closes {{count}} terminals: {{list}}.",
+    "closesTerminals_one": "Restarting closes {{count}} terminal.",
+    "closesTerminals_other": "Restarting closes {{count}} terminals.",
     "dismiss": "Dismiss",
     "stalled": "Couldn't restart automatically. Quit and reopen the app to finish updating.",
     "subtitle": "Relaunch to get the latest improvements and fixes.",
     "title": "A new version is ready",
-    "whatsChanged": "See what changed"
+    "whatsChanged": "See what changed",
+    "showTerminals": "See which",
+    "terminalsTitle": "Terminals a restart closes"
   },
   "updateCritical": {
     "body": "This release fixes a critical issue and has to be installed before you continue. The app will restart to apply it.",

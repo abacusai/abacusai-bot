@@ -16,11 +16,13 @@ const CHAT_CHARACTERS = 32;
 export const terminalInChat = (
   terminal: TerminalInUse,
   name: string,
-  t: Translate
+  t: Translate,
+  /** A list with room for it (a popover) keeps the chat's whole name. */
+  whole = false
 ): string => {
   if (!terminal.chat) return name;
   const chat =
-    terminal.chat.length > CHAT_CHARACTERS
+    !whole && terminal.chat.length > CHAT_CHARACTERS
       ? `${terminal.chat.slice(0, CHAT_CHARACTERS - 1).trimEnd()}…`
       : terminal.chat;
   return t("sessions.terminal.inChat", { terminal: name, chat });
