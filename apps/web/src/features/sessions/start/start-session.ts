@@ -127,17 +127,18 @@ export const openStartDraft = (id?: string, workspaceId?: string): string => {
       }
     );
   // An empty new chat is reused, but not one with terminals: a new chat
-  // starts with none, and the left one's shells end (nothing shows it again).
-  const terminals = id || kept ? [] : draftTerminals(current.id);
+  // starts with none. Left for a new or saved draft, an empty one is pruned,
+  // so its shells end (nothing shows it again).
+  const terminals = kept || id === current.id ? [] : draftTerminals(current.id);
   if (saved) startDraftStore.setState(() => saved);
-  else if (id || kept || terminals.length > 0) {
+  else if (id || kept || terminals.length > 0)
     startDraftStore.setState(() => ({
       ...newStartDraft(),
       workspaceId: workspaceId ?? null,
     }));
-    closeTerminals(terminals);
-  } else if (workspaceId)
+  else if (workspaceId)
     startDraftStore.setState((d) => ({ ...d, workspaceId }));
+  closeTerminals(terminals);
   draftViewStore.setState(() => "split");
   requestAnimationFrame(() =>
     document
