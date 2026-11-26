@@ -1889,7 +1889,8 @@
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
       "emptyDescription": "Start one with {{key}}, or drop a folder here.",
-      "deleteCheckout": "Su copia {{branch}} se elimina con él, salvo que otro chat siga trabajando en ella o tenga trabajo que quieras conservar (commits, cambios sin commit o archivos ignorados como .env). En ese caso se conserva y te avisamos."
+      "deleteCheckout_one": "Su copia {{branches}} se elimina con él, salvo que otro chat siga trabajando en ella o tenga trabajo que quieras conservar (commits, cambios sin commit o archivos ignorados como .env). En ese caso se conserva y te avisamos.",
+      "deleteCheckout_other": "Sus copias {{branches}} se eliminan con él, salvo que otro chat siga trabajando en una o alguna tenga trabajo que quieras conservar (commits, cambios sin commit o archivos ignorados como .env). En ese caso esa se conserva y te avisamos."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",

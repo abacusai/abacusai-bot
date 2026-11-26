@@ -1889,7 +1889,8 @@
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
       "emptyDescription": "Start one with {{key}}, or drop a folder here.",
-      "deleteCheckout": "Sein Checkout {{branch}} wird mit gelöscht, außer ein anderer Chat arbeitet noch darin oder er enthält Arbeit, die du behalten willst (Commits, nicht committete Änderungen oder ignorierte Dateien wie .env). Dann bleibt er erhalten, und du wirst informiert."
+      "deleteCheckout_one": "Sein Checkout {{branches}} wird mit gelöscht, außer ein anderer Chat arbeitet noch darin oder er enthält Arbeit, die du behalten willst (Commits, nicht committete Änderungen oder ignorierte Dateien wie .env). Dann bleibt er erhalten, und du wirst informiert.",
+      "deleteCheckout_other": "Seine Checkouts {{branches}} werden mit gelöscht, außer ein anderer Chat arbeitet noch in einem davon oder einer enthält Arbeit, die du behalten willst (Commits, nicht committete Änderungen oder ignorierte Dateien wie .env). Dann bleibt dieser erhalten, und du wirst informiert."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",

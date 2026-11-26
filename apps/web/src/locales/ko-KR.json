@@ -1889,7 +1889,8 @@
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
       "emptyDescription": "Start one with {{key}}, or drop a folder here.",
-      "deleteCheckout": "이 채팅의 체크아웃 {{branch}}도 함께 삭제됩니다. 단, 다른 채팅이 아직 사용 중이거나 보관할 만한 작업(커밋, 커밋하지 않은 변경, .env 같은 무시된 파일)이 있으면 유지하고 알려 드립니다."
+      "deleteCheckout_one": "이 채팅의 체크아웃 {{branches}}도 함께 삭제됩니다. 단, 다른 채팅이 아직 사용 중이거나 보관할 만한 작업(커밋, 커밋하지 않은 변경, .env 같은 무시된 파일)이 있으면 유지하고 알려 드립니다.",
+      "deleteCheckout_other": "이 채팅의 체크아웃 {{branches}}도 함께 삭제됩니다. 단, 다른 채팅이 아직 사용 중이거나 보관할 만한 작업(커밋, 커밋하지 않은 변경, .env 같은 무시된 파일)이 있는 체크아웃은 유지하고 알려 드립니다."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",

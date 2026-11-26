@@ -5772,17 +5772,19 @@ export class ServiceHost {
 
   removeAgentSession(workspaceId: string, sessionId: string): boolean {
     const record = this.agentSessionManagerService.get(sessionId);
-    // Passed to another chat still on it, or returned for removal.
-    const checkout =
-      this.agentSessionManagerService.leaveHandOffCheckout(sessionId);
+    // Each passed to another chat still on it, or returned for removal.
+    const checkouts =
+      record?.workspaceId === workspaceId
+        ? this.agentSessionManagerService.leaveHandOffCheckouts(sessionId)
+        : [];
     const removed = this.agentSessionManagerService.remove(
       workspaceId,
       sessionId
     );
     if (removed) {
       this.handOffTurns.delete(sessionId);
-      if (checkout != null && record?.workspaceId === workspaceId)
-        void this.releaseHandOffCheckout(workspaceId, checkout, record.label);
+      for (const checkout of checkouts)
+        void this.releaseHandOffCheckout(workspaceId, checkout, record!.label);
       this.sessionArtifactsService.removeForSession(sessionId);
       this.sessionTurnStateService.clearSession(sessionId);
       environmentNoticeService.forgetSession(sessionId);
@@ -6730,7 +6732,11 @@ export class ServiceHost {
     }
 
     if (request.worktreeId == null) {
-      this.moveSessionWorktree(request.workspaceId, request.sessionId, null);
+      this.agentSessionManagerService.updateWorktree(
+        request.workspaceId,
+        request.sessionId,
+        null
+      );
       return {
         success: true,
         session: this.agentSessionManagerService.get(request.sessionId)!,
@@ -6744,7 +6750,7 @@ export class ServiceHost {
     if (!listed.success || worktree == null) {
       return { success: false, error: listed.error ?? "Worktree not found." };
     }
-    const attached = this.moveSessionWorktree(
+    const attached = this.agentSessionManagerService.updateWorktree(
       request.workspaceId,
       request.sessionId,
       worktree.isCurrent
@@ -6764,31 +6770,6 @@ export class ServiceHost {
           session: this.agentSessionManagerService.get(request.sessionId)!,
         }
       : { success: false, error: "Unable to attach worktree to session." };
-  }
-
-  /**
-   * Puts a session on another checkout. A hand-off checkout it owned and
-   * leaves passes to another chat still on it, or, with none, is released
-   * the same safe way a deletion releases it.
-   */
-  private moveSessionWorktree(
-    ...args: Parameters<AgentSessionManagerService["updateWorktree"]>
-  ): boolean {
-    const [workspaceId, sessionId, worktree] = args;
-    const owned = this.agentSessionManagerService.handOffCheckout(sessionId);
-    const moved = this.agentSessionManagerService.updateWorktree(...args);
-    if (!moved || owned == null || owned.path === worktree?.path) return moved;
-    const orphan = this.agentSessionManagerService.leaveHandOffCheckout(
-      sessionId,
-      owned
-    );
-    if (orphan != null)
-      void this.releaseHandOffCheckout(
-        workspaceId,
-        orphan,
-        this.agentSessionManagerService.get(sessionId)?.label ?? ""
-      );
-    return moved;
   }
 
   /** Idempotent per `(sessionId, operationId)` when given one (§26.4 g). */
