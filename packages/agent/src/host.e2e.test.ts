@@ -113,19 +113,21 @@ class Host {
       .filter((event) => event.type === type);
   }
 
+  /**
+   * Close stdin and wait for the process to be gone. A turn a test left
+   * running holds the exit until it settles, so past a grace it is killed,
+   * and still waited for: until it has exited it can send the provider a
+   * request that the next test would read as its own.
+   */
   async stop(): Promise<void> {
-    this.child.stdin.end();
-    await new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        this.child.kill("SIGKILL");
-        resolve(undefined);
-      }, 5_000);
+    if (this.child.exitCode != null || this.child.signalCode != null) return;
 
-      this.child.on("exit", () => {
-        clearTimeout(timer);
-        resolve(undefined);
-      });
-    });
+    const exited = new Promise((resolve) => this.child.once("exit", resolve));
+    const timer = setTimeout(() => this.child.kill("SIGKILL"), 5_000);
+
+    this.child.stdin.end();
+    await exited;
+    clearTimeout(timer);
   }
 
   private ingest(chunk: string): void {
@@ -211,6 +213,9 @@ afterAll(async () => {
 afterEach(async () => {
   await Promise.all(running.map((host) => host.stop()));
   running = [];
+  // Scripts reply by call index, so what the stopped agents sent on their way
+  // out has to be counted here, before the reset, and not as the next test's.
+  await provider.drained();
   provider.calls.length = 0;
   provider.script(() => ({ say: "ok" }));
 });
