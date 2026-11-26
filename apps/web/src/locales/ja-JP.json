@@ -2156,7 +2156,12 @@
       "busyTitle": "{{program}} を停止しますか？",
       "busyBody": "このターミナルでは {{program}} がまだ実行中です。ターミナルを閉じると停止します。",
       "busyConfirm": "ターミナルを閉じる",
-      "deleteStops": "ターミナルで実行中のため、削除すると停止します：{{list}}。",
+      "deleteSessionStops": "このセッションを削除すると、ターミナルで実行中のものが停止します：{{list}}。",
+      "deleteSessionCloses": "このセッションを削除すると、開いているターミナルが閉じます：{{list}}。",
+      "deleteWorkspaceStops": "このワークスペースを削除すると、ターミナルで実行中のものが停止します：{{list}}。",
+      "deleteWorkspaceCloses": "このワークスペースを削除すると、開いているターミナルが閉じます：{{list}}。",
+      "andMore_one": "{{list}} ほか {{count}} 件",
+      "andMore_other": "{{list}} ほか {{count}} 件",
       "folderMissing": "このチャットのフォルダーが見つかりません: {{path}}。元に戻してから「再起動」を押してください。",
       "folderDenied": "このチャットのフォルダーを開く権限がありません: {{path}}。権限を直してから「再起動」を押してください。",
       "signalled": "プロセスが停止されました (シグナル {{signal}})"

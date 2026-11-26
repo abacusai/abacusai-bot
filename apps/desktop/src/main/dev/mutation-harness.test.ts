@@ -22,7 +22,6 @@ const fakeHost = (): HarnessHost &
   updateAgentSessionLabel: vi.fn(),
   removeAgentSession: vi.fn(),
   hasLiveTerminalSessions: vi.fn(() => true),
-  terminalsHoldRendererSwap: vi.fn(() => false),
   openTerminals: vi.fn(() => [{ program: null, chat: "A chat" }]),
 });
 
@@ -118,7 +117,7 @@ describe("runHarnessOp", () => {
       runHarnessOp(host, { op: "updates.restartGate", input: {} })
     ).resolves.toEqual({
       silentRestartHeld: true,
-      rendererSwapHeld: false,
+      rendererSwapHeld: true,
       offerNames: [{ program: null, chat: "A chat" }],
     });
   });

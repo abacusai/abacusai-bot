@@ -2156,7 +2156,12 @@
       "busyTitle": "Fermare {{program}}?",
       "busyBody": "{{program}} è ancora in esecuzione in questo terminale. Chiudere il terminale lo ferma.",
       "busyConfirm": "Chiudi il terminale",
-      "deleteStops": "Ancora in esecuzione nei suoi terminali, verrà interrotto dall'eliminazione: {{list}}.",
+      "deleteSessionStops": "Eliminando questa sessione si interrompe ciò che è in esecuzione nei suoi terminali: {{list}}.",
+      "deleteSessionCloses": "Eliminando questa sessione si chiudono i suoi terminali aperti: {{list}}.",
+      "deleteWorkspaceStops": "Eliminando questo spazio di lavoro si interrompe ciò che è in esecuzione nei suoi terminali: {{list}}.",
+      "deleteWorkspaceCloses": "Eliminando questo spazio di lavoro si chiudono i suoi terminali aperti: {{list}}.",
+      "andMore_one": "{{list}} e {{count}} altro",
+      "andMore_other": "{{list}} e altri {{count}}",
       "folderMissing": "La cartella di questa chat non c’è più: {{path}}. Rimettila al suo posto, poi premi Riavvia.",
       "folderDenied": "Non hai il permesso di aprire la cartella di questa chat: {{path}}. Correggi i permessi, poi premi Riavvia.",
       "signalled": "Processo fermato (segnale {{signal}})"

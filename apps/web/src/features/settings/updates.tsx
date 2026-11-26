@@ -36,6 +36,10 @@ import {
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 
+import {
+  terminalList,
+  terminalName,
+} from "../sessions/terminal/terminal-names";
 import { LicenseSection } from "./license-section";
 /**
  * What an install failure adds under its title: the service's own words
@@ -56,15 +60,11 @@ export const terminalsNote = (
   status: UpdateStatus | undefined,
   t: (key: string, options?: Record<string, unknown>) => string
 ): string | null => {
-  const open = status?.openTerminals ?? [];
-  if (open.length === 0) return null;
-  const list = open
-    .map(({ program, chat }) => {
-      const name = program ?? t("sessions.dock.terminal");
-      return chat ? `${name} (${chat})` : name;
-    })
-    .join(", ");
-  return t("updateBanner.closesTerminals", { list });
+  const list = terminalList(status?.openTerminals ?? [], t, (terminal) => {
+    const name = terminalName(terminal, t);
+    return terminal.program ? `${name} (${terminal.program})` : name;
+  });
+  return list == null ? null : t("updateBanner.closesTerminals", { list });
 };
 export const updatePhase = (
   status: UpdateStatus | undefined,

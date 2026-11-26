@@ -6,7 +6,7 @@
  * hooks exactly as an old-renderer action would.
  *
  * `updates.restartGate` reports whether the terminals hold the silent update
- * restart (any live shell) and the renderer swap (a program running in one).
+ * restart and the renderer swap (any live shell holds both).
  *
  * `renderer.dropPort` makes main drop renderer's MessagePort the way
  * it does for a real reconnect (R1-T22: the port-loss reload and the
@@ -35,10 +35,8 @@ export interface HarnessHost {
     label: string
   ): unknown;
   removeAgentSession(workspaceId: string, sessionId: string): unknown;
-  /** The terminals' part of the silent update restart's gate. */
+  /** The terminals' part of the update restart's and renderer swap's gates. */
   hasLiveTerminalSessions(): boolean;
-  /** The terminals' part of the renderer swap's gate. */
-  terminalsHoldRendererSwap(): boolean;
   /** What the update offer names as closing on a restart. */
   openTerminals(): unknown[];
 }
@@ -147,7 +145,7 @@ export const runHarnessOp = async (
     case "updates.restartGate":
       return {
         silentRestartHeld: host.hasLiveTerminalSessions(),
-        rendererSwapHeld: host.terminalsHoldRendererSwap(),
+        rendererSwapHeld: host.hasLiveTerminalSessions(),
         offerNames: host.openTerminals(),
       };
     case "renderer.dropPort":

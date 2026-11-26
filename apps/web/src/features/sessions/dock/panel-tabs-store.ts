@@ -226,6 +226,17 @@ export const rememberTerminalShell = (
         }
       : s
   );
+/** A terminal's tab name, as its tab shows it (kept across restarts too). */
+export const terminalTabTitle = (
+  key: string,
+  terminalId: string
+): string | undefined => {
+  const ref = `terminal:${terminalId}`;
+  return (
+    panelTabsStore.state[key]?.tabs.find((tab) => tab.ref === ref)?.title ??
+    savedTerminals.state[key]?.tabs.find((tab) => tab.ref === ref)?.title
+  );
+};
 export const terminalExited = (key: string, ref: string): boolean =>
   exitedTerminals.has(`${key} ${ref}`);
 export const closeTab = (key: string, ref: string): string | undefined => {

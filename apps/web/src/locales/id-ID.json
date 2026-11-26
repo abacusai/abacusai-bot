@@ -2156,7 +2156,12 @@
       "busyTitle": "Hentikan {{program}}?",
       "busyBody": "{{program}} masih berjalan di terminal ini. Menutup terminal akan menghentikannya.",
       "busyConfirm": "Tutup terminal",
-      "deleteStops": "Masih berjalan di terminalnya, dan dihentikan saat dihapus: {{list}}.",
+      "deleteSessionStops": "Menghapus sesi ini akan menghentikan yang berjalan di terminalnya: {{list}}.",
+      "deleteSessionCloses": "Menghapus sesi ini akan menutup terminalnya yang terbuka: {{list}}.",
+      "deleteWorkspaceStops": "Menghapus ruang kerja ini akan menghentikan yang berjalan di terminalnya: {{list}}.",
+      "deleteWorkspaceCloses": "Menghapus ruang kerja ini akan menutup terminalnya yang terbuka: {{list}}.",
+      "andMore_one": "{{list}} dan {{count}} lainnya",
+      "andMore_other": "{{list}} dan {{count}} lainnya",
       "folderMissing": "Folder obrolan ini sudah tidak ada: {{path}}. Kembalikan, lalu tekan Mulai ulang.",
       "folderDenied": "Anda tidak punya izin membuka folder obrolan ini: {{path}}. Perbaiki izinnya, lalu tekan Mulai ulang.",
       "signalled": "Proses dihentikan (sinyal {{signal}})"

@@ -7,6 +7,7 @@ import type {
 } from "../contracts";
 import {
   TERMINAL_SHELLS,
+  type TerminalInUse,
   type TerminalShellId,
   type TerminalShellState,
 } from "../terminal-shells";
@@ -124,15 +125,15 @@ export const terminal = {
     )
     .output(type<boolean>()),
   /**
-   * The programs running in place of a prompt in a chat's terminals, or in a
-   * whole workspace's: what deleting it would stop. Empty where the platform
-   * can't tell (Windows).
+   * What deleting a chat, or a whole workspace, would stop in its terminals:
+   * those running a program, or on Windows, which can't tell a program from
+   * a prompt, every open one (`program` null).
    */
   busyIn: query
     .input(
       v.object({ workspaceId: v.string(), sessionId: v.optional(v.string()) })
     )
-    .output(type<{ program: string; chat: string }[]>()),
+    .output(type<TerminalInUse[]>()),
   /**
    * The program running in place of the shell's prompt (a dev server, an
    * editor), or null at the prompt or where the platform can't tell. Closing

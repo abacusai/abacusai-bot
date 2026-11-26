@@ -90,16 +90,39 @@ it("a manual .deb install pill leads to the steps and is inert without them", as
   );
   expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
 });
-it("a ready update names the terminals its restart closes", async () => {
+it("a ready update names the terminals its restart closes, by their tabs, briefly", async () => {
   await initI18n();
   const { UpdateNotice } = await import("./update-notice");
+  const { openTab } = await import("../sessions/dock/panel-tabs-store");
+  const chat = '["conversation",1,"w","session","a"]';
+  const other = '["conversation",1,"w","session","b"]';
+  openTab(chat, { ref: "terminal:t1", title: "Terminal" });
+  openTab(chat, { ref: "terminal:t2", title: "Dev server" });
+  openTab(chat, { ref: "terminal:t3", title: "Terminal 3" });
+  openTab(other, { ref: "terminal:t4", title: "Terminal" });
+  openTab(other, { ref: "terminal:t5", title: "Logs" });
+  const open = (
+    conversationKey: string,
+    terminalId: string,
+    program: string | null = null
+  ) => ({
+    conversationKey,
+    terminalId,
+    program,
+    chat: "",
+  });
   const ready = {
     ...status,
     downloaded: true,
     updateInfo: { version: "9.9.9" },
     openTerminals: [
-      { program: "vim", chat: "Fix the parser" },
-      { program: null, chat: "" },
+      open(chat, "t1"),
+      open(chat, "t2", "npm"),
+      open(chat, "t3"),
+      // The same name in another chat is said once.
+      open(other, "t4"),
+      open(other, "t5"),
+      open(other, "t6"),
     ],
   } as UpdateStatus;
   const install = vi.fn(async () => undefined);
@@ -122,7 +145,7 @@ it("a ready update names the terminals its restart closes", async () => {
   );
   expect(
     screen.getByText(
-      "Restarting closes your open terminals: vim (Fix the parser), Terminal."
+      "Restarting closes your open terminals: Terminal, Dev server (npm), Terminal 3 and 1 more."
     )
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button"));

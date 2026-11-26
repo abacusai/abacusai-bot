@@ -314,30 +314,41 @@ describe("conversation terminal session service", () => {
   );
 
   it.skipIf(process.platform === "win32")(
-    "holds a window reload for a program, not for a shell at its prompt",
+    "names what deleting would stop: a program, not a shell at its prompt",
     async () => {
       const terminals = service();
       const draft = draftRequest();
-      const idle = fakePty("-system");
-      const server = fakePty("python3");
-      ptySpawn.mockReturnValueOnce(idle).mockReturnValueOnce(server);
+      ptySpawn
+        .mockReturnValueOnce(fakePty("-system"))
+        .mockReturnValueOnce(fakePty("python3"));
       await terminals.startSession({ ...draft, terminalId: "idle" });
-      expect(terminals.holdsRendererSwap()).toBe(false);
-      const { state } = await terminals.startSession({
-        ...draft,
-        terminalId: "server",
-      });
-      expect(terminals.holdsRendererSwap()).toBe(true);
-      terminals.hideSession({
-        conversationKey: draft.conversationKey,
-        terminalId: "server",
-        generation: state.generation,
-        close: true,
-      });
-      expect(terminals.holdsRendererSwap()).toBe(false);
-      expect(terminals.hasLiveSessions()).toBe(true);
+      await terminals.startSession({ ...draft, terminalId: "server" });
+
+      expect(terminals.stoppable(() => true)).toEqual([
+        {
+          key: draft.conversationKey,
+          terminalId: "server",
+          program: "python3",
+        },
+      ]);
+      expect(terminals.stoppable(() => false)).toEqual([]);
     }
   );
+
+  it("on Windows, which can't tell a program from a prompt, names every open terminal", async () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    Object.defineProperty(process, "platform", { value: "win32" });
+    try {
+      const terminals = service();
+      const draft = draftRequest();
+      await terminals.startSession({ ...draft, terminalId: "idle" });
+      expect(terminals.stoppable(() => true)).toEqual([
+        { key: draft.conversationKey, terminalId: "idle", program: null },
+      ]);
+    } finally {
+      Object.defineProperty(process, "platform", platform);
+    }
+  });
 
   it("ends a deleted chat's shells, those its new-chat page left too", async () => {
     const terminals = service();

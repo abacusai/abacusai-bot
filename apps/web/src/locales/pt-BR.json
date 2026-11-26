@@ -2156,7 +2156,12 @@
       "busyTitle": "Parar {{program}}?",
       "busyBody": "{{program}} ainda está em execução neste terminal. Fechar o terminal o interrompe.",
       "busyConfirm": "Fechar terminal",
-      "deleteStops": "Ainda em execução nos terminais, e encerrado ao excluir: {{list}}.",
+      "deleteSessionStops": "Excluir esta sessão encerra o que está em execução nos terminais dela: {{list}}.",
+      "deleteSessionCloses": "Excluir esta sessão fecha os terminais abertos dela: {{list}}.",
+      "deleteWorkspaceStops": "Excluir este espaço de trabalho encerra o que está em execução nos terminais dele: {{list}}.",
+      "deleteWorkspaceCloses": "Excluir este espaço de trabalho fecha os terminais abertos dele: {{list}}.",
+      "andMore_one": "{{list}} e mais {{count}}",
+      "andMore_other": "{{list}} e mais {{count}}",
       "folderMissing": "A pasta deste chat não existe mais: {{path}}. Coloque-a de volta e toque em Reiniciar.",
       "folderDenied": "Você não tem permissão para abrir a pasta deste chat: {{path}}. Corrija as permissões e toque em Reiniciar.",
       "signalled": "Processo interrompido (sinal {{signal}})"

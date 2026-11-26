@@ -1,3 +1,5 @@
+import type { TerminalInUse } from "./terminal-shells";
+
 export interface UpdateProgress {
   percent: number;
   bytesPerSecond: number;
@@ -55,14 +57,7 @@ export interface UpdateStatus {
    * offer names them. A program is named where the platform tells it.
    * Absent from older shells.
    */
-  openTerminals?: UpdateOpenTerminal[];
-}
-
-export interface UpdateOpenTerminal {
-  /** What runs in place of the shell's prompt, if anything and if known. */
-  program: string | null;
-  /** The chat it belongs to; empty for a new chat. */
-  chat: string;
+  openTerminals?: TerminalInUse[];
 }
 
 export interface UpdateManualInstall {

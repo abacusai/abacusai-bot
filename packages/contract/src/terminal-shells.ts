@@ -102,3 +102,14 @@ export interface TerminalShellState {
   effective: TerminalShellId;
   statuses: TerminalShellStatus[];
 }
+
+/** A live terminal, as a question about ending it names it. */
+export interface TerminalInUse {
+  conversationKey: string;
+  /** The window names it by its tab. */
+  terminalId: string;
+  /** What runs in place of the shell's prompt, if anything and if known. */
+  program: string | null;
+  /** The chat it belongs to; empty for a new chat. */
+  chat: string;
+}

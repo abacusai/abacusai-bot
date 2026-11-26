@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { useSessionsTransport } from "../data/queries";
+import { terminalList, terminalName } from "./terminal-names";
 
 /**
- * In a delete's confirmation: the programs running in the terminals the
- * delete ends (a dev server, an editor), as the quit and the tab close ask.
+ * In a delete's confirmation: what the delete stops in its terminals (a dev
+ * server, an editor), as the quit and the tab close ask. Where the platform
+ * can't tell a program from a prompt (Windows), every open terminal.
  */
 export const BusyTerminalsNote = ({
   workspaceId,
@@ -23,15 +25,27 @@ export const BusyTerminalsNote = ({
     }),
     staleTime: 0,
   });
-  if (!busy.data?.length) return null;
-  const list = busy.data
-    .map(({ program, chat }) =>
-      chat && sessionId == null ? `${program} (${chat})` : program
-    )
-    .join(", ");
+  const terminals = busy.data ?? [];
+  const list = terminalList(terminals, t, (terminal) => {
+    const name = terminal.program ?? terminalName(terminal, t);
+    return sessionId == null && terminal.chat
+      ? `${name} (${terminal.chat})`
+      : name;
+  });
+  if (list == null) return null;
+  // Programs named where known; otherwise the terminals themselves.
+  const known = terminals.every((terminal) => terminal.program != null);
+  const text =
+    sessionId == null
+      ? known
+        ? t("sessions.terminal.deleteWorkspaceStops", { list })
+        : t("sessions.terminal.deleteWorkspaceCloses", { list })
+      : known
+        ? t("sessions.terminal.deleteSessionStops", { list })
+        : t("sessions.terminal.deleteSessionCloses", { list });
   return (
     <p role="alert" className="text-sm font-medium">
-      {t("sessions.terminal.deleteStops", { list })}
+      {text}
     </p>
   );
 };

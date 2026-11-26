@@ -252,6 +252,7 @@ import type { StatusDetail } from "@abacus-ai/contract/status";
 import { isPositiveReactionEmoji } from "@abacus-ai/contract/success-pitch";
 import type {
   TerminalShellId,
+  TerminalInUse,
   TerminalShellState,
 } from "@abacus-ai/contract/terminal-shells";
 import { TimeoutError } from "@abacus-ai/contract/timeout-error";
@@ -4269,11 +4270,6 @@ export class ServiceHost {
     return this.terminalSessionService.hasLiveSessions();
   }
 
-  /** Whether a window reload would disturb a program running in a terminal. */
-  terminalsHoldRendererSwap(): boolean {
-    return this.terminalSessionService.holdsRendererSwap();
-  }
-
   /** Main owns the shells: a tab, or a whole conversation, closes by key. */
   closeTerminal(request: {
     conversationKey: ConversationKey;
@@ -4285,41 +4281,65 @@ export class ServiceHost {
     );
   }
 
-  /** Programs a delete would stop: a chat's terminals, or a workspace's. */
+  /**
+   * What deleting a chat, or a workspace, would stop in its terminals: the
+   * programs running in them (every terminal on Windows, which cannot tell).
+   */
   busyTerminalsIn(scope: {
     workspaceId: string;
     sessionId?: string;
-  }): { program: string; chat: string }[] {
-    const labels = new Map(
-      this.listAllAgentSessions().map((session) => [session.id, session.label])
-    );
-    return this.terminalSessionService
-      .busyTerminals()
-      .flatMap(({ key, program }) => {
+  }): TerminalInUse[] {
+    return this.terminalsInUse(
+      this.terminalSessionService.stoppable((key) => {
         const ref = conversationRefFromKey(key);
-        if (ref == null || ref.workspaceId !== scope.workspaceId) return [];
-        const sessionId = ref.kind === "session" ? ref.sessionId : ref.draftId;
-        if (scope.sessionId != null && sessionId !== scope.sessionId) return [];
-        const chat =
-          sessionId == null ? "" : (labels.get(sessionId)?.trim() ?? "");
-        return [{ program, chat }];
-      });
+        if (ref == null || ref.workspaceId !== scope.workspaceId) return false;
+        const id = ref.kind === "session" ? ref.sessionId : ref.draftId;
+        return scope.sessionId == null || id === scope.sessionId;
+      })
+    );
   }
 
-  /** What an update restart would end, for the offer that names it. */
-  openTerminals(): { program: string | null; chat: string }[] {
+  /**
+   * What an update restart would end, for the offer that names it. Asked
+   * every poll while an update waits, so nothing is built with no terminal.
+   */
+  openTerminals(): TerminalInUse[] {
+    if (!this.terminalSessionService.hasLiveSessions()) return [];
+    return this.terminalsInUse(
+      this.terminalSessionService
+        .listStates()
+        .map(({ conversationKey: key, terminalId }) => ({
+          key,
+          terminalId,
+          program: this.terminalSessionService.busyProgram(key, terminalId),
+        }))
+    );
+  }
+
+  /** With each terminal's chat name; the window adds the tab's own name. */
+  private terminalsInUse(
+    terminals: {
+      key: ConversationKey;
+      terminalId: string;
+      program: string | null;
+    }[]
+  ): TerminalInUse[] {
+    if (terminals.length === 0) return [];
     const labels = new Map(
       this.listAllAgentSessions().map((session) => [session.id, session.label])
     );
-    return this.terminalSessionService
-      .listStates()
-      .map(({ conversationKey: key, terminalId, conversation }) => ({
-        program: this.terminalSessionService.busyProgram(key, terminalId),
+    return terminals.map(({ key, terminalId, program }) => {
+      const ref = conversationRefFromKey(key);
+      return {
+        conversationKey: key,
+        terminalId,
+        program,
         chat:
-          conversation.kind === "session"
-            ? (labels.get(conversation.sessionId)?.trim() ?? "")
+          ref?.kind === "session"
+            ? (labels.get(ref.sessionId)?.trim() ?? "")
             : "",
-      }));
+      };
+    });
   }
 
   /** Every agent process this run, as the log dump wants it. */
@@ -4833,6 +4853,11 @@ export class ServiceHost {
       return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
+    // Its shells end at the first delete, with its agents: a deleted
+    // workspace's chats can't be opened, so its terminals could be neither
+    // shown nor closed, yet would hold the update. Restoring it points it at a
+    // folder again; its chats' terminals start there when shown.
+    this.terminalSessionService.disposeWorkspace(workspaceId);
     if (workspace.status !== "deleted") {
       for (const session of this.agentSessionManagerService.list(workspaceId)) {
         this.agentManagerService.stopSession(workspaceId, session.id);
@@ -4843,9 +4868,6 @@ export class ServiceHost {
       return { success: true };
     }
 
-    // Its shells outlive the tombstone, which can be restored, and end here
-    // with its chats; the confirmation named any program they ran.
-    this.terminalSessionService.disposeWorkspace(workspaceId);
     // Read while its chats are still there; removed once they are gone.
     const checkouts =
       this.agentSessionManagerService.handOffCheckoutsIn(workspaceId);

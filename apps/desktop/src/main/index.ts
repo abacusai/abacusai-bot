@@ -463,8 +463,8 @@ let lastRendererActivity = 0;
 /**
  * Swap to a newly activated renderer bundle at the first quiet moment. The
  * gates: an agent mid-turn would lose a reply that exists nowhere else yet, a
- * program running in a terminal would be redrawn from its scrollback mid-run
- * (a shell at its prompt reattaches as it was), and recent input defers it.
+ * live terminal's screen (modes, a Clear, the alternate screen) would be
+ * rebuilt from raw scrollback, and recent input defers it.
  */
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.
@@ -478,7 +478,7 @@ const rendererSwaps = new RendererSwapScheduler({
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
-    workspaceServiceHost.terminalsHoldRendererSwap() ||
+    workspaceServiceHost.hasLiveTerminalSessions() ||
     Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.

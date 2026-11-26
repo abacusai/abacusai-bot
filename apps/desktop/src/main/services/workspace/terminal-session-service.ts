@@ -306,15 +306,19 @@ export class TerminalSessionService {
   }
 
   /**
-   * Whether reloading the window would disturb a program: a terminal running
-   * one in the foreground (a full-screen app's modes live in the screen), or
-   * on Windows any live terminal, where the foreground program is unknown.
-   * Shells themselves outlive a reload.
+   * What ending these terminals would stop, for a question that names it:
+   * the ones running a program, or on Windows, where the foreground program
+   * cannot be told from a prompt, every live one (`program` null).
    */
-  holdsRendererSwap(): boolean {
-    return process.platform === "win32"
-      ? this.registry.hasLiveRuntimes()
-      : this.busyTerminals().length > 0;
+  stoppable(
+    keep: (key: ConversationKey) => boolean
+  ): { key: ConversationKey; terminalId: string; program: string | null }[] {
+    if (process.platform !== "win32")
+      return this.busyTerminals().filter(({ key }) => keep(key));
+    return this.registry
+      .listAll()
+      .filter(({ key }) => keep(key))
+      .map(({ key, terminalId }) => ({ key, terminalId, program: null }));
   }
 
   /** A tab's shell, or all of a conversation's, ended whatever its generation. */

@@ -155,17 +155,18 @@ describe("a real terminal", () => {
   });
 
   it.skipIf(windows)(
-    "holds the update restart for a running program only, and a deleted chat's shell ends",
+    "names a running program as what a delete would stop, and a deleted chat's shell ends",
     async () => {
       const { runtime, type } = await start("chat-2", "busy");
       type("echo shell-pid-$$");
       await until("the shell's pid", () => /shell-pid-\d+/.test(plain("busy")));
       const pid = Number(/shell-pid-(\d+)/.exec(plain("busy"))![1]);
-      expect(terminals.holdsRendererSwap()).toBe(false);
+      expect(terminals.stoppable(() => true)).toEqual([]);
 
       type("sleep 30");
-      await until("sleep in the foreground", () =>
-        terminals.holdsRendererSwap()
+      await until(
+        "sleep in the foreground",
+        () => terminals.stoppable(() => true).length > 0
       );
       expect(terminals.busyProgram(runtime.conversationKey, "busy")).toBe(
         "sleep"
@@ -181,7 +182,7 @@ describe("a real terminal", () => {
           return true;
         }
       });
-      expect(terminals.holdsRendererSwap()).toBe(false);
+      expect(terminals.hasLiveSessions()).toBe(false);
     }
   );
 });
