@@ -1365,6 +1365,19 @@ describe("checkDraft", () => {
       ["4821", "9932"],
     ],
     [
+      "Gmail password: hunter2. Also 4821 for the work laptop",
+      ["hunter2", "4821"],
+    ],
+    [
+      "Gmail password: hunter2, and the laptop takes 993217 at boot",
+      ["hunter2", "993217"],
+    ],
+    ["Gmail password: hunter2\n4821 for the garage door", ["hunter2", "4821"]],
+    [
+      "Gmail password: hunter2. Card PIN 1984 for the family account",
+      ["hunter2", "1984"],
+    ],
+    [
       `AWS key AKIA${fake(upper36, 16)} paired with qwertyuiopasdfghjklz for the uploads bucket`,
       ["qwertyuiopasdfghjklz"],
     ],
@@ -1379,6 +1392,15 @@ describe("checkDraft", () => {
       }
     }
   );
+
+  it("keeps years, quantities, dates and versions beside a withheld value", () => {
+    const text =
+      "Gmail password: hunter2. Office moved in 2026, 4821 km away; budget $4821 and 1500 users. Release v2026.1 shipped on 2026-11-20 at 10:30.";
+    const result = check(text) as Draft;
+    expect(result).toMatchObject({ withheld: 1 });
+    expect(result.body).not.toContain("hunter2");
+    expect(result.body).toContain("4821 km away; budget $4821 and 1500 users");
+  });
 
   it.each([
     [
@@ -1419,7 +1441,11 @@ describe("checkDraft", () => {
         () => `${fake(UPPER, 1)}${fake(LOWER, 5)}${fake(DIGITS, 2)}`,
         () =>
           `${fake(LOWER, 6)}${fake(DIGITS, 1)}${"&!#$"[Math.floor(random() * 4)]}`,
-        () => fake(DIGITS, 4 + Math.floor(random() * 5)),
+        () => {
+          const number = fake(DIGITS, 4 + Math.floor(random() * 5));
+          // A year (1900–2099) is not read as a code; make it one that is not.
+          return /^(19|20)\d\d$/.test(number) ? `7${number.slice(1)}` : number;
+        },
       ][Math.floor(random() * 3)]!();
     const phrasings = [
       (v: string) => `Backup password ${v} for the family account.`,
@@ -1443,8 +1469,7 @@ describe("checkDraft", () => {
         expect(fieldsOf(result), text).not.toMatch(
           /hunter2|4821|sk_live_|monkey/
         );
-        if (!/^\d+$/.test(value) || /PIN|pin/.test(phrase))
-          expect(fieldsOf(result), text).not.toContain(value);
+        expect(fieldsOf(result), text).not.toContain(value);
       }
     }
   });

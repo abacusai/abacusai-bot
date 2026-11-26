@@ -292,9 +292,40 @@ const credentialToken = (token: string): boolean =>
       .some(
         (piece) => piece.length >= 4 && /\d/.test(piece) && /\p{L}/u.test(piece)
       ));
-/** A 4–8 digit number within three words of a word for a code ("Bank PIN 9932"). */
-const CODE_NUMBER =
-  /\b(?:pin|pins|code|codes|pass\w*|otp|cvv|cvc)\b(?:\W+\w+){0,3}?\W+\d{4,8}\b|\b\d{4,8}\b(?:\W+\w+){0,3}?\W+(?:pin|code|pass\w*|otp|cvv|cvc)\b/i;
+/** Units and currencies a number can be a quantity of ("4821 km", "$4821", "4821 users"). */
+const UNIT_AFTER =
+  /^\s?(?:%|(?:km|m|cm|mm|mi|kg|g|lb|lbs|kb|mb|gb|tb|ms|s|sec|secs|seconds?|mins?|minutes?|h|hrs?|hours?|days?|weeks?|months?|years?|px|pt|dpi|fps|hz|khz|mhz|ghz|w|kw|kwh|mah|rpm|usd|eur|gbp|inr|rs|rupees?|dollars?|euros?|credits?|tokens?|users?|people|rows?|lines?|words?|chars?|characters?|files?|items?|steps?|views?|downloads?|calls?|requests?|records?|pages?|members?|orders?)\b)/i;
+const UNIT_BEFORE = /(?:[$€£¥₹]|\b(?:rs|inr|usd|eur|gbp)\.?\s?)$/i;
+/** A word for a code right before a number ("PIN 1984", "code: 2019"). */
+const CODE_WORD_BEFORE =
+  /\b(?:pin|pins|code|codes|pass\w*|otp|cvv|cvc)\b[\s:=#-]*$/i;
+/**
+ * A 4–8 digit number that could be a PIN or a code. Not a quantity with its
+ * unit or currency, part of a date or time, or a version; a year (1900–2099)
+ * only when a word for a code comes right before it.
+ */
+const numberLeft = (text: string): boolean => {
+  for (const match of text.matchAll(
+    /(?<![\d.,:/\-\p{L}])\d{4,8}(?![\d\p{L}]|[.,:/-]\d)/gu
+  )) {
+    const number = match[0];
+    const before = text.slice(Math.max(0, match.index - 30), match.index);
+    const after = text.slice(
+      match.index + number.length,
+      match.index + number.length + 14
+    );
+    if (
+      UNIT_AFTER.test(after) ||
+      UNIT_BEFORE.test(before) ||
+      /v\s?$/i.test(before)
+    )
+      continue;
+    const year = number.length === 4 && +number >= 1900 && +number <= 2099;
+    if (year && !CODE_WORD_BEFORE.test(before)) continue;
+    return true;
+  }
+  return false;
+};
 /** A word a note names as another secret right after a withheld one ("[…]. Sunshine is the backup"). */
 const NAMED_BACKUP = new RegExp(
   `${SECRET_WITHHELD.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[.!?;,]?\\s+\\p{Lu}\\p{L}*\\s+(?:is|was)\\s+(?:the|my|our|a|an)\\s+(?:backup|other|second|old|new|spare|recovery)`,
@@ -302,7 +333,7 @@ const NAMED_BACKUP = new RegExp(
 );
 /**
  * Whether a note with something withheld still holds a credential: a
- * credential-shaped token, a code number beside its word, a word it names as
+ * credential-shaped token, a number that could be a PIN or a code, a word it names as
  * another secret, or after a withheld key, a long run of letters (its other
  * half). Withholding is for a note with one secret in it; one with more is
  * refused, as the earlier gate refused it.
@@ -315,7 +346,7 @@ const credentialLeft = (text: string, afterKey: boolean): boolean => {
     .filter((token) => token.length > 0);
   return (
     tokens.some(credentialToken) ||
-    CODE_NUMBER.test(plain) ||
+    numberLeft(plain) ||
     NAMED_BACKUP.test(text) ||
     (afterKey && tokens.some((token) => /^[A-Za-z]{16,}$/.test(token)))
   );
