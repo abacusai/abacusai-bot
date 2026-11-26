@@ -991,7 +991,7 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
     const host = makeHost({ folder });
     const child = await childOf(host);
     host.remove(child.id);
-    await settled(() => !fs.existsSync(child.worktreePath!));
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
     expect(fs.existsSync(child.worktreePath!)).toBe(false);
     expect(branches(folder)).toEqual(["main"]);
     expect(host.notices).toEqual([]);
@@ -1057,7 +1057,7 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
     fs.mkdirSync(path.join(child.worktreePath!, "img"));
     fs.writeFileSync(path.join(child.worktreePath!, "img", "Thumbs.db"), "x");
     host.remove(child.id);
-    await settled(() => !fs.existsSync(child.worktreePath!));
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
     expect(fs.existsSync(child.worktreePath!)).toBe(false);
     expect(host.notices).toEqual([]);
   });
@@ -1067,7 +1067,7 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
     const host = makeHost({ folder });
     const alone = await childOf(host);
     expect((await host.moveTo(alone.id, null)).success).toBe(true);
-    await settled(() => !fs.existsSync(alone.worktreePath!));
+    await settled(() => !branches(folder).includes(alone.worktreeBranch!));
     expect(fs.existsSync(alone.worktreePath!)).toBe(false);
     expect(branches(folder)).not.toContain(alone.worktreeBranch);
     expect(host.manager.get(alone.id)).not.toHaveProperty("ownsWorktree");
