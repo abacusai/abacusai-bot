@@ -253,12 +253,14 @@ const useWritesSnapshot = () => {
       ),
   };
 };
-/** The shared bot lane on, and a fresh link code minted for it. */
+/**
+ * A fresh link code for the shared bot lane. Main turns the lane on when it
+ * is not running, as part of this connect (see pairSharedChannel).
+ */
 const pairSharedLane = async (
   deps: Parameters<typeof connectPlatform>[0],
   platformId: MessagingPlatformId
 ) => {
-  await connectPlatform(deps, platformId);
   deps.queryClient.setQueryData(
     deps.transport.orpc.messaging.snapshot.queryKey({ input: {} }),
     await deps.transport.client.messaging.pairShared({ platformId })

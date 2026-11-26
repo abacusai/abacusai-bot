@@ -23,7 +23,9 @@ import {
   MESSAGING_CONFIG_VERSION,
   isPlatformEnabled,
   readPlatformAppStopped,
+  readPlatformLoginSetup,
   savePlatformAppStopped,
+  savePlatformLoginSetup,
   setPlatformEnabled,
 } from "./messaging-config-service";
 
@@ -179,5 +181,27 @@ describe("a lane the app stopped (a login left unfinished)", () => {
     expect(isPlatformEnabled("whatsapp")).toBe(true);
     setPlatformEnabled("whatsapp", true);
     expect(readPlatformAppStopped("whatsapp")).toBeNull();
+  });
+});
+
+describe("what an unfinished login set up on a shared bot lane", () => {
+  it("is stored apart from the user's switch, and a hand switch either way makes the lane the user's", () => {
+    for (const enabled of [true, false]) {
+      savePlatformLoginSetup("abacus_telegram", "lane");
+      savePlatformAppStopped("abacus_telegram", "login-not-finished");
+      expect(readPlatformLoginSetup("abacus_telegram")).toBe("lane");
+      // Kept across a restart: it is read from the stored file.
+      expect(
+        JSON.parse(fs.readFileSync(path.join(home, "messaging.json"), "utf8"))
+          .platforms.abacus_telegram.loginSetup
+      ).toBe("lane");
+      setPlatformEnabled("abacus_telegram", enabled);
+      expect(readPlatformLoginSetup("abacus_telegram")).toBeNull();
+      expect(readPlatformAppStopped("abacus_telegram")).toBeNull();
+    }
+    savePlatformLoginSetup("abacus_discord", "code");
+    expect(readPlatformLoginSetup("abacus_discord")).toBe("code");
+    savePlatformLoginSetup("abacus_discord", null);
+    expect(readPlatformLoginSetup("abacus_discord")).toBeNull();
   });
 });

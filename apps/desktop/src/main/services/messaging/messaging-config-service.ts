@@ -23,6 +23,8 @@ import { environmentNoticeService } from "../providers/environment-notice-servic
  * with provider keys, the environment wins over anything stored here.
  */
 
+type SharedLaneLoginSetup = "lane" | "code";
+
 type StoredPlatform = {
   enabled?: boolean;
   values?: Record<string, string>;
@@ -35,6 +37,12 @@ type StoredPlatform = {
    * `enabled`: it stays on, is not started again, and Connect resumes it.
    */
   appStopped?: "login-not-finished" | null;
+  /**
+   * A shared bot's lane that its chat app's unfinished personal login set up:
+   * turned the lane on (`lane`), or minted a code on it (`code`). An
+   * abandoned login takes that back; see MessagingGatewayService.abandonLogin.
+   */
+  loginSetup?: SharedLaneLoginSetup | null;
   /** A shared bot's lane: the user must message the bot there once before it can reach them. */
   firstMessageNeeded?: boolean;
   /** A shared bot's profile, where its chat is one click away; learned at pairing. */
@@ -319,17 +327,36 @@ export const savePlatformAppStopped = (
   writeConfig({ ...config, platforms });
 };
 
+/** What an unfinished personal login set up on this shared lane; see `loginSetup`. */
+export const readPlatformLoginSetup = (
+  platformId: MessagingPlatformId
+): SharedLaneLoginSetup | null =>
+  readConfig().platforms?.[platformId]?.loginSetup ?? null;
+
+export const savePlatformLoginSetup = (
+  platformId: MessagingPlatformId,
+  setup: SharedLaneLoginSetup | null
+): void => {
+  const config = readConfig();
+  if ((config.platforms?.[platformId]?.loginSetup ?? null) === setup) return;
+  const platforms = { ...config.platforms };
+  platforms[platformId] = { ...platforms[platformId], loginSetup: setup };
+  writeConfig({ ...config, platforms });
+};
+
 export const setPlatformEnabled = (
   platformId: MessagingPlatformId,
   enabled: boolean
 ): void => {
   const config = readConfig();
   const platforms = { ...config.platforms };
-  // Switched by hand either way: whatever the app had stopped is the user's again.
+  // Switched by hand either way: whatever the app had stopped or a login had
+  // set up is the user's again.
   platforms[platformId] = {
     ...platforms[platformId],
     enabled,
     appStopped: null,
+    loginSetup: null,
   };
   writeConfig({ ...config, platforms });
   // A conversation in progress was told what connectors it has. Pairing changes
