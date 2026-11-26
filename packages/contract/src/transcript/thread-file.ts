@@ -514,6 +514,7 @@ const MessageAbacus = v.strictObject({
             "tests-left-alone",
             "bot-exchange",
             "bot-task",
+            "handoff",
           ]),
           visibleFrom: v.optional(
             v.pipe(v.number(), v.integer(), v.minValue(0))
@@ -527,6 +528,9 @@ const MessageAbacus = v.strictObject({
               task: Str,
               userWords: Str,
             })
+          ),
+          handoff: v.optional(
+            v.strictObject({ fromSessionId: Str, brief: Str })
           ),
           exchange: v.optional(
             v.strictObject({

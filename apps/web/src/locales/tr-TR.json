@@ -2339,9 +2339,11 @@
       "removeFailed": "Klasör kaldırılamadı. Tekrar deneyin."
     },
     "handoff": {
-      "cardLabel": "Kendi sohbetinde çalışıyor",
+      "cardLabel": "Kendi sohbetinde",
       "starting": "Başlatılıyor…",
-      "ready": "Bitti"
+      "ready": "Bitti",
+      "stopped": "Durduruldu",
+      "deleted": "Sohbet silindi"
     }
   },
   "terminalShells": {

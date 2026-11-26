@@ -2339,9 +2339,11 @@
       "removeFailed": "無法移除資料夾。請再試一次。"
     },
     "handoff": {
-      "cardLabel": "在獨立的對話中執行",
+      "cardLabel": "在獨立的對話中",
       "starting": "正在啟動…",
-      "ready": "已完成"
+      "ready": "已完成",
+      "stopped": "已停止",
+      "deleted": "對話已刪除"
     }
   },
   "terminalShells": {

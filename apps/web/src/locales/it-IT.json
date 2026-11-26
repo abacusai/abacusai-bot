@@ -2339,9 +2339,11 @@
       "removeFailed": "Impossibile rimuovere la cartella. Riprova."
     },
     "handoff": {
-      "cardLabel": "In esecuzione in una chat a parte",
+      "cardLabel": "In una chat a parte",
       "starting": "Avvio…",
-      "ready": "Fatto"
+      "ready": "Fatto",
+      "stopped": "Interrotto",
+      "deleted": "Chat eliminata"
     }
   },
   "terminalShells": {

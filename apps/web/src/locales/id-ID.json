@@ -2339,9 +2339,11 @@
       "removeFailed": "Folder tidak bisa dihapus. Coba lagi."
     },
     "handoff": {
-      "cardLabel": "Berjalan di chat tersendiri",
+      "cardLabel": "Di chat tersendiri",
       "starting": "Memulai…",
-      "ready": "Selesai"
+      "ready": "Selesai",
+      "stopped": "Dihentikan",
+      "deleted": "Chat dihapus"
     }
   },
   "terminalShells": {

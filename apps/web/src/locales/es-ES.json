@@ -2339,9 +2339,11 @@
       "removeFailed": "No se ha podido quitar la carpeta. Inténtalo de nuevo."
     },
     "handoff": {
-      "cardLabel": "Se ejecuta en su propio chat",
+      "cardLabel": "En su propio chat",
       "starting": "Iniciando…",
-      "ready": "Listo"
+      "ready": "Listo",
+      "stopped": "Detenido",
+      "deleted": "Chat eliminado"
     }
   },
   "terminalShells": {

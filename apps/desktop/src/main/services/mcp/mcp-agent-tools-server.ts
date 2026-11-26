@@ -463,9 +463,11 @@ export interface McpAgentToolsServerOptions {
   handOffSession?: (
     fromSessionId: string,
     task: { title: string; prompt: string }
-  ) => Promise<{ sessionId: string } | { error: string }>;
-  /** ServiceHost.isPlainAppChat: the user's own app chat, for `appChatOnly` tools. */
-  isPlainAppChat?: (sessionId: string) => boolean;
+  ) => Promise<
+    { sessionId: string; sharedFolder: boolean } | { error: string }
+  >;
+  /** ServiceHost.mayHandOff: the user's own app chat, not one handed off itself. For `appChatOnly` tools. */
+  mayHandOff?: (sessionId: string) => boolean;
   /** A run nobody is watching: it gets only the unattended allowlist. */
   isUnattended?: (sessionId: string) => boolean;
   /** What a bot-owned session is to its bot: its own chat, or one with someone else. */
@@ -1020,7 +1022,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         !this.isRoutineEditor(callerSession) &&
         !this.isPhoneCaller(callerSession) &&
         this.options.channelForSession?.(callerSession) == null &&
-        this.options.isPlainAppChat?.(callerSession) === true
+        this.options.mayHandOff?.(callerSession) === true
       );
     if (!("appBotChatOnly" in definition) || definition.appBotChatOnly !== true)
       return true;
@@ -4101,7 +4103,9 @@ export class McpAgentToolsServer extends McpHttpServer {
         "Pass title and prompt: the new chat's name and its task."
       );
     if (callerSession == null || this.options.handOffSession == null)
-      return this.err("This chat cannot hand work off. Do it here.");
+      return this.err(
+        "Handing work off works only in the user's own chat in the app. Do the work here."
+      );
     const name = title.slice(0, HAND_OFF_TITLE_MAX);
     const started = await this.options.handOffSession(callerSession, {
       title: name,
@@ -4110,7 +4114,10 @@ export class McpAgentToolsServer extends McpHttpServer {
     if ("error" in started) return this.err(started.error);
     // The id goes first: the card reads the first `session:` of this text.
     return this.ok(
-      `Started a new chat (session: ${started.sessionId}) on “${name}”. It runs on its own; the user follows it from the card here and the sidebar. Do not do that task here too.`
+      `Started a new chat (session: ${started.sessionId}) on “${name}”. It runs on its own; the user follows it from the card here and the sidebar. Do not do that task here too.` +
+        (started.sharedFolder
+          ? " It works in this same folder at the same time: do not edit files it is working on."
+          : " It works in a checkout of its own, made from this chat's last commit.")
     );
   }
 

@@ -2339,9 +2339,11 @@
       "removeFailed": "De map kon niet worden verwijderd. Probeer het opnieuw."
     },
     "handoff": {
-      "cardLabel": "Draait in een eigen chat",
+      "cardLabel": "In een eigen chat",
       "starting": "Starten…",
-      "ready": "Klaar"
+      "ready": "Klaar",
+      "stopped": "Gestopt",
+      "deleted": "Chat verwijderd"
     }
   },
   "terminalShells": {

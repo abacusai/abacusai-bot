@@ -2339,9 +2339,11 @@
       "removeFailed": "Der Ordner konnte nicht entfernt werden. Versuche es erneut."
     },
     "handoff": {
-      "cardLabel": "Läuft in einem eigenen Chat",
+      "cardLabel": "In einem eigenen Chat",
       "starting": "Wird gestartet…",
-      "ready": "Fertig"
+      "ready": "Fertig",
+      "stopped": "Gestoppt",
+      "deleted": "Chat gelöscht"
     }
   },
   "terminalShells": {

@@ -93,7 +93,7 @@ beforeAll(async () => {
       workspacePath: () => null,
       botIdForSession: (session: string) =>
         session === "bot-session" ? "bot-1" : null,
-      isPlainAppChat: (session: string) => session === "ui-session",
+      mayHandOff: (session: string) => session === "ui-session",
     } as never),
     "agent-tools"
   );

@@ -1,3 +1,4 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 /**
  * `hand_off_session`'s card: a task the agent moved into a chat of its own
  * (same folder, model and mode), running beside this one. The row shows the
@@ -12,26 +13,67 @@ import { useTranslation } from "react-i18next";
 import { useCollections } from "#renderer/data/db";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 
+import { descriptorFor, useThreadStore } from "../../store/selectors";
+import { useChatView, useSubagentScope } from "../context";
 import { normalizeTool, toolInput } from "./normalize";
 
 /** The new chat's id, as the tool's result names it (`session: <id>`). */
 export const handedOffSessionId = (text: string): string | null =>
   /\bsession: ([\w-]+)/.exec(text)?.[1] ?? null;
 
+export type HandOffState =
+  | "starting"
+  | "running"
+  | "needs-you"
+  | "done"
+  | "error"
+  | "stopped"
+  | "deleted";
+
+/**
+ * The new chat's state, read off its row: live while a turn runs, else how
+ * its last turn ended. A chat gone from the list once it is loaded was deleted.
+ */
+export const handOffState = (
+  id: string | null,
+  row: Pick<SessionRow, "turn" | "status" | "handOffEnd"> | undefined,
+  loaded: boolean
+): HandOffState => {
+  if (id == null) return "starting";
+  if (row == null) return loaded ? "deleted" : "starting";
+  if (row.turn?.phase === "waiting_permission") return "needs-you";
+  if (row.turn?.isBusy === true) return "running";
+  if (row.handOffEnd === "done") return "done";
+  if (row.handOffEnd === "stopped") return "stopped";
+  if (
+    row.handOffEnd === "failed" ||
+    row.turn?.phase === "error" ||
+    row.status === "error"
+  )
+    return "error";
+  return "starting";
+};
+
 export const HandOffCard = ({ part, result }: ToolProps<unknown>) => {
   const { t } = useTranslation();
   const collections = useCollections();
   const input = toolInput(part, parsePartialJSON);
-  // No result yet reads as running: the card says Starting… until it lands.
+  const { session } = useChatView();
+  const scope = useSubagentScope();
+  // Waiting on the user's approval: the approval card says what it starts.
+  const needsYou = useThreadStore(
+    session,
+    (state) => descriptorFor(state, scope, part.id) != null
+  );
   const tool = normalizeTool(
     part,
     result,
     {},
-    { runActive: true },
+    { runActive: true, needsYou },
     parsePartialJSON
   );
   const id = tool.status === "done" ? handedOffSessionId(tool.text) : null;
-  const { data } = useLiveQuery({
+  const { data, isReady } = useLiveQuery({
     queryKey: ["handed-off", id],
     query: (q) =>
       id == null
@@ -43,24 +85,26 @@ export const HandOffCard = ({ part, result }: ToolProps<unknown>) => {
     row?.label.trim() ||
     (typeof input.title === "string" ? input.title.trim() : "") ||
     t("sessions.untitled");
-  if (tool.status === "failed" || tool.status === "refused") return null;
-  // The sidebar's dot, read off the row (the chat kit reaches no feature).
-  const kind =
-    row == null
-      ? "starting"
-      : row.turn?.phase === "waiting_permission"
-        ? "needs-you"
-        : row.turn?.isBusy === true
-          ? "running"
-          : row.turn?.phase === "error" || row.status === "error"
-            ? "error"
-            : "done";
+  // Shown once it is approved and starting: never for a refused, failed or
+  // stopped call, nor while the approval card is up.
+  if (
+    tool.status === "failed" ||
+    tool.status === "refused" ||
+    tool.status === "stopped" ||
+    tool.status === "needs-you"
+  )
+    return null;
+  const kind = handOffState(id, row, isReady);
   const state =
     kind === "starting"
       ? t("sessions.handoff.starting")
       : kind === "done"
         ? t("sessions.handoff.ready")
-        : t(`sessions.attention.${kind}`);
+        : kind === "stopped"
+          ? t("sessions.handoff.stopped")
+          : kind === "deleted"
+            ? t("sessions.handoff.deleted")
+            : t(`sessions.attention.${kind}`);
   const body = (
     <>
       <GitBranch

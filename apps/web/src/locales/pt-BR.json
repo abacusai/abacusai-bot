@@ -2339,9 +2339,11 @@
       "removeFailed": "Não foi possível remover a pasta. Tente de novo."
     },
     "handoff": {
-      "cardLabel": "Rodando em um chat próprio",
+      "cardLabel": "Em um chat próprio",
       "starting": "Iniciando…",
-      "ready": "Pronto"
+      "ready": "Pronto",
+      "stopped": "Interrompido",
+      "deleted": "Chat excluído"
     }
   },
   "terminalShells": {

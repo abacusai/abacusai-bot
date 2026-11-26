@@ -170,6 +170,7 @@ export const APP_NOTE_TAGS = {
     "memory flush",
     "memory maintenance",
     "memory check",
+    "handed off",
   ],
   part: [
     "auto-reply",

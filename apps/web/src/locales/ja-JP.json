@@ -2339,9 +2339,11 @@
       "removeFailed": "フォルダーを削除できませんでした。もう一度お試しください。"
     },
     "handoff": {
-      "cardLabel": "別のチャットで実行中",
+      "cardLabel": "別のチャット",
       "starting": "開始しています…",
-      "ready": "完了"
+      "ready": "完了",
+      "stopped": "停止しました",
+      "deleted": "チャットは削除されました"
     }
   },
   "terminalShells": {

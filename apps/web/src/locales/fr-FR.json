@@ -2339,9 +2339,11 @@
       "removeFailed": "Le dossier n'a pas pu être retiré. Réessayez."
     },
     "handoff": {
-      "cardLabel": "S’exécute dans son propre chat",
+      "cardLabel": "Dans son propre chat",
       "starting": "Démarrage…",
-      "ready": "Terminé"
+      "ready": "Terminé",
+      "stopped": "Arrêté",
+      "deleted": "Chat supprimé"
     }
   },
   "terminalShells": {

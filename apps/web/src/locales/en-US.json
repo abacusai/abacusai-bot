@@ -2339,9 +2339,11 @@
       "removeFailed": "The folder couldn't be removed. Try again."
     },
     "handoff": {
-      "cardLabel": "Running in its own chat",
+      "cardLabel": "In its own chat",
       "starting": "Starting…",
-      "ready": "Done"
+      "ready": "Done",
+      "stopped": "Stopped",
+      "deleted": "Chat deleted"
     }
   },
   "terminalShells": {

@@ -193,6 +193,9 @@ const MUTATING_TOOLS = new Set([
   "ppt",
   "design",
   "browser_task",
+  // Starts another chat's agent on a brief this one wrote, on the same
+  // model and mode: like delegate_task, a run the user agrees to first.
+  "hand_off_session",
   // `serve` puts a directory on an http port, an outbound channel carrying
   // whatever is in it; an absolute path reaches anywhere the user can read.
   "serve",

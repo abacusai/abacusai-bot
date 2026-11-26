@@ -12,6 +12,7 @@ import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
+  HandOffEnd,
   RoutineRunOutcome,
   RunReportStamp,
   SessionOwner,
@@ -79,6 +80,8 @@ type SessionRecord = {
   continuedFrom?: string;
   /** "handoff": a task split off from `continuedFrom`, which goes on beside it. */
   continuationKind?: "handoff";
+  /** A handoff's last turn's ending. See AgentSessionListItem.handOffEnd. */
+  handOffEnd?: HandOffEnd;
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
   /** Folders the user added to this chat beyond its own, real paths. See addFolder. */
@@ -147,6 +150,7 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   ...(record.continuationKind != null
     ? { continuationKind: record.continuationKind }
     : {}),
+  ...(record.handOffEnd != null ? { handOffEnd: record.handOffEnd } : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
   owner: record.owner ?? null,
@@ -455,6 +459,16 @@ export class AgentSessionManagerService {
     if (session.runOutcome === outcome) return false;
     session.runOutcome = outcome;
     session.updatedAt = new Date().toISOString();
+    this.persist();
+    return true;
+  }
+
+  /** A handed-off chat's turn ended: its source's card shows how. True when it changed. */
+  setHandOffEnd(sessionId: string, end: HandOffEnd): boolean {
+    const session = this.sessions.get(sessionId);
+    if (session?.continuationKind !== "handoff" || session.handOffEnd === end)
+      return false;
+    session.handOffEnd = end;
     this.persist();
     return true;
   }

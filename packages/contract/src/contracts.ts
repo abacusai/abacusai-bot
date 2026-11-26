@@ -351,6 +351,9 @@ export interface SessionOwner {
   senderName?: string | null;
 }
 
+/** How a handed-off chat's last turn ended. */
+export type HandOffEnd = "done" | "failed" | "stopped";
+
 export interface AgentSessionListItem {
   id: string;
   workspaceId: string;
@@ -388,6 +391,8 @@ export interface AgentSessionListItem {
    * chat while the first goes on; the sidebar nests a handoff under its source.
    */
   continuationKind?: "handoff";
+  /** A handed-off chat: how its last turn ended, for its source's card. Absent until one has. */
+  handOffEnd?: HandOffEnd;
   /** The routine this session edits, when it is the editor turn behind a routine page. Hidden from lists. */
   editorFor: string | null;
   /** Derived from `owner` (plus legacy stamps); hides the session from the Sessions tree. */

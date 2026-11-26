@@ -2361,9 +2361,11 @@
       "removeFailed": "Nie udało się usunąć folderu. Spróbuj ponownie."
     },
     "handoff": {
-      "cardLabel": "Działa we własnym czacie",
+      "cardLabel": "We własnym czacie",
       "starting": "Uruchamianie…",
-      "ready": "Gotowe"
+      "ready": "Gotowe",
+      "stopped": "Zatrzymano",
+      "deleted": "Czat usunięty"
     }
   },
   "terminalShells": {

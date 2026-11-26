@@ -10,7 +10,7 @@ const HAND_OFF_SESSION: ToolDefinition = {
   toolsets: "always",
   appChatOnly: true,
   description: [
-    "Start a separate task in a new chat that runs beside this one, in the same folder with the same model and mode.",
+    "Start a separate task in a new chat that runs beside this one, in the same project with the same model and mode (in a git project, on a checkout of its own).",
     "The task starts at once and the user follows it from a card here and from the sidebar, where it sits under this chat.",
     "Call it only when it is needed:",
     "- the user asks for it: to split something off, do it separately, in parallel or in its own chat or session;",
@@ -20,6 +20,7 @@ const HAND_OFF_SESSION: ToolDefinition = {
     "Never call it for a step of the current task, for something a few tool calls finish, for a question, or to split",
     "one task into pieces: do those here (delegate_task is for a helper whose result you need back). Never call it",
     "twice for the same task. When in doubt, do the work here.",
+    "Unless the chat runs with approvals off, the user approves each one first. At most three from one message; a chat that was itself handed off cannot hand off.",
     "The new chat knows nothing of this one: write prompt as a complete brief.",
     "Afterwards tell the user in one short line, in their language, what you started there, and carry on with the rest here.",
   ].join("\n"),

@@ -107,7 +107,8 @@ export const withContinuationLinks = (
         ? context.index
         : context.messages.findIndex((row) => row.id === message.id);
     if (host < 0) return inner;
-    const first = host === 0 && links.from != null;
+    // A hand-off's first message says where it came from itself.
+    const first = host === 0 && links.from != null && links.handoff !== true;
     const last =
       rowEnd(context.messages, host) === context.messages.length - 1 &&
       !context.runActive &&

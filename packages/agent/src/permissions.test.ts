@@ -634,6 +634,37 @@ describe("sub-agent tools", () => {
   });
 });
 
+describe("hand_off_session", () => {
+  // It starts another chat's agent on a brief this one wrote: a run the user
+  // agrees to first, like delegate_task, and never from plan mode.
+  const handOff = call("hand_off_session", {
+    title: "Release notes",
+    prompt: "Write the release notes",
+  });
+
+  it.each([
+    [AgentMode.Normal, "ask"],
+    [AgentMode.AcceptEdits, "ask"],
+    [AgentMode.PlanMode, "refuse"],
+    [AgentMode.Auto, "allow"],
+    [AgentMode.Yolo, "allow"],
+  ])("in %s mode: %s", (mode, kind) => {
+    expect(gateToolCall(handOff, options({ mode })).kind).toBe(kind);
+    expect(
+      gateToolCall(call("delegate_task", { task: "x" }), options({ mode })).kind
+    ).toBe(kind);
+  });
+
+  it("names the tool on its approval card", () => {
+    const gate = gateToolCall(handOff, options());
+    expect(
+      gate.kind === "ask" && gate.request.type === "generic"
+        ? gate.request.toolName
+        : null
+    ).toBe("hand_off_session");
+  });
+});
+
 describe("writes outside the workspace", () => {
   const outside = "/etc/hosts";
 

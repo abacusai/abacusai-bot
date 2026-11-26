@@ -2339,9 +2339,11 @@
       "removeFailed": "无法移除文件夹。请重试。"
     },
     "handoff": {
-      "cardLabel": "在单独的对话中运行",
+      "cardLabel": "在单独的对话中",
       "starting": "正在启动…",
-      "ready": "已完成"
+      "ready": "已完成",
+      "stopped": "已停止",
+      "deleted": "对话已删除"
     }
   },
   "terminalShells": {
