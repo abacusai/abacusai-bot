@@ -2141,6 +2141,7 @@
     "missing": {
       "worktree": "Brakuje folderu worktree.",
       "folder": "Brakuje folderu obszaru roboczego.",
+      "deleted": "Ten obszar roboczy został usunięty. Dodaj jego folder ponownie, aby z niego korzystać.",
       "primary": "Użyj głównego checkoutu",
       "choose": "Wybierz folder",
       "deleteWorkspace": "Usuń obszar roboczy",
@@ -2456,15 +2457,17 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Ponowne uruchomienie zamknie {{count}} terminal: {{list}}.",
-    "closesTerminals_other": "Ponowne uruchomienie zamknie {{count}} terminali: {{list}}.",
-    "closesTerminals_few": "Ponowne uruchomienie zamknie {{count}} terminale: {{list}}.",
-    "closesTerminals_many": "Ponowne uruchomienie zamknie {{count}} terminali: {{list}}.",
+    "closesTerminals_one": "Ponowne uruchomienie zamknie {{count}} terminal.",
+    "closesTerminals_other": "Ponowne uruchomienie zamknie {{count}} terminali.",
+    "closesTerminals_few": "Ponowne uruchomienie zamknie {{count}} terminale.",
+    "closesTerminals_many": "Ponowne uruchomienie zamknie {{count}} terminali.",
     "dismiss": "Zamknij",
     "stalled": "Nie udało się automatycznie uruchomić ponownie. Zamknij i otwórz aplikację, aby dokończyć aktualizację.",
     "subtitle": "Uruchom ponownie, aby otrzymać najnowsze ulepszenia i poprawki.",
     "title": "Nowa wersja jest gotowa",
-    "whatsChanged": "Zobacz, co się zmieniło"
+    "whatsChanged": "Zobacz, co się zmieniło",
+    "showTerminals": "Pokaż które",
+    "terminalsTitle": "Terminale zamykane przy ponownym uruchomieniu"
   },
   "updateCritical": {
     "body": "Ta wersja naprawia krytyczny błąd i trzeba ją zainstalować, zanim przejdziesz dalej. Aplikacja uruchomi się ponownie, aby ją zastosować.",

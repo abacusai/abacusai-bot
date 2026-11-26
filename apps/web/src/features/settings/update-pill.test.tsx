@@ -90,7 +90,7 @@ it("a manual .deb install pill leads to the steps and is inert without them", as
   );
   expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
 });
-it("a ready update says how many terminals close first, then names them by tab and chat, a running program first", async () => {
+it("a ready update says how many terminals close, and lists every one behind a button the keyboard reaches", async () => {
   await initI18n();
   const { UpdateNotice } = await import("./update-notice");
   const { openTab } = await import("../sessions/dock/panel-tabs-store");
@@ -129,13 +129,30 @@ it("a ready update says how many terminals close first, then names them by tab a
       />
     </I18nextProvider>
   );
-  // Four shells, four counted: none folded into another.
+  // Four shells, four counted; which ones is a button away, with no
+  // tooltip on text a keyboard can't reach.
+  expect(screen.getByText(/Restarting closes 4 terminals\./)).toBeTruthy();
+  expect(view.container.querySelector("[title]:not(button):not(a)")).toBeNull();
+  const which = screen.getByRole("button", { name: "See which" });
+  which.focus();
+  expect(document.activeElement).toBe(which);
+  fireEvent.click(which);
+  const list = await screen.findByRole("list");
   expect(
-    screen.getByText(
-      "Restarting closes 4 terminals: Terminal (sleep) in Fix the login page, Terminal in Write release notes, Terminal in Plan the launch and 1 more."
-    )
+    [...list.querySelectorAll("li")].map((item) => item.textContent)
+  ).toEqual([
+    "Terminal (sleep) in Fix the login page",
+    "Terminal in Write release notes",
+    "Terminal in Plan the launch",
+    "Terminal in Tidy the README",
+  ]);
+  expect(
+    screen.getByRole("dialog", { name: "Terminals a restart closes" })
   ).toBeTruthy();
-  fireEvent.click(screen.getByRole("button"));
+  fireEvent.keyDown(document.activeElement ?? document.body, {
+    key: "Escape",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Relaunch to update" }));
   expect(install).toHaveBeenCalledOnce();
   view.unmount();
 });

@@ -784,9 +784,11 @@ const SessionRoute = () => {
                       ),
                     },
                   }
-                : workspace?.status === "deleted" || model.missing
-                  ? { readOnly: { reason: t("sessions.missing.folder") } }
-                  : {}),
+                : workspace?.status === "deleted"
+                  ? { readOnly: { reason: t("sessions.missing.deleted") } }
+                  : model.missing
+                    ? { readOnly: { reason: t("sessions.missing.folder") } }
+                    : {}),
             }}
           />
         }

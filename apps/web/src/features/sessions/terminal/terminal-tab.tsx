@@ -622,7 +622,7 @@ export const TerminalTab = ({
                   : // Its workspace was deleted: no shell starts there, and
                     // that is a state, not a failure.
                     message === TERMINAL_WORKSPACE_DELETED
-                    ? t("sessions.missing.folder")
+                    ? t("sessions.missing.deleted")
                     : failureText(e)
         );
       })

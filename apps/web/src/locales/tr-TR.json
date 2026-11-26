@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "Worktree klasörü bulunamıyor.",
       "folder": "Çalışma alanı klasörü bulunamıyor.",
+      "deleted": "Bu çalışma alanı silindi. Kullanmak için klasörünü yeniden ekleyin.",
       "primary": "Ana checkout'u kullan",
       "choose": "Klasör seç",
       "deleteWorkspace": "Çalışma alanını sil",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Yeniden başlatma {{count}} terminali kapatır: {{list}}.",
-    "closesTerminals_other": "Yeniden başlatma {{count}} terminali kapatır: {{list}}.",
+    "closesTerminals_one": "Yeniden başlatma {{count}} terminali kapatır.",
+    "closesTerminals_other": "Yeniden başlatma {{count}} terminali kapatır.",
     "dismiss": "Kapat",
     "stalled": "Otomatik olarak yeniden başlatılamadı. Güncellemeyi tamamlamak için uygulamadan çıkıp yeniden aç.",
     "subtitle": "En son iyileştirmeleri ve düzeltmeleri almak için yeniden başlat.",
     "title": "Yeni bir sürüm hazır",
-    "whatsChanged": "Nelerin değiştiğini gör"
+    "whatsChanged": "Nelerin değiştiğini gör",
+    "showTerminals": "Hangileri?",
+    "terminalsTitle": "Yeniden başlatmanın kapattığı terminaller"
   },
   "updateCritical": {
     "body": "Bu sürüm kritik bir sorunu düzeltiyor ve devam etmeden önce yüklenmesi gerekiyor. Uygulamak için uygulama yeniden başlatılacak.",

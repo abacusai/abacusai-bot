@@ -38,7 +38,6 @@ import { Button } from "#renderer/ui/button";
 
 import {
   terminalInChat,
-  terminalList,
   terminalName,
 } from "../sessions/terminal/terminal-names";
 import { LicenseSection } from "./license-section";
@@ -53,36 +52,37 @@ export const installNote = (
   installError != null && installError !== t("phase5.updates.installFailed")
     ? installError
     : null;
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 /**
- * The terminals a restart would close, which keep it from happening by
- * itself: named on the offer, so the restart is the user's call.
+ * How many terminals a restart would close, which keep it from happening by
+ * itself: said on the offer, so the restart is the user's call. Which ones
+ * is a list of its own (`openTerminalNames`), one a keyboard can reach.
  */
 export const terminalsNote = (
   status: UpdateStatus | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string
+  t: Translate
 ): string | null => {
-  // How many first, so a clamped line never hides it; then a running
-  // program's terminal, and the rest by their tabs and chats.
-  const open = [...(status?.openTerminals ?? [])].sort(
-    (a, b) => Number(b.program != null) - Number(a.program != null)
-  );
-  const list = terminalList(
-    open,
-    t,
-    (terminal) => {
+  const count = status?.openTerminals?.length ?? 0;
+  return count === 0 ? null : t("updateBanner.closesTerminals", { count });
+};
+
+/** Every terminal a restart would close, by tab and chat, programs first. */
+export const openTerminalNames = (
+  status: UpdateStatus | undefined,
+  t: Translate
+): string[] =>
+  [...(status?.openTerminals ?? [])]
+    .sort((a, b) => Number(b.program != null) - Number(a.program != null))
+    .map((terminal) => {
       const name = terminalName(terminal, t);
       return terminalInChat(
         terminal,
         terminal.program ? `${name} (${terminal.program})` : name,
-        t
+        t,
+        true
       );
-    },
-    3
-  );
-  return list == null
-    ? null
-    : t("updateBanner.closesTerminals", { count: open.length, list });
-};
+    });
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false

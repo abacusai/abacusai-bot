@@ -4,10 +4,17 @@ import { useTranslation } from "react-i18next";
 
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "#renderer/ui/popover";
 
 import {
   installNote,
   ManualInstallSteps,
+  openTerminalNames,
   terminalsNote,
   UpdatePillButton,
   updateVisible,
@@ -17,6 +24,39 @@ import {
 import "./update-notice.css";
 
 type Update = ReturnType<typeof useUpdateStatus>;
+
+/**
+ * Which terminals a restart closes: a button (so the keyboard and a screen
+ * reader reach it) that opens the whole list, one terminal per line.
+ */
+const OpenTerminals = ({ names }: { names: string[] }) => {
+  const { t } = useTranslation();
+  if (names.length === 0) return null;
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="text-foreground underline underline-offset-2"
+          />
+        }
+      >
+        {t("updateBanner.showTerminals")}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72">
+        <PopoverTitle className="text-sm">
+          {t("updateBanner.terminalsTitle")}
+        </PopoverTitle>
+        <ul className="text-muted-foreground mt-2 max-h-60 space-y-1 overflow-y-auto text-xs">
+          {names.map((name, index) => (
+            <li key={index}>{name}</li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export const UpdateNotice = ({
   update,
@@ -67,12 +107,9 @@ export const UpdateNotice = ({
                 : t(`phase5.updates.${update.phase}`, { version, percent })}
             </p>
             {ready && (
-              // Two lines at most beside Restart; the whole list on hover.
-              <p
-                className="text-muted-foreground line-clamp-2 text-xs"
-                title={terminalsNote(update.status, t) ?? undefined}
-              >
-                {terminalsNote(update.status, t) ?? t("updateBanner.subtitle")}
+              <p className="text-muted-foreground text-xs">
+                {terminalsNote(update.status, t) ?? t("updateBanner.subtitle")}{" "}
+                <OpenTerminals names={openTerminalNames(update.status, t)} />
               </p>
             )}
             {manual != null && (

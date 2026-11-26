@@ -146,7 +146,7 @@ it("a chat whose workspace was deleted starts no shell and says the workspace is
   const mounted = render(<TerminalTab {...props} />);
   await waitFor(() =>
     expect(mounted.getByRole("alert").textContent).toBe(
-      "sessions.missing.folder"
+      "sessions.missing.deleted"
     )
   );
   expect(mocks.start).toHaveBeenCalledOnce();

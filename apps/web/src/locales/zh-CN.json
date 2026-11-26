@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "工作树文件夹不见了。",
       "folder": "工作区文件夹不见了。",
+      "deleted": "此工作区已删除。重新添加其文件夹即可使用。",
       "primary": "使用主检出",
       "choose": "选择文件夹",
       "deleteWorkspace": "删除工作区",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "重新启动会关闭 {{count}} 个终端：{{list}}。",
-    "closesTerminals_other": "重新启动会关闭 {{count}} 个终端：{{list}}。",
+    "closesTerminals_one": "重新启动会关闭 {{count}} 个终端。",
+    "closesTerminals_other": "重新启动会关闭 {{count}} 个终端。",
     "dismiss": "关闭",
     "stalled": "无法自动重启。请退出并重新打开应用以完成更新。",
     "subtitle": "重新启动即可获得最新改进和修复。",
     "title": "新版本已就绪",
-    "whatsChanged": "查看更新内容"
+    "whatsChanged": "查看更新内容",
+    "showTerminals": "查看是哪些",
+    "terminalsTitle": "重新启动会关闭的终端"
   },
   "updateCritical": {
     "body": "此版本修复了一个严重问题，必须先安装才能继续。应用将重启以完成安装。",

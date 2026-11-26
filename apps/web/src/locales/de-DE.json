@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
+      "deleted": "Dieser Arbeitsbereich wurde gelöscht. Fügen Sie seinen Ordner erneut hinzu, um ihn zu verwenden.",
       "primary": "Use primary checkout",
       "choose": "Ordner wählen",
       "deleteWorkspace": "Workspace löschen",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Ein Neustart schließt {{count}} Terminal: {{list}}.",
-    "closesTerminals_other": "Ein Neustart schließt {{count}} Terminals: {{list}}.",
+    "closesTerminals_one": "Ein Neustart schließt {{count}} Terminal.",
+    "closesTerminals_other": "Ein Neustart schließt {{count}} Terminals.",
     "dismiss": "Entlassen",
     "stalled": "Automatischer Neustart nicht möglich. Beenden Sie die App und öffnen Sie sie erneut, um das Update abzuschließen.",
     "subtitle": "Starten Sie neu, um die neuesten Verbesserungen und Korrekturen zu erhalten.",
     "title": "Eine neue Version ist fertig",
-    "whatsChanged": "Sehen Sie, was sich geändert hat"
+    "whatsChanged": "Sehen Sie, was sich geändert hat",
+    "showTerminals": "Welche?",
+    "terminalsTitle": "Terminals, die ein Neustart schließt"
   },
   "updateCritical": {
     "body": "Diese Version behebt ein kritisches Problem und muss installiert werden, bevor Sie fortfahren. Die App wird neu gestartet, um sie anzuwenden.",

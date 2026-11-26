@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "The worktree folder is missing.",
       "folder": "The workspace folder is missing.",
+      "deleted": "Ruang kerja ini telah dihapus. Tambahkan foldernya lagi untuk menggunakannya.",
       "primary": "Use primary checkout",
       "choose": "Pilih folder",
       "deleteWorkspace": "Hapus workspace",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Memulai ulang menutup {{count}} terminal: {{list}}.",
-    "closesTerminals_other": "Memulai ulang menutup {{count}} terminal: {{list}}.",
+    "closesTerminals_one": "Memulai ulang menutup {{count}} terminal.",
+    "closesTerminals_other": "Memulai ulang menutup {{count}} terminal.",
     "dismiss": "Singkirkan",
     "stalled": "Tidak dapat memulai ulang secara otomatis. Tutup aplikasi lalu buka kembali untuk menyelesaikan pembaruan.",
     "subtitle": "Luncurkan kembali untuk mendapatkan peningkatan dan perbaikan terbaru.",
     "title": "Versi baru sudah siap",
-    "whatsChanged": "Lihat apa yang berubah"
+    "whatsChanged": "Lihat apa yang berubah",
+    "showTerminals": "Lihat yang mana",
+    "terminalsTitle": "Terminal yang ditutup saat memulai ulang"
   },
   "updateCritical": {
     "body": "Rilis ini memperbaiki masalah kritis dan harus diinstal sebelum Anda melanjutkan. Aplikasi akan dimulai ulang untuk menerapkannya.",

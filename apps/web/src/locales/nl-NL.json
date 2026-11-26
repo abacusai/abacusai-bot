@@ -2117,6 +2117,7 @@
     "missing": {
       "worktree": "De worktree-map ontbreekt.",
       "folder": "De workspacemap ontbreekt.",
+      "deleted": "Deze werkruimte is verwijderd. Voeg de map opnieuw toe om hem te gebruiken.",
       "primary": "Primaire checkout gebruiken",
       "choose": "Map kiezen",
       "deleteWorkspace": "Workspace verwijderen",
@@ -2432,13 +2433,15 @@
     }
   },
   "updateBanner": {
-    "closesTerminals_one": "Opnieuw starten sluit {{count}} terminal: {{list}}.",
-    "closesTerminals_other": "Opnieuw starten sluit {{count}} terminals: {{list}}.",
+    "closesTerminals_one": "Opnieuw starten sluit {{count}} terminal.",
+    "closesTerminals_other": "Opnieuw starten sluit {{count}} terminals.",
     "dismiss": "Sluiten",
     "stalled": "Automatisch herstarten is mislukt. Sluit de app en open hem opnieuw om de update te voltooien.",
     "subtitle": "Start opnieuw voor de nieuwste verbeteringen en oplossingen.",
     "title": "Er staat een nieuwe versie klaar",
-    "whatsChanged": "Bekijk wat er is veranderd"
+    "whatsChanged": "Bekijk wat er is veranderd",
+    "showTerminals": "Welke?",
+    "terminalsTitle": "Terminals die opnieuw starten sluit"
   },
   "updateCritical": {
     "body": "Deze release lost een kritiek probleem op en moet worden geïnstalleerd voordat je verdergaat. De app start opnieuw om de update toe te passen.",
