@@ -181,7 +181,7 @@ const SECRET_LABEL =
 const ADDED_LABEL =
   /^(?:secret[ _-]?access[ _-]?key|client[ _-]?secret|auth[ _-]?token|private[ _-]?key)$/i;
 const LABELLED_SECRET = new RegExp(
-  `(?<![A-Za-z])(${SECRET_LABEL})(?![A-Za-z])(\\s*(?:is|was|=|:|-)\\s*)(?=["'\`]?[^\\s"'\`]{3,}|${SECRET_WITHHELD.replace(/[[\]]/g, "\\$&")})`,
+  `(?<![A-Za-z])(${SECRET_LABEL})(?![A-Za-z])(\\s*(?:is|was|=|:|-)\\s*)(?=["'\`]?[^\\s"'\`]{3,}|${SECRET_WITHHELD.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
   "gi"
 );
 
