@@ -24,58 +24,34 @@ const RELATED_OVERLAP = 0.2;
 
 // ── secrets ────────────────────────────────────────────────────────────────
 //
-// Two jobs. `looksSecret` detects: it runs the patterns the gate has always
-// refused on, unchanged in what they match, and adds to them; refusals, the
-// Memory page, the handover and the migration all use it. `withholdSecrets`
-// redacts keys only (provider formats and long random runs, which have known
-// edges): a model's note is kept with its keys withheld only when
-// `looksSecret` finds nothing left in the result. A person's secret (a
-// password, a PIN, a recovery phrase) has no knowable shape or end, so a note
-// naming one is refused whole, as it always was.
+// A note that holds a secret is refused whole. `looksSecret` runs the patterns
+// the gate has always refused on, unchanged in what they match, on the text as
+// written, and adds to them on the text folded: more provider formats, labels
+// written in full-width or split by invisible characters, and secrets a person
+// chose (a password, a PIN, a recovery phrase).
 
-/**
- * Stands where a secret was. The space after "[" keeps it from reading as a
- * value to the earlier patterns ("PIN: [ secret withheld ]" is not a PIN).
- */
-export const SECRET_WITHHELD = "[ secret withheld ]";
 /** Past this a text is treated as secret without reading it: notes are far shorter. */
 const MAX_SCAN_CHARS = 100_000;
-/** The longest value read after a label such as "password:". */
-const MAX_VALUE_CHARS = 300;
 
-/** Characters that show nothing, so a key split by one still reads as one. */
+/** Characters that show nothing, so a key or a label split by one still reads as one. */
 const INVISIBLE = /\p{Default_Ignorable_Code_Point}/u;
 /** Hyphens that stand in for "-" ("sk‐…"). Em and en dashes are prose and stay. */
 const DASH = /[‐‑−﹣－]/u;
-
-/**
- * Text as the checks read it, one character at a time: compatibility forms
- * folded (full-width letters, "："), dashes made "-", invisible characters
- * dropped. `from[i]` is where folded character `i` came from in `text`, so a
- * span found in the folded text can be withheld from the text as written.
- */
-const fold = (text: string): { text: string; from: number[] } => {
+/** Text as the added patterns read it: full-width and other compatibility forms folded, invisible characters dropped. */
+const folded = (text: string): string => {
   let out = "";
-  const from: number[] = [];
-  let at = 0;
-  for (const char of text) {
-    const folded = INVISIBLE.test(char)
+  for (const char of text)
+    out += INVISIBLE.test(char)
       ? ""
       : DASH.test(char)
         ? "-"
         : char.normalize("NFKC");
-    for (let i = 0; i < folded.length; i += 1) from.push(at);
-    out += folded;
-    at += char.length;
-  }
-  from.push(at);
-  return { text: out, from };
+  return out;
 };
-const folded = (text: string): string => fold(text).text;
 
 /**
  * The patterns the gate has always refused on. Two are read run by run
- * (`EARLIER_RUN`, `jwtSpans`): the same matches, without rescanning a long run
+ * (`EARLIER_RUN`, `hasJwt`): the same matches, without rescanning a long run
  * once per position. gate.test.ts checks nothing they found is missed.
  */
 const EARLIER_PATTERNS: readonly RegExp[] = [
@@ -93,44 +69,42 @@ const EARLIER_PATTERNS: readonly RegExp[] = [
 /** The earlier long-run pattern, read run by run: it can only match inside one run of 32+ holding letters and digits. */
 const EARLIER_RUN =
   /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z_-]*\d)(?=[0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/;
-/** As /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/g: three dot-joined runs, the first ending in "eyJ" and 10+ more. */
+/** As /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/: three dot-joined runs, the first ending in "eyJ" and 10+ more. */
 const EARLIER_JWT_START = /\beyJ[A-Za-z0-9_-]{10,}$/;
-const jwtSpans = (text: string): Span[] => {
-  const spans: Span[] = [];
+const hasJwt = (text: string): boolean => {
   const runs = [...text.matchAll(/[A-Za-z0-9_-]+/g)];
-  for (let i = 0; i + 2 < runs.length; i += 1) {
-    const [first, second, third] = [runs[i]!, runs[i + 1]!, runs[i + 2]!];
+  return runs.some((first, i) => {
+    const second = runs[i + 1];
+    const third = runs[i + 2];
+    if (second == null || third == null) return false;
     const firstEnd = first.index + first[0].length;
     const secondEnd = second.index + second[0].length;
-    if (
-      text[firstEnd] !== "." ||
-      second.index !== firstEnd + 1 ||
-      second[0].length < 10 ||
-      text[secondEnd] !== "." ||
-      third.index !== secondEnd + 1 ||
-      third[0].length < 5
-    )
-      continue;
-    const at = first[0].search(EARLIER_JWT_START);
-    if (at < 0) continue;
-    spans.push([first.index + at, third.index + third[0].length]);
-    i += 2;
-  }
-  return spans;
+    return (
+      text[firstEnd] === "." &&
+      second.index === firstEnd + 1 &&
+      second[0].length >= 10 &&
+      text[secondEnd] === "." &&
+      third.index === secondEnd + 1 &&
+      third[0].length >= 5 &&
+      EARLIER_JWT_START.test(first[0])
+    );
+  });
 };
-const earlierFinds = (text: string): boolean =>
-  EARLIER_PATTERNS.some((pattern) => pattern.test(text)) ||
-  jwtSpans(text).length > 0 ||
+/** The earlier long-run pattern over each run of 32+ that holds letters and digits. */
+const longRunFinds = (text: string): boolean =>
   (text.match(/[A-Za-z0-9_-]{32,}/g) ?? []).some(
     (run) => /\d/.test(run) && /[A-Za-z]/.test(run) && EARLIER_RUN.test(run)
   );
+const earlierFinds = (text: string): boolean =>
+  EARLIER_PATTERNS.some((pattern) => pattern.test(text)) ||
+  hasJwt(text) ||
+  longRunFinds(text);
 
 /** Where a word starts, as `\b` before a word character. */
 const RUN_START = "(?<![A-Za-z0-9_])";
 
-/** Formats issued by known providers, and key material: withheld whole. */
-const SECRET_FORMATS: RegExp[] = [
-  ...EARLIER_PATTERNS.slice(0, 8).map((pattern) => pattern.source),
+/** Formats issued by known providers, and key material. */
+const SECRET_FORMATS: readonly RegExp[] = [
   `${RUN_START}(?:sk|pk|rk)[-_][A-Za-z0-9_-]{16,}`,
   `${RUN_START}glpat-[A-Za-z0-9_-]{20,}`,
   `${RUN_START}xapp-\\d-[A-Za-z0-9-]{10,}`,
@@ -138,17 +112,17 @@ const SECRET_FORMATS: RegExp[] = [
   `${RUN_START}GOCSPX-[A-Za-z0-9_-]{20,}`,
   `${RUN_START}ya29\\.[A-Za-z0-9._-]{20,}`,
   `(?<![A-Za-z0-9/])1//0[A-Za-z0-9_-]{20,}`,
-  `${RUN_START}SG\\.(?=(?<s>[A-Za-z0-9_-]{16,}))\\k<s>\\.[A-Za-z0-9_-]{16,}`,
+  `${RUN_START}SG\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}`,
   `${RUN_START}(?:whsec|npm|hf|shpat|shpss|shpca|dop_v1|glsa|pypi)_[A-Za-z0-9_-]{20,}`,
   `${RUN_START}sq0(?:atp|csp)-[A-Za-z0-9_-]{20,}`,
   `${RUN_START}\\d{8,10}:AA[A-Za-z0-9_-]{30,}`,
   `(?<![A-Za-z0-9_-])[MNO][A-Za-z0-9_-]{23,}\\.[A-Za-z0-9_-]{6}\\.[A-Za-z0-9_-]{27,}`,
   `AccountKey=[A-Za-z0-9+/]{20,}={0,2}`,
   // Webhook URLs whose path is the credential.
-  `(?<=hooks\\.slack\\.com/services/)[A-Za-z0-9/]{20,}`,
-  `(?<=maker\\.ifttt\\.com/[^\\s]{0,100}/key/)[A-Za-z0-9_-]{16,}`,
-  `-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----[\\s\\S]*?(?:-----END [A-Z ]*PRIVATE KEY(?: BLOCK)?-----|$)`,
-].map((source) => new RegExp(source, source.includes("bearer") ? "gi" : "g"));
+  `hooks\\.slack\\.com/services/[A-Za-z0-9/]{20,}`,
+  `maker\\.ifttt\\.com/[^\\s]{0,100}/key/[A-Za-z0-9_-]{16,}`,
+  `-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----`,
+].map((source) => new RegExp(source));
 
 /**
  * 40+ characters of base64 with "+" or "/": an AWS secret key, a base64 key.
@@ -160,9 +134,9 @@ const BASE64_RUN =
 const FOLDER =
   /^(?:[A-Z]?[a-z]{2,}(?:[A-Z][a-z]+)*\d{0,4}|\d{1,4}|[A-Z]{1,4}\d{0,4})$/;
 /**
- * A run that names a file or folder: it goes on to an extension
- * (".../index.tsx"), starts at a root ("/", "~/", "./"), or is three or more
- * folder names ("Clients/Acme/Contracts").
+ * A run that names a file or folder, not a key: it goes on to an extension
+ * (".../index.tsx"), starts at a root ("/", "~/", "./"), or is mostly folder
+ * names with no segment long enough for the run rule ("Clients/Acme/<id>/Contracts").
  */
 const isPath = (run: string, at: number, text: string): boolean => {
   if (
@@ -174,40 +148,24 @@ const isPath = (run: string, at: number, text: string): boolean => {
   )
     return true;
   const parts = run.split("/");
-  return parts.length >= 3 && parts.every((part) => FOLDER.test(part));
+  const folders = parts.filter((part) => FOLDER.test(part)).length;
+  return (
+    parts.length >= 3 &&
+    folders * 2 >= parts.length &&
+    parts.every((part) => part.length < 32)
+  );
 };
-
-/**
- * Base64 runs, withheld whole, except a run of folder names with a key-like
- * segment in it ("Clients/Acme/<random>/Contracts"): only that segment goes.
- */
-const base64Spans = (view: string): { spans: Span[]; found: number } => {
-  const spans: Span[] = [];
-  for (const match of view.matchAll(BASE64_RUN)) {
-    const run = match[0];
-    if (isPath(run, match.index, view)) continue;
-    const parts = run.split("/");
-    const folders = parts.filter((part) => FOLDER.test(part)).length;
-    if (parts.length >= 3 && folders * 2 >= parts.length) {
-      let at = match.index;
-      for (const part of parts) {
-        if (!FOLDER.test(part) && part.length > 0)
-          spans.push([at, at + part.length]);
-        at += part.length + 1;
-      }
-      continue;
-    }
-    spans.push([match.index, match.index + run.length]);
-  }
-  return { spans, found: spans.length };
-};
+const base64Finds = (text: string): boolean =>
+  [...text.matchAll(BASE64_RUN)].some(
+    (match) => !isPath(match[0], match.index, text)
+  );
 
 /**
  * Words a secret is named by. A value after one, as in "PIN: 4821", is the
  * secret. Label words may be split by spaces, a line break or "_"/"-"
  * ("api\nkey", "secret_access_key").
  */
-const HUMAN_LABELS = [
+const SECRET_LABEL = [
   "password",
   "passwd",
   "passcode",
@@ -224,9 +182,6 @@ const HUMAN_LABELS = [
   "seed phrase",
   "seed words",
   "backup code",
-];
-const SECRET_LABEL = [
-  ...HUMAN_LABELS,
   "api key",
   "access key",
   "secret access key",
@@ -238,260 +193,41 @@ const SECRET_LABEL = [
 ]
   .map((label) => label.replaceAll(" ", "[\\s_-]{0,3}"))
   .join("|");
-/** A label for a secret a person chose or was given: its value has no knowable shape or end. */
-const HUMAN_LABEL = new RegExp(
-  `^(?:${HUMAN_LABELS.map((label) => label.replaceAll(" ", "[\\s_-]{0,3}")).join("|")})s?$`,
-  "i"
-);
 /** Labels the earlier patterns did not have: a dash after one is prose ("the private key - ed25519 - is …"). */
 const ADDED_LABEL =
   /^(?:secret[\s_-]*access[\s_-]*key|client[\s_-]*secret|auth[\s_-]*token|private[\s_-]*key)$/i;
 const LABELLED_SECRET = new RegExp(
-  `(?<![A-Za-z])(${SECRET_LABEL})(?![A-Za-z])(\\s*(?:is|was|=|:|-)\\s*)(?=["'\`]?[^\\s"'\`]{3,}|${SECRET_WITHHELD.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+  `(?<![A-Za-z])(${SECRET_LABEL})(?![A-Za-z])(\\s*(?:is|was|=|:|-)\\s*)(?=["'\`]?[^\\s"'\`]{3,})`,
   "gi"
 );
-
-/** The rest of the clause after `from`: what is said after a placeholder before the clause ends. */
-const clauseAfter = (text: string, from: number): string =>
-  text.slice(from, from + MAX_VALUE_CHARS).split(/\n|[,;.!?](?=\s|$)/)[0]!;
-
 /** Where a note says where a secret is kept rather than what it is: "is stored in ~/.ssh", "is in the .env file". */
 const KEPT_AT =
   /^(?:(?:stored|kept|saved|held|located|lives?)\s+(?:in|at|on|under|inside)|in|inside|at|under)\s/i;
-
-type Span = [number, number];
-
-/**
- * Between the parts of a note read as one (description, body, keywords): a
- * line holding U+2029, whitespace to every pattern, so a label in one part
- * still reads its value in the next, and no line of one reads as the line
- * after another.
- */
-const PART_BREAK = "\n\u2029\n";
-
-/** A token shaped like a credential: a digit, a symbol inside it, or a case change inside it. */
-const CREDENTIAL_SHAPED =
-  /\d|\p{L}[^\p{L}\p{N}\s.,;:!?)'’-]|[^\p{L}\p{N}\s("'`[’-]\p{L}|\p{Ll}\p{Lu}/u;
-
-/**
- * Whether a value is said after its label. A person's secret (a password, a
- * PIN, a recovery phrase) has no knowable shape or end, so any value counts,
- * a placeholder too. After a key's label ("token:", "api key ="), a withheld
- * key followed by words is not a new value; a key-shaped token after it is.
- */
+/** Whether a value is said after its label. */
 const labelledFinds = (text: string): boolean => {
-  LABELLED_SECRET.lastIndex = 0;
-  for (
-    let match = LABELLED_SECRET.exec(text);
-    match != null;
-    match = LABELLED_SECRET.exec(text)
-  ) {
-    const from = match.index + match[0].length;
+  for (const match of text.matchAll(LABELLED_SECRET)) {
     if (ADDED_LABEL.test(match[1]!) && match[2]!.includes("-")) continue;
+    const from = match.index + match[0].length;
     if (KEPT_AT.test(text.slice(from, from + 30))) continue;
-    if (HUMAN_LABEL.test(match[1]!)) return true;
-    if (!text.startsWith(SECRET_WITHHELD, from)) return true;
-    const after = clauseAfter(text, from + SECRET_WITHHELD.length);
-    if (CREDENTIAL_SHAPED.test(after.trim().split(/\s+/)[0] ?? "")) return true;
+    return true;
   }
   return false;
 };
 
-/** A run of 32+ letters, digits, "_" and "-" holding both letters and digits: a key or a token. */
-const RUN = /[A-Za-z0-9_-]{32,}/g;
-
 /**
- * Text with spans withheld: `view` shows each span as one placeholder, and
- * `toText` maps a position in `view` back to `text`.
- */
-const render = (text: string, spans: readonly Span[]) => {
-  let view = "";
-  const starts: number[] = [];
-  const ends: number[] = [];
-  let at = 0;
-  const push = (start: number, end: number, piece: string) => {
-    for (let i = 0; i < piece.length; i += 1) {
-      starts.push(start === end ? start : start + i);
-      ends.push(start === end ? end : start + i + 1);
-    }
-    view += piece;
-  };
-  for (const [start, end] of spans) {
-    if (start > at) push(at, start, text.slice(at, start));
-    starts.push(start);
-    ends.push(end);
-    for (let i = 1; i < SECRET_WITHHELD.length; i += 1) {
-      starts.push(start);
-      ends.push(end);
-    }
-    view += SECRET_WITHHELD;
-    at = end;
-  }
-  if (at < text.length) push(at, text.length, text.slice(at));
-  return {
-    view,
-    toText: ([start, end]: Span): Span => [
-      start < starts.length ? starts[start]! : text.length,
-      end > 0 ? ends[end - 1]! : 0,
-    ],
-  };
-};
-
-/** Spans merged in order, overlapping ones joined. */
-const merge = (spans: Span[]): Span[] => {
-  const sorted = [...spans].sort((a, b) => a[0] - b[0]);
-  const out: Span[] = [];
-  for (const span of sorted) {
-    const last = out[out.length - 1];
-    if (last != null && span[0] <= last[1])
-      last[1] = Math.max(last[1], span[1]);
-    else out.push([...span]);
-  }
-  return out;
-};
-
-/** Where the secrets in `text` are, as written, and how many were new. */
-const secretSpans = (text: string): { spans: Span[]; withheld: number } => {
-  if (text.length > MAX_SCAN_CHARS)
-    return { spans: [[0, text.length]], withheld: 1 };
-  const read = fold(text);
-  let spans: Span[] = [];
-  let withheld = 0;
-  let shown = render(read.text, spans);
-  const pass = (find: (view: string) => { spans: Span[]; found: number }) => {
-    const result = find(shown.view);
-    withheld += result.found;
-    if (result.spans.length === 0) return;
-    spans = merge([...spans, ...result.spans.map(shown.toText)]);
-    shown = render(read.text, spans);
-  };
-  const matches =
-    (
-      pattern: RegExp,
-      keep?: (run: string, at: number, view: string) => boolean
-    ) =>
-    (view: string) => {
-      const found: Span[] = [];
-      for (const match of view.matchAll(pattern))
-        if (keep == null || !keep(match[0], match.index, view))
-          found.push([match.index, match.index + match[0].length]);
-      return { spans: found, found: found.length };
-    };
-  for (const format of SECRET_FORMATS) pass(matches(format));
-  pass((view) => {
-    const found = jwtSpans(view);
-    return { spans: found, found: found.length };
-  });
-  pass(base64Spans);
-  pass(matches(RUN, (run) => !/\d/.test(run) || !/[A-Za-z]/.test(run)));
-  return {
-    spans: spans.map(([start, end]): Span => [
-      read.from[start]!,
-      read.from[end]!,
-    ]),
-    withheld,
-  };
-};
-
-/** `text` with `spans` (in order, apart) each replaced by `SECRET_WITHHELD`. */
-const applySpans = (text: string, spans: readonly Span[]): string => {
-  let out = "";
-  let at = 0;
-  for (const [start, end] of spans) {
-    out += text.slice(at, start) + SECRET_WITHHELD;
-    at = end;
-  }
-  return out + text.slice(at);
-};
-
-/**
- * `text` with every secret replaced by `SECRET_WITHHELD`, and how many there
- * were. The secrets are found in the folded text and withheld from the text as
- * written, which is otherwise kept as it was.
- */
-export const withholdSecrets = (
-  text: string
-): { text: string; withheld: number } => {
-  const found = secretSpans(text);
-  return { text: applySpans(text, found.spans), withheld: found.withheld };
-};
-
-/**
- * A token shaped like a random key: 12+ letters and digits, several of each,
- * with little of it in lower-case runs of four or more, which words make.
- */
-const MIN_RANDOM_LENGTH = 12;
-const MAX_WORDY_SHARE = 0.4;
-const KEY_TOKEN = /^[A-Za-z0-9+/=_-]+$/;
-/** Folder names joined by "/" ("Clients/Acme/Q757/"): a path, not a key. */
-const folderPath = (token: string): boolean =>
-  token.includes("/") &&
-  token
-    .split("/")
-    .filter((part) => part.length > 0)
-    .every((part) => FOLDER.test(part));
-const randomLooking = (token: string): boolean => {
-  if (!KEY_TOKEN.test(token) || token.length < MIN_RANDOM_LENGTH) return false;
-  if (folderPath(token)) return false;
-  if ((token.match(/\d/g)?.length ?? 0) < 2) return false;
-  if ((token.match(/[A-Za-z]/g)?.length ?? 0) < 4) return false;
-  const wordy = (token.match(/[a-z]{4,}/g) ?? []).join("").length;
-  return wordy / token.length <= MAX_WORDY_SHARE;
-};
-/** A token that could be a key's other half: 12+ letters and digits, or 16+ base32 or hex. */
-const keyShaped = (token: string): boolean =>
-  KEY_TOKEN.test(token) &&
-  !folderPath(token) &&
-  ((token.length >= MIN_RANDOM_LENGTH &&
-    /\d/.test(token) &&
-    /[A-Za-z]/.test(token)) ||
-    /^[A-Z2-7]{16,}=*$/.test(token) ||
-    /^[A-Za-z]{16,}$/.test(token) ||
-    /^[0-9a-f]{16,}$/i.test(token));
-const tokensOf = (text: string): string[] =>
-  text
-    .split(/\s+/)
-    .map((token) => token.replace(/^[("'`[<]+|[)"'`\],.;:!?>]+$/g, ""));
-/**
- * A withheld value with another half of a key beside it: a random-looking
- * token anywhere in the text, or a key-shaped one in the same sentence or on
- * the next line (a key pair, a value moved past a placeholder, a wrapped key).
- */
-const credentialBeside = (text: string): boolean => {
-  if (!text.includes(SECRET_WITHHELD)) return false;
-  if (tokensOf(text.replaceAll(SECRET_WITHHELD, " ")).some(randomLooking))
-    return true;
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  if (
-    sentences.some(
-      (sentence) =>
-        sentence.includes(SECRET_WITHHELD) &&
-        tokensOf(sentence.replaceAll(SECRET_WITHHELD, " ")).some(keyShaped)
-    )
-  )
-    return true;
-  const lines = text.split("\n");
-  return lines.some(
-    (line, at) =>
-      line.includes(SECRET_WITHHELD) &&
-      at + 1 < lines.length &&
-      tokensOf(lines[at + 1]!).some(keyShaped)
-  );
-};
-
-/**
- * Whether `text` holds a secret: anything the earlier patterns find in the text
- * as written, anything the patterns above find in it folded, and a withheld
- * value with another half beside it. The earlier patterns never read a
- * placeholder as a value; a value written after one is read as new.
+ * Whether `text` holds a secret: anything the earlier patterns find in the
+ * text as written, and anything the added patterns find in it folded.
  */
 export const looksSecret = (text: string): boolean => {
   if (text.length > MAX_SCAN_CHARS) return true;
+  if (earlierFinds(text)) return true;
+  const read = folded(text);
   return (
-    earlierFinds(text) ||
-    secretSpans(text).withheld > 0 ||
-    labelledFinds(folded(text)) ||
-    credentialBeside(folded(text))
+    SECRET_FORMATS.some((pattern) => pattern.test(read)) ||
+    hasJwt(read) ||
+    base64Finds(read) ||
+    labelledFinds(read) ||
+    longRunFinds(read)
   );
 };
 
@@ -583,57 +319,6 @@ const isTheClaim = (claim: RegExp, text: string): boolean => {
   return claimed.size * 2 >= all;
 };
 
-/** Words that only name a secret, the placeholder's own words among them. */
-const SECRET_WORDS = contentWords(
-  `${SECRET_WITHHELD} password passwd passcode passphrase pass phrase pin code otp security api key access token login credential`
-);
-const MIN_WORDS_BESIDE_SECRET = 3;
-
-/** Whether withholding the secrets in `text` would leave no fact worth keeping ("Stripe key: …", "PIN: 4821"). */
-const onlySecret = (withheld: string): boolean => {
-  let left = 0;
-  for (const word of contentWords(withheld))
-    if (!SECRET_WORDS.has(word)) left += 1;
-  return left < MIN_WORDS_BESIDE_SECRET;
-};
-
-/**
- * A model's text, in parts in reading order (a note's description, body and
- * keywords, or one journal line), with its secrets withheld, or null when it
- * must be refused. The parts are read as one note, so a label in one and its
- * value in the next is withheld like any other. Refused when the text is a
- * secret and little else, or when `looksSecret` still finds one in the result.
- */
-export const withholdOrRefuse = (
-  texts: readonly [string, ...string[]]
-): { texts: string[]; withheld: number } | null => {
-  const found = secretSpans(texts.join(PART_BREAK));
-  const kept: string[] = [];
-  let offset = 0;
-  for (const text of texts) {
-    const end = offset + text.length;
-    const own = found.spans
-      .map(([start, stop]): Span => [
-        Math.max(start, offset) - offset,
-        Math.min(stop, end) - offset,
-      ])
-      .filter(
-        ([start, stop]) =>
-          stop > start && text.slice(start, stop).trim().length > 0
-      );
-    kept.push(applySpans(text, own));
-    offset = end + PART_BREAK.length;
-  }
-  if (looksSecret(kept.join(PART_BREAK))) return null;
-  if (found.withheld > 0 && onlySecret(kept.slice(0, 2).join("\n")))
-    return null;
-  return { texts: kept, withheld: found.withheld };
-};
-
-/** Told to the model when a secret was withheld from what it saved. */
-export const SECRET_WITHHELD_NOTICE =
-  "A key or token in it was withheld; suggest the user keeps it in the app's vault.";
-
 // ── the checks ─────────────────────────────────────────────────────────────
 
 export interface Draft {
@@ -643,11 +328,6 @@ export interface Draft {
   body: string;
   expires?: string;
   keywords?: string;
-}
-
-/** A draft the gate let through, and how many secrets it withheld from it. */
-export interface Checked extends Draft {
-  withheld: number;
 }
 
 export interface GateInput {
@@ -680,59 +360,24 @@ export const coreChars = (
  * The draft, cleaned, or the one-line reason it cannot be saved. ID numbers
  * are withheld rather than refused: the rest of the note is still worth keeping.
  */
-export const checkDraft = (input: GateInput): Checked | string => {
+export const checkDraft = (input: GateInput): Draft | string => {
   const { draft, siblings, updating, userWords, byUser, now } = input;
-  // ID numbers first, as the gate always did: secrets are then read in the text it read.
-  let body = redactIdNumbers(draft.body.trim());
-  let description = draft.description.trim();
-  let keywords = oneLine(draft.keywords ?? "");
+  const body = redactIdNumbers(draft.body.trim());
+  const description = (draft.description.trim() || firstSentence(body)).slice(
+    0,
+    MAX_DESCRIPTION_CHARS
+  );
+
+  const keywords = oneLine(draft.keywords ?? "").slice(0, MAX_KEYWORDS_CHARS);
 
   if (body.length === 0) return "Nothing to save: the text is empty.";
   if (body.length > sizeLimit(draft.type))
     return `That is ${body.length} characters; a ${draft.type === "card" ? "project card" : "note"} holds ${sizeLimit(draft.type)}. Keep one fact per note, or split it.`;
 
-  // The user's own edit is told; a model's note keeps everything but its keys.
-  // The note is read whole, and as the earlier gate read it (description filled
-  // in, parts joined by a line), so nothing it refused is let through.
-  const asEarlier = (): string =>
-    [
-      (description || firstSentence(body)).slice(0, MAX_DESCRIPTION_CHARS),
-      body,
-      keywords.slice(0, MAX_KEYWORDS_CHARS),
-    ].join("\n");
-  const REFUSED =
-    "That looks like a password, key or code. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
-  let withheld = 0;
-  // A placeholder in a model's text is checked like a secret: it may front a value.
-  const placeholder =
-    !byUser &&
-    [description, body, keywords].join(PART_BREAK).includes(SECRET_WITHHELD);
-  if (
-    placeholder ||
-    looksSecret([description, body, keywords].join(PART_BREAK)) ||
-    looksSecret(asEarlier())
-  ) {
-    if (byUser)
-      return "That looks like a password, key or code. Memory never keeps those; the vault is the place for them.";
-    // In the order the note reads: description, body, keywords.
-    const kept = withholdOrRefuse([description, body, keywords]);
-    if (kept == null) return REFUSED;
-    [description, body, keywords] = kept.texts as [string, string, string];
-    withheld = kept.withheld;
-  }
-  description = (description || firstSentence(body)).slice(
-    0,
-    MAX_DESCRIPTION_CHARS
-  );
-  keywords = keywords.slice(0, MAX_KEYWORDS_CHARS);
-  // The output gate: what is about to be saved, read as the earlier gate read
-  // it and read whole, holds nothing either finds, whatever happened above.
-  if (
-    !byUser &&
-    (earlierFinds(`${description}\n${body}\n${keywords}`) ||
-      looksSecret([description, body, keywords].join(PART_BREAK)))
-  )
-    return REFUSED;
+  if (looksSecret(`${description}\n${body}\n${keywords}`))
+    return byUser
+      ? "That looks like a password, key or code. Memory never keeps those; the vault is the place for them."
+      : "That looks like a password, key or code. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
 
   if (draft.type === "status") {
     const expires = Date.parse(draft.expires ?? "");
@@ -803,7 +448,6 @@ export const checkDraft = (input: GateInput): Checked | string => {
     body,
     description,
     ...(keywords.length > 0 ? { keywords } : {}),
-    withheld,
   };
 };
 

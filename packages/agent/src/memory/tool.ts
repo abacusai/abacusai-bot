@@ -8,8 +8,7 @@ import { ageOf, ensureProject, projectSummary, withStatus } from "./core.js";
 import {
   checkDraft,
   contentWords,
-  SECRET_WITHHELD_NOTICE,
-  withholdOrRefuse,
+  looksSecret,
   MAX_CARD_CHARS,
   MAX_JOURNAL_CHARS,
   MAX_NOTE_CHARS,
@@ -258,7 +257,7 @@ export function buildMemoryTool(
         const replaced = siblings.find((note) => note.name === replaces);
         if (replaced != null && userWrote(replaced))
           return USER_WROTE(replaced.name);
-        const checked = checkDraft({
+        const draft = checkDraft({
           draft: {
             name,
             description:
@@ -278,8 +277,7 @@ export function buildMemoryTool(
           byUser: false,
           now,
         });
-        if (typeof checked === "string") return checked;
-        const { withheld, ...draft } = checked;
+        if (typeof draft === "string") return draft;
         const note: Note = {
           scope,
           ...draft,
@@ -297,21 +295,16 @@ export function buildMemoryTool(
         ];
         return {
           writes,
-          value: {
-            note,
-            related: relatedNotes(draft, siblings),
-            withheld: withheld > 0,
-          },
+          value: { note, related: relatedNotes(draft, siblings) },
         };
       }
     );
     if (!result.ok) return reply(result.message, true);
     turn.saved();
-    const { note, related, withheld } = result.value;
+    const { note, related } = result.value;
     return reply(
       [
         `Saved "${note.name}" ${where(scope)}${updating ? " (updated)" : ""}${replaces ? `, replacing "${replaces}"` : ""}.`,
-        ...(withheld ? [SECRET_WITHHELD_NOTICE] : []),
         ...(related.length > 0
           ? [
               "Related notes; if one now says something different, update or forget it:",
@@ -516,6 +509,7 @@ export function buildMemoryTool(
       }
 
       if (action === "note") {
+        // ID numbers are withheld here as in notes (gate.ts).
         const text = redactIdNumbers(string(params.text).trim());
         if (text.length === 0)
           return reply("Nothing to note: text is empty.", true);
@@ -538,24 +532,18 @@ export function buildMemoryTool(
             "This turn already added a journal line; one per task is enough.",
             true
           );
-        // ID numbers, then secrets, are withheld as in notes (gate.ts).
-        const kept = withholdOrRefuse([text]);
-        if (kept == null)
+        // Secrets are refused here too; what happened at a moment is what a journal is for.
+        if (looksSecret(text))
           return reply(
-            "That looks like a password, key or code. Memory never keeps those; suggest the user keeps it in the app's vault.",
+            "That looks like a password, key or code. Memory never keeps those.",
             true
           );
-        const line = kept.texts[0]!;
         const result = await commit({ by: authorOf(context) }, () => ({
-          writes: [journalAppend(scope, line)],
+          writes: [journalAppend(scope, text)],
           value: null,
         }));
         if (!result.ok) return reply(result.message, true);
-        return reply(
-          kept.withheld > 0
-            ? `Noted in the journal. ${SECRET_WITHHELD_NOTICE}`
-            : "Noted in the journal."
-        );
+        return reply("Noted in the journal.");
       }
 
       return reply(

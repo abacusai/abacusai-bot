@@ -66,23 +66,6 @@ describe("the phone's memory writers", () => {
   });
 });
 
-describe("the phone's about-you writer", () => {
-  it("withholds a key, keeps the fact and tells the model so", async () => {
-    const key = ["sk", "live", "Q9w8E7r6T5y4U3i2O1p0A9s8"].join("-");
-    const result = await rememberFact(
-      `Runs the bakery's online orders through Stripe with key ${key} for checkout.`
-    );
-    expect(result.ok).toBe(true);
-    expect(result.message).toMatch(/withheld; suggest the user keeps it/);
-    const [entry] = aboutYouEntries();
-    expect(entry).toContain("online orders through Stripe");
-    expect(entry).not.toContain(key);
-
-    const plain = await rememberFact("Bakes sourdough on Saturdays only.");
-    expect(plain).toEqual({ ok: true, message: "Remembered." });
-  });
-});
-
 describe("the memory tool", () => {
   it("withholds ID numbers in notes and journal lines", async () => {
     const context = readMemoryContext(dir, "default", {

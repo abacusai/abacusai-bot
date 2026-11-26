@@ -240,7 +240,7 @@ export const saveNote = async (
         input.name ??
         freshName(input.description || text, siblings);
       const expires = input.expires ?? current?.expires;
-      const checked = checkDraft({
+      const draft = checkDraft({
         draft: {
           name,
           // An edited text gets a description of its own words.
@@ -260,9 +260,7 @@ export const saveNote = async (
         byUser: true,
         now,
       });
-      if (typeof checked === "string") throw new InvalidInputError(checked);
-      // The user's own edit is refused, never withheld, so nothing was.
-      const { withheld: _none, ...draft } = checked;
+      if (typeof draft === "string") throw new InvalidInputError(draft);
       const saved: Note = { scope, ...draft, updated: today(now), by: "you" };
       return {
         writes: [

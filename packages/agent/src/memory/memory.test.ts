@@ -120,53 +120,6 @@ describe("the memory tool", () => {
     expect(listNotes({ kind: "you" })).toEqual([]);
   });
 
-  it("saves a note with a key in it, withholds the key and says so", async () => {
-    const { call } = chat("owner");
-    const key = ["sk", "live", "Q9w8E7r6T5y4U3i2O1p0A9s8"].join("-");
-    const saved = await call({
-      action: "save",
-      type: "fact",
-      name: "payments",
-      text: `The shop takes payments through Stripe; the live key ${key} was pasted in chat.`,
-    });
-    expect(saved.error).toBe(false);
-    expect(saved.text).toMatch(
-      /withheld; suggest the user keeps it in the app's vault/
-    );
-    const body = readNote({ kind: "project", slug: "shop" }, "payments")?.body;
-    expect(body).toContain("payments through Stripe");
-    expect(body).not.toContain(key);
-
-    const plain = await call({
-      action: "update",
-      name: "payments",
-      text: `${body} Refunds go out on Mondays.`,
-    });
-    expect(plain.text).not.toMatch(/withheld/);
-  });
-
-  it("withholds a key from a journal line and keeps the line", async () => {
-    const { call } = chat("owner");
-    const key = ["ghp", "Z1x2C3v4B5n6M7a8S9d0F1g2H3j4K5l6"].join("_");
-    const line = await call({
-      action: "note",
-      text: `Rotated the deploy token to ${key} after the leak.`,
-    });
-    expect(line).toMatchObject({ error: false });
-    expect(line.text).toMatch(/withheld/);
-    const journal = readJournal({ kind: "project", slug: "shop" }).join("\n");
-    expect(journal).toContain("Rotated the deploy token");
-    expect(journal).not.toContain(key);
-  });
-
-  it("refuses a journal line that is only a key", async () => {
-    const { call } = chat("owner");
-    const key = ["ghp", "Z1x2C3v4B5n6M7a8S9d0F1g2H3j4K5l6"].join("_");
-    const line = await call({ action: "note", text: `Token: ${key}` });
-    expect(line.error).toBe(true);
-    expect(readJournal({ kind: "project", slug: "shop" })).toEqual([]);
-  });
-
   it("keeps the card's binding when the card is updated", async () => {
     const { call } = chat("owner");
     await call({
