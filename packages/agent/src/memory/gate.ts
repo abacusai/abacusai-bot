@@ -296,29 +296,6 @@ const userSaidIt = (claim: RegExp, text: string, userWords: string): boolean =>
   claim.test(userWords) &&
   containment(contentWords(text), contentWords(userWords)) >= 0.5;
 
-/** Sentences and list items: the unit a claim is made in. A list joined by commas is one claim. */
-const sentencesOf = (text: string): string[] =>
-  text
-    .split(/(?<=[.!?;])\s+|\r?\n+/)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-
-/**
- * Whether the note is that claim: the sentences making it hold most of the
- * note's words. A long note that mentions in passing that a branch does not
- * exist yet, or that a rule switches auto-reply off, is about something else
- * and is kept.
- */
-const isTheClaim = (claim: RegExp, text: string): boolean => {
-  const all = contentWords(text).size;
-  if (all === 0) return false;
-  const claimed = new Set<string>();
-  for (const sentence of sentencesOf(text))
-    if (claim.test(sentence))
-      for (const word of contentWords(sentence)) claimed.add(word);
-  return claimed.size * 2 >= all;
-};
-
 // ── the checks ─────────────────────────────────────────────────────────────
 
 export interface Draft {
@@ -393,15 +370,12 @@ export const checkDraft = (input: GateInput): Draft | string => {
 
   const text = `${description}\n${body}`;
   if (!byUser && draft.type !== "card") {
-    if (
-      isTheClaim(LIVE_STATE, text) &&
-      !userSaidIt(LIVE_STATE, text, userWords)
-    )
+    if (LIVE_STATE.test(text) && !userSaidIt(LIVE_STATE, text, userWords))
       return "Not saved: whether something is connected, paused or running is read live each time, never from memory. Check it with the relevant tool instead.";
     if (
       draft.type !== "rule" &&
       draft.type !== "preference" &&
-      isTheClaim(ABSENCE, text) &&
+      ABSENCE.test(text) &&
       !userSaidIt(ABSENCE, text, userWords)
     )
       return "Not saved: a search or tool that found nothing is not a fact (the item may be hidden, renamed or elsewhere). Save it only if the user says so.";

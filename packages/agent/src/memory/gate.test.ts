@@ -140,41 +140,6 @@ const ROWS: Array<{
     refused: /password, key or code/,
   },
   {
-    case: "a long note that mentions a missing branch in passing",
-    draft: draft(
-      "The shop site repo is github.com/example/shop-site, private. Stack: npm workspaces, React 19, Vite 7, Tailwind v4. The default branch main does not exist yet; work is on chore/skeleton."
-    ),
-    refused: null,
-  },
-  {
-    case: "a rule-like fact that switches something off",
-    draft: draft(
-      "Pause rule for the auto-reply: when the owner replies in a chat himself, the bot stays quiet in that chat for 30 minutes, then answers again. A typed STOP is turned off after 5 minutes."
-    ),
-    refused: null,
-  },
-  {
-    case: "a failed search listed across places",
-    draft: draft(
-      "Acme invoice not found in Gmail, Drive, Dropbox, OneDrive, Outlook, Notion, Slack, the shared team folder or the downloads folder"
-    ),
-    refused: /not a fact/,
-  },
-  {
-    case: "states listed in one sentence",
-    draft: draft(
-      "Status of tools: Gmail is connected, Slack disconnected, Notion connected, Drive connected, Calendar connected, routines running"
-    ),
-    refused: /read live/,
-  },
-  {
-    case: "states listed with semicolons",
-    draft: draft(
-      "Gmail is connected; Slack is connected; Notion is connected; Drive is connected; Calendar is connected."
-    ),
-    refused: /read live/,
-  },
-  {
     case: "a failed search as a fact",
     draft: draft("The file config.yaml doesn't exist in the bot folder."),
     refused: /not a fact/,
