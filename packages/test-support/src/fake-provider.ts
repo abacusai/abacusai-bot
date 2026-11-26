@@ -5,7 +5,7 @@
  * configure it the same way as a real provider.
  */
 import * as http from "node:http";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 
 /** One request the agent made, as a test wants to read it. */
 export interface RecordedCall {
@@ -105,6 +105,9 @@ export class FakeProvider {
   private responder: Responder = () => ({ say: "ok" });
   /** What `GET /models` lists, for a provider that reads its catalog live. */
   private catalog: unknown[] = [{ id: "fake-1" }];
+  /** Connections a client may still send on; see drained. */
+  private readonly open = new Set<Socket>();
+  private readonly drainWaiters: Array<() => void> = [];
 
   private constructor(
     private readonly server: http.Server,
@@ -118,6 +121,8 @@ export class FakeProvider {
       request.on("data", (chunk) => (body += chunk));
       request.on("end", () => provider.handle(request, response, body));
     });
+
+    server.on("connection", (socket: Socket) => provider.track(socket));
 
     await new Promise<void>((resolve) =>
       server.listen(0, "127.0.0.1", resolve)
@@ -155,6 +160,19 @@ export class FakeProvider {
     this.script((_call, index) => replies[index] ?? { say: "done" });
   }
 
+  /**
+   * Resolves once every client connection has ended from the client's side,
+   * so each request a client sent before it went away has been read and
+   * recorded. A suite that stops its agent processes waits on this before it
+   * clears `calls`: otherwise a request a dying agent sent lands after the
+   * clear, as the next test's call 0, and takes that test's first reply.
+   */
+  drained(): Promise<void> {
+    if (this.open.size === 0) return Promise.resolve();
+
+    return new Promise((resolve) => this.drainWaiters.push(resolve));
+  }
+
   /** The first request the agent made: the one carrying the user's prompt. */
   get firstCall(): RecordedCall | undefined {
     return this.calls[0];
@@ -164,6 +182,22 @@ export class FakeProvider {
     // server.close waits for open responses; a stalled one would wait forever.
     for (const response of this.stalled.splice(0)) response.destroy();
     await new Promise<void>((resolve) => this.server.close(() => resolve()));
+  }
+
+  /**
+   * The client's FIN arrives after every byte it sent, so a request on this
+   * socket has been handled by the time `end` fires; `close` covers a reset.
+   */
+  private track(socket: Socket): void {
+    this.open.add(socket);
+
+    const settle = (): void => {
+      if (!this.open.delete(socket) || this.open.size > 0) return;
+      for (const resolve of this.drainWaiters.splice(0)) resolve();
+    };
+
+    socket.once("end", settle);
+    socket.once("close", settle);
   }
 
   private async handle(

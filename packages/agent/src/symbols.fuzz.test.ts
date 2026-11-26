@@ -79,6 +79,34 @@ function index(family: SymbolFamily, lang: string, source: string) {
   return symbolsIn(family, source, parseSource(lang, source).root());
 }
 
+/**
+ * How many frames the call stack holds here, counted with the smallest frame
+ * there is. A walk that spends a frame per tree level runs out well before a
+ * tree this deep, on any machine and stack size, so a case can be sized to
+ * the stack instead of to a constant picked large enough to be sure.
+ */
+function callStackDepth(): number {
+  let depth = 0;
+  const descend = (): void => {
+    depth += 1;
+    descend();
+  };
+
+  try {
+    descend();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+  }
+
+  return depth;
+}
+
+/**
+ * Twice what the stack holds: a recursive walk overflows at any frame size,
+ * and the case costs what proving that costs rather than a constant's worth.
+ */
+const DEEPER_THAN_THE_STACK = 2 * callStackDepth();
+
 /** The properties that must hold for any input at all, however broken. */
 function checkInvariants(
   family: SymbolFamily,
@@ -230,22 +258,24 @@ describe("input that is merely extreme", () => {
 
   /**
    * Tree depth follows source shape: `1 + 1 + …` nests one node per term, so
-   * this line is 60,000 levels deep. Walked with one call frame per level it
-   * threw `RangeError: Maximum call stack size exceeded`, and at the 5,000 of
-   * the case above it depended on how much stack the rest of the suite had
-   * already used: a real crash that presented as a flaky test.
+   * this line is twice as deep as the stack. Walked with one call frame per
+   * level it threw `RangeError: Maximum call stack size exceeded`, and at the
+   * 5,000 of the case above it depended on how much stack the rest of the
+   * suite had already used: a real crash that presented as a flaky test.
    */
   it("indexes a line too deep for the call stack", () => {
-    const source = `export const A = ${"1 + ".repeat(60_000)}1`;
+    const source = `export const A = ${"1 + ".repeat(DEEPER_THAN_THE_STACK)}1`;
 
-    expect(() => index("ts", "TypeScript", source)).not.toThrow();
+    // A walk that overflows throws out of this call and fails the case.
     expect(
       index("ts", "TypeScript", source).map((symbol) => symbol.name)
     ).toEqual(["A"]);
   });
 
   it("indexes deeply nested blocks without recursing into the stack", () => {
-    const source = `${"if (a) {".repeat(20_000)}${"}".repeat(20_000)}\nexport function after() {}`;
+    // Each `if (a) {` nests two levels, an if and its block.
+    const levels = DEEPER_THAN_THE_STACK / 2;
+    const source = `${"if (a) {".repeat(levels)}${"}".repeat(levels)}\nexport function after() {}`;
 
     expect(
       index("ts", "TypeScript", source).map((symbol) => symbol.name)
