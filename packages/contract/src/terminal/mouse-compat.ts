@@ -186,6 +186,9 @@ export const installMouseReporting = (
     event.preventDefault();
     // The library's own selection listeners sit on the canvas below this one.
     event.stopImmediatePropagation();
+    // Cancelling the press also cancels the focus it would give: a click
+    // into htop or vim must still take the keys, not leave them on a button.
+    if (kind === "down") term.focus();
   };
 
   const onMouseDown = (event: MouseEvent): void => claim(event, "down");
