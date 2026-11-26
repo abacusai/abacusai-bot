@@ -2350,10 +2350,12 @@
       "keptChangesTitle": "“{{title}}” 체크아웃 유지됨",
       "keptChanges": "커밋되지 않은 변경 사항이 있습니다({{path}}).",
       "keptBranchUndeletable": "git이 브랜치를 삭제하지 못했습니다. 더 이상 필요 없으면 git으로 삭제하세요.",
-      "keptIgnored": "{{path}}에 .env처럼 필요할 수 있는 무시된 파일이 있습니다.",
+      "keptIgnored": "{{path}}에 {{file}}처럼 필요할 수 있는 무시된 파일이 있습니다.",
       "keptUnreadable": "git이 읽지 못해 아무것도 삭제하지 않았습니다: {{path}}",
       "keptBranchMoved": "채팅의 체크아웃이 이 브랜치로 전환되어 있어 유지했습니다. 더 이상 필요 없으면 git으로 삭제하세요.",
-      "keptCommits": "{{path}}에 어떤 브랜치에도 없는 커밋이 있습니다."
+      "keptCommits": "{{path}}에 어떤 브랜치에도 없는 커밋이 있습니다.",
+      "keptIgnoredCleaned": "{{path}}에 {{file}}처럼 필요할 수 있는 무시된 파일이 있습니다. 공간을 아끼기 위해 설치된 의존성과 캐시는 삭제했습니다.",
+      "keptNoHistory": "git이 기록을 남기지 않았고 HEAD가 이동해, 그곳에만 있는 커밋이 있을 수 있습니다: {{path}}"
     }
   },
   "terminalShells": {

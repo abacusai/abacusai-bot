@@ -2350,10 +2350,12 @@
       "keptChangesTitle": "已保留“{{title}}”的检出",
       "keptChanges": "其中有未提交的更改，位于 {{path}}。",
       "keptBranchUndeletable": "git 无法删除该分支。不再需要时，请用 git 删除。",
-      "keptIgnored": "{{path}} 中有你可能需要的被忽略文件，例如 .env。",
+      "keptIgnored": "{{path}} 中有你可能需要的被忽略文件，例如 {{file}}。",
       "keptUnreadable": "git 无法读取它，因此没有删除任何内容：{{path}}。",
       "keptBranchMoved": "该对话的检出已切换到此分支，因此保留了它。不再需要时，请用 git 删除。",
-      "keptCommits": "{{path}} 中有不在任何分支上的提交。"
+      "keptCommits": "{{path}} 中有不在任何分支上的提交。",
+      "keptIgnoredCleaned": "{{path}} 中有你可能需要的被忽略文件，例如 {{file}}。为节省空间，已删除其中安装的依赖和缓存。",
+      "keptNoHistory": "git 没有保留它的历史且 HEAD 已移动，可能有只存在于那里的提交：{{path}}。"
     }
   },
   "terminalShells": {

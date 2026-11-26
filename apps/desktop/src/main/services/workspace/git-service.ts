@@ -187,6 +187,7 @@ export type WorktreeRelease =
   | "kept-branch-undeletable"
   | "kept-changes"
   | "kept-commits"
+  | "kept-no-history"
   | "kept-ignored"
   | "kept-unreadable"
   | "not-managed";
@@ -211,6 +212,10 @@ const DISPOSABLE_IGNORED = new Set([
   "__pycache__",
   ".pytest_cache",
   ".mypy_cache",
+  // Clutter the OS leaves in folders.
+  ".DS_Store",
+  "Thumbs.db",
+  "desktop.ini",
 ]);
 
 /** An ignored path inside one of those, or one of them. */
@@ -609,18 +614,28 @@ export class GitService {
    * checkout, then its branch while that is still on `base`. Only for that:
    * the user's own removals go through removeManagedWorktree.
    *
-   * It fails safe, keeping the checkout whole when git cannot read it, when
-   * it has changes never committed or ignored files worth keeping (an `.env`,
-   * say, but not dependencies or caches), or when any commit it ever had
-   * checked out would be left on no branch or tag (a commit on a detached
-   * HEAD, say). A branch with commits of its own, one git would not delete,
-   * or another branch the checkout moved to, is kept. Says which.
+   * It fails safe, keeping the checkout when git cannot read it, when it has
+   * changes never committed, when any commit it ever had checked out would be
+   * left on no branch or tag (a commit on a detached HEAD, say), or when that
+   * cannot be known (reflogs off, HEAD moved). It keeps it, too, for ignored
+   * files worth keeping (an `.env`, `dist/`), and then deletes only what can
+   * be made again (dependencies, caches) to save disk. A branch with commits
+   * of its own, one git would not delete, or another branch the checkout
+   * moved to, is kept. Says which, and for ignored files, the first found.
    */
   async releaseWorktree(
     workspacePath: string,
     managedRoot: string,
     checkout: { path: string; branch: string | null; base: string }
-  ): Promise<{ kind: WorktreeRelease; branch?: string }> {
+  ): Promise<{
+    kind: WorktreeRelease;
+    /** The branch kept, for "kept-branch" and "kept-branch-undeletable". */
+    branch?: string;
+    /** For "kept-ignored": the first ignored file worth keeping that was found. */
+    found?: string;
+    /** For "kept-ignored": its dependencies and caches were deleted. */
+    cleaned?: boolean;
+  }> {
     // Only a checkout under the app's own root is ever taken away.
     if (!isPathInside(managedRoot, checkout.path))
       return { kind: "not-managed" };
@@ -648,35 +663,69 @@ export class GitService {
     let movedTo: string | null = null;
     if (present) {
       try {
-        const entries = (
-          await git(checkout.path, "status", "--porcelain", "--ignored")
-        )
-          .split("\n")
-          .filter((line) => line.length > 3);
+        const entries =
+          // Each ignored path as its pattern matched it, never a folder
+          // folded around it: `img/Thumbs.db`, not `img/`.
+          (
+            await git(
+              checkout.path,
+              "status",
+              "--porcelain",
+              "--ignored=matching",
+              "--untracked-files=all"
+            )
+          )
+            .split("\n")
+            .filter((line) => line.length > 3);
         if (entries.some((line) => !line.startsWith("!! ")))
           return { kind: "kept-changes" };
-        if (entries.some((line) => !disposableIgnored(line.slice(3).trim())))
-          return { kind: "kept-ignored" };
         // Every commit this checkout has had checked out, from its HEAD's reflog.
-        const visited = new Set(
-          (await git(checkout.path, "reflog", "show", "--format=%H", "HEAD"))
-            .split("\n")
-            .filter(Boolean)
-        );
-        visited.add((await git(checkout.path, "rev-parse", "HEAD")).trim());
+        const reflog = (
+          await git(checkout.path, "reflog", "show", "--format=%H", "HEAD")
+        )
+          .split("\n")
+          .filter(Boolean);
+        const head = (await git(checkout.path, "rev-parse", "HEAD")).trim();
+        // With reflogs off (core.logAllRefUpdates=false) there is no history
+        // to check: a HEAD that moved off its start may have left commits.
+        if (reflog.length === 0 && head !== checkout.base)
+          return { kind: "kept-no-history" };
         const lost = await git(
           workspacePath,
           "rev-list",
-          ...visited,
+          ...new Set([...reflog, head]),
           "--not",
           ...(dropBranch ? [`--exclude=refs/heads/${checkout.branch}`] : []),
           "--glob=refs/*"
         );
         if (lost.trim() !== "") return { kind: "kept-commits" };
-        const head = await git(checkout.path, "symbolic-ref", "--quiet", "HEAD")
+        const ignored = entries.map((line) =>
+          line.slice(3).trim().replace(/^"|"$/g, "")
+        );
+        const worth = ignored.find((entry) => !disposableIgnored(entry));
+        if (worth != null) {
+          // Kept for those files alone: what can be made again goes, to save disk.
+          for (const entry of ignored.filter(disposableIgnored)) {
+            const target = path.join(checkout.path, entry);
+            if (isPathInside(checkout.path, target))
+              await fs.rm(target, { recursive: true, force: true });
+          }
+          return {
+            kind: "kept-ignored",
+            found: worth,
+            cleaned: ignored.some(disposableIgnored),
+          };
+        }
+        const branchHead = await git(
+          checkout.path,
+          "symbolic-ref",
+          "--quiet",
+          "HEAD"
+        )
           .then((out) => out.trim().replace(/^refs\/heads\//, ""))
           .catch(() => null);
-        if (head != null && head !== checkout.branch) movedTo = head;
+        if (branchHead != null && branchHead !== checkout.branch)
+          movedTo = branchHead;
       } catch {
         return { kind: "kept-unreadable" };
       }
