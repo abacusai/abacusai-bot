@@ -200,7 +200,8 @@ const valueEnd = (text: string, from: number): [number, number] => {
     if (char === "\n") return [from, at];
     const spaceNext = at + 1 >= text.length || /\s/.test(text[at + 1]!);
     if ((char === "," || char === ";") && spaceNext) return [from, at];
-    if (/[.!?]/.test(char) && spaceNext) return [from, at + 1];
+    // The full stop stays: it ends the sentence, not the value.
+    if (/[.!?]/.test(char) && spaceNext) return [from, at];
   }
   return [from, limit];
 };
@@ -210,6 +211,10 @@ const KEPT_AT =
   /^(?:(?:stored|kept|saved|held|located|lives?)\s+(?:in|at|on|under|inside)|in|inside|at|under)\s/i;
 
 type Span = [number, number];
+
+/** A token shaped like a credential: a digit, a symbol inside it, or a case change inside it. */
+const CREDENTIAL_SHAPED =
+  /\d|\p{L}[^\p{L}\p{N}\s.,;:!?)'’-]|[^\p{L}\p{N}\s("'`[’-]\p{L}|\p{Ll}\p{Lu}/u;
 
 /** Each value said after its label, to the end of its clause. A placeholder alone is not a new one. */
 const labelledSpans = (text: string): { spans: Span[]; found: number } => {
@@ -224,11 +229,31 @@ const labelledSpans = (text: string): { spans: Span[]; found: number } => {
     const from = match.index + match[0].length;
     if (ADDED_LABEL.test(match[1]!) && match[2]!.includes("-")) continue;
     if (KEPT_AT.test(text.slice(from, from + 30))) continue;
-    // A placeholder already there is withheld again with whatever follows it.
     const span = valueEnd(text, from);
-    spans.push(span);
-    if (text.slice(...span).replace(/[.!?]+$/, "") !== SECRET_WITHHELD)
-      found += 1;
+    // A placeholder already there stays one. What follows it in the clause is
+    // a new value only when it is shaped like one ("[ … ] hunter2"); words
+    // ("[ … ] Updated on Friday") are the note going on.
+    if (text.startsWith(SECRET_WITHHELD, from)) {
+      const after = text.slice(from + SECRET_WITHHELD.length, span[1]);
+      const next = after.trim().split(/\s+/)[0] ?? "";
+      if (!CREDENTIAL_SHAPED.test(next)) {
+        spans.push([from, from + SECRET_WITHHELD.length]);
+        LABELLED_SECRET.lastIndex = Math.max(
+          from + SECRET_WITHHELD.length,
+          LABELLED_SECRET.lastIndex
+        );
+        continue;
+      }
+    }
+    // A value on the line after its label is withheld from the line break, so
+    // the placeholder stays on the label's line ("password:[ secret withheld ]").
+    const lineBreak = match[2]!.indexOf("\n");
+    spans.push(
+      lineBreak < 0
+        ? span
+        : [match.index + match[1]!.length + lineBreak, span[1]]
+    );
+    found += 1;
     LABELLED_SECRET.lastIndex = Math.max(span[1], LABELLED_SECRET.lastIndex);
   }
   return { spans, found };
@@ -350,6 +375,13 @@ const randomLooking = (token: string): boolean => {
   if (!KEY_TOKEN.test(token) || token.length < MIN_RANDOM_LENGTH) return false;
   if ((token.match(/\d/g)?.length ?? 0) < 2) return false;
   if ((token.match(/[A-Za-z]/g)?.length ?? 0) < 4) return false;
+  // Mixed case, as base64 and base62 keys have, or a long hex string. A code
+  // in capitals and digits ("RT-AX88U2024", "ABC123DEF456") is a product or a plate.
+  if (
+    !(/[a-z]/.test(token) && /[A-Z]/.test(token)) &&
+    !/^[0-9a-f]{16,}$/i.test(token)
+  )
+    return false;
   const wordy = (token.match(/[a-z]{4,}/g) ?? []).join("").length;
   return wordy / token.length <= MAX_WORDY_SHARE;
 };
@@ -384,20 +416,17 @@ const credentialBeside = (text: string): boolean => {
 /**
  * Whether `text` holds a secret: anything the earlier patterns find, read as
  * written and folded, anything the patterns above add, and a withheld value
- * with another half beside it. A placeholder is read as nothing, so a value
- * written after one is read as the value.
+ * with another half beside it. The earlier patterns never read a placeholder
+ * as a value, and a value written after one in its clause is read as new.
  */
 export const looksSecret = (text: string): boolean => {
   if (text.length > MAX_SCAN_CHARS) return true;
-  const plain = text.replaceAll(SECRET_WITHHELD, "");
-  const read = folded(plain);
+  const read = folded(text);
   return (
     earlierFinds(text) ||
-    earlierFinds(folded(text)) ||
-    earlierFinds(plain) ||
     earlierFinds(read) ||
     withholdSecrets(read).withheld > 0 ||
-    credentialBeside(folded(text))
+    credentialBeside(read)
   );
 };
 
@@ -590,14 +619,15 @@ export const checkDraft = (input: GateInput): Checked | string => {
     (description || firstSentence(body)).slice(0, MAX_DESCRIPTION_CHARS),
     body,
     keywords.slice(0, MAX_KEYWORDS_CHARS),
-  ].join("\n");
+    // A blank line between the parts: no line of one reads as following another.
+  ].join("\n\n");
   let withheld = 0;
   // A placeholder in a model's text is checked like a secret: it may front a value.
   const placeholder =
     !byUser && `${description}\n${body}\n${keywords}`.includes(SECRET_WITHHELD);
   if (
     placeholder ||
-    looksSecret(`${description}\n${body}\n${keywords}`) ||
+    looksSecret(`${description}\n\n${body}\n\n${keywords}`) ||
     looksSecret(earlier)
   ) {
     if (byUser)

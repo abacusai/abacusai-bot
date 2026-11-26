@@ -1036,6 +1036,65 @@ describe("checkDraft", () => {
       expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
   });
 
+  it.each([
+    [
+      "Gmail password: hunter2. Shared with the family, rotated yearly.",
+      "hunter2",
+      `Gmail password: ${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
+    ],
+    [
+      "Gmail password is hunter2. Recovery email is on the family account.",
+      "hunter2",
+      `Gmail password is ${SECRET_WITHHELD}. Recovery email is on the family account.`,
+    ],
+    [
+      "The router PIN is 4821. Router sits in the hall closet upstairs.",
+      "4821",
+      `The router PIN is ${SECRET_WITHHELD}. Router sits in the hall closet upstairs.`,
+    ],
+    [
+      "Router password:\nhunter2 for the hall router, set by Bob.",
+      "hunter2",
+      `Router password:${SECRET_WITHHELD}, set by Bob.`,
+    ],
+  ])("keeps the sentence after a withheld value: %s", (text, value, saved) => {
+    const result = check(text);
+    expect(result).toMatchObject({ withheld: 1 });
+    expect((result as Draft).body).not.toContain(value);
+    expect((result as Draft).body).toBe(saved);
+  });
+
+  it.each([
+    `Gmail password: ${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
+    `Gmail password: ${SECRET_WITHHELD}, shared with the family and rotated yearly.`,
+    `Router password = ${SECRET_WITHHELD} Updated on Friday.`,
+    `Router admin password is ${SECRET_WITHHELD}. The router model is RT-AX88U2024 in the hall.`,
+  ])(
+    "keeps a note that restates its placeholder, on both paths: %s",
+    (text) => {
+      for (const byUser of [false, true])
+        expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
+    }
+  );
+
+  it("saves every withheld note again, unchanged, on both paths", () => {
+    for (const [, text] of CREDENTIALS) {
+      const first = check(`Work setup for the Acme billing project: ${text}`);
+      if (typeof first === "string") continue;
+      const body = first.body;
+      for (const again of [
+        body,
+        `${body} Updated on Friday.`,
+        body.replace(SECRET_WITHHELD, `${SECRET_WITHHELD}.`),
+      ])
+        for (const byUser of [false, true])
+          expect(check(again, byUser), JSON.stringify(again)).toMatchObject({
+            body: again,
+            withheld: 0,
+          });
+    }
+  });
+
   it("finds everything the earlier patterns find, in fuzzed text", () => {
     const pieces = [
       "password",
