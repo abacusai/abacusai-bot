@@ -18,13 +18,19 @@ const sources = readSourceFiles(
 it("R4-T22 literal session translation keys resolve", () => {
   for (const [file, source] of Object.entries(sources)) {
     for (const match of source.matchAll(/t\(\s*["'](sessions\.[\w.-]+)["']/g)) {
-      const value = match[1]!
-        .split(".")
-        .reduce<unknown>(
-          (node, key) => (node as Record<string, unknown>)?.[key],
-          enUS
-        );
-      expect(typeof value, `${file}: ${match[1]}`).toBe("string");
+      const at = (key: string): unknown =>
+        key
+          .split(".")
+          .reduce<unknown>(
+            (node, part) => (node as Record<string, unknown>)?.[part],
+            enUS
+          );
+      const key = match[1]!;
+      // A plural stem (t(key, { count })) resolves through its forms.
+      const forms =
+        at(key) === undefined ? [`${key}_one`, `${key}_other`] : [key];
+      for (const form of forms)
+        expect(typeof at(form), `${file}: ${form}`).toBe("string");
     }
   }
 });
