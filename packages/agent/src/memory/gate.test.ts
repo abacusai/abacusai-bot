@@ -1068,7 +1068,6 @@ describe("checkDraft", () => {
     `Gmail password: ${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
     `Gmail password: ${SECRET_WITHHELD}, shared with the family and rotated yearly.`,
     `Router password = ${SECRET_WITHHELD} Updated on Friday.`,
-    `Router admin password is ${SECRET_WITHHELD}. The router model is RT-AX88U2024 in the hall.`,
   ])(
     "keeps a note that restates its placeholder, on both paths: %s",
     (text) => {
@@ -1092,6 +1091,227 @@ describe("checkDraft", () => {
             body: again,
             withheld: 0,
           });
+    }
+  });
+
+  const draftOf = (parts: {
+    description?: string;
+    body: string;
+    keywords?: string;
+  }) =>
+    draft(parts.body, {
+      description: parts.description ?? "",
+      ...(parts.keywords != null ? { keywords: parts.keywords } : {}),
+    });
+  const checkParts = (
+    parts: { description?: string; body: string; keywords?: string },
+    byUser = false
+  ) =>
+    checkDraft({
+      draft: draftOf(parts),
+      siblings: [],
+      updating: null,
+      userWords: "",
+      byUser,
+      now: NOW,
+    });
+  const fieldsOf = (result: Draft) =>
+    [result.description, result.body, result.keywords ?? ""].join("\n");
+
+  // A label in one part of a note and its value in another: never stored.
+  const LABELS: Array<[string, string]> = [
+    ["Gmail password:", "hunter2"],
+    ["Gmail password is", "Tr0ub4dor&3"],
+    ["Router PIN:", "4821"],
+    ["Home WiFi passphrase:", "purple monkey dishwasher"],
+    ["Stripe API key:", mixed(20)],
+    ["Billing token =", mixed(24)],
+    ["Bank OTP is", "482193"],
+  ];
+  const SPLITS: Array<
+    [
+      string,
+      (
+        label: string,
+        value: string
+      ) => { description?: string; body: string; keywords?: string },
+    ]
+  > = [
+    [
+      "description and body",
+      (label, value) => ({
+        description: label,
+        body: `${value}. Shared with the family, rotated yearly.`,
+      }),
+    ],
+    [
+      "body and keywords",
+      (label, value) => ({
+        body: `Family account setup for the shared laptop. ${label}`,
+        keywords: value,
+      }),
+    ],
+    [
+      "description and keywords",
+      (label, value) => ({
+        description: label,
+        body: "Family account setup for the shared laptop, rotated yearly.",
+        keywords: value,
+      }),
+    ],
+  ];
+  it.each(
+    LABELS.flatMap(([label, value]) =>
+      SPLITS.map(
+        ([split, make]): [
+          string,
+          string,
+          { description?: string; body: string; keywords?: string },
+          string,
+        ] => [`${label} … ${value}`, split, make(label, value), value]
+      )
+    )
+  )("never stores %s split across %s", (_, __, parts, value) => {
+    for (const byUser of [false, true]) {
+      const result = checkParts(parts, byUser);
+      if (typeof result === "string") continue;
+      expect(byUser).toBe(false);
+      expect(fieldsOf(result)).not.toContain(value);
+      expect(
+        earlierGateRefuses(
+          `${result.description}\n${result.body}\n${result.keywords ?? ""}`
+        )
+      ).toBe(false);
+    }
+  });
+
+  it("withholds a value split from its label, and keeps the note", () => {
+    expect(
+      checkParts({
+        description: "Gmail password:",
+        body: "hunter2. Shared with the family, rotated yearly.",
+      })
+    ).toMatchObject({
+      description: "Gmail password:",
+      body: `${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
+      withheld: 1,
+    });
+    expect(
+      checkParts({
+        description: "Router setup",
+        body: "The hall router password is",
+        keywords: "hunter2",
+      })
+    ).toMatchObject({
+      body: "The hall router password is",
+      keywords: SECRET_WITHHELD,
+      withheld: 1,
+    });
+  });
+
+  it.each([
+    "The Gmail password — stored in 1Password — is shared with the family.",
+    "The API key – the one for billing – lives in the vault for the team.",
+    "Rotate the token — every 90 days — per the security policy for the team.",
+    "The secret — grandma’s recipe — is smoked paprika and honey.",
+  ])("keeps prose with dashes, on both paths: %s", (text) => {
+    expect(earlierGateRefuses(text)).toBe(false);
+    for (const byUser of [false, true])
+      expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
+  });
+
+  it.each([
+    [
+      "Dropbox api key: k7Xm2p4Q8r1z5wQ, the other half a1b2c3d4e5f6g7h for the sync job",
+      "a1b2c3d4e5f6g7h",
+    ],
+    [
+      "Okta token: 00aBcD1234efGH5678ijKL, TOTP seed JBSWY3DPEHPK3PXP for the admin login",
+      "JBSWY3DPEHPK3PXP",
+    ],
+    [
+      `AWS key AKIA${fake(upper36, 16)} paired with ABC123DEF456GHI789JKL for the uploads bucket`,
+      "ABC123DEF456GHI789JKL",
+    ],
+    [
+      `AWS key AKIA${fake(upper36, 16)} paired with 9f8e7d6c5b4a3f2e for the uploads bucket`,
+      "9f8e7d6c5b4a3f2e",
+    ],
+    [
+      `AWS key AKIA${fake(upper36, 16)} paired with abc123def456ghi789jkl for the uploads bucket`,
+      "abc123def456ghi789jkl",
+    ],
+    [
+      `Stripe ${["sk", "live", fake(base62, 20)].join("_")} and webhook pass zq81mn72lk63jh54gf for checkout`,
+      "zq81mn72lk63jh54gf",
+    ],
+    [
+      `Router admin password is ${SECRET_WITHHELD}. The router model is RT-AX88U2024 in the hall.`,
+      "RT-AX88U2024",
+    ],
+  ])("never stores a key's other half: %s", (text, half) => {
+    for (const byUser of [false, true]) {
+      const result = check(text, byUser);
+      if (typeof result !== "string")
+        expect(fieldsOf(result)).not.toContain(half);
+    }
+  });
+
+  it.each([
+    [
+      "Router password is hunter2! and hunter3 for the hall router",
+      ["hunter2", "hunter3"],
+    ],
+    ["Router password is my dog. rex 2019 for the hall", ["rex 2019"]],
+    ["Router password: Tr0ub4dor. 3x for the hall router", ["3x"]],
+    ["Debit PIN: 4. 821 for the family account card", ["821"]],
+    ["Gmail password: hunt. er2 for the family account", ["er2"]],
+    [
+      "api key: https://acme.example.com/k/abc. Def456 for the hall",
+      ["Def456"],
+    ],
+    ["Router password is hunter2... for the hall router", ["hunter2"]],
+  ])("withholds what goes on after a full stop: %s", (text, values) => {
+    // Where the earlier gate saw no value ("is my dog", "PIN: 4."), neither is one read now.
+    if (!earlierGateRefuses(text)) return;
+    const result = check(text);
+    if (typeof result === "string") return;
+    for (const value of values) expect(fieldsOf(result)).not.toContain(value);
+  });
+
+  it("never stores a refused note's credential, however it is split across the parts", () => {
+    const notes = [
+      ...CREDENTIALS.map(([, text, secrets]): [string, string[]] => [
+        `Work setup for the Acme billing project: ${text}`,
+        secrets,
+      ]),
+      [
+        "Gmail password: hunter2. Shared with the family, rotated yearly.",
+        ["hunter2"],
+      ],
+      ["Router PIN is 4821 for the hall closet box.", ["4821"]],
+    ] as Array<[string, string[]]>;
+    for (const [text, secrets] of notes) {
+      if (!earlierGateRefuses(text) || secrets.length === 0) continue;
+      for (let n = 0; n < 6; n += 1) {
+        const words = text.split(" ");
+        const a = Math.floor(random() * words.length);
+        const b = a + 1 + Math.floor(random() * (words.length - a));
+        const parts = {
+          description: words.slice(0, a).join(" "),
+          body: words.slice(a, b).join(" "),
+          keywords: words.slice(b).join(" "),
+        };
+        const result = checkParts(parts);
+        if (typeof result === "string") continue;
+        for (const secret of secrets)
+          expect(fieldsOf(result), JSON.stringify(parts)).not.toContain(secret);
+        expect(
+          earlierGateRefuses(
+            `${result.description}\n${result.body}\n${result.keywords ?? ""}`
+          )
+        ).toBe(false);
+      }
     }
   });
 
