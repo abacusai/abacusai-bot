@@ -11,6 +11,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  conversationOf,
   FakeProvider,
   fakeProviderConfig,
   type Reply,
@@ -80,8 +81,7 @@ describe("a long silent turn", () => {
 
       const calls = provider.calls;
       expect(calls).toHaveLength(5);
-      const text = (call: (typeof calls)[number]) =>
-        JSON.stringify(call.body.messages);
+      const text = (call: (typeof calls)[number]) => conversationOf(call);
       const count = (call: (typeof calls)[number], needle: string) =>
         text(call).split(needle).length - 1;
 

@@ -10,6 +10,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
+  conversationOf,
   FakeProvider,
   type RecordedCall,
 } from "@abacus-ai/test-support/fake-provider";
@@ -37,6 +38,10 @@ const { setHostCreditWall } = await import("./credit-wall.js");
 
 const BILLED = "abacus-premium-1";
 const OPEN = "abacus-open-1";
+
+/** pi's summary request: the transcript in <conversation> tags, as the last user message. */
+const isSummaryRequest = (call: RecordedCall): boolean =>
+  call.userText.at(-1)?.startsWith("<conversation>") === true;
 
 let provider: FakeProvider;
 let home: string;
@@ -165,7 +170,7 @@ it("a billed chat never sends more than 160k tokens, however long it grows", asy
   // Billed on input: a credit for every 5,000 tokens sent.
   provider.meterWith({ credits: (tokens) => tokens / 5_000 });
   provider.script((call) =>
-    JSON.stringify(call.messages).includes("summar")
+    isSummaryRequest(call)
       ? { say: "Summary: the user pasted long logs and asked about them." }
       : { say: "Noted." }
   );
@@ -203,9 +208,7 @@ it("a flat price per request is never made dearer by summaries: 12 turns cost wh
   // 70 credits a request whatever it carries: over 2% of the plan, and flat.
   provider.meterWith({ credits: () => 70 });
   provider.script((call) =>
-    JSON.stringify(call.messages).includes("summar")
-      ? { say: "Summary." }
-      : { say: "Noted." }
+    isSummaryRequest(call) ? { say: "Summary." } : { say: "Noted." }
   );
   const from = provider.billed.length;
   const { session, turn } = await start();
@@ -234,7 +237,7 @@ it("Stop during the summary before a run ends the turn, and sends nothing", asyn
     summarizing = resolve;
   });
   provider.script((call) => {
-    if (JSON.stringify(call.messages).includes("summar")) {
+    if (isSummaryRequest(call)) {
       summarizing?.();
       return { stall: {} };
     }
@@ -260,7 +263,7 @@ it("Stop during the summary before a run ends the turn, and sends nothing", asyn
   // The summary was the only request: the message itself never went out.
   const after = provider.calls.slice(before);
   expect(after).toHaveLength(1);
-  expect(JSON.stringify(after[0]?.messages)).toContain("summar");
+  expect(after[0] != null && isSummaryRequest(after[0])).toBe(true);
 }, 300_000);
 
 it("a chat near the end of its credits is told the balance and builds what was asked", async () => {
@@ -274,7 +277,7 @@ it("a chat near the end of its credits is told the balance and builds what was a
   provider.meterWith({ credits: () => 1 });
   // A model that reads "do not start new work" as "decline".
   provider.script((call) => {
-    const sent = JSON.stringify(call.messages);
+    const sent = conversationOf(call);
     if (/Do not start new work|Wrap up now/.test(sent))
       return { say: "DECLINED" };
     return call.messages.at(-1)?.role === "tool"
@@ -290,7 +293,8 @@ it("a chat near the end of its credits is told the balance and builds what was a
   const calls = await turn("Build me a landing page");
   await session.stop();
 
-  const hidden = JSON.stringify(calls.at(-1)?.messages ?? []);
+  const last = calls.at(-1);
+  const hidden = last == null ? "" : conversationOf(last);
   const declined = agentEvents().some(
     (event) => event.type === "text_delta" && /DECLINED/.test(event.content)
   );
@@ -319,7 +323,8 @@ it("a routine run near the end of its credits hears nothing about them and does 
   const { session, turn } = await start();
   const calls = await turn("Run the check");
   await session.stop();
-  expect(JSON.stringify(calls.at(-1)?.messages)).not.toContain("Credit note");
+  const last = calls.at(-1);
+  expect(last == null ? "" : conversationOf(last)).not.toContain("Credit note");
   expect(calls.at(-1)?.messages.at(-1)?.role).toBe("tool");
 }, 120_000);
 
