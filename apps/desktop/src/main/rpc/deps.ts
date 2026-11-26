@@ -158,6 +158,13 @@ export interface AppOperations {
   markRendererActivity(): void;
   /** The `abacusaibot://` link waiting for the renderer, once (desktop only). */
   takeOpenLink?(): OpenLink | null;
+  /** Artifacts installed as apps (artifact-apps.ts); desktop only. */
+  artifactApps?: {
+    list(): Array<{ id: string; path: string; title: string }>;
+    install(path: string, title: string): { id: string };
+    uninstall(path: string): void;
+    open(id: string): void;
+  };
 }
 
 /** The browser runtime's legacy channels, restricted to the main renderer. */

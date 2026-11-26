@@ -200,6 +200,29 @@ export const system = {
    * there is none or another caller took it.
    */
   takeOpenLink: mutation.input(NoInput).output(type<OpenLink | null>()),
+  /**
+   * "Install as app" (spike): an artifact page gets a launcher entry of its
+   * own that opens it in its own window. Desktop only.
+   */
+  artifactApps: {
+    list: query
+      .input(NoInput)
+      .output(type<Array<{ id: string; path: string; title: string }>>()),
+    install: mutation
+      .input(
+        v.object({
+          path: v.pipe(v.string(), v.nonEmpty()),
+          title: v.pipe(v.string(), v.maxLength(120)),
+        })
+      )
+      .output(type<{ id: string }>()),
+    uninstall: mutation
+      .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
+      .output(type<void>()),
+    open: mutation
+      .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
+      .output(type<void>()),
+  },
   /** First-run milestones; fire-and-forget. */
   funnelStep: mutation
     .input(

@@ -106,6 +106,27 @@ export const systemRouter = impl.system.router({
     requireMainRenderer(context);
     return context.deps.app.takeOpenLink?.() ?? null;
   }),
+  artifactApps: {
+    list: impl.system.artifactApps.list.handler(
+      ({ context }) => context.deps.app.artifactApps?.list() ?? []
+    ),
+    install: impl.system.artifactApps.install.handler(({ input, context }) => {
+      requireMainRenderer(context);
+      const apps = context.deps.app.artifactApps;
+      if (!apps) throw forbidden("Installing apps needs the desktop app.");
+      return apps.install(input.path, input.title);
+    }),
+    uninstall: impl.system.artifactApps.uninstall.handler(
+      ({ input, context }) => {
+        requireMainRenderer(context);
+        context.deps.app.artifactApps?.uninstall(input.path);
+      }
+    ),
+    open: impl.system.artifactApps.open.handler(({ input, context }) => {
+      requireMainRenderer(context);
+      context.deps.app.artifactApps?.open(input.id);
+    }),
+  },
   funnelStep: impl.system.funnelStep.handler(({ input, context }) => {
     if (input.once === true)
       context.deps.app.reportFunnelStep(input.step, input.detail, true);

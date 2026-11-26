@@ -55,6 +55,10 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
       "",
       "Every action saves a new version and returns the page's path. Hand that path to",
       "present_deliverable to show it.",
+      "",
+      "A page that keeps what the user enters (a tracker, a list, a planner) saves it with",
+      "`window.abacus.store` (async get(key), set(key, value), keys()) when present: the page",
+      "installed as an app has it. Else it keeps data in memory; never localStorage.",
     ].join("\n"),
     inputSchema: {
       type: "object",

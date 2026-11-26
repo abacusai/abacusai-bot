@@ -121,6 +121,14 @@ import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { revivePreview } from "./services/agent-tools/served-previews";
 import { isSiteExport } from "./services/agent-tools/site-pack";
+import {
+  artifactAppLinkId,
+  artifactAppLinkInArgv,
+  installArtifactApp,
+  installedApps,
+  openArtifactApp,
+  uninstallArtifactApp,
+} from "./services/artifact-apps/artifact-apps";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import {
@@ -635,7 +643,9 @@ async function createWindow(restored?: RecreatedWindowState) {
   // Set before a silent update restart of a hidden window, so the relaunch
   // stays hidden instead of popping over the user's work.
   const startHiddenAfterUpdate =
-    restored !== undefined ? !restored.visible : consumeRelaunchHidden();
+    (restored !== undefined ? !restored.visible : consumeRelaunchHidden()) ||
+    // Started from an installed app's launcher: only its window shows.
+    takeStartHiddenForApp();
 
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
@@ -1754,6 +1764,12 @@ const appOperations: AppOperations = {
   loginItem: createLoginItem(app),
 
   takeOpenLink: () => openLinks.take(),
+  artifactApps: {
+    list: () => installedApps(),
+    install: (path, title) => ({ id: installArtifactApp(path, title).id }),
+    uninstall: (path) => uninstallArtifactApp(path),
+    open: (id) => void openInstalledApp(id),
+  },
 
   markRendererActivity() {
     lastRendererActivity = Date.now();
@@ -1953,6 +1969,22 @@ function revealOnRelaunch(): void {
     void app.dock.show();
   revealMainWindow();
 }
+// An installed artifact app's launcher (artifact-apps.ts): its own window,
+// and the main window stays as it was (hidden when the app was not open).
+let startHiddenForApp = artifactAppLinkInArgv(process.argv) != null;
+function takeStartHiddenForApp(): boolean {
+  const hidden = startHiddenForApp;
+  startHiddenForApp = false;
+  return hidden;
+}
+function openInstalledApp(id: string): boolean {
+  return openArtifactApp(id, () => {
+    // The last app window closed with the main window hidden: quit, as
+    // closing the main window does on Windows and Linux.
+    if (process.platform !== "darwin" && !aliveMainWindow()?.isVisible())
+      app.quit();
+  });
+}
 const openLinks = new OpenLinkInbox({
   reveal: revealOnRelaunch,
   announce: () => emitBusChannel("system", { type: "open-link" }),
@@ -1972,6 +2004,12 @@ function onSecondInstance(
   _workingDirectory: string,
   data: unknown
 ): void {
+  const appId = artifactAppLinkInArgv(argv);
+  if (appId != null) {
+    if ((data as { retry?: unknown } | null)?.retry !== true)
+      void app.whenReady().then(() => openInstalledApp(appId));
+    return;
+  }
   revealOnRelaunch();
   if ((data as { retry?: unknown } | null)?.retry !== true)
     receiveOpenLink(openLinkInArgv(argv));
@@ -1979,6 +2017,11 @@ function onSecondInstance(
 // macOS, before `whenReady` too: a link can be what launched the app.
 app.on("open-url", (event, url) => {
   event.preventDefault();
+  const appId = artifactAppLinkId(url);
+  if (appId != null) {
+    void app.whenReady().then(() => openInstalledApp(appId));
+    return;
+  }
   receiveOpenLink(url);
 });
 if (gotSingleInstanceLock) {
@@ -2210,6 +2253,9 @@ app
   })
   .then(() => createWindow())
   .then(async () => {
+    const launchedApp = artifactAppLinkInArgv(process.argv);
+    if (launchedApp != null && !openInstalledApp(launchedApp))
+      revealMainWindow();
     updateService.checkForUpdatesOnStartup();
 
     app.on("activate", function () {

@@ -1,5 +1,6 @@
 import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import { isArtifactPage } from "@abacus-ai/contract/share";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSearch } from "@tanstack/react-router";
 import { Ellipsis } from "lucide-react";
@@ -167,6 +168,17 @@ export const ArtifactsPage = ({
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const saver = useSaveFiles();
+  // Artifact pages installed as apps (desktop only), by page path.
+  const [installed, setInstalled] = useState<Set<string>>(new Set());
+  const refreshInstalled = () =>
+    void transport.client.system.artifactApps
+      .list()
+      .then((apps) => setInstalled(new Set(apps.map((app) => app.path))))
+      .catch(() => undefined);
+  useEffect(() => {
+    if (IS_ELECTRON) refreshInstalled();
+    // oxlint-disable-next-line exhaustive-deps -- once per mount.
+  }, []);
   const list = search.view === "list" || !!search.item;
   // Phone widths fit two narrower cards instead of one stretched card.
   const columns = list
@@ -241,6 +253,32 @@ export const ArtifactsPage = ({
             .then(() => showInfo(t("phase5.copied")))
             .catch(() => showError(t("phase5.failed"))),
       },
+      ...(IS_ELECTRON && a.kind === "file" && isArtifactPage(a.location)
+        ? installed.has(a.location)
+          ? [
+              {
+                label: t("phase5.uninstallApp"),
+                run: () =>
+                  void transport.client.system.artifactApps
+                    .uninstall({ path: a.location })
+                    .then(refreshInstalled)
+                    .catch(() => showError(t("phase5.failed"))),
+              },
+            ]
+          : [
+              {
+                label: t("phase5.installApp"),
+                run: () =>
+                  void transport.client.system.artifactApps
+                    .install({ path: a.location, title: a.title })
+                    .then(() => {
+                      refreshInstalled();
+                      showInfo(t("phase5.installedApp"));
+                    })
+                    .catch(() => showError(t("phase5.failed"))),
+              },
+            ]
+        : []),
       ...(target
         ? [
             {

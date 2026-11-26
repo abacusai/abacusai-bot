@@ -30,6 +30,8 @@ export const WEB_HOST_DENIED = [
   "system.openPrivacyPane",
   // Links open the desktop app; a hosted computer has no URL scheme.
   "system.takeOpenLink",
+  // Writes OS launcher entries for this computer's own app.
+  "system.artifactApps",
   "sites",
   "skills.openFile",
   "voice.whisper.fetch",
