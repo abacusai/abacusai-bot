@@ -2373,7 +2373,9 @@
       "keptChanges": "Zawiera niezacommitowane zmiany, w {{path}}.",
       "keptBranchUndeletable": "git nie mógł usunąć gałęzi. Usuń ją przez git, gdy nie będzie już potrzebna.",
       "keptIgnored": "Zawiera ignorowane pliki, które mogą Ci się przydać, np. .env, w {{path}}.",
-      "keptUnreadable": "git nie mógł jej odczytać, więc nic nie zostało usunięte: {{path}}."
+      "keptUnreadable": "git nie mógł jej odczytać, więc nic nie zostało usunięte: {{path}}.",
+      "keptBranchMoved": "Kopia czatu została przełączona na tę gałąź, więc ją zachowano. Usuń ją przez git, gdy nie będzie już potrzebna.",
+      "keptCommits": "Zawiera commity, których nie ma w żadnej gałęzi, w {{path}}."
     }
   },
   "terminalShells": {

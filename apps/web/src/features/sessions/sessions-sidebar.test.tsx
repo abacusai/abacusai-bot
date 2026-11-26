@@ -262,6 +262,14 @@ describe("deleting a chat that owns a hand-off checkout", () => {
     expect(
       within(dialog).getByText(/Then it is kept, and you are told/)
     ).toBeTruthy();
+    // One description: the dialog's accessible description reads both lines.
+    const described = (dialog.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .filter(Boolean)
+      .map((id) => document.getElementById(id)?.textContent ?? "")
+      .join(" ");
+    expect(described).toContain("This session and its transcript");
+    expect(described).toContain("goes with it");
     fireEvent.click(within(dialog).getByText("Cancel"));
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     const plain = await open("Review my pull requests");

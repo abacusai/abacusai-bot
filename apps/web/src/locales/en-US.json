@@ -2351,7 +2351,9 @@
       "keptChanges": "It has changes that were never committed, in {{path}}.",
       "keptBranchUndeletable": "git would not delete it. Delete it with git when you no longer need it.",
       "keptIgnored": "It has ignored files you may want, like .env, in {{path}}.",
-      "keptUnreadable": "git could not read it, so nothing in it was removed: {{path}}."
+      "keptUnreadable": "git could not read it, so nothing in it was removed: {{path}}.",
+      "keptBranchMoved": "The chat's checkout had moved to this branch, so it was kept. Delete it with git when you no longer need it.",
+      "keptCommits": "It has commits that are on no branch, in {{path}}."
     }
   },
   "terminalShells": {

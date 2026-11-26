@@ -2351,7 +2351,9 @@
       "keptChanges": "Er enthält nicht committete Änderungen, in {{path}}.",
       "keptBranchUndeletable": "git konnte den Branch nicht löschen. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
       "keptIgnored": "Er enthält ignorierte Dateien, die du vielleicht brauchst, etwa .env, in {{path}}.",
-      "keptUnreadable": "git konnte ihn nicht lesen, daher wurde nichts darin entfernt: {{path}}."
+      "keptUnreadable": "git konnte ihn nicht lesen, daher wurde nichts darin entfernt: {{path}}.",
+      "keptBranchMoved": "Der Checkout des Chats war auf diesen Branch gewechselt, daher wurde er behalten. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
+      "keptCommits": "Er enthält Commits, die auf keinem Branch liegen, in {{path}}."
     }
   },
   "terminalShells": {

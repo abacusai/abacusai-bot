@@ -2351,7 +2351,9 @@
       "keptChanges": "Commit edilmemiş değişiklikleri var: {{path}}.",
       "keptBranchUndeletable": "git dalı silemedi. Artık gerekmediğinde git ile silin.",
       "keptIgnored": "{{path}} içinde .env gibi isteyebileceğin yok sayılan dosyalar var.",
-      "keptUnreadable": "git okuyamadı, bu yüzden hiçbir şey silinmedi: {{path}}."
+      "keptUnreadable": "git okuyamadı, bu yüzden hiçbir şey silinmedi: {{path}}.",
+      "keptBranchMoved": "Sohbetin kopyası bu dala geçmişti, bu yüzden dal saklandı. Artık gerekmediğinde git ile silin.",
+      "keptCommits": "{{path}} içinde hiçbir dalda olmayan commit’ler var."
     }
   },
   "terminalShells": {

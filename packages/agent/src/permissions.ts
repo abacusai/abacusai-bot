@@ -5,11 +5,12 @@
  * mutations outright; YOLO never asks. Reads inside the workspace never prompt,
  * reads outside it do, since that is the one read that can leak.
  */
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 
@@ -45,6 +46,8 @@ import {
   type UnattendedPolicy,
 } from "./tool-policy.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
+
+const execFileAsync = promisify(execFile);
 
 const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 
@@ -269,6 +272,8 @@ export type Gate =
 export interface GateOptions {
   mode: AgentMode;
   cwd: string;
+  /** For hand_off_session's card: git at `cwd` has a last commit (hasLastCommit, asked ahead). */
+  hasLastCommit?: boolean;
   /** Literal command prefixes the user has pre-approved for this session. */
   allowedCommands: readonly string[];
   /** Non-bash tools the user chose to always allow for this session. */
@@ -447,7 +452,10 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
     case "web_fetch":
       return gateWebFetch(tool, options);
     case "hand_off_session":
-      return { kind: "ask", request: buildHandOffRequest(tool, options.cwd) };
+      return {
+        kind: "ask",
+        request: buildHandOffRequest(tool, options.hasLastCommit === true),
+      };
     default:
       // Unknown mutating tools are caught by MUTATING_TOOLS; everything else
       // runs without a prompt, matching pi's own default.
@@ -966,28 +974,24 @@ function buildWriteRequest(tool: ToolRequest, cwd: string): PermissionRequest {
 /**
  * Whether a hand-off from `dir` gets a checkout of its own: the host makes
  * one when git there has a last commit to make it from (headCommit), so the
- * card asks git the same question.
+ * card asks git the same question. Asked before the gate runs (the tool_call
+ * handler awaits it), so the permission check itself never waits on git.
  */
-function hasLastCommit(dir: string): boolean {
-  try {
-    execFileSync(
-      "git",
-      ["-C", dir, "rev-parse", "--verify", "--quiet", "HEAD"],
-      {
-        stdio: "ignore",
-        timeout: 5_000,
-      }
-    );
-    return true;
-  } catch {
-    return false;
-  }
+export async function hasLastCommit(dir: string): Promise<boolean> {
+  return execFileAsync(
+    "git",
+    ["-C", dir, "rev-parse", "--verify", "--quiet", "HEAD"],
+    { timeout: 5_000 }
+  ).then(
+    () => true,
+    () => false
+  );
 }
 
 /** `hand_off_session`'s card: the new chat's title, its whole brief, and where it will work. */
 function buildHandOffRequest(
   tool: ToolRequest,
-  cwd: string
+  ownCheckout: boolean
 ): PermissionRequest {
   return {
     type: "hand_off",
@@ -995,7 +999,7 @@ function buildHandOffRequest(
     displayName: "Start a new chat",
     title: String(tool.input.title ?? "").trim(),
     brief: String(tool.input.prompt ?? "").trim(),
-    ownCheckout: hasLastCommit(cwd),
+    ownCheckout,
   };
 }
 

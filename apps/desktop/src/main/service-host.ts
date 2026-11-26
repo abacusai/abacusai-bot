@@ -5345,12 +5345,13 @@ export class ServiceHost {
   ): Promise<void> {
     const repo = this.localWorkspacePath(workspaceId);
     if (repo == null) return;
-    const outcome = await this.gitService
+    const release = await this.gitService
       .releaseWorktree(repo, this.managedWorktreeRoot(workspaceId), checkout)
       .catch((error: unknown) => {
         console.warn(`[hand-off] releasing ${checkout.path}: ${String(error)}`);
         return null;
       });
+    const outcome = release?.kind;
     if (
       label == null ||
       outcome == null ||
@@ -5359,15 +5360,17 @@ export class ServiceHost {
     )
       return;
     const { t } = await this.channelWordsNow();
-    const branch = checkout.branch ?? "";
+    const branch = release?.branch ?? checkout.branch ?? "";
     this.userNotifier?.({
       ...(outcome === "kept-branch" || outcome === "kept-branch-undeletable"
         ? {
             title: t("sessions.handoff.keptBranchTitle", { branch }),
             body: t(
-              outcome === "kept-branch"
-                ? "sessions.handoff.keptBranch"
-                : "sessions.handoff.keptBranchUndeletable"
+              outcome === "kept-branch-undeletable"
+                ? "sessions.handoff.keptBranchUndeletable"
+                : branch === checkout.branch
+                  ? "sessions.handoff.keptBranch"
+                  : "sessions.handoff.keptBranchMoved"
             ),
           }
         : {
@@ -5375,9 +5378,11 @@ export class ServiceHost {
             body: t(
               outcome === "kept-changes"
                 ? "sessions.handoff.keptChanges"
-                : outcome === "kept-ignored"
-                  ? "sessions.handoff.keptIgnored"
-                  : "sessions.handoff.keptUnreadable",
+                : outcome === "kept-commits"
+                  ? "sessions.handoff.keptCommits"
+                  : outcome === "kept-ignored"
+                    ? "sessions.handoff.keptIgnored"
+                    : "sessions.handoff.keptUnreadable",
               { path: checkout.path }
             ),
           }),

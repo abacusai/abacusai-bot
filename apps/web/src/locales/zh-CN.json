@@ -2351,7 +2351,9 @@
       "keptChanges": "其中有未提交的更改，位于 {{path}}。",
       "keptBranchUndeletable": "git 无法删除该分支。不再需要时，请用 git 删除。",
       "keptIgnored": "{{path}} 中有你可能需要的被忽略文件，例如 .env。",
-      "keptUnreadable": "git 无法读取它，因此没有删除任何内容：{{path}}。"
+      "keptUnreadable": "git 无法读取它，因此没有删除任何内容：{{path}}。",
+      "keptBranchMoved": "该对话的检出已切换到此分支，因此保留了它。不再需要时，请用 git 删除。",
+      "keptCommits": "{{path}} 中有不在任何分支上的提交。"
     }
   },
   "terminalShells": {

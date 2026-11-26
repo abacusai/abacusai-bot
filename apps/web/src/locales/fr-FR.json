@@ -2351,7 +2351,9 @@
       "keptChanges": "Elle contient des modifications jamais commitées, dans {{path}}.",
       "keptBranchUndeletable": "git n’a pas pu supprimer la branche. Supprimez-la avec git quand vous n’en avez plus besoin.",
       "keptIgnored": "Elle contient des fichiers ignorés utiles, comme .env, dans {{path}}.",
-      "keptUnreadable": "git n’a pas pu la lire, donc rien n’a été supprimé : {{path}}."
+      "keptUnreadable": "git n’a pas pu la lire, donc rien n’a été supprimé : {{path}}.",
+      "keptBranchMoved": "La copie du chat était passée sur cette branche, elle a donc été conservée. Supprimez-la avec git quand vous n’en avez plus besoin.",
+      "keptCommits": "Elle contient des commits qui ne sont sur aucune branche, dans {{path}}."
     }
   },
   "terminalShells": {

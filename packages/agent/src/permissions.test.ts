@@ -31,6 +31,7 @@ import { Allowances } from "./allowances.js";
 import { modelPath } from "./model-path.js";
 import {
   gateToolCall,
+  hasLastCommit,
   isMutatingTool,
   parseMode,
   parseModeStrict,
@@ -656,7 +657,7 @@ describe("hand_off_session", () => {
     ).toBe(kind);
   });
 
-  it("asks on its own card: the title, the whole brief, and where it will work", () => {
+  it("asks on its own card: the title, the whole brief, and where it will work", async () => {
     const brief = "Write the release notes. ".repeat(60).trim();
     const plain = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-plain-"));
     const unborn = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-unborn-"));
@@ -679,30 +680,32 @@ describe("hand_off_session", () => {
       "first"
     );
     try {
-      const card = (cwd: string) => {
+      const card = (lastCommit?: boolean) => {
         const gate = gateToolCall(
           call("hand_off_session", { title: " Release notes ", prompt: brief }),
-          options({ cwd })
+          options({
+            cwd: repo,
+            ...(lastCommit != null ? { hasLastCommit: lastCommit } : {}),
+          })
         );
         return gate.kind === "ask" ? gate.request : null;
       };
-      expect(card(plain)).toMatchObject({
+      expect(card(false)).toMatchObject({
         type: "hand_off",
         title: "Release notes",
         brief,
         ownCheckout: false,
       });
-      // The brief is whole, never cut to a summary.
-      expect(card(plain)?.type === "hand_off" && card(plain)).toHaveProperty(
-        "brief",
-        brief
-      );
-      // The host's test: a last commit to make the checkout from, not a .git.
-      expect(card(unborn)).toMatchObject({ ownCheckout: false });
-      expect(card(repo)).toMatchObject({ ownCheckout: true });
-      expect(card(path.join(repo, "apps", "site"))).toMatchObject({
-        ownCheckout: true,
-      });
+      expect(card(true)).toMatchObject({ ownCheckout: true });
+      // The gate never asks git itself: unasked, it is not claimed.
+      expect(card()).toMatchObject({ ownCheckout: false });
+      // The host's test, asked ahead: a last commit, not merely a .git.
+      await expect(hasLastCommit(plain)).resolves.toBe(false);
+      await expect(hasLastCommit(unborn)).resolves.toBe(false);
+      await expect(hasLastCommit(repo)).resolves.toBe(true);
+      await expect(
+        hasLastCommit(path.join(repo, "apps", "site"))
+      ).resolves.toBe(true);
     } finally {
       fs.rmSync(plain, { recursive: true, force: true });
       fs.rmSync(unborn, { recursive: true, force: true });

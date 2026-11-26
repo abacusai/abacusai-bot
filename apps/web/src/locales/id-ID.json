@@ -2351,7 +2351,9 @@
       "keptChanges": "Ada perubahan yang belum di-commit, di {{path}}.",
       "keptBranchUndeletable": "git tidak bisa menghapus branch ini. Hapus dengan git jika sudah tidak diperlukan.",
       "keptIgnored": "Ada file yang diabaikan yang mungkin Anda perlukan, seperti .env, di {{path}}.",
-      "keptUnreadable": "git tidak bisa membacanya, jadi tidak ada yang dihapus: {{path}}."
+      "keptUnreadable": "git tidak bisa membacanya, jadi tidak ada yang dihapus: {{path}}.",
+      "keptBranchMoved": "Checkout chat ini sudah pindah ke branch ini, jadi branch disimpan. Hapus dengan git jika sudah tidak diperlukan.",
+      "keptCommits": "Ada commit yang tidak berada di branch mana pun, di {{path}}."
     }
   },
   "terminalShells": {

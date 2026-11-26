@@ -2351,7 +2351,9 @@
       "keptChanges": "Er staan wijzigingen in die nooit zijn gecommit, in {{path}}.",
       "keptBranchUndeletable": "git kon de branch niet verwijderen. Verwijder hem met git als je hem niet meer nodig hebt.",
       "keptIgnored": "Er staan genegeerde bestanden in die je misschien wilt houden, zoals .env, in {{path}}.",
-      "keptUnreadable": "git kon hem niet lezen, dus er is niets verwijderd: {{path}}."
+      "keptUnreadable": "git kon hem niet lezen, dus er is niets verwijderd: {{path}}.",
+      "keptBranchMoved": "De checkout van de chat was naar deze branch gewisseld, dus die is bewaard. Verwijder hem met git als je hem niet meer nodig hebt.",
+      "keptCommits": "Er staan commits in die op geen enkele branch staan, in {{path}}."
     }
   },
   "terminalShells": {

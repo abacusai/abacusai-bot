@@ -598,16 +598,19 @@ const SessionSidebarRow = ({
               <AlertDialogTitle>
                 {t("sessions.sidebar.delete")}
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("sessions.sidebar.deleteBody")}
+              {/* One description, so the dialog's aria-describedby reads all of it. */}
+              <AlertDialogDescription
+                render={<div className="flex flex-col gap-2" />}
+              >
+                <p>{t("sessions.sidebar.deleteBody")}</p>
+                {session.ownsWorktree === true ? (
+                  <p data-slot="delete-checkout">
+                    {t("sessions.sidebar.deleteCheckout", {
+                      branch: session.worktreeBranch ?? "",
+                    })}
+                  </p>
+                ) : null}
               </AlertDialogDescription>
-              {session.ownsWorktree === true ? (
-                <AlertDialogDescription data-slot="delete-checkout">
-                  {t("sessions.sidebar.deleteCheckout", {
-                    branch: session.worktreeBranch ?? "",
-                  })}
-                </AlertDialogDescription>
-              ) : null}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>

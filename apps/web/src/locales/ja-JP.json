@@ -2351,7 +2351,9 @@
       "keptChanges": "コミットされていない変更があります（{{path}}）。",
       "keptBranchUndeletable": "git がブランチを削除できませんでした。不要になったら git で削除してください。",
       "keptIgnored": "{{path}} に .env など残したい可能性のある無視されたファイルがあります。",
-      "keptUnreadable": "git が読み取れなかったため、何も削除していません: {{path}}"
+      "keptUnreadable": "git が読み取れなかったため、何も削除していません: {{path}}",
+      "keptBranchMoved": "チャットのチェックアウトがこのブランチに切り替わっていたため、残しました。不要になったら git で削除してください。",
+      "keptCommits": "{{path}} に、どのブランチにも含まれないコミットがあります。"
     }
   },
   "terminalShells": {

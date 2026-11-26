@@ -38,6 +38,10 @@ vi.mock("electron", () => {
   );
 });
 
+// Real git: a test makes several worktrees and runs many git commands, which
+// a loaded machine takes longer than the default 5 s for.
+vi.setConfig({ testTimeout: 30_000 });
+
 const stored = new Map<string, unknown>();
 vi.mock("./services/session/workspace-store", () => ({
   workspaceStore: {
@@ -803,11 +807,11 @@ describe("a hand-off's checkout is removed only when it is safe", () => {
     expect(host.notices[0]!.body).toContain("keptUnreadable");
   });
 
-  it("keeps a checkout holding an ignored .env, and says so; dependencies and builds alone do not keep it", async () => {
+  it("keeps a checkout holding an ignored .env, and says so; dependencies and caches alone do not keep it", async () => {
     const folder = project("git");
     fs.writeFileSync(
       path.join(folder, ".gitignore"),
-      ".env\nnode_modules/\ndist/\n.venv/\n"
+      ".env\nnode_modules/\n.next/\n.venv/\nout/\ndist/\n"
     );
     commitIn(folder, "keep.txt");
     const host = makeHost({ folder });
@@ -819,7 +823,7 @@ describe("a hand-off's checkout is removed only when it is safe", () => {
     expect(host.notices[0]!.body).toContain("keptIgnored");
 
     const builtOnly = await childOf(host);
-    for (const dir of ["node_modules/left-pad", "dist", ".venv/bin"]) {
+    for (const dir of ["node_modules/left-pad", ".next/cache", ".venv/bin"]) {
       fs.mkdirSync(path.join(builtOnly.worktreePath!, dir), {
         recursive: true,
       });
@@ -829,6 +833,67 @@ describe("a hand-off's checkout is removed only when it is safe", () => {
     await settled(() => !fs.existsSync(builtOnly.worktreePath!));
     expect(fs.existsSync(builtOnly.worktreePath!)).toBe(false);
     expect(branches(folder)).not.toContain(builtOnly.worktreeBranch);
+  });
+
+  it("keeps a checkout whose ignored out/ or dist/ holds a file someone may want", async () => {
+    const folder = project("git");
+    fs.writeFileSync(path.join(folder, ".gitignore"), "out/\ndist/\n");
+    commitIn(folder, "keep.txt");
+    const host = makeHost({ folder });
+    for (const file of ["out/report.pdf", "dist/app.zip"]) {
+      const child = await childOf(host);
+      fs.mkdirSync(path.join(child.worktreePath!, path.dirname(file)));
+      fs.writeFileSync(path.join(child.worktreePath!, file), "%PDF");
+      const before = host.notices.length;
+      host.remove(child.id);
+      await settled(() => host.notices.length > before);
+      expect(fs.existsSync(path.join(child.worktreePath!, file))).toBe(true);
+      expect(host.notices.at(-1)!.body).toContain("keptIgnored");
+    }
+  });
+
+  it("keeps a checkout with a commit made on a detached HEAD, which no branch holds", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    git(child.worktreePath!, "checkout", "-q", "--detach");
+    commitIn(child.worktreePath!, "lost.txt");
+    const detached = git(child.worktreePath!, "rev-parse", "HEAD");
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(git(child.worktreePath!, "rev-parse", "HEAD")).toBe(detached);
+    expect(host.notices[0]!.body).toContain("keptCommits");
+  });
+
+  it("keeps it too when that detached commit was left behind by checking the branch out again", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    git(child.worktreePath!, "checkout", "-q", "--detach");
+    commitIn(child.worktreePath!, "lost.txt");
+    git(child.worktreePath!, "checkout", "-q", child.worktreeBranch!);
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(host.notices[0]!.body).toContain("keptCommits");
+  });
+
+  it("moved to a new named branch: removes the checkout, keeps that branch with its commits, and says so", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    git(child.worktreePath!, "checkout", "-q", "-b", "feature/notes");
+    commitIn(child.worktreePath!, "notes.md");
+    const tip = git(child.worktreePath!, "rev-parse", "HEAD");
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(git(folder, "rev-parse", "feature/notes")).toBe(tip);
+    // Its own branch never moved, so it goes.
+    expect(branches(folder)).not.toContain(child.worktreeBranch);
+    expect(host.notices[0]!.title).toContain("feature/notes");
+    expect(host.notices[0]!.body).toContain("keptBranchMoved");
   });
 
   it("says so when git will not delete the branch", async () => {

@@ -2351,7 +2351,9 @@
       "keptChanges": "Ela tem alterações nunca commitadas, em {{path}}.",
       "keptBranchUndeletable": "O git não conseguiu excluir o branch. Exclua-o com git quando não precisar mais.",
       "keptIgnored": "Ela tem arquivos ignorados que você pode querer, como .env, em {{path}}.",
-      "keptUnreadable": "O git não conseguiu lê-la, então nada foi removido: {{path}}."
+      "keptUnreadable": "O git não conseguiu lê-la, então nada foi removido: {{path}}.",
+      "keptBranchMoved": "A cópia do chat tinha mudado para este branch, então ele foi mantido. Exclua-o com git quando não precisar mais.",
+      "keptCommits": "Ela tem commits que não estão em nenhum branch, em {{path}}."
     }
   },
   "terminalShells": {
