@@ -864,6 +864,45 @@ describe("checkDraft", () => {
       "pass​word is hunter2 for the router",
       ["hunter2"],
     ],
+    ...["­", "͏", "᠎", "⁡", "⁤"].map((mark): [string, string, string[]] => {
+      const a = fake(base62, 20);
+      const b = fake(base62, 20);
+      return [
+        `a key split by U+${mark.charCodeAt(0).toString(16)}`,
+        `OpenAI key sk-${a}${mark}${b} for the router`,
+        [a, b],
+      ];
+    }),
+    ...["‐", "‑", "−", "﹣"].map((dash): [string, string, string[]] => {
+      const k = fake(base62, 40);
+      return [
+        `a key after a U+${dash.charCodeAt(0).toString(16)} dash`,
+        `OpenAI key sk${dash}${k} for the router`,
+        [k],
+      ];
+    }),
+    [
+      "a label split by a soft hyphen",
+      "pass­word is hunter2 for the router in the hall",
+      ["hunter2"],
+    ],
+    (() => {
+      const a = fake(base62, 20);
+      const b = mixed(20);
+      return [
+        "a key wrapped onto the next line",
+        `OpenAI key sk-${a}\n${b} for the router`,
+        [a, b],
+      ];
+    })(),
+    (() => {
+      const b = mixed(17);
+      return [
+        "a Stripe key wrapped after more words",
+        `Stripe key sk_live_${fake(base62, 16)}\nnext line ${b}`,
+        [b],
+      ];
+    })(),
     [
       "a label in full-width letters",
       "ｐａｓｓｗｏｒｄ: hunter2 for the router",
@@ -966,6 +1005,37 @@ describe("checkDraft", () => {
     expect(check(text)).toMatchObject({ body: text, withheld: 0 });
   });
 
+  it("refuses a key written beside a placeholder on every path", () => {
+    const text = `api key: ${SECRET_WITHHELD}. The real one is ${mixed(20)} for the router`;
+    expect(looksSecret(text)).toBe(true);
+    expect(check(text, true)).toMatch(/password, key or code/);
+    expect(check(text)).toMatch(/password, key or code/);
+  });
+
+  it("never reads its own placeholder as a value, so a withheld note saves again", () => {
+    const saved = check("Shop admin PIN: 4821, changed monthly by the owner.");
+    expect(earlierGateRefuses((saved as Draft).body)).toBe(false);
+    expect(looksSecret((saved as Draft).body)).toBe(false);
+    expect(check((saved as Draft).body, true)).toMatchObject({ withheld: 0 });
+  });
+
+  it.each([
+    "Drive folder Clients/Acme/Contracts/2026/Signed/FinalVersions holds the signed contracts.",
+    "Breadcrumb Home/Products/Laptops/Gaming/ASUS/ROG2026/StrixScar is the product page.",
+    "Quarter plan Q1/Q2/Q3/Q4/Revenue/Costs/Margin/2026/PlanFinal is the sheet tab order.",
+    "The Notion page Team/Engineering/Backend/Services/Billing2/Runbook is the runbook.",
+    "The private key - ed25519 - is on the build box for deploys.",
+    `The rule: ${"-".repeat(1_001)}`,
+    `Indented block${" ".repeat(1_001)}end`,
+    `Long hyphenated slug ${"word-".repeat(250)}end`,
+    "Ｐｒｏｊｅｃｔ codename is Ｂｌｕｅ and the deadline is ① week from Friday.",
+    "Use the ﬁnal draft ﬁle for the client; area is 20 m² and price is 5 ™ units.",
+  ])("keeps as written, on both paths: %s", (text) => {
+    expect(earlierGateRefuses(text)).toBe(false);
+    for (const byUser of [false, true])
+      expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
+  });
+
   it("finds everything the earlier patterns find, in fuzzed text", () => {
     const pieces = [
       "password",
@@ -1017,6 +1087,19 @@ describe("checkDraft", () => {
       "Password",
       fake(upper36, 16),
       fake(base62, 24),
+      "\u00ad",
+      "[secret withheld]",
+      SECRET_WITHHELD,
+      " in ",
+      " stored in ",
+      "~/",
+      "./",
+      ".ts",
+      "\uff53\uff4b",
+      "\uff1a",
+      "AbCdEf",
+      "Q1/Q2/",
+      "x9Y8",
     ];
     for (let n = 0; n < 20_000; n += 1) {
       const text = Array.from(
@@ -1046,6 +1129,9 @@ describe("checkDraft", () => {
       "eyJ-".repeat(size / 4),
       "aB1/".repeat(size / 4),
       `password: x${"!".repeat(size)}`,
+      "word-".repeat(size / 5),
+      "-".repeat(size),
+      " ".repeat(size),
     ];
     for (const text of shapes) {
       const started = performance.now();

@@ -516,7 +516,7 @@ export function buildMemoryTool(
       }
 
       if (action === "note") {
-        const text = string(params.text).trim();
+        const text = redactIdNumbers(string(params.text).trim());
         if (text.length === 0)
           return reply("Nothing to note: text is empty.", true);
         if (text.length > MAX_JOURNAL_CHARS)
@@ -538,14 +538,14 @@ export function buildMemoryTool(
             "This turn already added a journal line; one per task is enough.",
             true
           );
-        // Secrets, then ID numbers, are withheld as in notes (gate.ts).
+        // ID numbers, then secrets, are withheld as in notes (gate.ts).
         const kept = withholdOrRefuse([text]);
         if (kept == null)
           return reply(
             "That looks like a password, key or code. Memory never keeps those; suggest the user keeps it in the app's vault.",
             true
           );
-        const line = redactIdNumbers(kept.texts[0]!);
+        const line = kept.texts[0]!;
         const result = await commit({ by: authorOf(context) }, () => ({
           writes: [journalAppend(scope, line)],
           value: null,
