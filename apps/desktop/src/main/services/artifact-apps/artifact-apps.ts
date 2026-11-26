@@ -15,6 +15,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   watch,
@@ -23,6 +24,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { isArtifactPage } from "@abacus-ai/contract/share";
 import {
@@ -57,8 +59,34 @@ const root = (): string => join(app.getPath("userData"), "artifact-apps");
 const registryFile = (): string => join(root(), "registry.json");
 const appDir = (id: string): string => join(root(), id);
 
-const appIdFor = (path: string): string =>
-  createHash("sha256").update(path).digest("hex").slice(0, 16);
+/**
+ * One id per artifact page, from its real path: the installed window and the
+ * chat's side panel reach the page by different routes and must share a store.
+ */
+const appIdFor = (path: string): string => {
+  let real = path;
+  try {
+    real = realpathSync(path);
+  } catch {
+    // A deleted page keeps the id of the path it had.
+  }
+  return createHash("sha256").update(real).digest("hex").slice(0, 16);
+};
+
+/** The artifact page a view shows, or null when it shows anything else. */
+const artifactPageOf = (url: string): string | null => {
+  if (!url.startsWith("file:")) return null;
+  try {
+    const path = fileURLToPath(url.split("#")[0]!.split("?")[0]!);
+    return isArtifactPage(path) ? path : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Whether a <webview> about to load `src` shows an artifact page. */
+export const isArtifactPageUrl = (src: string): boolean =>
+  artifactPageOf(src) != null;
 
 const writeAtomic = (file: string, data: string | Buffer): void => {
   mkdirSync(dirname(file), { recursive: true });
@@ -181,11 +209,19 @@ const pageTitle = (path: string): string | null => {
   return text || null;
 };
 
+/**
+ * A page the `artifact` tool made: its path shape and the versions folder
+ * only that tool writes. A file the agent wrote by hand in the same place is
+ * not one (no versions, no edit action behind it).
+ */
+export const isToolArtifact = (path: string): boolean =>
+  isArtifactPage(path) && existsSync(join(dirname(path), "versions"));
+
 export const installArtifactApp = (
   path: string,
   title: string
 ): InstalledApp => {
-  if (!isArtifactPage(path) || !existsSync(path))
+  if (!isToolArtifact(path) || !existsSync(path))
     throw new Error("Only an artifact page can be installed as an app.");
   const id = appIdFor(path);
   const registry = readRegistry();
@@ -239,29 +275,67 @@ const validKey = (key: unknown): string => {
   return key;
 };
 
+/** Every view showing an artifact page, by store id. */
+const viewers = new Map<string, Set<WebContents>>();
+const served = new WeakSet<WebContents>();
+
 /**
- * The store for one app's window, on that window's own IPC: no other page
- * (the main window, another app) can reach it, and it never sees another
- * app's data.
+ * The page's saved data, on the view's own IPC (no other page can reach it).
+ * The store follows the page the view shows now, so the chat's side panel
+ * and the installed window share one store per artifact, and a page that is
+ * not an artifact gets none. Pages read their data on load, so a write
+ * reloads the other views of the same artifact: neither keeps a stale copy
+ * that would overwrite the other's rows.
  */
-const serveStore = (contents: WebContents, id: string): void => {
+export const serveArtifactStore = (contents: WebContents): void => {
+  if (served.has(contents)) return;
+  served.add(contents);
+  let current: string | null = null;
+  const track = (): void => {
+    const page = artifactPageOf(contents.getURL());
+    const id = page == null ? null : appIdFor(page);
+    if (id === current) return;
+    if (current != null) viewers.get(current)?.delete(contents);
+    current = id;
+    if (id != null) {
+      if (!viewers.has(id)) viewers.set(id, new Set());
+      viewers.get(id)!.add(contents);
+    }
+  };
+  contents.on("did-navigate", track);
+  contents.once("destroyed", () => {
+    if (current != null) viewers.get(current)?.delete(contents);
+  });
+  track();
+  const idOf = (): string => {
+    const page = artifactPageOf(contents.getURL());
+    if (page == null) throw new Error("Not an artifact page.");
+    return appIdFor(page);
+  };
   contents.ipc.handle("artifact-app:store-get", (_event, key: unknown) => {
-    const value = readStore(id)[validKey(key)];
+    const value = readStore(idOf())[validKey(key)];
     return value === undefined ? null : value;
   });
   contents.ipc.handle("artifact-app:store-keys", () =>
-    Object.keys(readStore(id))
+    Object.keys(readStore(idOf()))
   );
   contents.ipc.handle(
     "artifact-app:store-set",
     (_event, key: unknown, value: unknown) => {
+      const id = idOf();
       const store = readStore(id);
+      const before = JSON.stringify(store);
       if (value === null || value === undefined) delete store[validKey(key)];
       else store[validKey(key)] = JSON.parse(JSON.stringify(value)) as unknown;
       const text = JSON.stringify(store);
+      // A page that saves on load writes what is already there: no reload,
+      // or two open views would reload each other forever.
+      if (text === before) return;
       if (Buffer.byteLength(text) > MAX_STORE_BYTES)
-        throw new Error("This app's saved data is over 5 MB.");
+        throw new Error("This page's saved data is over 5 MB.");
       writeAtomic(storeFile(id), text);
+      for (const other of viewers.get(id) ?? [])
+        if (other !== contents && !other.isDestroyed()) other.reload();
     }
   );
 };
@@ -339,7 +413,7 @@ export const openArtifactApp = (
   window.on("resize", fit);
 
   const contents = view.webContents;
-  serveStore(contents, id);
+  serveArtifactStore(contents);
   const pageUrl = `file://${entry.path}`;
   // The page stays itself: no navigation away, no new windows. Web links go to
   // the user's browser.

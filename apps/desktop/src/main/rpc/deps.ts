@@ -161,6 +161,7 @@ export interface AppOperations {
   /** Artifacts installed as apps (artifact-apps.ts); desktop only. */
   artifactApps?: {
     list(): Array<{ id: string; path: string; title: string }>;
+    status(path: string): { installable: boolean; installedId: string | null };
     install(path: string, title: string): { id: string };
     uninstall(path: string): void;
     open(id: string): void;

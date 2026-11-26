@@ -110,6 +110,13 @@ export const systemRouter = impl.system.router({
     list: impl.system.artifactApps.list.handler(
       ({ context }) => context.deps.app.artifactApps?.list() ?? []
     ),
+    status: impl.system.artifactApps.status.handler(
+      ({ input, context }) =>
+        context.deps.app.artifactApps?.status(input.path) ?? {
+          installable: false,
+          installedId: null,
+        }
+    ),
     install: impl.system.artifactApps.install.handler(({ input, context }) => {
       requireMainRenderer(context);
       const apps = context.deps.app.artifactApps;

@@ -11,6 +11,7 @@ import {
   DeliverablesCard,
   resolveWorkspacePath,
 } from "#renderer/components/file-preview";
+import { InstallAppRowButton } from "#renderer/components/file-preview/install-app-button";
 import { LookRowButton } from "#renderer/components/file-preview/look-row-button";
 import {
   SaveAllButton,
@@ -110,6 +111,7 @@ export const sessionDeliverablesCard = (
             />
             <LookRowButton path={resolve(item.path)} />
             <ShareRowButton path={resolve(item.path)} />
+            <InstallAppRowButton path={resolve(item.path)} />
           </>
         )
       }

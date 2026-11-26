@@ -208,6 +208,10 @@ export const system = {
     list: query
       .input(NoInput)
       .output(type<Array<{ id: string; path: string; title: string }>>()),
+    /** Whether a page can be installed, and its app's id when it is. */
+    status: query
+      .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
+      .output(type<{ installable: boolean; installedId: string | null }>()),
     install: mutation
       .input(
         v.object({

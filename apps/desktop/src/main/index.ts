@@ -126,7 +126,10 @@ import {
   artifactAppLinkInArgv,
   installArtifactApp,
   installedApps,
+  isArtifactPageUrl,
+  isToolArtifact,
   openArtifactApp,
+  serveArtifactStore,
   uninstallArtifactApp,
 } from "./services/artifact-apps/artifact-apps";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
@@ -1089,7 +1092,20 @@ async function createWindow(restored?: RecreatedWindowState) {
       delete params.preload;
       delete params.nodeintegration;
       delete params.nodeintegrationinsubframes;
+      // An artifact page's preview gets only its saved data, the same store
+      // its installed window uses (artifact-apps.ts).
+      if (isArtifactPageUrl(params.src ?? "")) {
+        webPreferences.preload = join(
+          import.meta.dirname,
+          "../preload/index.cjs"
+        );
+        webPreferences.additionalArguments = ["--abacus-window=artifact-app"];
+        webPreferences.sandbox = true;
+      }
     });
+    contents.on("did-attach-webview", (_event, webview) =>
+      serveArtifactStore(webview)
+    );
 
     // A reload of the live renderer must dispose its browser views first, or
     // crash recovery leaks hidden Chromium pages with no owner. Only the live
@@ -1766,6 +1782,10 @@ const appOperations: AppOperations = {
   takeOpenLink: () => openLinks.take(),
   artifactApps: {
     list: () => installedApps(),
+    status: (path) => ({
+      installable: isToolArtifact(path),
+      installedId: installedApps().find((a) => a.path === path)?.id ?? null,
+    }),
     install: (path, title) => ({ id: installArtifactApp(path, title).id }),
     uninstall: (path) => uninstallArtifactApp(path),
     open: (id) => void openInstalledApp(id),

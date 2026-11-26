@@ -4361,6 +4361,7 @@
     "installApp": "Install as app",
     "uninstallApp": "Uninstall app",
     "installedApp": "Installed. Open it from your apps menu.",
+    "openApp": "Open app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search connectors",
     "searchSkills": "Search skills",

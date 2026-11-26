@@ -168,17 +168,32 @@ export const ArtifactsPage = ({
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const saver = useSaveFiles();
-  // Artifact pages installed as apps (desktop only), by page path.
+  // Pages the `artifact` tool made, and which of them are installed as apps
+  // (desktop only), by page path. The host decides what is installable.
   const [installed, setInstalled] = useState<Set<string>>(new Set());
-  const refreshInstalled = () =>
-    void transport.client.system.artifactApps
-      .list()
-      .then((apps) => setInstalled(new Set(apps.map((app) => app.path))))
+  const [installable, setInstallable] = useState<Set<string>>(new Set());
+  const pagePaths = rows
+    .filter((a) => a.kind === "file" && isArtifactPage(a.location))
+    .map((a) => a.location)
+    .join("\n");
+  const refreshInstalled = () => {
+    if (!IS_ELECTRON || pagePaths === "") return;
+    const paths = pagePaths.split("\n");
+    void Promise.all(
+      paths.map((path) => transport.client.system.artifactApps.status({ path }))
+    )
+      .then((statuses) => {
+        setInstallable(
+          new Set(paths.filter((_, i) => statuses[i]!.installable))
+        );
+        setInstalled(
+          new Set(paths.filter((_, i) => statuses[i]!.installedId != null))
+        );
+      })
       .catch(() => undefined);
-  useEffect(() => {
-    if (IS_ELECTRON) refreshInstalled();
-    // oxlint-disable-next-line exhaustive-deps -- once per mount.
-  }, []);
+  };
+  // oxlint-disable-next-line exhaustive-deps -- again only when the pages change.
+  useEffect(refreshInstalled, [pagePaths]);
   const list = search.view === "list" || !!search.item;
   // Phone widths fit two narrower cards instead of one stretched card.
   const columns = list
@@ -253,7 +268,7 @@ export const ArtifactsPage = ({
             .then(() => showInfo(t("phase5.copied")))
             .catch(() => showError(t("phase5.failed"))),
       },
-      ...(IS_ELECTRON && a.kind === "file" && isArtifactPage(a.location)
+      ...(installable.has(a.location) || installed.has(a.location)
         ? installed.has(a.location)
           ? [
               {
