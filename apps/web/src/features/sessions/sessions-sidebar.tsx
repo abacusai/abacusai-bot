@@ -606,7 +606,7 @@ const SessionSidebarRow = ({
                 {session.ownsWorktree === true ? (
                   <p data-slot="delete-checkout">
                     {t("sessions.sidebar.deleteCheckout", {
-                      branch: session.worktreeBranch ?? "",
+                      branch: session.ownedWorktreeBranch ?? "",
                     })}
                   </p>
                 ) : null}

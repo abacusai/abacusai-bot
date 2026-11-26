@@ -22,6 +22,8 @@ export interface HandOffCheckout {
   branch: string | null;
   /** The commit it was made from: a branch still on it has nothing of its own. */
   base: string;
+  /** The project's subfolder inside it, when the project is one of its repository's. */
+  subdir?: string;
 }
 
 /** What `hand_off_session` started, or why it did not. */

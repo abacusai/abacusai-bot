@@ -83,9 +83,14 @@ type SessionRecord = {
   continuationKind?: "handoff";
   /** A handoff's last turn's ending. See AgentSessionListItem.handOffEnd. */
   handOffEnd?: HandOffEnd;
-  /** The checkout a hand-off made for this chat; removed with it. See ServiceHost.releaseHandOffCheckout. */
+  /**
+   * The checkout a hand-off made for this chat. The chat owns it until the
+   * chat is deleted, on it or not (the picker can switch away and back);
+   * then it passes to another chat on it, or is released. See
+   * ServiceHost.releaseHandOffCheckout.
+   */
   handOffCheckout?: HandOffCheckout;
-  /** See AgentSessionListItem.worktreeSubdir; dropped when the worktree changes. */
+  /** Legacy: the subfolder before it moved onto `handOffCheckout.subdir`. */
   worktreeSubdir?: string;
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
@@ -125,6 +130,16 @@ const isWithinFolder = (child: string, parent: string): boolean => {
 /** How often a session list a full disk refused tries to save again. */
 const SESSIONS_DISK_FULL_RETRY_MS = 30_000;
 
+/** The project's subfolder in the worktree the session is on: only its own hand-off checkout has one. */
+const worktreeSubdirOf = (
+  record: SessionRecord
+): { worktreeSubdir?: string } => {
+  const checkout = record.handOffCheckout;
+  if (checkout == null || record.worktreePath !== checkout.path) return {};
+  const subdir = checkout.subdir ?? record.worktreeSubdir;
+  return subdir != null && subdir !== "" ? { worktreeSubdir: subdir } : {};
+};
+
 const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   id: record.id,
   workspaceId: record.workspaceId,
@@ -156,13 +171,13 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
     ? { continuationKind: record.continuationKind }
     : {}),
   ...(record.handOffEnd != null ? { handOffEnd: record.handOffEnd } : {}),
-  ...(record.handOffCheckout != null &&
-  record.handOffCheckout.path === record.worktreePath
-    ? { ownsWorktree: true }
+  ...(record.handOffCheckout != null
+    ? {
+        ownsWorktree: true,
+        ownedWorktreeBranch: record.handOffCheckout.branch,
+      }
     : {}),
-  ...(record.worktreeSubdir != null && record.worktreePath != null
-    ? { worktreeSubdir: record.worktreeSubdir }
-    : {}),
+  ...worktreeSubdirOf(record),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
   owner: record.owner ?? null,
@@ -491,34 +506,26 @@ export class AgentSessionManagerService {
       session.worktreePath !== checkout.path
     )
       return false;
-    session.handOffCheckout = checkout;
-    if (subdir != null && subdir !== "") session.worktreeSubdir = subdir;
-    else delete session.worktreeSubdir;
+    session.handOffCheckout =
+      subdir != null && subdir !== "" ? { ...checkout, subdir } : checkout;
+    delete session.worktreeSubdir;
     this.persist();
     return true;
   }
 
-  /** The checkout a hand-off made for this chat while it is still on it; null otherwise. */
+  /** The checkout a hand-off made that this chat owns, whichever worktree it is on now. */
   handOffCheckout(sessionId: string): HandOffCheckout | null {
-    const session = this.sessions.get(sessionId);
-    const checkout = session?.handOffCheckout;
-    return checkout != null && session?.worktreePath === checkout.path
-      ? checkout
-      : null;
+    return this.sessions.get(sessionId)?.handOffCheckout ?? null;
   }
 
   /**
    * The checkout this chat owns, now that the chat goes. Another chat still
    * on that worktree (a continuation on another model, a chat that picked it)
    * takes it over, so the last chat on it is the one whose removal takes it
-   * away: then it is returned, for the caller to remove. Read before
-   * `remove`; for a chat moved off it, pass what it owned before the move.
+   * away: then it is returned, for the caller to remove. Read before `remove`.
    */
-  leaveHandOffCheckout(
-    sessionId: string,
-    /** What it owned, read before a move off it; else what it owns now. */
-    owned: HandOffCheckout | null = this.handOffCheckout(sessionId)
-  ): HandOffCheckout | null {
+  leaveHandOffCheckout(sessionId: string): HandOffCheckout | null {
+    const owned = this.handOffCheckout(sessionId);
     if (owned == null) return null;
     const owner = this.sessions.get(sessionId);
     if (owner != null) delete owner.handOffCheckout;
@@ -791,8 +798,6 @@ export class AgentSessionManagerService {
   ): boolean {
     const session = this.sessions.get(sessionId);
     if (session == null || session.workspaceId !== workspaceId) return false;
-    if (session.worktreePath !== (worktree?.path ?? null))
-      delete session.worktreeSubdir;
     session.worktreeId = worktree?.id ?? null;
     session.worktreePath = worktree?.path ?? null;
     session.worktreeBranch = worktree?.branch ?? null;

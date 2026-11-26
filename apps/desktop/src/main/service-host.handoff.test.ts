@@ -220,7 +220,6 @@ const makeHost = (
     "resolveWorkspaceContextPath",
     "settleHandOff",
     "removeWorkspace",
-    "moveSessionWorktree",
   ])
     self[name] = proto[name]!.bind(self);
   self.worktreeMaterializer = new WorktreeMaterializer({
@@ -1070,32 +1069,88 @@ describe("hand-off checkouts: what a release keeps and frees", () => {
     expect(host.notices).toEqual([]);
   });
 
-  it("a chat moved by hand off its checkout releases it the safe way, unless another chat is still on it", async () => {
+  it("the picker switching a chat off its checkout removes nothing; switching back finds it, subfolder and all", async () => {
+    const repo = project("git");
+    const folder = path.join(repo, "apps", "site");
+    fs.mkdirSync(folder, { recursive: true });
+    commitIn(folder, "index.html");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    const listed = {
+      id: child.worktreeId!,
+      path: child.worktreePath!,
+      branch: child.worktreeBranch,
+    };
+    expect((await host.moveTo(child.id, null)).success).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(branches(repo)).toContain(child.worktreeBranch);
+    expect(host.notices).toEqual([]);
+    // Still its own: the delete dialog says so, with the branch.
+    expect(host.manager.get(child.id)).toMatchObject({
+      ownsWorktree: true,
+      ownedWorktreeBranch: child.worktreeBranch,
+    });
+    expect(host.directory(child.id)).toBe(folder);
+    host.manager.updateWorktree(WORKSPACE, child.id, listed);
+    expect(host.directory(child.id)).toBe(
+      path.join(child.worktreePath!, "apps", "site")
+    );
+  });
+
+  it("a chat switched away still takes its clean checkout with it when deleted", async () => {
     const folder = project("git");
     const host = makeHost({ folder });
-    const alone = await childOf(host);
-    expect((await host.moveTo(alone.id, null)).success).toBe(true);
-    await settled(() => !branches(folder).includes(alone.worktreeBranch!));
-    expect(fs.existsSync(alone.worktreePath!)).toBe(false);
-    expect(branches(folder)).not.toContain(alone.worktreeBranch);
-    expect(host.manager.get(alone.id)).not.toHaveProperty("ownsWorktree");
+    const child = await childOf(host);
+    expect((await host.moveTo(child.id, null)).success).toBe(true);
+    host.remove(child.id);
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(branches(folder)).toEqual(["main"]);
+  });
 
-    const shared = await childOf(host);
+  it("deleted while away from it, it leaves the checkout to a chat now on it", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    expect((await host.moveTo(child.id, null)).success).toBe(true);
     const other = host.manager.create(WORKSPACE);
     host.manager.updateWorktree(WORKSPACE, other.id, {
-      id: shared.worktreeId!,
-      path: shared.worktreePath!,
-      branch: shared.worktreeBranch,
+      id: child.worktreeId!,
+      path: child.worktreePath!,
+      branch: child.worktreeBranch,
     });
-    expect((await host.moveTo(shared.id, null)).success).toBe(true);
+    host.remove(child.id);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(fs.existsSync(shared.worktreePath!)).toBe(true);
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
     expect(host.manager.get(other.id)?.ownsWorktree).toBe(true);
+  });
 
-    // Moving back does not make it the owner again: the other chat is.
-    const back = await host.handOff(host.manager.create(WORKSPACE).id);
-    void back;
-    expect(host.manager.get(shared.id)).not.toHaveProperty("ownsWorktree");
+  it("tool caches (.ruff_cache, .pytest_cache, .mypy_cache, .tox) neither keep a checkout nor are named", async () => {
+    const folder = project("git");
+    fs.writeFileSync(
+      path.join(folder, ".gitignore"),
+      ".ruff_cache/\n.pytest_cache/\n.mypy_cache/\n.tox/\n.eslintcache\n"
+    );
+    commitIn(folder, "keep.txt");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    for (const file of [
+      ".ruff_cache/0.6.9/a",
+      ".pytest_cache/v/cache/nodeids",
+      ".mypy_cache/3.12/b.json",
+      ".tox/py312/c",
+      ".eslintcache",
+    ]) {
+      fs.mkdirSync(path.dirname(path.join(child.worktreePath!, file)), {
+        recursive: true,
+      });
+      fs.writeFileSync(path.join(child.worktreePath!, file), "x");
+    }
+    host.remove(child.id);
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(host.notices).toEqual([]);
   });
 });
 

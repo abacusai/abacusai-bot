@@ -210,8 +210,16 @@ const DISPOSABLE_IGNORED = new Set([
   ".venv",
   "venv",
   "__pycache__",
+  // Tool caches, rebuilt on the next run.
   ".pytest_cache",
   ".mypy_cache",
+  ".ruff_cache",
+  ".tox",
+  ".nox",
+  ".eslintcache",
+  ".stylelintcache",
+  ".sass-cache",
+  ".angular",
   // Clutter the OS leaves in folders.
   ".DS_Store",
   "Thumbs.db",
