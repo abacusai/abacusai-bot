@@ -89,8 +89,10 @@ import { Skeleton } from "#renderer/ui/skeleton";
 import { useGithubIntegration, useSessionsTransport } from "../data/queries";
 import {
   clearTerminal,
+  closeTerminalView,
+  disposeConversationViews,
   getTerminalView,
-  disposeTerminalView,
+  peekTerminalView,
 } from "../terminal/terminal-registry";
 import { afterMenusClose } from "./after-menus-close";
 import {
@@ -103,6 +105,7 @@ import {
   nextTab,
   reopenTab,
   reconcileTerminals,
+  terminalExited,
   terminalTitle,
   updateTabs,
   focusTab,
@@ -250,8 +253,24 @@ export const SessionDock = ({
       enabled: IS_ELECTRON,
     })
   );
-  const shells = useQuery(
-    transport.orpc.terminal.shell.get.queryOptions({ input: {} })
+  // The shell roster is for the menus that list shells: asked for when one
+  // is about to open, not on every chat (on Windows it asks the registry).
+  const [shellsWanted, setShellsWanted] = useState(false);
+  const wantShells = () => setShellsWanted(true);
+  const shells = useQuery({
+    ...transport.orpc.terminal.shell.get.queryOptions({ input: {} }),
+    enabled: shellsWanted,
+  });
+  // Main's generation of each running terminal, for a tab never shown here
+  // (an agent's): closing it still closes its shell.
+  const [running] = useState(() => new Map<string, number>());
+  // A chat left the screen: its terminals' screens go, their shells stay.
+  useEffect(
+    () => () =>
+      disposeConversationViews(key, (id) =>
+        terminalExited(key, `terminal:${id}`)
+      ),
+    [key]
   );
   const active =
     search.tab ?? (entries.open ? (entries.last ?? undefined) : undefined);
@@ -310,14 +329,15 @@ export const SessionDock = ({
   const close = (ref: string) => {
     if (!ref.startsWith("terminal:")) return closeNow(ref);
     const id = ref.slice(9);
-    void getTerminalView(`${key}:${id}`)
-      .then((view) =>
-        view.generation == null
+    void Promise.resolve(peekTerminalView(`${key}:${id}`))
+      .then((view) => view?.generation ?? running.get(id))
+      .then((generation) =>
+        generation == null
           ? { program: null }
           : transport.client.terminal.busy({
               conversationKey: key,
               terminalId: id,
-              generation: view.generation,
+              generation,
             })
       )
       .catch(() => ({ program: null }))
@@ -329,18 +349,17 @@ export const SessionDock = ({
     if (ref === "chat") return;
     if (ref.startsWith("terminal:")) {
       const id = ref.slice(9);
-      void getTerminalView(`${key}:${id}`)
-        .then(async (view) => {
-          if (view.generation !== null)
-            await transport.client.terminal.hide({
-              conversationKey: key,
-              terminalId: id,
-              generation: view.generation,
-              close: true,
-            });
-          disposeTerminalView(`${key}:${id}`);
-        })
-        .catch(() => {});
+      void closeTerminalView(
+        `${key}:${id}`,
+        (generation) =>
+          transport.client.terminal.hide({
+            conversationKey: key,
+            terminalId: id,
+            generation,
+            close: true,
+          }),
+        running.get(id)
+      ).catch(() => {});
     }
     if (ref.startsWith("browser:")) {
       if (IS_ELECTRON)
@@ -369,6 +388,13 @@ export const SessionDock = ({
       ({ signal }) =>
         transport.client.terminal.events({ conversationKey: key }, { signal }),
       (event) => {
+        if (event.type === "snapshot") running.clear();
+        for (const state of event.type === "snapshot"
+          ? event.states
+          : [event.state])
+          if (state.status === "running")
+            running.set(state.terminalId, state.generation);
+          else running.delete(state.terminalId);
         if (event.type === "snapshot") {
           reconcileTerminals(key, event.states, t("sessions.dock.terminal"));
           setTerminalSnapshot(key);
@@ -404,8 +430,11 @@ export const SessionDock = ({
         },
         abort.signal
       );
-    return () => abort.abort();
-  }, [transport, key, t]);
+    return () => {
+      abort.abort();
+      running.clear();
+    };
+  }, [transport, key, t, running]);
   useEffect(() => {
     if (
       active &&
@@ -513,6 +542,11 @@ export const SessionDock = ({
   ).filter((shell) =>
     terminalShellListed(shell.id, shells.data?.statuses, platform)
   );
+  // Asked for as a shell menu opens: until the answer comes, a row saying so
+  // holds the shells' place, so the menu keeps its shape.
+  const shellsLoading = shells.data == null && (
+    <DropdownMenuItem disabled>{t("common.loading")}</DropdownMenuItem>
+  );
   const shellItems = listedShells.map((shell) => (
     <DropdownMenuItem
       key={shell.id}
@@ -541,6 +575,7 @@ export const SessionDock = ({
             </span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
+            {shellsLoading}
             {listedShells.map((shell) => (
               <DropdownMenuItem
                 key={shell.id}
@@ -564,7 +599,8 @@ export const SessionDock = ({
   };
   // One entry per shell only where there is a choice (Windows); with one
   // shell the plain "Terminal" entry is the same thing.
-  const pickShell = shellItems.length > 1;
+  const pickShell =
+    shells.data == null ? platform === "win32" : shellItems.length > 1;
   const [renameRequest, setRenameRequest] = useState<{
     id: string;
     at: number;
@@ -615,8 +651,10 @@ export const SessionDock = ({
   const controls = (
     <TopBar.Group className="titlebar-nodrag shrink-0 self-start px-1">
       {activeTerminal ? (
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(open) => open && wantShells()}>
           <DropdownMenuTrigger
+            onPointerEnter={wantShells}
+            onFocus={wantShells}
             render={
               <TopBar.IconButton label={t("sessions.terminal.actions")} />
             }
@@ -648,7 +686,10 @@ export const SessionDock = ({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               {pickShell ? (
-                shellItems
+                <>
+                  {shellsLoading}
+                  {shellItems}
+                </>
               ) : (
                 <DropdownMenuItem onClick={() => add("terminal")}>
                   <Terminal />
@@ -660,8 +701,10 @@ export const SessionDock = ({
         </DropdownMenu>
       ) : null}
       {
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(open) => open && wantShells()}>
           <DropdownMenuTrigger
+            onPointerEnter={wantShells}
+            onFocus={wantShells}
             render={<TopBar.IconButton label={t("sessions.dock.add")} />}
           >
             <Plus />

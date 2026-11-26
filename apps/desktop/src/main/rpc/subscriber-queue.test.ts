@@ -224,6 +224,8 @@ const terminalHarness = (maxScrollbackBytes?: number) => {
   const deps = fakeDeps({
     bus,
     serviceHost: {
+      canonicalTerminalKey: (key: ConversationKey) =>
+        registry.canonicalKey(key),
       terminalOutputState: (request: {
         conversationKey: ConversationKey;
         terminalId?: string;

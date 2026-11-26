@@ -217,7 +217,6 @@ describe("conversation terminal runtime registry", () => {
       scrollback: "preserved",
     });
     expect(promoted.attachment!.generation).toBeGreaterThan(started.generation);
-    expect(registry.attach(conversationKey(draftScope))).toBeNull();
     expect(ptys).toHaveLength(1);
 
     registry.hide(promoted.attachment!.key, promoted.attachment!.generation);
@@ -227,12 +226,122 @@ describe("conversation terminal runtime registry", () => {
     );
     expect(repeated.status).toBe("already-promoted");
     expect(repeated.attachment?.visible).toBe(false);
-
-    await registry.start({ scope: draftScope, cols: 90, rows: 30 });
-    expect(ptys).toHaveLength(2);
     expect(registry.attach(conversationKey(sessionScope))?.scrollback).toBe(
       "preserved"
     );
+  });
+
+  it("gives a promoted draft's later terminals to its chat, never a second shell", async () => {
+    const { registry, ptys } = setup();
+    const draftScope = draft("workspace-1");
+    const sessionScope = session("workspace-1", "session-1");
+    const sessionKey = conversationKey(sessionScope);
+    await registry.start({ scope: draftScope, cols: 80, rows: 24 });
+    await registry.promoteDraftToSession(draftScope, sessionScope);
+
+    // The new-chat page, still on screen while the chat hands off.
+    const again = await registry.start({
+      scope: draftScope,
+      cols: 90,
+      rows: 30,
+    });
+    expect(again).toMatchObject({ key: sessionKey, created: false });
+    const later = await registry.start({
+      terminalId: "terminal-2",
+      scope: draftScope,
+      cols: 80,
+      rows: 24,
+    });
+    expect(later).toMatchObject({ key: sessionKey, created: true });
+    expect(
+      registry.attach(conversationKey(draftScope), undefined, "terminal-2")
+    ).toMatchObject({ key: sessionKey, generation: later.generation });
+    expect(
+      registry.write(
+        conversationKey(draftScope),
+        later.generation,
+        "ls\r",
+        "terminal-2"
+      )
+    ).toBe(true);
+    expect(ptys[1]!.write).toHaveBeenCalledWith("ls\r");
+
+    // The chat's page then shows the same tab: it attaches.
+    const shown = await registry.start({
+      terminalId: "terminal-2",
+      scope: sessionScope,
+      cols: 80,
+      rows: 24,
+    });
+    expect(shown).toMatchObject({
+      created: false,
+      generation: later.generation,
+    });
+    expect(ptys).toHaveLength(2);
+    expect(registry.list(sessionKey).map((t) => t.terminalId)).toEqual([
+      "terminal-1",
+      "terminal-2",
+    ]);
+  });
+
+  it("attaches a chat's start to a draft shell still spawning while it is promoted", async () => {
+    let spawn: ((pty: TerminalPty) => void) | undefined;
+    const pty = fakePty();
+    const created = vi.fn();
+    const registry = new ConversationTerminalRuntimeRegistry({
+      createPty: () => {
+        created();
+        return new Promise<TerminalPty>((resolve) => {
+          spawn = resolve;
+        });
+      },
+    });
+    const draftScope = draft("workspace-1");
+    const sessionScope = session("workspace-1", "session-1");
+    const drafted = registry.start({ scope: draftScope, cols: 80, rows: 24 });
+    const promotion = registry.promoteDraftToSession(draftScope, sessionScope);
+    const fromChat = registry.start({
+      scope: sessionScope,
+      cols: 80,
+      rows: 24,
+    });
+    const fromDraft = registry.start({ scope: draftScope, cols: 80, rows: 24 });
+    spawn!(pty);
+    await drafted;
+    await expect(promotion).resolves.toMatchObject({ status: "promoted" });
+    const [chat, again] = await Promise.all([fromChat, fromDraft]);
+    expect(chat).toMatchObject({
+      key: conversationKey(sessionScope),
+      created: false,
+    });
+    expect(again.generation).toBe(chat.generation);
+    expect(created).toHaveBeenCalledTimes(1);
+    expect(pty.kill).not.toHaveBeenCalled();
+  });
+
+  it("ends a deleted chat's terminals and forgets the draft it came from", async () => {
+    const { registry, ptys } = setup();
+    const draftScope = draft("workspace-1");
+    const sessionScope = session("workspace-1", "session-1");
+    await registry.start({ scope: draftScope, cols: 80, rows: 24 });
+    await registry.promoteDraftToSession(draftScope, sessionScope);
+    await registry.start({
+      terminalId: "terminal-2",
+      scope: draftScope,
+      cols: 80,
+      rows: 24,
+    });
+
+    expect(registry.disposeScope(conversationKey(sessionScope))).toBe(true);
+    expect(ptys.map((pty) => pty.kill.mock.calls.length)).toEqual([1, 1]);
+    expect(registry.hasLiveRuntimes()).toBe(false);
+    // A draft of the same workspace is its own conversation again.
+    const fresh = await registry.start({
+      scope: draftScope,
+      cols: 80,
+      rows: 24,
+    });
+    expect(fresh.key).toBe(conversationKey(draftScope));
   });
 
   it("disposes one scope, one workspace, or every workspace", async () => {

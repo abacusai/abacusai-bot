@@ -9,6 +9,9 @@ import {
   updateTab,
   focusTab,
   reconcileTerminals,
+  openTerminalTab,
+  promoteTabs,
+  retainTerminalStart,
 } from "./panel-tabs-store";
 it("preview eviction repairs last while keeping the most recent 50 previews", () => {
   const key = "eviction";
@@ -95,4 +98,25 @@ it("reopens closed browser metadata without reviving its closed native resource"
     url: "https://example.test",
   });
   expect(reopenTab(key)).toBeNull();
+});
+it("a new chat's terminal opened while it hands off stays the chat's tab", async () => {
+  const draft = "promote-draft";
+  const chat = "promote-chat";
+  // Opened on the new-chat page while the first turn hands off: its shell is
+  // still starting when the chat takes the page's tabs.
+  openTerminalTab(draft, { ref: "terminal:late", title: "Terminal" });
+  const started = retainTerminalStart(draft, "late");
+  promoteTabs(draft, chat);
+  expect(panelTabsStore.state[draft]).toBeUndefined();
+  reconcileTerminals(chat, []);
+  expect(panelTabsStore.state[chat]!.tabs.map((tab) => tab.ref)).toEqual([
+    "terminal:late",
+  ]);
+  started();
+  await Promise.resolve();
+  // The chat's page shows it and its start settles there.
+  retainTerminalStart(chat, "late")();
+  await Promise.resolve();
+  reconcileTerminals(chat, []);
+  expect(panelTabsStore.state[chat]!.tabs).toEqual([]);
 });

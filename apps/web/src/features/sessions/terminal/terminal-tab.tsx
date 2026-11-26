@@ -52,6 +52,7 @@ import { pumpOutput, type OutputView } from "./output-pump";
 import {
   clearTerminal,
   getTerminalView,
+  peekTerminalView,
   type TerminalView,
 } from "./terminal-registry";
 /** Why a hosted computer refused the terminal on this plan, if it did. */
@@ -219,6 +220,10 @@ export const TerminalTab = ({
   /** The shell being started, while it has printed nothing (PowerShell takes seconds). */
   const [starting, setStarting] = useState<string | null>(null);
   const [run, setRun] = useState(0);
+  // A tab's shell starts the first time the tab is on screen: a restored tab
+  // behind another, or in a closed panel, runs nothing until it is shown.
+  const [shown, setShown] = useState(visible);
+  if (visible && !shown) setShown(true);
   const bindings = useContext(TerminalActionBindingsContext);
   const handleKey = useEffectEvent(
     (
@@ -233,6 +238,7 @@ export const TerminalTab = ({
   const shellToStart = useEffectEvent(() => shell);
   const close = useEffectEvent(onClose);
   useEffect(() => {
+    if (!shown) return;
     const abort = new AbortController();
     const finishStart = retainTerminalStart(key, id);
     let starting = false;
@@ -277,18 +283,27 @@ export const TerminalTab = ({
           setExited(true);
         } else {
           starting = true;
-          const start = await transport.client.terminal.start({
-            terminalId: id,
-            conversationKey: key,
-            conversation: conversationRefFromKey(key)!,
-            generation: view.generation,
-            ...(shellToStart() ? { shell: shellToStart() } : {}),
-            cols: view.term.cols || 80,
-            rows: view.term.rows || 24,
-          });
+          // The generation is the view's before anyone waiting on the start
+          // resumes: a tab closed meanwhile closes the shell this started.
+          const pending = transport.client.terminal
+            .start({
+              terminalId: id,
+              conversationKey: key,
+              conversation: conversationRefFromKey(key)!,
+              generation: view.generation,
+              ...(shellToStart() ? { shell: shellToStart() } : {}),
+              cols: view.term.cols || 80,
+              rows: view.term.rows || 24,
+            })
+            .then((start) => {
+              if (start.success && start.state)
+                view.generation = start.state.generation;
+              return start;
+            });
+          view.starting = pending;
+          const start = await pending;
           if (!start.success || !start.state)
             throw new Error(start.error ?? "Terminal failed");
-          view.generation = start.state.generation;
           // Kept with the tab, so after an app restart it comes back with
           // the same shell (not whatever the default is by then).
           if (start.state.shell)
@@ -607,7 +622,7 @@ export const TerminalTab = ({
       if (!starting) finishStart();
       cleanup();
     };
-  }, [transport, key, id, t, run]);
+  }, [transport, key, id, t, run, shown]);
   const [selection, setSelection] = useState(false);
   /** Runs on this tab's terminal, then gives it the keyboard back. */
   const withTerm = (fn: (term: TerminalView["term"]) => unknown) =>
@@ -634,8 +649,12 @@ export const TerminalTab = ({
   };
   useEffect(() => {
     let live = true;
-    void getTerminalView(`${key}:${id}`)
-      .then((view) => {
+    // Hidden before it was ever shown: no screen, no shell, nothing to tell.
+    const view = visible
+      ? getTerminalView(`${key}:${id}`)
+      : peekTerminalView(`${key}:${id}`);
+    void view
+      ?.then((view) => {
         if (!live) return;
         if (visible) {
           view.refit?.();

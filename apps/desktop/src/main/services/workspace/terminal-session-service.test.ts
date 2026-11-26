@@ -24,6 +24,7 @@ const resolveShell = vi.fn((id: TerminalShellId) => ({
 vi.mock("./terminal-shells", () => ({
   resolveTerminalShell: (id: TerminalShellId) => resolveShell(id),
   preferredTerminalShell: () => storedShell(),
+  learnTerminalShell: async () => {},
 }));
 
 vi.mock("@lydell/node-pty", () => ({
@@ -311,4 +312,61 @@ describe("conversation terminal session service", () => {
       expect(terminals.busyProgram(draft.conversationKey, "idle")).toBeNull();
     }
   );
+
+  it.skipIf(process.platform === "win32")(
+    "holds the silent restart for a program, not for a shell at its prompt",
+    async () => {
+      const terminals = service();
+      const draft = draftRequest();
+      const idle = fakePty("-system");
+      const server = fakePty("python3");
+      ptySpawn.mockReturnValueOnce(idle).mockReturnValueOnce(server);
+      await terminals.startSession({ ...draft, terminalId: "idle" });
+      expect(terminals.holdsRestart()).toBe(false);
+      const { state } = await terminals.startSession({
+        ...draft,
+        terminalId: "server",
+      });
+      expect(terminals.holdsRestart()).toBe(true);
+      terminals.hideSession({
+        conversationKey: draft.conversationKey,
+        terminalId: "server",
+        generation: state.generation,
+        close: true,
+      });
+      expect(terminals.holdsRestart()).toBe(false);
+      expect(terminals.hasLiveSessions()).toBe(true);
+    }
+  );
+
+  it("ends a deleted chat's shells, those its new-chat page left too", async () => {
+    const terminals = service();
+    const drafted = fakePty();
+    const chat = fakePty();
+    const other = fakePty();
+    ptySpawn
+      .mockReturnValueOnce(drafted)
+      .mockReturnValueOnce(chat)
+      .mockReturnValueOnce(other);
+    const draftRef = draftConversationRef("workspace-1", "chat-1");
+    const chatRef = sessionConversationRef("workspace-1", "chat-1");
+    const otherRef = sessionConversationRef("workspace-1", "chat-2");
+    for (const conversation of [draftRef, chatRef, otherRef])
+      await terminals.startSession({
+        conversation,
+        conversationKey: conversationKey(conversation),
+        generation: null,
+        cols: 80,
+        rows: 24,
+      });
+
+    terminals.disposeConversation("workspace-1", "chat-1");
+    expect(drafted.kill).toHaveBeenCalledOnce();
+    expect(chat.kill).toHaveBeenCalledOnce();
+    expect(other.kill).not.toHaveBeenCalled();
+
+    terminals.disposeWorkspace("workspace-1");
+    expect(other.kill).toHaveBeenCalledOnce();
+    expect(terminals.hasLiveSessions()).toBe(false);
+  });
 });

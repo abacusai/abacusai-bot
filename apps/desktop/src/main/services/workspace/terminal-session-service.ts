@@ -13,7 +13,9 @@ import type {
 } from "@abacus-ai/contract/contracts";
 import {
   conversationKey,
+  draftConversationKey,
   draftConversationRef,
+  sessionConversationKey,
   sessionConversationRef,
   type ConversationKey,
   type ConversationRef,
@@ -29,6 +31,7 @@ import {
   type TerminalPty,
 } from "../conversation/conversation-terminal-runtime-registry";
 import {
+  learnTerminalShell,
   preferredTerminalShell,
   resolveTerminalShell,
 } from "./terminal-shells";
@@ -302,6 +305,33 @@ export class TerminalSessionService {
     return this.registry.hasLiveRuntimes();
   }
 
+  /**
+   * Whether a restart nobody asked for would stop a program: a terminal
+   * running one, or on Windows any live terminal, since there the foreground
+   * program cannot be told from the shell's prompt.
+   */
+  holdsRestart(): boolean {
+    return process.platform === "win32"
+      ? this.registry.hasLiveRuntimes()
+      : this.busyTerminals().length > 0;
+  }
+
+  /** A deleted chat's terminals end, and any its new-chat page left. */
+  disposeConversation(workspaceId: string, sessionId: string): void {
+    this.registry.disposeScope(sessionConversationKey(workspaceId, sessionId));
+    this.registry.disposeScope(draftConversationKey(workspaceId, sessionId));
+  }
+
+  /** A removed workspace's terminals end, in every chat of it. */
+  disposeWorkspace(workspaceId: string): void {
+    this.registry.disposeWorkspace(workspaceId);
+  }
+
+  /** The key a conversation's terminals live under (a promoted draft's chat). */
+  canonicalKey(key: ConversationKey): ConversationKey {
+    return this.registry.canonicalKey(key);
+  }
+
   async startSession(
     request: StartTerminalSessionRequest
   ): Promise<StartTerminalSessionResult> {
@@ -321,6 +351,7 @@ export class TerminalSessionService {
       }
       let created = false;
       if (attachment == null) {
+        await learnTerminalShell(requestedShell(request.shell));
         const started = await this.registry.start({
           terminalId,
           scope: registryScope(request.conversation),

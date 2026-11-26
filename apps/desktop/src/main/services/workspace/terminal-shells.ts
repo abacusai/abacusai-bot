@@ -7,7 +7,7 @@
  * materialised per user by the agent package, which hands back the `sh`
  * launcher plus the applet directory its children need on PATH.
  */
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -176,28 +176,58 @@ const gitBash = (env: NodeJS.ProcessEnv): string | undefined => {
 };
 
 let wslDistros: { found: boolean; at: number } | null = null;
+let wslQuery: Promise<boolean> | null = null;
 
 /**
  * Whether WSL has a Linux installed. wsl.exe ships with Windows whether or
  * not one is, so its presence says nothing: the installed distributions are
- * the subkeys of HKCU\...\Lxss. Asked of reg.exe at most every 30 s.
+ * the subkeys of HKCU\...\Lxss. Asked of reg.exe off the main thread, one
+ * query at a time, and at most every 30 s.
  */
-const wslInstalled = (): boolean => {
+const queryWslInstalled = (): Promise<boolean> => {
   if (wslDistros != null && Date.now() - wslDistros.at < 30_000)
-    return wslDistros.found;
-  let found = false;
-  try {
-    const out = execFileSync(
+    return Promise.resolve(wslDistros.found);
+  wslQuery ??= new Promise<boolean>((resolve) => {
+    execFile(
       "reg",
       ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss"],
-      { encoding: "utf8", timeout: 3000, windowsHide: true }
+      { encoding: "utf8", timeout: 3000, windowsHide: true },
+      // An error is no key: WSL was never set up.
+      (error, out) => resolve(error == null && /\\Lxss\\\{/i.test(out))
     );
-    found = /\\Lxss\\\{/i.test(out);
-  } catch {
-    // No key: WSL was never set up.
-  }
-  wslDistros = { found, at: Date.now() };
-  return found;
+  }).then((found) => {
+    wslDistros = { found, at: Date.now() };
+    wslQuery = null;
+    return found;
+  });
+  return wslQuery;
+};
+
+/** The last answer, without asking: no WSL until one came. */
+const wslInstalled = (): boolean => wslDistros?.found ?? false;
+
+/**
+ * Before a shell id is resolved: what the roster needs to know about this
+ * machine that takes a process to learn (WSL's distributions, on Windows).
+ */
+export const learnTerminalShell = async (
+  id: TerminalShellId,
+  platform: NodeJS.Platform = process.platform
+): Promise<void> => {
+  if (platform === "win32" && id === "wsl") await queryWslInstalled();
+};
+
+/** Before the whole roster is listed (the `+` menu, Settings). */
+export const learnTerminalShells = async (
+  platform: NodeJS.Platform = process.platform
+): Promise<void> => {
+  if (platform === "win32") await queryWslInstalled();
+};
+
+/** Test seam: forget what was learned about WSL. */
+export const resetWslForTesting = (): void => {
+  wslDistros = null;
+  wslQuery = null;
 };
 
 const systemShell = (

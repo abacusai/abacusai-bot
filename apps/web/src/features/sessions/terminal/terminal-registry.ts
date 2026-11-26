@@ -5,6 +5,8 @@ export interface TerminalView {
   element: HTMLDivElement;
   offset: number | undefined;
   generation: number | null;
+  /** The tab's `terminal.start` while it is on its way; `generation` once it settled. */
+  starting?: Promise<unknown>;
   reconnect?: () => void;
   /** Set by the tab while mounted: fit cols/rows to the box and resize the PTY. */
   refit?: () => void;
@@ -87,6 +89,39 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
     views.set(key, view);
   }
   return view;
+};
+/** The view a tab already has, without making one (a hidden tab has none). */
+export const peekTerminalView = (key: string): Promise<TerminalView> | null =>
+  views.get(key) ?? null;
+/**
+ * Closes a tab's shell in main, whatever generation it reached: one still
+ * starting is waited for, so closing a tab never leaves its shell behind.
+ */
+export const closeTerminalView = async (
+  key: string,
+  close: (generation: number) => Promise<unknown>,
+  /** Main's generation for a shell this window never showed (an agent's). */
+  running?: number
+): Promise<void> => {
+  const view = await views.get(key)?.catch(() => null);
+  await view?.starting?.catch(() => {});
+  const generation = view?.generation ?? running;
+  if (generation != null) await close(generation);
+  disposeTerminalView(key);
+};
+/**
+ * A conversation left the screen: its terminals' screens go (main keeps each
+ * shell and its scrollback, replayed when the tab is shown again). `keep`
+ * spares a tab whose shell exited, the one place its last output lives.
+ */
+export const disposeConversationViews = (
+  conversationKey: string,
+  keep: (id: string) => boolean
+): void => {
+  const prefix = `${conversationKey}:`;
+  for (const key of views.keys())
+    if (key.startsWith(prefix) && !keep(key.slice(prefix.length)))
+      disposeTerminalView(key);
 };
 export const disposeTerminalView = (key: string): void => {
   const view = views.get(key);

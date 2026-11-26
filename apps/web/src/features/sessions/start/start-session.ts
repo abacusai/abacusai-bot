@@ -28,10 +28,7 @@ import {
   panelTabsStore,
   promoteTabs,
 } from "../dock/panel-tabs-store";
-import {
-  disposeTerminalView,
-  getTerminalView,
-} from "../terminal/terminal-registry";
+import { closeTerminalView } from "../terminal/terminal-registry";
 import {
   hasDraftContent,
   saveSessionDraft,
@@ -97,20 +94,14 @@ const closeTerminals = (terminals: { key: ConversationKey; ref: string }[]) => {
   for (const { key, ref } of terminals) {
     const terminalId = ref.slice("terminal:".length);
     closeTab(key, ref);
-    void getTerminalView(`${key}:${terminalId}`)
-      .then(async (view) => {
-        if (view.generation !== null)
-          await (
-            await getTransport()
-          ).client.terminal.hide({
-            conversationKey: key,
-            terminalId,
-            generation: view.generation,
-            close: true,
-          });
-        disposeTerminalView(`${key}:${terminalId}`);
+    void closeTerminalView(`${key}:${terminalId}`, async (generation) =>
+      (await getTransport()).client.terminal.hide({
+        conversationKey: key,
+        terminalId,
+        generation,
+        close: true,
       })
-      .catch(() => {});
+    ).catch(() => {});
   }
 };
 

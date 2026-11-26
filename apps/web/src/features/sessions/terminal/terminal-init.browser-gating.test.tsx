@@ -13,7 +13,10 @@ vi.mock("ghostty-web", () => ({
 vi.mock("../data/queries", () => ({
   useSessionsTransport: () => ({ client: {} }),
 }));
-vi.mock("./terminal-registry", () => ({ getTerminalView: mocks.get }));
+vi.mock("./terminal-registry", () => ({
+  getTerminalView: mocks.get,
+  peekTerminalView: () => null,
+}));
 import { ghosttyReady } from "#renderer/components/terminal/ghostty";
 
 import { TerminalTab } from "./terminal-tab";
@@ -35,18 +38,22 @@ it("loads the served Vite WASM asset explicitly and allows retry after failure",
   expect(url).not.toBe("/ghostty-vt.wasm");
   expect(mocks.load).toHaveBeenCalledTimes(2);
 });
-it("shows initialization failure for hidden terminal tabs without an unhandled rejection", async () => {
+it("initializes a hidden tab only once shown, then shows its failure without an unhandled rejection", async () => {
   mocks.get.mockRejectedValue(new Error("WASM unavailable"));
-  const view = render(
+  const tab = (visible: boolean) => (
     <TerminalTab
       row={{ workspaceId: "w", id: "s" } as SessionRow}
       id="t"
-      visible={false}
+      visible={visible}
       onClose={() => {}}
       dispatch={() => {}}
       onUrl={() => {}}
     />
   );
+  const view = render(tab(false));
+  expect(mocks.get).not.toHaveBeenCalled();
+  expect(screen.queryByRole("alert")).toBeNull();
+  view.rerender(tab(true));
   expect((await screen.findByRole("alert")).textContent).toBe(
     "Something went wrong. Try again."
   );

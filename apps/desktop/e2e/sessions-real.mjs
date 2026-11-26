@@ -113,7 +113,7 @@ try {
   for (let i = 0; i < 120 && !page; i++) {
     try {
       page = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find(
-        (p) => p.type === "page" && p.url.includes("index-next.html")
+        (p) => p.type === "page" && p.url.includes("index.html")
       );
     } catch {}
     if (!page) await sleep(100);

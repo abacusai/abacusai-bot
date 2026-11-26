@@ -21,6 +21,7 @@ const fakeHost = (): HarnessHost &
   createAgentSession: vi.fn(() => ({ id: "s1" })),
   updateAgentSessionLabel: vi.fn(),
   removeAgentSession: vi.fn(),
+  terminalsHoldRestart: vi.fn(() => true),
 });
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
@@ -107,6 +108,13 @@ describe("runHarnessOp", () => {
       input: { workspaceId: "w", sessionId: "s1" },
     });
     expect(host.removeAgentSession).toHaveBeenCalledWith("w", "s1");
+  });
+
+  it("reports whether the terminals hold the silent update restart", async () => {
+    const host = fakeHost();
+    await expect(
+      runHarnessOp(host, { op: "updates.restartGate", input: {} })
+    ).resolves.toEqual({ terminalsHoldRestart: true });
   });
 
   it("rejects unknown ops and bad shapes", async () => {

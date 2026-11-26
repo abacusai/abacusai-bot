@@ -232,6 +232,18 @@ export class ConversationTerminalRuntimeRegistry {
   private readonly pendingStarts = new Map<string, PendingStart>();
   private readonly generations = new Map<string, number>();
   private readonly promotedSessionKeys = new Set<ConversationKey>();
+  /**
+   * A promoted draft's key, to the chat it became. From the promotion on the
+   * draft and the chat are one conversation here: a terminal the new-chat page
+   * starts or addresses after it (while it hands off) is the chat's, so no
+   * shell is left behind under a key nothing shows again.
+   */
+  private readonly promotedDrafts = new Map<
+    ConversationKey,
+    SessionConversationScope
+  >();
+  /** Promotions under way, by both of their keys. */
+  private readonly promoting = new Map<ConversationKey, Promise<unknown>>();
   private readonly exited = new Map<string, ExitedRuntime>();
   private readonly maximumScrollbackBytes: number;
 
@@ -255,9 +267,18 @@ export class ConversationTerminalRuntimeRegistry {
     rows: number;
     shell?: TerminalShellId;
   }): Promise<StartConversationTerminalResult> {
-    const key = conversationKey(request.scope);
+    const asked = conversationKey(request.scope);
+    const scope = this.promotedDrafts.get(asked) ?? request.scope;
+    const key = conversationKey(scope);
     const terminalId = request.terminalId ?? DEFAULT_TERMINAL_ID;
     const id = runtimeKey(key, terminalId);
+    // A promotion still moving this conversation's shells: start once it is
+    // done, so a shell spawned under the draft is attached rather than doubled.
+    const moving = this.promoting.get(asked) ?? this.promoting.get(key);
+    if (moving != null) {
+      await moving.catch(() => undefined);
+      return this.start({ ...request, scope });
+    }
     const established = this.runtimes.get(id);
     if (established != null) {
       established.cols = request.cols;
@@ -271,13 +292,13 @@ export class ConversationTerminalRuntimeRegistry {
     if (pending != null) return pending.promise;
 
     const generation = this.nextGeneration(id);
-    const promise = this.createRuntime(request, key, terminalId, generation);
-    this.pendingStarts.set(id, {
+    const promise = this.createRuntime(
+      { ...request, scope },
+      key,
       terminalId,
-      scope: request.scope,
-      generation,
-      promise,
-    });
+      generation
+    );
+    this.pendingStarts.set(id, { terminalId, scope, generation, promise });
     try {
       return await promise;
     } finally {
@@ -291,7 +312,11 @@ export class ConversationTerminalRuntimeRegistry {
     expectedGeneration?: number,
     terminalId = DEFAULT_TERMINAL_ID
   ): ConversationTerminalAttachment | null {
-    const runtime = this.currentRuntime(key, terminalId, expectedGeneration);
+    const runtime = this.currentRuntime(
+      this.canonicalKey(key),
+      terminalId,
+      expectedGeneration
+    );
     if (runtime == null) return null;
     runtime.visible = true;
     return this.attachment(runtime);
@@ -308,8 +333,9 @@ export class ConversationTerminalRuntimeRegistry {
   }
 
   list(key: ConversationKey): ConversationTerminalAttachment[] {
+    const canonical = this.canonicalKey(key);
     return [...this.runtimes.values()]
-      .filter((runtime) => runtime.key === key)
+      .filter((runtime) => runtime.key === canonical)
       .map((runtime) => this.attachment(runtime));
   }
 
@@ -331,10 +357,13 @@ export class ConversationTerminalRuntimeRegistry {
     terminalId = DEFAULT_TERMINAL_ID,
     fromOffset?: number
   ): ConversationTerminalOutputState | null {
-    const runtime = this.currentRuntime(key, terminalId, generation);
-    const exited = this.exited.get(runtimeKey(key, terminalId));
-    const record =
-      runtime ?? (exited?.generation === generation ? exited : null);
+    const canonical = this.canonicalKey(key);
+    const runtime = this.currentRuntime(canonical, terminalId, generation);
+    // A promoted draft's last generation ended under the draft's own key.
+    const exited = [key, canonical]
+      .map((each) => this.exited.get(runtimeKey(each, terminalId)))
+      .find((record) => record?.generation === generation);
+    const record = runtime ?? exited;
     if (record == null) return null;
 
     const { scrollback } = record;
@@ -358,7 +387,11 @@ export class ConversationTerminalRuntimeRegistry {
     data: string,
     terminalId = DEFAULT_TERMINAL_ID
   ): boolean {
-    const runtime = this.currentRuntime(key, terminalId, generation);
+    const runtime = this.currentRuntime(
+      this.canonicalKey(key),
+      terminalId,
+      generation
+    );
     if (runtime == null) return false;
     runtime.pty.write(data);
     return true;
@@ -366,7 +399,10 @@ export class ConversationTerminalRuntimeRegistry {
 
   /** A running terminal's PTY, whatever its generation. */
   ptyOf(key: ConversationKey, terminalId: string): TerminalPty | null {
-    return this.runtimes.get(runtimeKey(key, terminalId))?.pty ?? null;
+    return (
+      this.runtimes.get(runtimeKey(this.canonicalKey(key), terminalId))?.pty ??
+      null
+    );
   }
 
   resize(
@@ -376,7 +412,11 @@ export class ConversationTerminalRuntimeRegistry {
     rows: number,
     terminalId = DEFAULT_TERMINAL_ID
   ): number | false {
-    const runtime = this.currentRuntime(key, terminalId, generation);
+    const runtime = this.currentRuntime(
+      this.canonicalKey(key),
+      terminalId,
+      generation
+    );
     if (runtime == null) return false;
     // Where its output stands as ConPTY takes the size: the renderer resizes
     // its screen at exactly that point of the stream (Windows).
@@ -392,7 +432,11 @@ export class ConversationTerminalRuntimeRegistry {
     generation: number,
     terminalId = DEFAULT_TERMINAL_ID
   ): boolean {
-    const runtime = this.currentRuntime(key, terminalId, generation);
+    const runtime = this.currentRuntime(
+      this.canonicalKey(key),
+      terminalId,
+      generation
+    );
     if (runtime == null) return false;
     runtime.visible = false;
     return true;
@@ -404,6 +448,7 @@ export class ConversationTerminalRuntimeRegistry {
     terminalId = DEFAULT_TERMINAL_ID,
     reason: TerminalRetireReason = "closed"
   ): boolean {
+    key = this.canonicalKey(key);
     const id = runtimeKey(key, terminalId);
     const runtime = this.currentRuntime(key, terminalId, expectedGeneration);
     const pending = this.pendingStarts.get(id);
@@ -427,15 +472,37 @@ export class ConversationTerminalRuntimeRegistry {
     return true;
   }
 
-  async promoteDraftToSession(
+  promoteDraftToSession(
     draft: DraftConversationScope,
     session: SessionConversationScope
   ): Promise<PromoteConversationTerminalResult> {
-    if (draft.workspaceId !== session.workspaceId) {
-      throw new Error("A terminal cannot move between workspaces.");
-    }
+    if (draft.workspaceId !== session.workspaceId)
+      return Promise.reject(
+        new Error("A terminal cannot move between workspaces.")
+      );
     const draftKey = conversationKey(draft);
     const sessionKey = conversationKey(session);
+    this.promotedDrafts.set(draftKey, session);
+    const promotion = this.moveDraftTerminals(
+      draftKey,
+      sessionKey,
+      session
+    ).finally(() => {
+      if (this.promoting.get(draftKey) === promotion) {
+        this.promoting.delete(draftKey);
+        this.promoting.delete(sessionKey);
+      }
+    });
+    this.promoting.set(draftKey, promotion);
+    this.promoting.set(sessionKey, promotion);
+    return promotion;
+  }
+
+  private async moveDraftTerminals(
+    draftKey: ConversationKey,
+    sessionKey: ConversationKey,
+    session: SessionConversationScope
+  ): Promise<PromoteConversationTerminalResult> {
     if (this.promotedSessionKeys.has(sessionKey)) {
       const target = [...this.runtimes.values()].find(
         (runtime) => runtime.key === sessionKey
@@ -491,7 +558,16 @@ export class ConversationTerminalRuntimeRegistry {
     return { status: "promoted", attachment: this.attachment(sources[0]!) };
   }
 
+  /**
+   * Ends a conversation's terminals: a chat's, and a draft's that became it.
+   * The chat is gone, so its draft key is forgotten with it.
+   */
   disposeScope(key: ConversationKey): boolean {
+    key = this.canonicalKey(key);
+    for (const [draftKey, session] of this.promotedDrafts)
+      if (draftKey === key || conversationKey(session) === key)
+        this.promotedDrafts.delete(draftKey);
+    this.promotedSessionKeys.delete(key);
     const terminalIds = new Set<string>();
     for (const runtime of this.runtimes.values()) {
       if (runtime.key === key) terminalIds.add(runtime.terminalId);
@@ -532,6 +608,9 @@ export class ConversationTerminalRuntimeRegistry {
         this.promotedSessionKeys.delete(key);
       }
     }
+    for (const [draftKey, session] of this.promotedDrafts)
+      if (session.workspaceId === workspaceId)
+        this.promotedDrafts.delete(draftKey);
     return entries.size;
   }
 
@@ -557,6 +636,7 @@ export class ConversationTerminalRuntimeRegistry {
       this.close(key, undefined, terminalId, "quit");
     }
     this.promotedSessionKeys.clear();
+    this.promotedDrafts.clear();
     return entries.size;
   }
 
@@ -635,6 +715,12 @@ export class ConversationTerminalRuntimeRegistry {
     });
 
     return { ...this.attachment(runtime), created: true };
+  }
+
+  /** The key a conversation's terminals live under: a promoted draft's chat. */
+  canonicalKey(key: ConversationKey): ConversationKey {
+    const session = this.promotedDrafts.get(key);
+    return session == null ? key : conversationKey(session);
   }
 
   private attachment(runtime: Runtime): ConversationTerminalAttachment {

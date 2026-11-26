@@ -743,6 +743,7 @@ import { SkillsService } from "./services/workspace/skills-service";
 import { TerminalSessionService } from "./services/workspace/terminal-session-service";
 import {
   effectiveTerminalShell,
+  learnTerminalShells,
   preferredTerminalShell,
   terminalShellStatuses,
 } from "./services/workspace/terminal-shells";
@@ -4260,9 +4261,12 @@ export class ServiceHost {
     }));
   }
 
-  /** True while any terminal PTY (user shell or preview server) is alive. */
-  hasLiveTerminalSessions(): boolean {
-    return this.terminalSessionService.hasLiveSessions();
+  /**
+   * Whether a terminal runs a program a restart nobody asked for would stop.
+   * A shell at its prompt does not hold one: it comes back with its tab.
+   */
+  terminalsHoldRestart(): boolean {
+    return this.terminalSessionService.holdsRestart();
   }
 
   /** Every agent process this run, as the log dump wants it. */
@@ -4776,6 +4780,9 @@ export class ServiceHost {
       return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
+    // Its shells end at the first delete, with its agents: nothing shows a
+    // deleted workspace's terminals.
+    this.terminalSessionService.disposeWorkspace(workspaceId);
     if (workspace.status !== "deleted") {
       for (const session of this.agentSessionManagerService.list(workspaceId)) {
         this.agentManagerService.stopSession(workspaceId, session.id);
@@ -5030,6 +5037,11 @@ export class ServiceHost {
         label: chat ? `${program} · ${chat}` : program,
       };
     });
+  }
+
+  /** The key a conversation's terminals live under (a promoted draft's chat). */
+  canonicalTerminalKey(key: ConversationKey): ConversationKey {
+    return this.terminalSessionService.canonicalKey(key);
   }
 
   /** Running terminals' states, for `terminal.events`' opening snapshot. */
@@ -5791,6 +5803,7 @@ export class ServiceHost {
       this.transcriptService.remove(sessionId);
       this.aguiRelay.forgetThread(sessionId);
       this.agentManagerService.stopSession(workspaceId, sessionId);
+      this.terminalSessionService.disposeConversation(workspaceId, sessionId);
       this.emitEvent({
         type: "local-cli-session-removed",
         workspaceId,
@@ -10664,6 +10677,15 @@ export class ServiceHost {
       effective: resolveBackend(stored),
       statuses: backendStatuses(),
     };
+  }
+
+  /**
+   * The roster, once what takes a process to learn is known (WSL's
+   * distributions, asked of the registry off the main thread).
+   */
+  async terminalShellState(): Promise<TerminalShellState> {
+    await learnTerminalShells();
+    return this.getTerminalShellState();
   }
 
   /** The shell roster for the settings pane and the terminal panel's `+` menu. */

@@ -388,11 +388,12 @@ setBringToFront(() => {
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running. A
-// shell never ends by itself, so it holds only the restart nobody asked for.
+// program in a terminal (a dev server, an editor) never ends by itself, so it
+// holds only the restart nobody asked for; a shell at its prompt holds none.
 const updateService = new UpdateService({
   isSafeToRestart: ({ requested }) =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
-    (requested || !workspaceServiceHost.hasLiveTerminalSessions()),
+    (requested || !workspaceServiceHost.terminalsHoldRestart()),
 });
 /** Set by the app's own Restart: the quit relaunches once it goes through. */
 let relaunchAfterQuit = false;
@@ -460,7 +461,8 @@ let lastRendererActivity = 0;
 /**
  * Swap to a newly activated renderer bundle at the first quiet moment. The
  * gates: an agent mid-turn would lose a reply that exists nowhere else yet, a
- * terminal's scrollback lives in the renderer, and recent input defers it.
+ * program running in a terminal would be redrawn from its scrollback mid-run
+ * (a shell at its prompt reattaches as it was), and recent input defers it.
  */
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.
@@ -474,7 +476,7 @@ const rendererSwaps = new RendererSwapScheduler({
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
-    workspaceServiceHost.hasLiveTerminalSessions() ||
+    workspaceServiceHost.terminalsHoldRestart() ||
     Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.

@@ -4,6 +4,7 @@ import { expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   start: vi.fn(),
   get: vi.fn(),
+  peek: vi.fn(),
   hide: vi.fn(),
 }));
 vi.mock("../data/queries", () => {
@@ -12,7 +13,12 @@ vi.mock("../data/queries", () => {
   };
   return { useSessionsTransport: () => transport };
 });
-vi.mock("./terminal-registry", () => ({ getTerminalView: mocks.get }));
+vi.mock("./terminal-registry", () => ({
+  getTerminalView: mocks.get,
+  // A view exists only once a tab was shown; these tests make one up front.
+  peekTerminalView: (key: string) =>
+    mocks.peek.getMockImplementation() ? mocks.peek(key) : mocks.get(key),
+}));
 import { TerminalTab } from "./terminal-tab";
 const props = {
   row: { workspaceId: "w", id: "s" } as SessionRow,
@@ -85,5 +91,25 @@ it("refits a retained terminal when its pane is revealed without restarting it",
   mounted.rerender(<TerminalTab {...props} visible />);
   await waitFor(() => expect(refit).toHaveBeenCalledTimes(2));
   expect(mocks.start.mock.calls).toHaveLength(starts);
+  mounted.unmount();
+});
+
+it("starts no shell and makes no screen for a tab until it is first shown", async () => {
+  mocks.get.mockReset();
+  mocks.start.mockReset();
+  const view = makeView();
+  mocks.get.mockResolvedValue(view);
+  mocks.peek.mockImplementation(() => null);
+  mocks.start.mockResolvedValue({ success: true, state: { generation: 1 } });
+  const mounted = render(<TerminalTab {...props} visible={false} />);
+  await act(async () => {});
+  expect(mocks.get).not.toHaveBeenCalled();
+  expect(mocks.start).not.toHaveBeenCalled();
+  mounted.rerender(<TerminalTab {...props} visible />);
+  await waitFor(() => expect(mocks.start).toHaveBeenCalledOnce());
+  // Hidden again: the shell keeps running, nothing starts twice.
+  mounted.rerender(<TerminalTab {...props} visible={false} />);
+  await act(async () => {});
+  expect(mocks.start).toHaveBeenCalledOnce();
   mounted.unmount();
 });
