@@ -220,3 +220,51 @@ describe("nestHandoffs", () => {
     expect(source.closest("a")?.className).not.toContain("before:w-px");
   });
 });
+
+describe("deleting a chat that owns a hand-off checkout", () => {
+  it("says the checkout goes with it, and when it is kept; other chats say nothing of it", async () => {
+    const base = fixtureSessions(NOW).find((s) => s.id === "review-prs")!;
+    app = await renderApp("/sessions/new", {
+      seed: {
+        prefs: fixturePrefs(),
+        sessions: [
+          ...fixtureSessions(NOW),
+          {
+            ...base,
+            id: "split",
+            label: "Write the release notes",
+            continuedFrom: "review-prs",
+            continuationKind: "handoff",
+            worktreeId: "wt",
+            worktreePath: "/w/notes",
+            worktreeBranch: "abacus/write-the-release-notes-1a2b",
+            ownsWorktree: true,
+          },
+        ],
+        workspaces: fixtureWorkspaces(),
+      },
+    });
+    const sidebar = within(
+      screen.getByRole("navigation", { name: "Sessions" })
+    );
+    await sidebar.findByText("Write the release notes");
+    const open = async (name: string) => {
+      fireEvent.click(sidebar.getByRole("button", { name: new RegExp(name) }));
+      fireEvent.click(await screen.findByText("Delete session"));
+      return screen.findByRole("alertdialog");
+    };
+    const dialog = await open("Write the release notes");
+    expect(
+      within(dialog).getByText(
+        /abacus\/write-the-release-notes-1a2b goes with it/
+      )
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByText(/Then it is kept, and you are told/)
+    ).toBeTruthy();
+    fireEvent.click(within(dialog).getByText("Cancel"));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    const plain = await open("Review my pull requests");
+    expect(within(plain).queryByText(/goes with it/)).toBeNull();
+  });
+});

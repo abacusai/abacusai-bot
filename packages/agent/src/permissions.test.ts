@@ -13,6 +13,7 @@
  *     not approve `npm publish`, and approving one docs page must not approve
  *     every host on the internet.
  */
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -658,9 +659,25 @@ describe("hand_off_session", () => {
   it("asks on its own card: the title, the whole brief, and where it will work", () => {
     const brief = "Write the release notes. ".repeat(60).trim();
     const plain = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-plain-"));
+    const unborn = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-unborn-"));
     const repo = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-git-"));
-    fs.mkdirSync(path.join(repo, ".git"));
+    const run = (cwd: string, ...args: string[]) =>
+      execFileSync("git", ["-C", cwd, ...args], { stdio: "ignore" });
+    run(unborn, "init", "-q");
+    run(repo, "init", "-q");
     fs.mkdirSync(path.join(repo, "apps", "site"), { recursive: true });
+    fs.writeFileSync(path.join(repo, "apps", "site", "index.html"), "x");
+    run(repo, "add", ".");
+    run(
+      repo,
+      "-c",
+      "user.email=t@example.com",
+      "-c",
+      "user.name=t",
+      "commit",
+      "-qm",
+      "first"
+    );
     try {
       const card = (cwd: string) => {
         const gate = gateToolCall(
@@ -680,12 +697,15 @@ describe("hand_off_session", () => {
         "brief",
         brief
       );
+      // The host's test: a last commit to make the checkout from, not a .git.
+      expect(card(unborn)).toMatchObject({ ownCheckout: false });
       expect(card(repo)).toMatchObject({ ownCheckout: true });
       expect(card(path.join(repo, "apps", "site"))).toMatchObject({
         ownCheckout: true,
       });
     } finally {
       fs.rmSync(plain, { recursive: true, force: true });
+      fs.rmSync(unborn, { recursive: true, force: true });
       fs.rmSync(repo, { recursive: true, force: true });
     }
   });

@@ -127,6 +127,7 @@ const makeHost = (
   const sent: Sent[] = [];
   const creditChecks: string[] = [];
   const notices: Array<{ title: string; body: string }> = [];
+  const workspaceStatus = { value: "active" };
   const self: Record<string, unknown> = {
     platform: options.platform ?? "desktop",
     agentSessionManagerService: manager,
@@ -136,8 +137,14 @@ const makeHost = (
     gitService: new GitService(),
     workspaceService: {
       getWorkspaces: () => [
-        { id: WORKSPACE, path: options.folder ?? null, isRemote: false },
+        {
+          id: WORKSPACE,
+          path: options.folder ?? null,
+          isRemote: false,
+          status: workspaceStatus.value,
+        },
       ],
+      removeWorkspace: () => undefined,
     },
     managedWorktreeRoot: () => path.join(tmp, "worktrees"),
     messagingGatewayService: {
@@ -168,7 +175,14 @@ const makeHost = (
     }),
     userNotifier: (notice: { title: string; body: string }) =>
       notices.push(notice),
-    sessionArtifactsService: { removeForSession: () => undefined },
+    sessionArtifactsService: {
+      removeForSession: () => undefined,
+      removeForWorkspace: () => undefined,
+    },
+    workspaceRuntimeService: {
+      ensureWorkspaceWatchers: () => undefined,
+      refreshAndEmit: async () => undefined,
+    },
     transcriptService: { remove: () => undefined },
     aguiRelay: { forgetThread: () => undefined },
     atCreditWall: async (model: string) => {
@@ -200,6 +214,7 @@ const makeHost = (
     "sessionDirectory",
     "resolveWorkspaceContextPath",
     "settleHandOff",
+    "removeWorkspace",
   ])
     self[name] = proto[name]!.bind(self);
   self.worktreeMaterializer = new WorktreeMaterializer({
@@ -234,6 +249,12 @@ const makeHost = (
         WORKSPACE,
         id
       ),
+    removeProject: async () => {
+      workspaceStatus.value = "deleted";
+      return (self.removeWorkspace as (w: string) => Promise<unknown>)(
+        WORKSPACE
+      );
+    },
     directory: (id: string) =>
       (self.sessionDirectory as (s: string) => string | null)(id),
     plain: self.isPlainAppChat as (id: string) => boolean,
@@ -612,7 +633,7 @@ const branches = (dir: string) =>
   git(dir, "branch", "--format=%(refname:short)").split("\n").filter(Boolean);
 /** Until the removal the chat's deletion set going has finished. */
 const settled = async (check: () => boolean) => {
-  for (let n = 0; n < 100 && !check(); n += 1)
+  for (let n = 0; n < 500 && !check(); n += 1)
     await new Promise((resolve) => setTimeout(resolve, 20));
 };
 
@@ -720,6 +741,131 @@ describe("a hand-off's checkout goes with its chat", () => {
     expect(host.sent[0]!.message).toMatch(
       /install them before the first build/
     );
+  });
+});
+
+describe("a hand-off's checkout is removed only when it is safe", () => {
+  const childOf = async (host: ReturnType<typeof makeHost>) =>
+    host.manager.get(
+      started(await host.handOff(host.manager.create(WORKSPACE).id)).sessionId
+    )!;
+
+  it("continued in another model: deleting the old chat leaves the checkout to the new one, and deleting that removes it", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    // What continue-chat.ts does: a continuation on the same worktree.
+    const next = host.manager.create(WORKSPACE, null, null, null, undefined, {
+      model: "abacus/claude-opus-5-5",
+      continuedFrom: { sessionId: child.id, summary: "## Goal" },
+    });
+    host.manager.updateWorktree(WORKSPACE, next.id, {
+      id: child.worktreeId!,
+      path: child.worktreePath!,
+      branch: child.worktreeBranch,
+    });
+    expect(host.manager.get(child.id)?.ownsWorktree).toBe(true);
+    host.remove(child.id);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(branches(folder)).toContain(child.worktreeBranch);
+    expect(host.manager.get(next.id)?.ownsWorktree).toBe(true);
+    host.remove(next.id);
+    await settled(() => !branches(folder).includes(child.worktreeBranch!));
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(branches(folder)).toEqual(["main"]);
+  });
+
+  it("a chat that picked the worktree keeps it too", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    const picker = host.manager.create(WORKSPACE);
+    host.manager.updateWorktree(WORKSPACE, picker.id, {
+      id: child.worktreeId!,
+      path: child.worktreePath!,
+      branch: child.worktreeBranch,
+    });
+    host.remove(child.id);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+  });
+
+  it("keeps a checkout git cannot read (a corrupt index), and says so", async () => {
+    const host = makeHost({ folder: project("git") });
+    const child = await childOf(host);
+    const gitDir = git(child.worktreePath!, "rev-parse", "--absolute-git-dir");
+    fs.writeFileSync(path.join(gitDir, "index"), "not an index");
+    expect(() => git(child.worktreePath!, "status", "--porcelain")).toThrow();
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(child.worktreePath!)).toBe(true);
+    expect(host.notices[0]!.body).toContain("keptUnreadable");
+  });
+
+  it("keeps a checkout holding an ignored .env, and says so; dependencies and builds alone do not keep it", async () => {
+    const folder = project("git");
+    fs.writeFileSync(
+      path.join(folder, ".gitignore"),
+      ".env\nnode_modules/\ndist/\n.venv/\n"
+    );
+    commitIn(folder, "keep.txt");
+    const host = makeHost({ folder });
+    const withEnv = await childOf(host);
+    fs.writeFileSync(path.join(withEnv.worktreePath!, ".env"), "KEY=x");
+    host.remove(withEnv.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(path.join(withEnv.worktreePath!, ".env"))).toBe(true);
+    expect(host.notices[0]!.body).toContain("keptIgnored");
+
+    const builtOnly = await childOf(host);
+    for (const dir of ["node_modules/left-pad", "dist", ".venv/bin"]) {
+      fs.mkdirSync(path.join(builtOnly.worktreePath!, dir), {
+        recursive: true,
+      });
+      fs.writeFileSync(path.join(builtOnly.worktreePath!, dir, "f"), "x");
+    }
+    host.remove(builtOnly.id);
+    await settled(() => !fs.existsSync(builtOnly.worktreePath!));
+    expect(fs.existsSync(builtOnly.worktreePath!)).toBe(false);
+    expect(branches(folder)).not.toContain(builtOnly.worktreeBranch);
+  });
+
+  it("says so when git will not delete the branch", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const child = await childOf(host);
+    // A held ref lock makes `git branch -D` fail.
+    const lock = path.join(
+      folder,
+      ".git",
+      "refs",
+      "heads",
+      `${child.worktreeBranch}.lock`
+    );
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.writeFileSync(lock, "");
+    host.remove(child.id);
+    await settled(() => host.notices.length > 0);
+    expect(fs.existsSync(child.worktreePath!)).toBe(false);
+    expect(host.notices[0]!.body).toContain("keptBranchUndeletable");
+    fs.rmSync(lock);
+    expect(branches(folder)).toContain(child.worktreeBranch);
+  });
+
+  it("removing the project removes its hand-off checkouts the same safe way", async () => {
+    const folder = project("git");
+    const host = makeHost({ folder });
+    const clean = await childOf(host);
+    const kept = await childOf(host);
+    fs.writeFileSync(path.join(kept.worktreePath!, "draft.md"), "half");
+    await host.removeProject();
+    expect(fs.existsSync(clean.worktreePath!)).toBe(false);
+    expect(branches(folder)).not.toContain(clean.worktreeBranch);
+    expect(fs.existsSync(path.join(kept.worktreePath!, "draft.md"))).toBe(true);
+    expect(host.notices.map((notice) => notice.body)).toEqual([
+      expect.stringContaining("keptChanges"),
+    ]);
   });
 });
 

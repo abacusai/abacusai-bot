@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "Checkout {{branch}} ikut dihapus, kecuali masih dipakai chat lain atau berisi pekerjaan yang mungkin Anda perlukan (commit, perubahan yang belum di-commit, atau file yang diabaikan seperti .env). Dalam hal itu checkout disimpan dan Anda diberi tahu."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "{{branch}} disimpan",
       "keptBranch": "Branch ini punya commit sendiri. Hapus dengan git jika sudah tidak diperlukan.",
       "keptChangesTitle": "Checkout “{{title}}” disimpan",
-      "keptChanges": "Ada perubahan yang belum di-commit, di {{path}}."
+      "keptChanges": "Ada perubahan yang belum di-commit, di {{path}}.",
+      "keptBranchUndeletable": "git tidak bisa menghapus branch ini. Hapus dengan git jika sudah tidak diperlukan.",
+      "keptIgnored": "Ada file yang diabaikan yang mungkin Anda perlukan, seperti .env, di {{path}}.",
+      "keptUnreadable": "git tidak bisa membacanya, jadi tidak ada yang dihapus: {{path}}."
     }
   },
   "terminalShells": {

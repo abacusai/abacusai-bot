@@ -1888,7 +1888,8 @@
       "markUnread": "Okunmadı olarak işaretle",
       "openBeside": "Bu sohbetin yanında aç",
       "newWorktree": "Buradan yeni worktree",
-      "emptyDescription": "{{key}} ile bir tane başlat ya da buraya bir klasör bırak."
+      "emptyDescription": "{{key}} ile bir tane başlat ya da buraya bir klasör bırak.",
+      "deleteCheckout": "{{branch}} kopyası da silinir; ancak başka bir sohbet hâlâ onda çalışıyorsa ya da saklamak isteyebileceğin bir çalışma (commit’ler, commit edilmemiş değişiklikler veya .env gibi yok sayılan dosyalar) içeriyorsa saklanır ve sana bildirilir."
     },
     "gone": "Bu oturum silindi",
     "untitled": "Adsız",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "{{branch}} saklandı",
       "keptBranch": "Kendi commit’leri var. Artık gerekmediğinde dalı git ile silin.",
       "keptChangesTitle": "“{{title}}” kopyası saklandı",
-      "keptChanges": "Commit edilmemiş değişiklikleri var: {{path}}."
+      "keptChanges": "Commit edilmemiş değişiklikleri var: {{path}}.",
+      "keptBranchUndeletable": "git dalı silemedi. Artık gerekmediğinde git ile silin.",
+      "keptIgnored": "{{path}} içinde .env gibi isteyebileceğin yok sayılan dosyalar var.",
+      "keptUnreadable": "git okuyamadı, bu yüzden hiçbir şey silinmedi: {{path}}."
     }
   },
   "terminalShells": {

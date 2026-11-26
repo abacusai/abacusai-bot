@@ -4785,6 +4785,9 @@ export class ServiceHost {
       return { success: true };
     }
 
+    // Read while its chats are still there; removed once they are gone.
+    const checkouts =
+      this.agentSessionManagerService.handOffCheckoutsIn(workspaceId);
     const sessionIds =
       this.agentSessionManagerService.removeAllForWorkspace(workspaceId);
     for (const sessionId of sessionIds) {
@@ -4802,6 +4805,9 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     }
+    // Before the workspace goes: its repository is where they are removed from.
+    for (const { checkout, label } of checkouts)
+      await this.releaseHandOffCheckout(workspaceId, checkout, label);
     this.workspaceService.removeWorkspace(workspaceId);
     this.sessionArtifactsService.removeForWorkspace(workspaceId);
     this.workspaceRuntimeService.ensureWorkspaceWatchers();
@@ -5353,17 +5359,27 @@ export class ServiceHost {
     )
       return;
     const { t } = await this.channelWordsNow();
+    const branch = checkout.branch ?? "";
     this.userNotifier?.({
-      ...(outcome === "kept-branch"
+      ...(outcome === "kept-branch" || outcome === "kept-branch-undeletable"
         ? {
-            title: t("sessions.handoff.keptBranchTitle", {
-              branch: checkout.branch ?? "",
-            }),
-            body: t("sessions.handoff.keptBranch"),
+            title: t("sessions.handoff.keptBranchTitle", { branch }),
+            body: t(
+              outcome === "kept-branch"
+                ? "sessions.handoff.keptBranch"
+                : "sessions.handoff.keptBranchUndeletable"
+            ),
           }
         : {
             title: t("sessions.handoff.keptChangesTitle", { title: label }),
-            body: t("sessions.handoff.keptChanges", { path: checkout.path }),
+            body: t(
+              outcome === "kept-changes"
+                ? "sessions.handoff.keptChanges"
+                : outcome === "kept-ignored"
+                  ? "sessions.handoff.keptIgnored"
+                  : "sessions.handoff.keptUnreadable",
+              { path: checkout.path }
+            ),
           }),
       dedupeKey: `hand-off-kept:${checkout.path}`,
     });
@@ -5745,7 +5761,9 @@ export class ServiceHost {
 
   removeAgentSession(workspaceId: string, sessionId: string): boolean {
     const record = this.agentSessionManagerService.get(sessionId);
-    const checkout = this.agentSessionManagerService.handOffCheckout(sessionId);
+    // Passed to another chat still on it, or returned for removal.
+    const checkout =
+      this.agentSessionManagerService.leaveHandOffCheckout(sessionId);
     const removed = this.agentSessionManagerService.remove(
       workspaceId,
       sessionId

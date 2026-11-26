@@ -1888,7 +1888,8 @@
       "markUnread": "Markeren als ongelezen",
       "openBeside": "Openen naast deze chat",
       "newWorktree": "Nieuwe worktree vanaf hier",
-      "emptyDescription": "Start er een met {{key}}, of sleep hier een map naartoe."
+      "emptyDescription": "Start er een met {{key}}, of sleep hier een map naartoe.",
+      "deleteCheckout": "De checkout {{branch}} wordt mee verwijderd, tenzij een andere chat er nog in werkt of er werk in staat dat je wilt houden (commits, niet-gecommitte wijzigingen of genegeerde bestanden zoals .env). Dan blijft hij staan en krijg je bericht."
     },
     "gone": "Deze sessie is verwijderd",
     "untitled": "Naamloos",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "{{branch}} bewaard",
       "keptBranch": "Deze branch heeft eigen commits. Verwijder hem met git als je hem niet meer nodig hebt.",
       "keptChangesTitle": "Checkout van ‘{{title}}’ bewaard",
-      "keptChanges": "Er staan wijzigingen in die nooit zijn gecommit, in {{path}}."
+      "keptChanges": "Er staan wijzigingen in die nooit zijn gecommit, in {{path}}.",
+      "keptBranchUndeletable": "git kon de branch niet verwijderen. Verwijder hem met git als je hem niet meer nodig hebt.",
+      "keptIgnored": "Er staan genegeerde bestanden in die je misschien wilt houden, zoals .env, in {{path}}.",
+      "keptUnreadable": "git kon hem niet lezen, dus er is niets verwijderd: {{path}}."
     }
   },
   "terminalShells": {

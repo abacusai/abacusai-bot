@@ -156,6 +156,10 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
     ? { continuationKind: record.continuationKind }
     : {}),
   ...(record.handOffEnd != null ? { handOffEnd: record.handOffEnd } : {}),
+  ...(record.handOffCheckout != null &&
+  record.handOffCheckout.path === record.worktreePath
+    ? { ownsWorktree: true }
+    : {}),
   ...(record.worktreeSubdir != null && record.worktreePath != null
     ? { worktreeSubdir: record.worktreeSubdir }
     : {}),
@@ -501,6 +505,46 @@ export class AgentSessionManagerService {
     return checkout != null && session?.worktreePath === checkout.path
       ? checkout
       : null;
+  }
+
+  /**
+   * The checkout this chat owns, now that the chat goes. Another chat still
+   * on that worktree (a continuation on another model, a chat that picked it)
+   * takes it over, so the last chat on it is the one whose removal takes it
+   * away: then it is returned, for the caller to remove. Read before `remove`.
+   */
+  leaveHandOffCheckout(sessionId: string): HandOffCheckout | null {
+    const checkout = this.handOffCheckout(sessionId);
+    if (checkout == null) return null;
+    const heir = [...this.sessions.values(), ...this.orphanedRecords].find(
+      (record) =>
+        record.id !== sessionId && record.worktreePath === checkout.path
+    );
+    if (heir == null) return checkout;
+    heir.handOffCheckout = checkout;
+    const owner = this.sessions.get(sessionId);
+    if (owner != null) delete owner.handOffCheckout;
+    this.persist();
+    return null;
+  }
+
+  /**
+   * The checkouts hand-offs made in a workspace whose chats are all going,
+   * once each: none of them can pass to a chat that stays.
+   */
+  handOffCheckoutsIn(
+    workspaceId: string
+  ): Array<{ checkout: HandOffCheckout; label: string }> {
+    const found = new Map<
+      string,
+      { checkout: HandOffCheckout; label: string }
+    >();
+    for (const id of this.workspaceSessionIds.get(workspaceId) ?? []) {
+      const checkout = this.handOffCheckout(id);
+      const label = this.sessions.get(id)?.label ?? "";
+      if (checkout != null) found.set(checkout.path, { checkout, label });
+    }
+    return [...found.values()];
   }
 
   /** A handed-off chat's turn ended: its source's card shows how. True when it changed. */

@@ -180,6 +180,45 @@ type GitChangeStats = {
   deletions: number | null;
 };
 
+/** How `releaseWorktree` went. */
+export type WorktreeRelease =
+  | "removed"
+  | "kept-branch"
+  | "kept-branch-undeletable"
+  | "kept-changes"
+  | "kept-ignored"
+  | "kept-unreadable"
+  | "not-managed";
+
+/** Ignored folders a checkout can always make again: dependencies, builds, caches. */
+const DISPOSABLE_IGNORED = new Set([
+  "node_modules",
+  "dist",
+  "build",
+  "out",
+  ".next",
+  ".nuxt",
+  ".turbo",
+  ".cache",
+  ".parcel-cache",
+  "coverage",
+  "target",
+  ".venv",
+  "venv",
+  "__pycache__",
+  ".pytest_cache",
+  ".mypy_cache",
+  ".gradle",
+  ".DS_Store",
+]);
+
+/** An ignored path inside one of those, or one of them. */
+const disposableIgnored = (entry: string): boolean =>
+  entry
+    .replace(/^"|"$/g, "")
+    .split("/")
+    .some((segment) => DISPOSABLE_IGNORED.has(segment));
+
 export class GitService {
   // Workspaces are long-lived and rev-parse would run on every git op.
   // Invalidated by initRepository() and invalidateRepoCache().
@@ -566,28 +605,44 @@ export class GitService {
 
   /**
    * Takes away a worktree the app made for one chat (a hand-off's): the
-   * checkout, then its branch while that is still on `base`. A checkout with
-   * changes never committed is kept whole; a branch with commits of its own
-   * is kept. Says which.
+   * checkout, then its branch while that is still on `base`. Only for that:
+   * the user's own removals go through removeManagedWorktree.
+   *
+   * It fails safe. A checkout git cannot read, one with changes never
+   * committed, or one with ignored files worth keeping (an `.env`, say, but
+   * not dependencies or build output) is kept whole; a branch with commits of
+   * its own, or one git would not delete, is kept. Says which.
    */
   async releaseWorktree(
     workspacePath: string,
     managedRoot: string,
     checkout: { path: string; branch: string | null; base: string }
-  ): Promise<"removed" | "kept-branch" | "kept-changes" | "not-managed"> {
+  ): Promise<WorktreeRelease> {
     // Only a checkout under the app's own root is ever taken away.
     if (!isPathInside(managedRoot, checkout.path)) return "not-managed";
-    const changes = await execFileAsync("git", [
-      "-C",
-      checkout.path,
-      "status",
-      "--porcelain",
-    ]).then(
-      ({ stdout }) => stdout.trim() !== "",
-      // Gone already, or no longer a checkout: nothing in it to keep.
+    const present = await fs.stat(checkout.path).then(
+      () => true,
       () => false
     );
-    if (changes) return "kept-changes";
+    if (present) {
+      let status: string;
+      try {
+        ({ stdout: status } = await execFileAsync("git", [
+          "-C",
+          checkout.path,
+          "status",
+          "--porcelain",
+          "--ignored",
+        ]));
+      } catch {
+        return "kept-unreadable";
+      }
+      const entries = status.split("\n").filter((line) => line.length > 3);
+      if (entries.some((line) => !line.startsWith("!! ")))
+        return "kept-changes";
+      if (entries.some((line) => !disposableIgnored(line.slice(3).trim())))
+        return "kept-ignored";
+    }
     const tip =
       checkout.branch == null
         ? null
@@ -603,15 +658,27 @@ export class GitService {
             () => null
           );
     await this.removeManagedWorktree(workspacePath, managedRoot, checkout.path);
+    // A checkout already gone leaves git's record of it behind.
+    if (!present)
+      await execFileAsync("git", [
+        "-C",
+        workspacePath,
+        "worktree",
+        "prune",
+      ]).catch(() => undefined);
     if (checkout.branch == null || tip == null) return "removed";
     if (tip !== checkout.base) return "kept-branch";
-    await execFileAsync("git", [
-      "-C",
-      workspacePath,
-      "branch",
-      "-D",
-      checkout.branch,
-    ]);
+    try {
+      await execFileAsync("git", [
+        "-C",
+        workspacePath,
+        "branch",
+        "-D",
+        checkout.branch,
+      ]);
+    } catch {
+      return "kept-branch-undeletable";
+    }
     return "removed";
   }
 

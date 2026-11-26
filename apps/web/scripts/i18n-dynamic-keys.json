@@ -1926,7 +1926,10 @@
       "keptBranchTitle",
       "keptBranch",
       "keptChangesTitle",
-      "keptChanges"
+      "keptChanges",
+      "keptBranchUndeletable",
+      "keptIgnored",
+      "keptUnreadable"
     ],
     "sources": ["../../desktop/src/main/service-host.ts"]
   }

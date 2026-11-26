@@ -5,6 +5,7 @@
  * mutations outright; YOLO never asks. Reads inside the workspace never prompt,
  * reads outside it do, since that is the one read that can leak.
  */
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -962,13 +963,24 @@ function buildWriteRequest(tool: ToolRequest, cwd: string): PermissionRequest {
   };
 }
 
-/** Whether `dir` is inside a git checkout: a `.git` (folder, or a worktree's file) here or above. */
-function insideGitCheckout(dir: string): boolean {
-  for (let at = path.resolve(dir); ;) {
-    if (fs.existsSync(path.join(at, ".git"))) return true;
-    const parent = path.dirname(at);
-    if (parent === at) return false;
-    at = parent;
+/**
+ * Whether a hand-off from `dir` gets a checkout of its own: the host makes
+ * one when git there has a last commit to make it from (headCommit), so the
+ * card asks git the same question.
+ */
+function hasLastCommit(dir: string): boolean {
+  try {
+    execFileSync(
+      "git",
+      ["-C", dir, "rev-parse", "--verify", "--quiet", "HEAD"],
+      {
+        stdio: "ignore",
+        timeout: 5_000,
+      }
+    );
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -983,7 +995,7 @@ function buildHandOffRequest(
     displayName: "Start a new chat",
     title: String(tool.input.title ?? "").trim(),
     brief: String(tool.input.prompt ?? "").trim(),
-    ownCheckout: insideGitCheckout(cwd),
+    ownCheckout: hasLastCommit(cwd),
   };
 }
 

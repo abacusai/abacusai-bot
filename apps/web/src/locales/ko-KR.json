@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "이 채팅의 체크아웃 {{branch}}도 함께 삭제됩니다. 단, 다른 채팅이 아직 사용 중이거나 보관할 만한 작업(커밋, 커밋하지 않은 변경, .env 같은 무시된 파일)이 있으면 유지하고 알려 드립니다."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "{{branch}} 유지됨",
       "keptBranch": "자체 커밋이 있습니다. 더 이상 필요 없으면 git으로 브랜치를 삭제하세요.",
       "keptChangesTitle": "“{{title}}” 체크아웃 유지됨",
-      "keptChanges": "커밋되지 않은 변경 사항이 있습니다({{path}})."
+      "keptChanges": "커밋되지 않은 변경 사항이 있습니다({{path}}).",
+      "keptBranchUndeletable": "git이 브랜치를 삭제하지 못했습니다. 더 이상 필요 없으면 git으로 삭제하세요.",
+      "keptIgnored": "{{path}}에 .env처럼 필요할 수 있는 무시된 파일이 있습니다.",
+      "keptUnreadable": "git이 읽지 못해 아무것도 삭제하지 않았습니다: {{path}}"
     }
   },
   "terminalShells": {

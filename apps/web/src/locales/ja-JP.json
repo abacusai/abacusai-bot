@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "このチャットのチェックアウト {{branch}} も削除されます。ただし、別のチャットがまだ使っている場合や、残したい作業（コミット、未コミットの変更、.env などの無視されたファイル）がある場合は残し、お知らせします。"
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "{{branch}} を残しました",
       "keptBranch": "独自のコミットがあります。不要になったら git でブランチを削除してください。",
       "keptChangesTitle": "「{{title}}」のチェックアウトを残しました",
-      "keptChanges": "コミットされていない変更があります（{{path}}）。"
+      "keptChanges": "コミットされていない変更があります（{{path}}）。",
+      "keptBranchUndeletable": "git がブランチを削除できませんでした。不要になったら git で削除してください。",
+      "keptIgnored": "{{path}} に .env など残したい可能性のある無視されたファイルがあります。",
+      "keptUnreadable": "git が読み取れなかったため、何も削除していません: {{path}}"
     }
   },
   "terminalShells": {

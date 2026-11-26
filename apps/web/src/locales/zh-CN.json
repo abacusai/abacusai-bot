@@ -1888,7 +1888,8 @@
       "markUnread": "标记为未读",
       "openBeside": "在此聊天旁打开",
       "newWorktree": "从这里新建工作树",
-      "emptyDescription": "按 {{key}} 开始一个，或把文件夹拖到这里。"
+      "emptyDescription": "按 {{key}} 开始一个，或把文件夹拖到这里。",
+      "deleteCheckout": "它的检出 {{branch}} 会一并删除；但如果仍有其他对话在其中工作，或其中有你可能想保留的内容（提交、未提交的更改，或 .env 等被忽略的文件），则会保留并通知你。"
     },
     "gone": "此会话已被删除",
     "untitled": "未命名",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "已保留 {{branch}}",
       "keptBranch": "它有自己的提交。不再需要时，请用 git 删除该分支。",
       "keptChangesTitle": "已保留“{{title}}”的检出",
-      "keptChanges": "其中有未提交的更改，位于 {{path}}。"
+      "keptChanges": "其中有未提交的更改，位于 {{path}}。",
+      "keptBranchUndeletable": "git 无法删除该分支。不再需要时，请用 git 删除。",
+      "keptIgnored": "{{path}} 中有你可能需要的被忽略文件，例如 .env。",
+      "keptUnreadable": "git 无法读取它，因此没有删除任何内容：{{path}}。"
     }
   },
   "terminalShells": {

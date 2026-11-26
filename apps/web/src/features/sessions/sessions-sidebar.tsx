@@ -601,6 +601,13 @@ const SessionSidebarRow = ({
               <AlertDialogDescription>
                 {t("sessions.sidebar.deleteBody")}
               </AlertDialogDescription>
+              {session.ownsWorktree === true ? (
+                <AlertDialogDescription data-slot="delete-checkout">
+                  {t("sessions.sidebar.deleteCheckout", {
+                    branch: session.worktreeBranch ?? "",
+                  })}
+                </AlertDialogDescription>
+              ) : null}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>

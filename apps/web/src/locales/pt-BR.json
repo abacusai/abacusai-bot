@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "A cópia {{branch}} é excluída junto, a menos que outro chat ainda trabalhe nela ou ela tenha trabalho que você queira manter (commits, alterações nunca commitadas ou arquivos ignorados como .env). Nesse caso ela é mantida e você é avisado."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2347,7 +2348,10 @@
       "keptBranchTitle": "{{branch}} mantido",
       "keptBranch": "Ele tem commits próprios. Exclua o branch com git quando não precisar mais.",
       "keptChangesTitle": "Cópia de “{{title}}” mantida",
-      "keptChanges": "Ela tem alterações nunca commitadas, em {{path}}."
+      "keptChanges": "Ela tem alterações nunca commitadas, em {{path}}.",
+      "keptBranchUndeletable": "O git não conseguiu excluir o branch. Exclua-o com git quando não precisar mais.",
+      "keptIgnored": "Ela tem arquivos ignorados que você pode querer, como .env, em {{path}}.",
+      "keptUnreadable": "O git não conseguiu lê-la, então nada foi removido: {{path}}."
     }
   },
   "terminalShells": {
