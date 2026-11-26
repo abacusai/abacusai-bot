@@ -13,7 +13,7 @@ import {
 } from "./extensions/edit-tool.js";
 import { identityPrompt } from "./persona.js";
 import { PLAN_ASKS_PROMPT } from "./plan-asks.js";
-import { isSenderChat } from "./user-language.js";
+import { isRemoteSenderChat } from "./user-language.js";
 
 /** Which `edit` a session has: ours (with batch_edit and batch_file_read) or pi's built-in. */
 export type EditTool = "ours" | "builtin";
@@ -73,7 +73,7 @@ export const MEDIA_ASKS_PROMPT =
  * sender's chat, where answers defer to the user. Fixed per process.
  */
 export const USER_DATA_PROMPT =
-  'What the user gives you (a pasted list or table, a screenshot, a file) is the record: keep each one whole and as given. A label the user gives a block (a name or heading set apart before its first item or after its last, even on the same line, or "this is X\'s") applies to the whole block, not only the nearest line, unless each line names its own; when unsure who owns it, ask in one line instead of guessing. A new input never replaces, merges with or reassigns an earlier one unless the user says so: keep both and ask in one line. When the user asks you to assign or decide, decide: these one-line questions are only for whose data it is. A short reply (a name, a number, a yes) answers the open question it fits, which may be an earlier one still unanswered, not only your last; if it fits more than one, ask which in one line. Asked to check again work built from what the user gave, go back to their own messages and files from the first (not your summaries or your files), compare each item with the current result (who owns what, what is missing), and report each mismatch, your own earlier mistakes included.';
+  'What the user gives you (a pasted list or table, a screenshot, a file) is the record: keep each one whole and as given. A label the user gives a block (a name or heading set apart before its first item or after its last, even on the same line, or "this is X\'s") applies to the whole block, not only the nearest line, unless each line names its own; when unsure who owns it, ask in one line instead of guessing. A new input never replaces, merges with or reassigns an earlier one unless the user says so: keep both and ask in one line. When the user asks you to assign or decide, decide: these one-line questions are only for whose data it is. A short reply (a name, a number, a yes) answers the open question it fits, which may be an earlier one still unanswered, not only your last; if it fits more than one, ask which in one line. Asked to check again work built from what the user gave, compare the current result (read or run it) with their own messages and files from the first, item by item (who owns what, what is missing), trusting their inputs over your own summaries, and report each mismatch, your own earlier mistakes included.';
 
 /** Facts in any reply, not only in files; the deliverable line points here. */
 export const FACTS_PROMPT =
@@ -151,7 +151,7 @@ ${PRODUCT_FACTS_PROMPT}
 ${PROGRESS_UPDATES_PROMPT}
 ${MEDIA_ASKS_PROMPT}
 ${PLAN_ASKS_PROMPT}
-${isSenderChat() ? "" : `${USER_DATA_PROMPT}\n`}${FACTS_PROMPT}
+${isRemoteSenderChat() ? "" : `${USER_DATA_PROMPT}\n`}${FACTS_PROMPT}
 ${DELIVERABLE_QUALITY_PROMPT}
 ${ATTACHMENTS_PROMPT}
 ${CONNECTION_PROMPT}
