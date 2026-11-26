@@ -313,7 +313,7 @@ const PARKED_BOUNDS = { x: 0, y: 0, width: 1280, height: 900 };
 export class ElectronBrowserRuntime {
   private readonly attached = new WeakSet<WebContentsView>();
   /** Views parked in the hidden host window. */
-  private readonly parked = new WeakSet<WebContentsView>();
+  private parked = new WeakSet<WebContentsView>();
   private parkingWindow: BaseWindow | null = null;
 
   /**
@@ -869,6 +869,13 @@ export class ElectronBrowserRuntime {
       this.sources.clear();
       this.presentedLease = null;
       this.presentedBy = null;
+      // The hidden host is a window too: left open, closing the main window
+      // never fires window-all-closed, and Windows and Linux never quit.
+      // The next parked view makes a new one.
+      const host = this.parkingWindow;
+      this.parkingWindow = null;
+      this.parked = new WeakSet();
+      if (host != null && !host.isDestroyed()) host.destroy();
     }
   }
 
