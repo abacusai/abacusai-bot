@@ -4,6 +4,8 @@ import type {
   SessionRow,
 } from "@abacus-ai/contract/contract/rows";
 import {
+  conversationRefFromKey,
+  type ConversationKey,
   draftConversationKey,
   draftConversationRef,
   sessionConversationKey,
@@ -13,13 +15,23 @@ import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#renderer/data/db";
 import { isRpcError } from "#renderer/data/query-client";
+import { getTransport } from "#renderer/data/transport";
 import type { AppClient } from "#renderer/data/transport/types";
 import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { persistedStore } from "#renderer/lib/continuity/registry";
 import type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
-import { draftViewStore, promoteTabs } from "../dock/panel-tabs-store";
+import {
+  closeTab,
+  draftViewStore,
+  panelTabsStore,
+  promoteTabs,
+} from "../dock/panel-tabs-store";
+import {
+  disposeTerminalView,
+  getTerminalView,
+} from "../terminal/terminal-registry";
 import {
   hasDraftContent,
   saveSessionDraft,
@@ -70,25 +82,61 @@ const subscription = startDraftStore.subscribe((draft) =>
 );
 import.meta.hot?.dispose(() => subscription.unsubscribe());
 
+/** A draft's terminal tabs, under whichever folder it was shown with. */
+const draftTerminals = (draftId: string) =>
+  Object.entries(panelTabsStore.state).flatMap(([key, entry]) => {
+    const ref = conversationRefFromKey(key as ConversationKey);
+    return ref?.kind === "draft" && ref.draftId === draftId
+      ? entry.tabs
+          .filter((tab) => tab.ref.startsWith("terminal:"))
+          .map((tab) => ({ key: key as ConversationKey, ref: tab.ref }))
+      : [];
+  });
+/** Ends a left draft's shells: nothing can show that draft again. */
+const closeTerminals = (terminals: { key: ConversationKey; ref: string }[]) => {
+  for (const { key, ref } of terminals) {
+    const terminalId = ref.slice("terminal:".length);
+    closeTab(key, ref);
+    void getTerminalView(`${key}:${terminalId}`)
+      .then(async (view) => {
+        if (view.generation !== null)
+          await (
+            await getTransport()
+          ).client.terminal.hide({
+            conversationKey: key,
+            terminalId,
+            generation: view.generation,
+            close: true,
+          });
+        disposeTerminalView(`${key}:${terminalId}`);
+      })
+      .catch(() => {});
+  }
+};
+
 export const openStartDraft = (id?: string, workspaceId?: string): string => {
   const current = startDraftStore.state;
   const saved = id ? restoreSessionDraft(id) : undefined;
-  if (saved) startDraftStore.setState(() => saved);
-  else if (
-    id ||
-    current.envelope ||
+  // Kept in the drafts list (something typed or sent): its terminals stay.
+  const kept =
+    !!current.envelope ||
     hasDraftContent(
       sessionDraftsStore.state.drafts[current.id]?.composer ?? {
         text: "",
         attachments: [],
       }
-    )
-  )
+    );
+  // An empty new chat is reused, but not one with terminals: a new chat
+  // starts with none, and the left one's shells end (nothing shows it again).
+  const terminals = id || kept ? [] : draftTerminals(current.id);
+  if (saved) startDraftStore.setState(() => saved);
+  else if (id || kept || terminals.length > 0) {
     startDraftStore.setState(() => ({
       ...newStartDraft(),
       workspaceId: workspaceId ?? null,
     }));
-  else if (workspaceId)
+    closeTerminals(terminals);
+  } else if (workspaceId)
     startDraftStore.setState((d) => ({ ...d, workspaceId }));
   draftViewStore.setState(() => "split");
   requestAnimationFrame(() =>
