@@ -1888,7 +1888,8 @@
       "markUnread": "標示為未讀",
       "openBeside": "在這個聊天旁開啟",
       "newWorktree": "從這裡新增工作樹",
-      "emptyDescription": "按 {{key}} 開始一個，或把資料夾拖到這裡。"
+      "emptyDescription": "按 {{key}} 開始一個，或把資料夾拖到這裡。",
+      "deleteCheckout": "它的檢出 {{branch}} 會一併刪除；但如果仍有其他對話在其中工作，或其中有你可能想保留的內容（提交、尚未提交的變更，或 .env 等被忽略的檔案），則會保留並通知你。"
     },
     "gone": "這個工作階段已被刪除",
     "untitled": "未命名",
@@ -2315,7 +2316,8 @@
       "from": "接續自",
       "into": "接續於",
       "startsFrom": "從「{{label}}」的摘要開始",
-      "drop": "不帶摘要開始"
+      "drop": "不帶摘要開始",
+      "handedOffFrom": "交接自"
     },
     "websitePrompt": {
       "label": "你在網站上提交的任務",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "此檔案不在此聊天的資料夾中",
       "remove": "移除 {{name}}",
       "removeFailed": "無法移除資料夾。請再試一次。"
+    },
+    "handoff": {
+      "cardLabel": "在獨立的對話中",
+      "starting": "正在啟動…",
+      "ready": "已完成",
+      "stopped": "已停止",
+      "deleted": "對話已刪除",
+      "keptBranchTitle": "已保留 {{branch}}",
+      "keptBranch": "它有自己的提交。不再需要時，請用 git 刪除該分支。",
+      "keptChangesTitle": "已保留「{{title}}」的檢出",
+      "keptChanges": "其中有尚未提交的變更，位於 {{path}}。",
+      "keptBranchUndeletable": "git 無法刪除該分支。不再需要時，請用 git 刪除。",
+      "keptIgnored": "{{path}} 中有你可能需要的被忽略檔案，例如 .env。",
+      "keptUnreadable": "git 無法讀取它，因此沒有刪除任何內容：{{path}}。",
+      "keptBranchMoved": "該對話的檢出已切換到此分支，因此保留了它。不再需要時，請用 git 刪除。",
+      "keptCommits": "{{path}} 中有不在任何分支上的提交。"
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "資料夾以外",
         "plan": "核准計畫",
         "question": "回答問題",
-        "runCommand": "執行指令"
+        "runCommand": "執行指令",
+        "handOff": "新對話：{{title}}"
       },
       "notePlaceholder": "告訴 AI 代理應該改做什麼",
       "pending_one": "{{count}} 個要求等待處理",
@@ -3474,7 +3493,10 @@
         "runCommand": "要執行這個指令嗎？",
         "sandboxDenied": "沙箱拒絕了這個指令嘗試的某項動作",
         "sandboxDeniedDescription": "它嘗試了沙箱允許範圍以外的動作。",
-        "writeOutside": "要寫入資料夾以外的位置嗎？"
+        "writeOutside": "要寫入資料夾以外的位置嗎？",
+        "handOff": "開始新對話：{{title}}",
+        "handOffOwnCheckout": "它在自己的檢出中工作，以此對話的最新提交建立，使用相同的模型和模式。",
+        "handOffSharedFolder": "它與此對話同時在同一個資料夾中工作，使用相同的模型和模式。"
       },
       "verb": {
         "reach": "存取",

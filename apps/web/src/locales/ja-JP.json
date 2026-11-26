@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "このチャットのチェックアウト {{branch}} も削除されます。ただし、別のチャットがまだ使っている場合や、残したい作業（コミット、未コミットの変更、.env などの無視されたファイル）がある場合は残し、お知らせします。"
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "続きの元:",
       "into": "続きの先:",
       "startsFrom": "「{{label}}」の要約から始まります",
-      "drop": "要約なしで始める"
+      "drop": "要約なしで始める",
+      "handedOffFrom": "引き継ぎ元:"
     },
     "websitePrompt": {
       "label": "ウェブサイトからのあなたのタスク",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "このファイルはこのチャットのフォルダーの外にあります",
       "remove": "{{name}} を削除",
       "removeFailed": "フォルダーを削除できませんでした。もう一度お試しください。"
+    },
+    "handoff": {
+      "cardLabel": "別のチャット",
+      "starting": "開始しています…",
+      "ready": "完了",
+      "stopped": "停止しました",
+      "deleted": "チャットは削除されました",
+      "keptBranchTitle": "{{branch}} を残しました",
+      "keptBranch": "独自のコミットがあります。不要になったら git でブランチを削除してください。",
+      "keptChangesTitle": "「{{title}}」のチェックアウトを残しました",
+      "keptChanges": "コミットされていない変更があります（{{path}}）。",
+      "keptBranchUndeletable": "git がブランチを削除できませんでした。不要になったら git で削除してください。",
+      "keptIgnored": "{{path}} に .env など残したい可能性のある無視されたファイルがあります。",
+      "keptUnreadable": "git が読み取れなかったため、何も削除していません: {{path}}",
+      "keptBranchMoved": "チャットのチェックアウトがこのブランチに切り替わっていたため、残しました。不要になったら git で削除してください。",
+      "keptCommits": "{{path}} に、どのブランチにも含まれないコミットがあります。"
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "新しいチャット: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "新しいチャットを開始: {{title}}",
+        "handOffOwnCheckout": "このチャットの最新コミットから作った専用のチェックアウトで、同じモデルとモードで作業します。",
+        "handOffSharedFolder": "このチャットと同時に同じフォルダーで、同じモデルとモードで作業します。"
       },
       "verb": {
         "reach": "reach",

@@ -351,6 +351,9 @@ export interface SessionOwner {
   senderName?: string | null;
 }
 
+/** How a handed-off chat's last turn ended. */
+export type HandOffEnd = "done" | "failed" | "stopped";
+
 export interface AgentSessionListItem {
   id: string;
   workspaceId: string;
@@ -378,10 +381,29 @@ export interface AgentSessionListItem {
   runTrigger: string | null;
   /** Routine runs only: the report the app delivered to a chat, drawn there as a card. */
   report?: RunReportStamp | null;
-  /** The chat this one continues on another model, linked both ways in the transcripts. */
+  /** The chat this one continues, linked both ways in the transcripts. */
   continuedFrom?: string;
   /** Folders the user added to this chat beyond its own, as real paths. Absent: none. */
   folders?: string[];
+  /**
+   * Why it continues `continuedFrom`: absent for a move to another model (the
+   * new chat replaces the old), "handoff" for a task split off into its own
+   * chat while the first goes on; the sidebar nests a handoff under its source.
+   */
+  continuationKind?: "handoff";
+  /**
+   * The worktree is one a hand-off made, and this chat owns it: deleting the
+   * chat removes it, unless another chat still works in it or it holds work
+   * worth keeping.
+   */
+  ownsWorktree?: boolean;
+  /**
+   * The project's folder inside `worktreePath`, when the project is a
+   * subfolder of its repository: the session works there. Absent: the root.
+   */
+  worktreeSubdir?: string;
+  /** A handed-off chat: how its last turn ended, for its source's card. Absent until one has. */
+  handOffEnd?: HandOffEnd;
   /** The routine this session edits, when it is the editor turn behind a routine page. Hidden from lists. */
   editorFor: string | null;
   /** Derived from `owner` (plus legacy stamps); hides the session from the Sessions tree. */

@@ -28,14 +28,27 @@ export interface UserTextTags {
       | "test-repair-limit"
       | "tests-left-alone"
       | "bot-exchange"
-      | "bot-task";
+      | "bot-task"
+      | "handoff";
     /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
     visibleFrom?: number;
     /** For "bot-exchange": what passed between this bot and another. */
     exchange?: BotExchangeTag;
     /** For "bot-task": a task another bot passed on, drawn as a card. */
     task?: BotTaskTag;
+    /** For "handoff": the chat that handed this task off, and the brief it wrote. */
+    handoff?: HandOffTag;
   };
+}
+
+/**
+ * A task another of the user's chats handed off to this one (a "handoff"
+ * prompt): written by that chat's agent, never the user's own words. The chat
+ * draws it as "Handed off from" its source, with the brief underneath.
+ */
+export interface HandOffTag {
+  fromSessionId: string;
+  brief: string;
 }
 
 /**
@@ -559,6 +572,14 @@ export type PermissionRequest =
       type: "generic";
       toolName: string;
       inputSummary: string;
+    })
+  | (PermissionRequestBase & {
+      // hand_off_session: another chat's agent starts on this brief.
+      type: "hand_off";
+      title: string;
+      brief: string;
+      /** In a git project the new chat gets a checkout of its own; else it shares this folder. */
+      ownCheckout: boolean;
     })
   | (PermissionRequestBase & {
       type: "exit_plan_mode";

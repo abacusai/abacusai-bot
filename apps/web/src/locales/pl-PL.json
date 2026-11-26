@@ -1910,7 +1910,8 @@
       "markUnread": "Oznacz jako nieprzeczytane",
       "openBeside": "Otwórz obok tego czatu",
       "newWorktree": "Nowy worktree stąd",
-      "emptyDescription": "Zacznij skrótem {{key}} albo upuść tu folder."
+      "emptyDescription": "Zacznij skrótem {{key}} albo upuść tu folder.",
+      "deleteCheckout": "Jego kopia {{branch}} zostanie usunięta razem z nim, chyba że inny czat nadal w niej pracuje albo zawiera pracę wartą zachowania (commity, niezacommitowane zmiany lub ignorowane pliki, np. .env). Wtedy zostanie zachowana, a my Cię powiadomimy."
     },
     "gone": "Ta sesja została usunięta",
     "untitled": "Bez tytułu",
@@ -2337,7 +2338,8 @@
       "from": "Kontynuacja rozmowy",
       "into": "Kontynuowane w",
       "startsFrom": "Zaczyna od podsumowania „{{label}}”",
-      "drop": "Zacznij bez niego"
+      "drop": "Zacznij bez niego",
+      "handedOffFrom": "Przekazano z"
     },
     "websitePrompt": {
       "label": "Twoje zadanie ze strony",
@@ -2358,6 +2360,22 @@
       "outsideTitle": "Ten plik jest poza folderami tego czatu",
       "remove": "Usuń {{name}}",
       "removeFailed": "Nie udało się usunąć folderu. Spróbuj ponownie."
+    },
+    "handoff": {
+      "cardLabel": "We własnym czacie",
+      "starting": "Uruchamianie…",
+      "ready": "Gotowe",
+      "stopped": "Zatrzymano",
+      "deleted": "Czat usunięty",
+      "keptBranchTitle": "Zachowano {{branch}}",
+      "keptBranch": "Gałąź ma własne commity. Usuń ją przez git, gdy nie będzie już potrzebna.",
+      "keptChangesTitle": "Zachowano kopię „{{title}}”",
+      "keptChanges": "Zawiera niezacommitowane zmiany, w {{path}}.",
+      "keptBranchUndeletable": "git nie mógł usunąć gałęzi. Usuń ją przez git, gdy nie będzie już potrzebna.",
+      "keptIgnored": "Zawiera ignorowane pliki, które mogą Ci się przydać, np. .env, w {{path}}.",
+      "keptUnreadable": "git nie mógł jej odczytać, więc nic nie zostało usunięte: {{path}}.",
+      "keptBranchMoved": "Kopia czatu została przełączona na tę gałąź, więc ją zachowano. Usuń ją przez git, gdy nie będzie już potrzebna.",
+      "keptCommits": "Zawiera commity, których nie ma w żadnej gałęzi, w {{path}}."
     }
   },
   "terminalShells": {
@@ -3481,7 +3499,8 @@
         "outside": "Poza folderem",
         "plan": "Zatwierdź plan",
         "question": "Odpowiedz na pytanie",
-        "runCommand": "Uruchom polecenie"
+        "runCommand": "Uruchom polecenie",
+        "handOff": "Nowy czat: {{title}}"
       },
       "notePlaceholder": "Powiedz agentowi, co ma zrobić zamiast tego",
       "pending_one": "{{count}} prośba czeka",
@@ -3528,7 +3547,10 @@
         "runCommand": "Uruchomić to polecenie?",
         "sandboxDenied": "Sandbox zablokował jedną z akcji tego polecenia",
         "sandboxDeniedDescription": "Polecenie próbowało zrobić coś, na co sandbox nie pozwala.",
-        "writeOutside": "Zapisać poza folderem?"
+        "writeOutside": "Zapisać poza folderem?",
+        "handOff": "Rozpocznij nowy czat: {{title}}",
+        "handOffOwnCheckout": "Pracuje we własnej kopii utworzonej z ostatniego commita tego czatu, z tym samym modelem i trybem.",
+        "handOffSharedFolder": "Pracuje w tym samym folderze, równocześnie z tym czatem, z tym samym modelem i trybem."
       },
       "verb": {
         "reach": "połączyć się",

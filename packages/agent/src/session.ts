@@ -149,6 +149,7 @@ import { OwnedTurn } from "./owned-turn.js";
 import { PendingSteers } from "./pending-steers.js";
 import {
   gateToolCall,
+  hasLastCommit,
   MODE_NAMES,
   parseMode,
   parseModeStrict,
@@ -3804,6 +3805,10 @@ export class AbacusBotSession {
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
+        // Asked here, off the gate's synchronous path.
+        ...(tool.name === "hand_off_session"
+          ? { hasLastCommit: await hasLastCommit(ctx.cwd) }
+          : {}),
         ...this.gateAllowances(),
         userWords: this.userWords.window,
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),

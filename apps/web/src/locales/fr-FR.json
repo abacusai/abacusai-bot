@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "Sa copie {{branch}} est supprimée avec lui, sauf si un autre chat y travaille encore ou si elle contient du travail à garder (commits, modifications non commitées ou fichiers ignorés comme .env). Elle est alors conservée et vous êtes prévenu."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "Suite de",
       "into": "Suite dans",
       "startsFrom": "Commence par un résumé de « {{label}} »",
-      "drop": "Commencer sans"
+      "drop": "Commencer sans",
+      "handedOffFrom": "Confié depuis"
     },
     "websitePrompt": {
       "label": "Votre tâche depuis le site web",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "Ce fichier est en dehors des dossiers de ce chat",
       "remove": "Retirer {{name}}",
       "removeFailed": "Le dossier n'a pas pu être retiré. Réessayez."
+    },
+    "handoff": {
+      "cardLabel": "Dans son propre chat",
+      "starting": "Démarrage…",
+      "ready": "Terminé",
+      "stopped": "Arrêté",
+      "deleted": "Chat supprimé",
+      "keptBranchTitle": "{{branch}} conservée",
+      "keptBranch": "Elle contient ses propres commits. Supprimez la branche avec git quand vous n’en avez plus besoin.",
+      "keptChangesTitle": "Copie de « {{title}} » conservée",
+      "keptChanges": "Elle contient des modifications jamais commitées, dans {{path}}.",
+      "keptBranchUndeletable": "git n’a pas pu supprimer la branche. Supprimez-la avec git quand vous n’en avez plus besoin.",
+      "keptIgnored": "Elle contient des fichiers ignorés utiles, comme .env, dans {{path}}.",
+      "keptUnreadable": "git n’a pas pu la lire, donc rien n’a été supprimé : {{path}}.",
+      "keptBranchMoved": "La copie du chat était passée sur cette branche, elle a donc été conservée. Supprimez-la avec git quand vous n’en avez plus besoin.",
+      "keptCommits": "Elle contient des commits qui ne sont sur aucune branche, dans {{path}}."
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Nouveau chat : {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Démarrer un nouveau chat : {{title}}",
+        "handOffOwnCheckout": "Il travaille dans sa propre copie, créée depuis le dernier commit de ce chat, avec le même modèle et le même mode.",
+        "handOffSharedFolder": "Il travaille dans ce même dossier, en même temps que ce chat, avec le même modèle et le même mode."
       },
       "verb": {
         "reach": "reach",

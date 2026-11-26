@@ -13,6 +13,7 @@
  *     not approve `npm publish`, and approving one docs page must not approve
  *     every host on the internet.
  */
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -30,6 +31,7 @@ import { Allowances } from "./allowances.js";
 import { modelPath } from "./model-path.js";
 import {
   gateToolCall,
+  hasLastCommit,
   isMutatingTool,
   parseMode,
   parseModeStrict,
@@ -631,6 +633,84 @@ describe("sub-agent tools", () => {
     expect(gate.kind === "ask" && gate.request.displayName).toContain(
       "unsupervised"
     );
+  });
+});
+
+describe("hand_off_session", () => {
+  // It starts another chat's agent on a brief this one wrote: a run the user
+  // agrees to first, like delegate_task, and never from plan mode.
+  const handOff = call("hand_off_session", {
+    title: "Release notes",
+    prompt: "Write the release notes",
+  });
+
+  it.each([
+    [AgentMode.Normal, "ask"],
+    [AgentMode.AcceptEdits, "ask"],
+    [AgentMode.PlanMode, "refuse"],
+    [AgentMode.Auto, "allow"],
+    [AgentMode.Yolo, "allow"],
+  ])("in %s mode: %s", (mode, kind) => {
+    expect(gateToolCall(handOff, options({ mode })).kind).toBe(kind);
+    expect(
+      gateToolCall(call("delegate_task", { task: "x" }), options({ mode })).kind
+    ).toBe(kind);
+  });
+
+  it("asks on its own card: the title, the whole brief, and where it will work", async () => {
+    const brief = "Write the release notes. ".repeat(60).trim();
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-plain-"));
+    const unborn = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-unborn-"));
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), "handoff-git-"));
+    const run = (cwd: string, ...args: string[]) =>
+      execFileSync("git", ["-C", cwd, ...args], { stdio: "ignore" });
+    run(unborn, "init", "-q");
+    run(repo, "init", "-q");
+    fs.mkdirSync(path.join(repo, "apps", "site"), { recursive: true });
+    fs.writeFileSync(path.join(repo, "apps", "site", "index.html"), "x");
+    run(repo, "add", ".");
+    run(
+      repo,
+      "-c",
+      "user.email=t@example.com",
+      "-c",
+      "user.name=t",
+      "commit",
+      "-qm",
+      "first"
+    );
+    try {
+      const card = (lastCommit?: boolean) => {
+        const gate = gateToolCall(
+          call("hand_off_session", { title: " Release notes ", prompt: brief }),
+          options({
+            cwd: repo,
+            ...(lastCommit != null ? { hasLastCommit: lastCommit } : {}),
+          })
+        );
+        return gate.kind === "ask" ? gate.request : null;
+      };
+      expect(card(false)).toMatchObject({
+        type: "hand_off",
+        title: "Release notes",
+        brief,
+        ownCheckout: false,
+      });
+      expect(card(true)).toMatchObject({ ownCheckout: true });
+      // The gate never asks git itself: unasked, it is not claimed.
+      expect(card()).toMatchObject({ ownCheckout: false });
+      // The host's test, asked ahead: a last commit, not merely a .git.
+      await expect(hasLastCommit(plain)).resolves.toBe(false);
+      await expect(hasLastCommit(unborn)).resolves.toBe(false);
+      await expect(hasLastCommit(repo)).resolves.toBe(true);
+      await expect(
+        hasLastCommit(path.join(repo, "apps", "site"))
+      ).resolves.toBe(true);
+    } finally {
+      fs.rmSync(plain, { recursive: true, force: true });
+      fs.rmSync(unborn, { recursive: true, force: true });
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
   });
 });
 

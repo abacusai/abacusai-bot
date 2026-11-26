@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "A cópia {{branch}} é excluída junto, a menos que outro chat ainda trabalhe nela ou ela tenha trabalho que você queira manter (commits, alterações nunca commitadas ou arquivos ignorados como .env). Nesse caso ela é mantida e você é avisado."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "Continuação de",
       "into": "Continua em",
       "startsFrom": "Começa com um resumo de “{{label}}”",
-      "drop": "Começar sem ele"
+      "drop": "Começar sem ele",
+      "handedOffFrom": "Repassado de"
     },
     "websitePrompt": {
       "label": "Sua tarefa do site",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "Este arquivo está fora das pastas deste chat",
       "remove": "Remover {{name}}",
       "removeFailed": "Não foi possível remover a pasta. Tente de novo."
+    },
+    "handoff": {
+      "cardLabel": "Em um chat próprio",
+      "starting": "Iniciando…",
+      "ready": "Pronto",
+      "stopped": "Interrompido",
+      "deleted": "Chat excluído",
+      "keptBranchTitle": "{{branch}} mantido",
+      "keptBranch": "Ele tem commits próprios. Exclua o branch com git quando não precisar mais.",
+      "keptChangesTitle": "Cópia de “{{title}}” mantida",
+      "keptChanges": "Ela tem alterações nunca commitadas, em {{path}}.",
+      "keptBranchUndeletable": "O git não conseguiu excluir o branch. Exclua-o com git quando não precisar mais.",
+      "keptIgnored": "Ela tem arquivos ignorados que você pode querer, como .env, em {{path}}.",
+      "keptUnreadable": "O git não conseguiu lê-la, então nada foi removido: {{path}}.",
+      "keptBranchMoved": "A cópia do chat tinha mudado para este branch, então ele foi mantido. Exclua-o com git quando não precisar mais.",
+      "keptCommits": "Ela tem commits que não estão em nenhum branch, em {{path}}."
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Novo chat: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Iniciar um novo chat: {{title}}",
+        "handOffOwnCheckout": "Ele trabalha em uma cópia própria, criada a partir do último commit deste chat, com o mesmo modelo e modo.",
+        "handOffSharedFolder": "Ele trabalha nesta mesma pasta, ao mesmo tempo que este chat, com o mesmo modelo e modo."
       },
       "verb": {
         "reach": "reach",

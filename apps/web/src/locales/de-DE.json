@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "Sein Checkout {{branch}} wird mit gelöscht, außer ein anderer Chat arbeitet noch darin oder er enthält Arbeit, die du behalten willst (Commits, nicht committete Änderungen oder ignorierte Dateien wie .env). Dann bleibt er erhalten, und du wirst informiert."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "Fortgesetzt aus",
       "into": "Fortgesetzt in",
       "startsFrom": "Beginnt mit einer Zusammenfassung von „{{label}}“",
-      "drop": "Ohne sie beginnen"
+      "drop": "Ohne sie beginnen",
+      "handedOffFrom": "Übergeben aus"
     },
     "websitePrompt": {
       "label": "Deine Aufgabe von der Website",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "Diese Datei liegt außerhalb der Ordner dieses Chats",
       "remove": "{{name}} entfernen",
       "removeFailed": "Der Ordner konnte nicht entfernt werden. Versuche es erneut."
+    },
+    "handoff": {
+      "cardLabel": "In einem eigenen Chat",
+      "starting": "Wird gestartet…",
+      "ready": "Fertig",
+      "stopped": "Gestoppt",
+      "deleted": "Chat gelöscht",
+      "keptBranchTitle": "{{branch}} behalten",
+      "keptBranch": "Der Branch hat eigene Commits. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
+      "keptChangesTitle": "Checkout von „{{title}}“ behalten",
+      "keptChanges": "Er enthält nicht committete Änderungen, in {{path}}.",
+      "keptBranchUndeletable": "git konnte den Branch nicht löschen. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
+      "keptIgnored": "Er enthält ignorierte Dateien, die du vielleicht brauchst, etwa .env, in {{path}}.",
+      "keptUnreadable": "git konnte ihn nicht lesen, daher wurde nichts darin entfernt: {{path}}.",
+      "keptBranchMoved": "Der Checkout des Chats war auf diesen Branch gewechselt, daher wurde er behalten. Lösche ihn mit git, wenn du ihn nicht mehr brauchst.",
+      "keptCommits": "Er enthält Commits, die auf keinem Branch liegen, in {{path}}."
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Neuer Chat: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Neuen Chat starten: {{title}}",
+        "handOffOwnCheckout": "Er arbeitet in einem eigenen Checkout, erstellt aus dem letzten Commit dieses Chats, mit demselben Modell und Modus.",
+        "handOffSharedFolder": "Er arbeitet im selben Ordner, gleichzeitig mit diesem Chat, mit demselben Modell und Modus."
       },
       "verb": {
         "reach": "reach",

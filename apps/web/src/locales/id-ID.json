@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "Checkout {{branch}} ikut dihapus, kecuali masih dipakai chat lain atau berisi pekerjaan yang mungkin Anda perlukan (commit, perubahan yang belum di-commit, atau file yang diabaikan seperti .env). Dalam hal itu checkout disimpan dan Anda diberi tahu."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "Lanjutan dari",
       "into": "Dilanjutkan di",
       "startsFrom": "Dimulai dari ringkasan “{{label}}”",
-      "drop": "Mulai tanpa ringkasan"
+      "drop": "Mulai tanpa ringkasan",
+      "handedOffFrom": "Dialihkan dari"
     },
     "websitePrompt": {
       "label": "Tugas Anda dari situs web",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "File ini berada di luar folder chat ini",
       "remove": "Hapus {{name}}",
       "removeFailed": "Folder tidak bisa dihapus. Coba lagi."
+    },
+    "handoff": {
+      "cardLabel": "Di chat tersendiri",
+      "starting": "Memulai…",
+      "ready": "Selesai",
+      "stopped": "Dihentikan",
+      "deleted": "Chat dihapus",
+      "keptBranchTitle": "{{branch}} disimpan",
+      "keptBranch": "Branch ini punya commit sendiri. Hapus dengan git jika sudah tidak diperlukan.",
+      "keptChangesTitle": "Checkout “{{title}}” disimpan",
+      "keptChanges": "Ada perubahan yang belum di-commit, di {{path}}.",
+      "keptBranchUndeletable": "git tidak bisa menghapus branch ini. Hapus dengan git jika sudah tidak diperlukan.",
+      "keptIgnored": "Ada file yang diabaikan yang mungkin Anda perlukan, seperti .env, di {{path}}.",
+      "keptUnreadable": "git tidak bisa membacanya, jadi tidak ada yang dihapus: {{path}}.",
+      "keptBranchMoved": "Checkout chat ini sudah pindah ke branch ini, jadi branch disimpan. Hapus dengan git jika sudah tidak diperlukan.",
+      "keptCommits": "Ada commit yang tidak berada di branch mana pun, di {{path}}."
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Chat baru: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Mulai chat baru: {{title}}",
+        "handOffOwnCheckout": "Chat ini bekerja di checkout sendiri, dibuat dari commit terakhir chat ini, dengan model dan mode yang sama.",
+        "handOffSharedFolder": "Chat ini bekerja di folder yang sama, bersamaan dengan chat ini, dengan model dan mode yang sama."
       },
       "verb": {
         "reach": "reach",

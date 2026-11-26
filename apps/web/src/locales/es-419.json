@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "Su copia {{branch}} se elimina con él, salvo que otro chat siga trabajando en ella o tenga trabajo que quieras conservar (commits, cambios sin commit o archivos ignorados como .env). En ese caso se conserva y te avisamos."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "Continuación de",
       "into": "Continúa en",
       "startsFrom": "Empieza con un resumen de “{{label}}”",
-      "drop": "Empezar sin él"
+      "drop": "Empezar sin él",
+      "handedOffFrom": "Delegado desde"
     },
     "websitePrompt": {
       "label": "Tu tarea del sitio web",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "Este archivo está fuera de las carpetas de este chat",
       "remove": "Quitar {{name}}",
       "removeFailed": "No se pudo quitar la carpeta. Inténtalo de nuevo."
+    },
+    "handoff": {
+      "cardLabel": "En su propio chat",
+      "starting": "Iniciando…",
+      "ready": "Listo",
+      "stopped": "Detenido",
+      "deleted": "Chat eliminado",
+      "keptBranchTitle": "Se conservó {{branch}}",
+      "keptBranch": "Tiene commits propios. Borra la rama con git cuando ya no la necesites.",
+      "keptChangesTitle": "Se conservó la copia de “{{title}}”",
+      "keptChanges": "Tiene cambios sin hacer commit, en {{path}}.",
+      "keptBranchUndeletable": "git no pudo borrar la rama. Bórrala con git cuando ya no la necesites.",
+      "keptIgnored": "Tiene archivos ignorados que quizá quieras, como .env, en {{path}}.",
+      "keptUnreadable": "git no pudo leerla, así que no se eliminó nada: {{path}}.",
+      "keptBranchMoved": "La copia del chat se había cambiado a esta rama, así que se conservó. Bórrala con git cuando ya no la necesites.",
+      "keptCommits": "Tiene commits que no están en ninguna rama, en {{path}}."
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "Chat nuevo: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Iniciar un chat nuevo: {{title}}",
+        "handOffOwnCheckout": "Trabaja en una copia propia, creada desde el último commit de este chat, con el mismo modelo y modo.",
+        "handOffSharedFolder": "Trabaja en esta misma carpeta, al mismo tiempo que este chat, con el mismo modelo y modo."
       },
       "verb": {
         "reach": "reach",

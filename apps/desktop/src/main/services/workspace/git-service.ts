@@ -180,6 +180,46 @@ type GitChangeStats = {
   deletions: number | null;
 };
 
+/** How `releaseWorktree` went. */
+export type WorktreeRelease =
+  | "removed"
+  | "kept-branch"
+  | "kept-branch-undeletable"
+  | "kept-changes"
+  | "kept-commits"
+  | "kept-ignored"
+  | "kept-unreadable"
+  | "not-managed";
+
+/**
+ * Ignored folders a checkout can always make again: installed dependencies,
+ * caches and framework build folders. Not generic output folders (`out/`,
+ * `dist/`, `exports/`): those can hold a report or a file someone wants.
+ */
+const DISPOSABLE_IGNORED = new Set([
+  "node_modules",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".turbo",
+  ".cache",
+  ".parcel-cache",
+  ".gradle",
+  "target",
+  ".venv",
+  "venv",
+  "__pycache__",
+  ".pytest_cache",
+  ".mypy_cache",
+]);
+
+/** An ignored path inside one of those, or one of them. */
+const disposableIgnored = (entry: string): boolean =>
+  entry
+    .replace(/^"|"$/g, "")
+    .split("/")
+    .some((segment) => DISPOSABLE_IGNORED.has(segment));
+
 export class GitService {
   // Workspaces are long-lived and rev-parse would run on every git op.
   // Invalidated by initRepository() and invalidateRepoCache().
@@ -562,6 +602,103 @@ export class GitService {
       checkoutPath,
     ]).catch(() => undefined);
     await fs.rm(checkoutPath, { recursive: true, force: true }).catch(() => {});
+  }
+
+  /**
+   * Takes away a worktree the app made for one chat (a hand-off's): the
+   * checkout, then its branch while that is still on `base`. Only for that:
+   * the user's own removals go through removeManagedWorktree.
+   *
+   * It fails safe, keeping the checkout whole when git cannot read it, when
+   * it has changes never committed or ignored files worth keeping (an `.env`,
+   * say, but not dependencies or caches), or when any commit it ever had
+   * checked out would be left on no branch or tag (a commit on a detached
+   * HEAD, say). A branch with commits of its own, one git would not delete,
+   * or another branch the checkout moved to, is kept. Says which.
+   */
+  async releaseWorktree(
+    workspacePath: string,
+    managedRoot: string,
+    checkout: { path: string; branch: string | null; base: string }
+  ): Promise<{ kind: WorktreeRelease; branch?: string }> {
+    // Only a checkout under the app's own root is ever taken away.
+    if (!isPathInside(managedRoot, checkout.path))
+      return { kind: "not-managed" };
+    const git = async (cwd: string, ...args: string[]): Promise<string> =>
+      (await execFileAsync("git", ["-C", cwd, ...args])).stdout;
+    const tip =
+      checkout.branch == null
+        ? null
+        : await git(
+            workspacePath,
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            `refs/heads/${checkout.branch}`
+          ).then(
+            (out) => out.trim() || null,
+            () => null
+          );
+    // Deleted with the checkout only while it holds nothing of its own.
+    const dropBranch = checkout.branch != null && tip === checkout.base;
+    const present = await fs.stat(checkout.path).then(
+      () => true,
+      () => false
+    );
+    let movedTo: string | null = null;
+    if (present) {
+      try {
+        const entries = (
+          await git(checkout.path, "status", "--porcelain", "--ignored")
+        )
+          .split("\n")
+          .filter((line) => line.length > 3);
+        if (entries.some((line) => !line.startsWith("!! ")))
+          return { kind: "kept-changes" };
+        if (entries.some((line) => !disposableIgnored(line.slice(3).trim())))
+          return { kind: "kept-ignored" };
+        // Every commit this checkout has had checked out, from its HEAD's reflog.
+        const visited = new Set(
+          (await git(checkout.path, "reflog", "show", "--format=%H", "HEAD"))
+            .split("\n")
+            .filter(Boolean)
+        );
+        visited.add((await git(checkout.path, "rev-parse", "HEAD")).trim());
+        const lost = await git(
+          workspacePath,
+          "rev-list",
+          ...visited,
+          "--not",
+          ...(dropBranch ? [`--exclude=refs/heads/${checkout.branch}`] : []),
+          "--glob=refs/*"
+        );
+        if (lost.trim() !== "") return { kind: "kept-commits" };
+        const head = await git(checkout.path, "symbolic-ref", "--quiet", "HEAD")
+          .then((out) => out.trim().replace(/^refs\/heads\//, ""))
+          .catch(() => null);
+        if (head != null && head !== checkout.branch) movedTo = head;
+      } catch {
+        return { kind: "kept-unreadable" };
+      }
+    }
+    await this.removeManagedWorktree(workspacePath, managedRoot, checkout.path);
+    // Drop git's record of the checkout whichever way its folder went: a
+    // folder already gone, or `worktree remove` failing (a file held open on
+    // Windows) before the folder was deleted, leaves the record, and with it
+    // the branch counts as checked out and cannot be deleted.
+    await git(workspacePath, "worktree", "prune").catch(() => undefined);
+    if (checkout.branch != null && tip != null && !dropBranch)
+      return { kind: "kept-branch", branch: checkout.branch };
+    if (dropBranch) {
+      try {
+        await git(workspacePath, "branch", "-D", checkout.branch!);
+      } catch {
+        return { kind: "kept-branch-undeletable", branch: checkout.branch! };
+      }
+    }
+    return movedTo == null
+      ? { kind: "removed" }
+      : { kind: "kept-branch", branch: movedTo };
   }
 
   /**

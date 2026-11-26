@@ -51,6 +51,7 @@ import { containmentRootFor } from "#renderer/components/file-preview/paths";
 import {
   botVisibleMessage,
   isBotHelpTool,
+  isHandOffTool,
   isPaidFeatureTool,
 } from "#renderer/lib/bot-turns/turns";
 import { cn } from "#renderer/lib/cn";
@@ -88,6 +89,7 @@ import {
   useSubagentScope,
   type MessageDecoration,
 } from "./context";
+import { HandedOffMessage, handOffOf } from "./handed-off-message";
 import {
   MessageActions,
   MessageMenu,
@@ -302,7 +304,9 @@ export const routeRowOf = (message: UIMessage): string | null => {
   const kind = (
     message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined
   )?.abacus?.userText?.operator?.kind;
-  return kind === "bot-exchange" || kind === "bot-task" ? kind : null;
+  return kind === "bot-exchange" || kind === "bot-task" || kind === "handoff"
+    ? kind
+    : null;
 };
 
 export const appLineOf = (message: UIMessage): AppLineKind | null => {
@@ -443,6 +447,8 @@ const UserMessage = ({
   const { hidden, body, paths } = userView(message);
   const appLine = appLineOf(message);
   if (appLine != null) return <AppLine kind={appLine} />;
+  const handoff = handOffOf(message);
+  if (handoff != null) return <HandedOffMessage handoff={handoff} />;
   if (hidden) return null;
   const reacted = (message.metadata?.abacus?.reactions?.length ?? 0) > 0;
   return (
@@ -1021,7 +1027,8 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           if (
             isBotHelpTool(part.part.name) ||
             isSuggestTasksTool(part.part.name) ||
-            isMemoryTool(part.part.name)
+            isMemoryTool(part.part.name) ||
+            isHandOffTool(part.part.name)
           ) {
             flush();
             blocks.push({ run: false, part });

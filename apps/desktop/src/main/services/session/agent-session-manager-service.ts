@@ -12,6 +12,7 @@ import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
+  HandOffEnd,
   RoutineRunOutcome,
   RunReportStamp,
   SessionOwner,
@@ -24,6 +25,7 @@ import {
   readSessionStash,
   writeSessionStash,
 } from "./account-session-stash";
+import type { HandOffCheckout } from "./hand-off";
 import { workspaceStore } from "./workspace-store";
 
 type SessionRecord = {
@@ -77,6 +79,14 @@ type SessionRecord = {
   sponsoredUntil?: number;
   /** The chat this one continues, stamped at mint. See continuationFrom. */
   continuedFrom?: string;
+  /** "handoff": a task split off from `continuedFrom`, which goes on beside it. */
+  continuationKind?: "handoff";
+  /** A handoff's last turn's ending. See AgentSessionListItem.handOffEnd. */
+  handOffEnd?: HandOffEnd;
+  /** The checkout a hand-off made for this chat; removed with it. See ServiceHost.releaseHandOffCheckout. */
+  handOffCheckout?: HandOffCheckout;
+  /** See AgentSessionListItem.worktreeSubdir; dropped when the worktree changes. */
+  worktreeSubdir?: string;
   /** That chat's summary, owed to this one's first message and then dropped. */
   continuationSeed?: string;
   /** Folders the user added to this chat beyond its own, real paths. See addFolder. */
@@ -89,6 +99,14 @@ type SessionRecord = {
    */
   chatAppSender?: boolean;
 };
+
+/**
+ * The chat a new one continues: a summary its first message carries (a move
+ * to another model), or a handoff, whose first message is the task itself.
+ */
+export type SessionContinuedFrom =
+  | { sessionId: string; summary: string }
+  | { sessionId: string; kind: "handoff" };
 
 // Persisted, so the old name stays. See workspace-store.ts.
 const SESSIONS_STORAGE_KEY = "localCode.agentSessions";
@@ -133,6 +151,17 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
     : {}),
   ...(record.folders != null && record.folders.length > 0
     ? { folders: [...record.folders] }
+    : {}),
+  ...(record.continuationKind != null
+    ? { continuationKind: record.continuationKind }
+    : {}),
+  ...(record.handOffEnd != null ? { handOffEnd: record.handOffEnd } : {}),
+  ...(record.handOffCheckout != null &&
+  record.handOffCheckout.path === record.worktreePath
+    ? { ownsWorktree: true }
+    : {}),
+  ...(record.worktreeSubdir != null && record.worktreePath != null
+    ? { worktreeSubdir: record.worktreeSubdir }
     : {}),
   editorFor: record.editorFor ?? null,
   botOwned: record.botOwned === true || record.owner != null,
@@ -217,7 +246,7 @@ export class AgentSessionManagerService {
       model?: string | null;
       mode?: AgentMode | null;
       sponsoredUntil?: number;
-      continuedFrom?: { sessionId: string; summary: string };
+      continuedFrom?: SessionContinuedFrom;
       chatAppSender?: boolean;
     } = {}
   ): AgentSessionListItem {
@@ -274,10 +303,14 @@ export class AgentSessionManagerService {
     workspaceId: string,
     routineId: string | null,
     owner: SessionOwner | null,
-    initial: { continuedFrom?: { sessionId: string; summary: string } }
+    initial: { continuedFrom?: SessionContinuedFrom }
   ): Pick<
     SessionRecord,
-    "continuedFrom" | "continuationSeed" | "folders" | "attachedFiles"
+    | "continuedFrom"
+    | "continuationSeed"
+    | "continuationKind"
+    | "folders"
+    | "attachedFiles"
   > {
     const from = initial.continuedFrom;
     if (from == null || routineId != null || owner != null) return {};
@@ -295,7 +328,9 @@ export class AgentSessionManagerService {
     // The work goes on in the same folders.
     return {
       continuedFrom: source.id,
-      continuationSeed: from.summary,
+      ...("kind" in from
+        ? { continuationKind: from.kind }
+        : { continuationSeed: from.summary }),
       ...(source.folders != null ? { folders: [...source.folders] } : {}),
       ...(source.attachedFiles != null
         ? { attachedFiles: [...source.attachedFiles] }
@@ -436,6 +471,88 @@ export class AgentSessionManagerService {
     if (session.runOutcome === outcome) return false;
     session.runOutcome = outcome;
     session.updatedAt = new Date().toISOString();
+    this.persist();
+    return true;
+  }
+
+  /**
+   * The checkout a hand-off made for this chat, on the worktree attached to
+   * it, and the project's subfolder inside it. Only a handed-off chat on
+   * that very worktree takes it.
+   */
+  setHandOffCheckout(
+    sessionId: string,
+    checkout: HandOffCheckout,
+    subdir: string | null
+  ): boolean {
+    const session = this.sessions.get(sessionId);
+    if (
+      session?.continuationKind !== "handoff" ||
+      session.worktreePath !== checkout.path
+    )
+      return false;
+    session.handOffCheckout = checkout;
+    if (subdir != null && subdir !== "") session.worktreeSubdir = subdir;
+    else delete session.worktreeSubdir;
+    this.persist();
+    return true;
+  }
+
+  /** The checkout a hand-off made for this chat while it is still on it; null otherwise. */
+  handOffCheckout(sessionId: string): HandOffCheckout | null {
+    const session = this.sessions.get(sessionId);
+    const checkout = session?.handOffCheckout;
+    return checkout != null && session?.worktreePath === checkout.path
+      ? checkout
+      : null;
+  }
+
+  /**
+   * The checkout this chat owns, now that the chat goes. Another chat still
+   * on that worktree (a continuation on another model, a chat that picked it)
+   * takes it over, so the last chat on it is the one whose removal takes it
+   * away: then it is returned, for the caller to remove. Read before `remove`.
+   */
+  leaveHandOffCheckout(sessionId: string): HandOffCheckout | null {
+    const checkout = this.handOffCheckout(sessionId);
+    if (checkout == null) return null;
+    const heir = [...this.sessions.values(), ...this.orphanedRecords].find(
+      (record) =>
+        record.id !== sessionId && record.worktreePath === checkout.path
+    );
+    if (heir == null) return checkout;
+    heir.handOffCheckout = checkout;
+    const owner = this.sessions.get(sessionId);
+    if (owner != null) delete owner.handOffCheckout;
+    this.persist();
+    return null;
+  }
+
+  /**
+   * The checkouts hand-offs made in a workspace whose chats are all going,
+   * once each: none of them can pass to a chat that stays.
+   */
+  handOffCheckoutsIn(
+    workspaceId: string
+  ): Array<{ checkout: HandOffCheckout; label: string }> {
+    const found = new Map<
+      string,
+      { checkout: HandOffCheckout; label: string }
+    >();
+    for (const id of this.workspaceSessionIds.get(workspaceId) ?? []) {
+      const checkout = this.handOffCheckout(id);
+      const label = this.sessions.get(id)?.label ?? "";
+      if (checkout != null) found.set(checkout.path, { checkout, label });
+    }
+    return [...found.values()];
+  }
+
+  /** A handed-off chat's turn ended: its source's card shows how. True when it changed. */
+  setHandOffEnd(sessionId: string, end: HandOffEnd): boolean {
+    const session = this.sessions.get(sessionId);
+    if (session?.continuationKind !== "handoff" || session.handOffEnd === end)
+      return false;
+    session.handOffEnd = end;
     this.persist();
     return true;
   }
@@ -672,6 +789,8 @@ export class AgentSessionManagerService {
   ): boolean {
     const session = this.sessions.get(sessionId);
     if (session == null || session.workspaceId !== workspaceId) return false;
+    if (session.worktreePath !== (worktree?.path ?? null))
+      delete session.worktreeSubdir;
     session.worktreeId = worktree?.id ?? null;
     session.worktreePath = worktree?.path ?? null;
     session.worktreeBranch = worktree?.branch ?? null;

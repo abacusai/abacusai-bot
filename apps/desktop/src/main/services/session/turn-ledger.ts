@@ -227,6 +227,11 @@ export class TurnLedger {
     return this.open.has(sessionId);
   }
 
+  /** The open turn's id, or null when none is open. */
+  openTurnId(sessionId: string): string | null {
+    return this.open.get(sessionId)?.turnId ?? null;
+  }
+
   /** Whether a turn runs in any session. */
   anyOpen(): boolean {
     return this.open.size > 0;

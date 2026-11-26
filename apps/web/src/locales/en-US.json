@@ -1888,7 +1888,8 @@
       "markUnread": "Mark as unread",
       "openBeside": "Open beside this chat",
       "newWorktree": "New worktree from here",
-      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+      "emptyDescription": "Start one with {{key}}, or drop a folder here.",
+      "deleteCheckout": "Its checkout {{branch}} goes with it, unless another chat still works in it or it holds work you may want (commits, changes never committed, or ignored files like .env). Then it is kept, and you are told."
     },
     "gone": "This session was deleted",
     "untitled": "Untitled",
@@ -2315,7 +2316,8 @@
       "from": "Continued from",
       "into": "Continued in",
       "startsFrom": "Starts from a summary of “{{label}}”",
-      "drop": "Start without it"
+      "drop": "Start without it",
+      "handedOffFrom": "Handed off from"
     },
     "websitePrompt": {
       "label": "Your task from the website",
@@ -2336,6 +2338,22 @@
       "outsideTitle": "This file is outside this chat's folders",
       "remove": "Remove {{name}}",
       "removeFailed": "The folder couldn't be removed. Try again."
+    },
+    "handoff": {
+      "cardLabel": "In its own chat",
+      "starting": "Starting…",
+      "ready": "Done",
+      "stopped": "Stopped",
+      "deleted": "Chat deleted",
+      "keptBranchTitle": "Kept {{branch}}",
+      "keptBranch": "It has commits of its own. Delete the branch with git when you no longer need it.",
+      "keptChangesTitle": "Kept the checkout of “{{title}}”",
+      "keptChanges": "It has changes that were never committed, in {{path}}.",
+      "keptBranchUndeletable": "git would not delete it. Delete it with git when you no longer need it.",
+      "keptIgnored": "It has ignored files you may want, like .env, in {{path}}.",
+      "keptUnreadable": "git could not read it, so nothing in it was removed: {{path}}.",
+      "keptBranchMoved": "The chat's checkout had moved to this branch, so it was kept. Delete it with git when you no longer need it.",
+      "keptCommits": "It has commits that are on no branch, in {{path}}."
     }
   },
   "terminalShells": {
@@ -3429,7 +3447,8 @@
         "outside": "Outside the folder",
         "plan": "Approve the plan",
         "question": "Answer a question",
-        "runCommand": "Run command"
+        "runCommand": "Run command",
+        "handOff": "New chat: {{title}}"
       },
       "notePlaceholder": "Tell the agent what to do instead",
       "pending_one": "{{count}} request waiting",
@@ -3474,7 +3493,10 @@
         "runCommand": "Run this command?",
         "sandboxDenied": "The sandbox refused something this command tried",
         "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
-        "writeOutside": "Write outside the folder?"
+        "writeOutside": "Write outside the folder?",
+        "handOff": "Start a new chat: {{title}}",
+        "handOffOwnCheckout": "It works in a checkout of its own, made from this chat's last commit, on the same model and mode.",
+        "handOffSharedFolder": "It works in this same folder, at the same time as this chat, on the same model and mode."
       },
       "verb": {
         "reach": "reach",

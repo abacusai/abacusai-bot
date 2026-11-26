@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { AgentSessionListItem } from "@abacus-ai/contract/contracts";
 
 export interface WorkspacePathContext {
@@ -21,5 +23,20 @@ export const resolveSessionWorkspacePath = (
   if (session == null || session.workspaceId !== context.workspaceId) {
     return null;
   }
-  return session.worktreePath ?? workspacePath;
+  return session.worktreePath == null
+    ? workspacePath
+    : sessionCheckoutDirectory(session);
 };
+
+/**
+ * Where a session on a worktree works: the worktree, or the project's own
+ * folder inside it when the project is a subfolder of its repository.
+ */
+export const sessionCheckoutDirectory = (
+  session: Pick<AgentSessionListItem, "worktreePath" | "worktreeSubdir">
+): string | null =>
+  session.worktreePath == null
+    ? null
+    : session.worktreeSubdir == null
+      ? session.worktreePath
+      : path.join(session.worktreePath, session.worktreeSubdir);
