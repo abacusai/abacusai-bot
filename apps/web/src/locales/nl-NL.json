@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "Als je deze sessie verwijdert, worden de open terminals gesloten: {{list}}.",
       "deleteWorkspaceStops": "Als je deze werkruimte verwijdert, stopt wat er in de terminals draait: {{list}}.",
       "deleteWorkspaceCloses": "Als je deze werkruimte verwijdert, worden de open terminals gesloten: {{list}}.",
-      "andMore_one": "{{list}} en {{count}} meer",
-      "andMore_other": "{{list}} en {{count}} meer",
+      "andMore": "{{list}} en nog {{count}}",
       "folderMissing": "De map van deze chat is er niet meer: {{path}}. Zet hem terug en druk dan op Herstarten.",
       "folderDenied": "Je hebt geen toestemming om de map van deze chat te openen: {{path}}. Pas de rechten aan en druk dan op Herstarten.",
       "signalled": "Proces gestopt (signaal {{signal}})"

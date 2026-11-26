@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "Supprimer cette session ferme ses terminaux ouverts : {{list}}.",
       "deleteWorkspaceStops": "Supprimer cet espace de travail arrête ce qui s'exécute dans ses terminaux : {{list}}.",
       "deleteWorkspaceCloses": "Supprimer cet espace de travail ferme ses terminaux ouverts : {{list}}.",
-      "andMore_one": "{{list}} et {{count}} autre",
-      "andMore_other": "{{list}} et {{count}} autres",
+      "andMore": "{{list}} et {{count}} de plus",
       "folderMissing": "Le dossier de cette discussion n’existe plus : {{path}}. Remettez-le en place, puis appuyez sur Redémarrer.",
       "folderDenied": "Vous n’avez pas la permission d’ouvrir le dossier de cette discussion : {{path}}. Corrigez ses droits, puis appuyez sur Redémarrer.",
       "signalled": "Processus arrêté (signal {{signal}})"

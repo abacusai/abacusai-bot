@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "刪除此工作階段會關閉其開啟中的終端機：{{list}}。",
       "deleteWorkspaceStops": "刪除此工作區會停止其終端機中執行的內容：{{list}}。",
       "deleteWorkspaceCloses": "刪除此工作區會關閉其開啟中的終端機：{{list}}。",
-      "andMore_one": "{{list}} 及另外 {{count}} 個",
-      "andMore_other": "{{list}} 及另外 {{count}} 個",
+      "andMore": "{{list}} 及另外 {{count}} 個",
       "folderMissing": "此聊天的資料夾已不存在：{{path}}。請放回原處，然後按「重新啟動」。",
       "folderDenied": "你沒有開啟此聊天資料夾的權限：{{path}}。請修正權限，然後按「重新啟動」。",
       "signalled": "程序已停止（訊號 {{signal}}）"

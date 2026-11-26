@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "Wenn Sie diese Sitzung löschen, werden ihre offenen Terminals geschlossen: {{list}}.",
       "deleteWorkspaceStops": "Wenn Sie diesen Arbeitsbereich löschen, wird beendet, was in seinen Terminals läuft: {{list}}.",
       "deleteWorkspaceCloses": "Wenn Sie diesen Arbeitsbereich löschen, werden seine offenen Terminals geschlossen: {{list}}.",
-      "andMore_one": "{{list}} und {{count}} weiteres",
-      "andMore_other": "{{list}} und {{count}} weitere",
+      "andMore": "{{list}} und noch {{count}}",
       "folderMissing": "Der Ordner dieses Chats ist nicht mehr da: {{path}}. Stell ihn wieder her und drück dann auf „Neu starten“.",
       "folderDenied": "Du hast keine Berechtigung, den Ordner dieses Chats zu öffnen: {{path}}. Korrigiere die Berechtigungen und drück dann auf „Neu starten“.",
       "signalled": "Prozess gestoppt (Signal {{signal}})"

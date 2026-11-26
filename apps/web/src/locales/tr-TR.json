@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "Bu oturumu silmek, açık terminallerini kapatır: {{list}}.",
       "deleteWorkspaceStops": "Bu çalışma alanını silmek, terminallerinde çalışanları durdurur: {{list}}.",
       "deleteWorkspaceCloses": "Bu çalışma alanını silmek, açık terminallerini kapatır: {{list}}.",
-      "andMore_one": "{{list}} ve {{count}} tane daha",
-      "andMore_other": "{{list}} ve {{count}} tane daha",
+      "andMore": "{{list}} ve {{count}} tane daha",
       "folderMissing": "Bu sohbetin klasörü artık yok: {{path}}. Geri koyun, ardından Yeniden başlat’a basın.",
       "folderDenied": "Bu sohbetin klasörünü açma izniniz yok: {{path}}. İzinlerini düzeltin, ardından Yeniden başlat’a basın.",
       "signalled": "İşlem durduruldu (sinyal {{signal}})"

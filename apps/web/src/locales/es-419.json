@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "Al eliminar esta sesión se cerrarán sus terminales abiertas: {{list}}.",
       "deleteWorkspaceStops": "Al eliminar este espacio de trabajo se detendrá lo que se ejecuta en sus terminales: {{list}}.",
       "deleteWorkspaceCloses": "Al eliminar este espacio de trabajo se cerrarán sus terminales abiertas: {{list}}.",
-      "andMore_one": "{{list}} y {{count}} más",
-      "andMore_other": "{{list}} y {{count}} más",
+      "andMore": "{{list}} y {{count}} más",
       "folderMissing": "La carpeta de este chat ya no está: {{path}}. Vuelve a ponerla y luego pulsa Reiniciar.",
       "folderDenied": "No tienes permiso para abrir la carpeta de este chat: {{path}}. Corrige sus permisos y luego pulsa Reiniciar.",
       "signalled": "Proceso detenido (señal {{signal}})"

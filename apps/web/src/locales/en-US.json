@@ -2160,8 +2160,7 @@
       "deleteSessionCloses": "Deleting this session closes its open terminals: {{list}}.",
       "deleteWorkspaceStops": "Deleting this workspace stops what's running in its terminals: {{list}}.",
       "deleteWorkspaceCloses": "Deleting this workspace closes its open terminals: {{list}}.",
-      "andMore_one": "{{list}} and {{count}} more",
-      "andMore_other": "{{list}} and {{count}} more",
+      "andMore": "{{list}} and {{count}} more",
       "folderMissing": "This chat's folder isn't there any more: {{path}}. Put it back, then press Restart.",
       "folderDenied": "You don't have permission to open this chat's folder: {{path}}. Fix its permissions, then press Restart.",
       "signalled": "Process stopped (signal {{signal}})"

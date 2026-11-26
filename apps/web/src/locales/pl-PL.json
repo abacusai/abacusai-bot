@@ -2182,10 +2182,7 @@
       "deleteSessionCloses": "Usunięcie tej sesji zamknie jej otwarte terminale: {{list}}.",
       "deleteWorkspaceStops": "Usunięcie tego obszaru roboczego zatrzyma to, co działa w jego terminalach: {{list}}.",
       "deleteWorkspaceCloses": "Usunięcie tego obszaru roboczego zamknie jego otwarte terminale: {{list}}.",
-      "andMore_one": "{{list}} i {{count}} inny",
-      "andMore_other": "{{list}} i {{count}} innych",
-      "andMore_few": "{{list}} i {{count}} inne",
-      "andMore_many": "{{list}} i {{count}} innych",
+      "andMore": "{{list}} i jeszcze {{count}}",
       "folderMissing": "Folderu tego czatu już nie ma: {{path}}. Przywróć go, a potem naciśnij Uruchom ponownie.",
       "folderDenied": "Nie masz uprawnień do otwarcia folderu tego czatu: {{path}}. Popraw uprawnienia, a potem naciśnij Uruchom ponownie.",
       "signalled": "Proces zatrzymany (sygnał {{signal}})"
