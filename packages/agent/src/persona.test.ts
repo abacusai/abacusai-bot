@@ -126,11 +126,18 @@ describe("questions about the app itself", () => {
     // What the user gave is kept whole; facts are sourced; a remark is weighed.
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/applies to the whole block/);
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/keep both and ask in one line/);
-    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/re-read every input/);
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
+      /go back to the user's own messages/
+    );
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
       /Never present invented data as real/
     );
     expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/not with agreement/);
+    // Asked to decide, it decides; a remark's facts are searched, not recalled.
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(/assign or decide, decide/);
+    expect(USER_DATA_AND_FACTS_PROMPT).toMatch(
+      /check a figure or rule with a search/
+    );
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(/count done against total/);
     // A file said to be attached but missing is asked for again, never stood in for.
     expect(ATTACHMENTS_PROMPT).toMatch(/`@<path>` lines/);
