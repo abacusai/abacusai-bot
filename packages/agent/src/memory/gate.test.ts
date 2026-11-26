@@ -9,7 +9,6 @@ import {
   type Draft,
   looksSecret,
   SECRET_WITHHELD,
-  secretWithheld,
   withholdSecrets,
 } from "./gate.js";
 import type { Note } from "./notes.js";
@@ -40,12 +39,65 @@ const draft = (body: string, extra: Partial<Draft> = {}): Draft => ({
 
 // Built from parts so no credential-shaped literal sits in the source.
 const fakeKey = ["sk", "proj", "A1b2C3d4E5f6G7h8I9j0K1"].join("-");
-// A random run with no provider prefix, and the same shapes ids and checksums take.
+// A random run with no provider prefix, and the shapes ids and checksums take.
 const randomRun = ["q7Lm2Xp9Rt4Vz8Kb", "3Hd6Wn1Ys5Fc0Ja", "8Tg2"].join("");
 const driveId = ["1AbCdEf23GhIjK", "lMnO45pQrS6t", "UvWx78yZaBcDeFgH9i"].join(
   "-"
 );
 const md5 = ["0a1b2c3d4e5f", "6a7b8c9d0e1f", "2a3b4c5d"].join("");
+
+// Fake keys made at run time from a fixed seed: none sits in the source.
+let seed = 20_261_126;
+const random = (): number => {
+  seed = (seed * 1_103_515_245 + 12_345) % 2 ** 31;
+  return seed / 2 ** 31;
+};
+const LOWER = "abcdefghijklmnopqrstuvwxyz";
+const UPPER = LOWER.toUpperCase();
+const DIGITS = "0123456789";
+const ALPHABETS = {
+  base62: UPPER + LOWER + DIGITS,
+  lower36: LOWER + DIGITS,
+  upper36: UPPER + DIGITS,
+  hex: "0123456789abcdef",
+  base64url: `${UPPER}${LOWER}${DIGITS}-_`,
+  base64: `${UPPER}${LOWER}${DIGITS}+/`,
+};
+/** A PEM armour line, built from parts so no key header sits in the source. */
+const pem = (edge: "BEGIN" | "END", kind: string): string =>
+  ["-----", edge, " ", kind, kind ? " " : "", "PRIVATE KEY-----"].join("");
+const fake = (alphabet: string, length: number): string =>
+  Array.from(
+    { length },
+    () => alphabet[Math.floor(random() * alphabet.length)]
+  ).join("");
+
+/** The patterns the gate has always refused on: what it detects now must cover them. */
+const EARLIER_GATE: RegExp[] = [
+  /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/,
+  /\bgh[pousr]_[A-Za-z0-9]{20,}/,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
+  /\bAKIA[0-9A-Z]{16}\b/,
+  /\bAIza[0-9A-Za-z_-]{30,}/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/,
+  /\bbearer\s+[A-Za-z0-9._~+/-]{16,}/i,
+  /\b(?:password|passwd|passcode|passphrase|pass phrase|pin|pin code|api[ _-]?key|access[ _-]?key|secret|token|otp|security code)\b\s*(?:is|was|=|:|-)\s*["'`]?[^\s"'`]{3,}/i,
+  /\b(?=[A-Za-z0-9_-]{32,}\b)(?=[A-Za-z_-]*\d)(?=[0-9_-]*[A-Za-z])[A-Za-z0-9_-]{32,}\b/,
+];
+const earlierGateRefuses = (text: string): boolean =>
+  EARLIER_GATE.some((pattern) => pattern.test(text));
+
+const check = (body: string, byUser = false) =>
+  checkDraft({
+    draft: draft(body),
+    siblings: [],
+    updating: null,
+    userWords: "",
+    byUser,
+    now: NOW,
+  });
 
 const ROWS: Array<{
   case: string;
@@ -99,18 +151,18 @@ const ROWS: Array<{
     refused: null,
   },
   {
-    case: "a dated file name built from words",
+    case: "a dated file name the earlier gate took for a key: withheld, note kept",
     draft: draft(
       "Backup of the map is data/town_map_before_shops_20261102_093015.json."
     ),
     refused: null,
   },
   {
-    case: "a UUID routine id",
+    case: "a UUID and little else: refused, as before",
     draft: draft(
       "The check-in routine is routine-6f1c2b7a-3d4e-4f50-8a1b-2c3d4e5f6a7b."
     ),
-    refused: null,
+    refused: /password, key or code/,
   },
   {
     case: "a long note that mentions a missing branch in passing",
@@ -130,6 +182,27 @@ const ROWS: Array<{
     case: "a failed search as a fact",
     draft: draft("The file config.yaml doesn't exist in the bot folder."),
     refused: /not a fact/,
+  },
+  {
+    case: "a failed search listed across places",
+    draft: draft(
+      "Acme invoice not found in Gmail, Drive, Dropbox, OneDrive, Outlook, Notion, Slack, the shared team folder or the downloads folder"
+    ),
+    refused: /not a fact/,
+  },
+  {
+    case: "states listed in one sentence",
+    draft: draft(
+      "Status of tools: Gmail is connected, Slack disconnected, Notion connected, Drive connected, Calendar connected, routines running"
+    ),
+    refused: /read live/,
+  },
+  {
+    case: "states listed with semicolons",
+    draft: draft(
+      "Gmail is connected; Slack is connected; Notion is connected; Drive is connected; Calendar is connected."
+    ),
+    refused: /read live/,
   },
   {
     case: "the user said it is gone",
@@ -269,7 +342,7 @@ describe("checkDraft", () => {
     expect((result as Draft).body).not.toContain("K1234567");
   });
 
-  it("withholds a key inside a longer note but keeps the note and its ids", () => {
+  it("withholds a key and a key-shaped id inside a longer note but keeps the note", () => {
     const sheet = ["9xQ2mPz7Lk4Rt8Vb", "Wn3Ys6Hd1Jf5_Gc0Ae"].join("");
     const result = checkDraft({
       draft: draft(
@@ -284,8 +357,7 @@ describe("checkDraft", () => {
     expect(typeof result).toBe("object");
     const body = (result as Draft).body;
     expect(body).toContain("leads/leads-2026-11-20.xlsx");
-    // An id the note names as one is how the sheet is found again.
-    expect(body).toContain(sheet);
+    expect(body).not.toContain(sheet);
     expect(body).not.toContain(fakeKey);
   });
 
@@ -309,16 +381,16 @@ describe("checkDraft", () => {
       kept: ["shared with the kids"],
     },
     {
-      case: "a password, and where it is kept",
+      case: "a password to the end of its clause",
       text: "Router password: tiger lily in the drawer note, changed yearly.",
-      gone: ["tiger", "lily"],
-      kept: ["in the drawer note"],
+      gone: ["tiger", "lily", "drawer"],
+      kept: ["changed yearly"],
     },
     {
       case: "a token in a URL's query",
       text: "The deploy hook is https://hooks.example.com/run?token=abc123def456&team=7 and posts to ops.",
-      gone: ["abc123def456"],
-      kept: ["&team=7 and posts to ops"],
+      gone: ["abc123def456", "&team=7"],
+      kept: ["and posts to ops"],
     },
     {
       case: "a webhook secret in a URL's path",
@@ -344,30 +416,43 @@ describe("checkDraft", () => {
     [
       "a Drive id named as an id",
       `The lead list sheet (id ${driveId}) is shared with sales.`,
+      driveId,
     ],
     [
       "a Drive id in a document URL",
       `Brief: https://docs.google.com/document/d/${driveId}/edit`,
+      driveId,
     ],
-    ["a checksum", `The installer matches the original (md5 ${md5}).`],
-    ["a commit", `Fixed in commit ${md5}cafe12, merged Friday.`],
+    ["a checksum", `The installer matches the original (md5 ${md5}).`, md5],
+    ["a commit", `Fixed in commit ${md5}cafe12, merged Friday.`, md5],
     [
-      "a class name",
+      "a class name with a digit",
       "The bug is in InvoiceExportApplicationServicePostgresV2 at line 120.",
+      "InvoiceExport",
     ],
     [
-      "a variable that holds the token",
-      "The bot reads the token: GITHUB_TOKEN in deploy/.env.",
+      "a variable named after its label",
+      "The deploy bot reads the token: GITHUB_TOKEN in deploy/.env, rotated monthly by the ops team.",
+      "GITHUB_TOKEN",
     ],
-    [
-      "a password described, not given",
-      "The password is in the vault and the PIN is correct.",
-    ],
-    [
-      "a dated backup name",
-      "Backup at app.js.bak.before-cleanup-20261117T190027Z.",
-    ],
-  ])("keeps %s", (_, text) => {
+  ])(
+    "withholds %s, as the earlier gate refused it, and keeps the note",
+    (_, text, value) => {
+      expect(earlierGateRefuses(text)).toBe(true);
+      const result = check(text);
+      expect(typeof result).toBe("object");
+      expect((result as Draft).body).toContain(SECRET_WITHHELD);
+      expect((result as Draft).body).not.toContain(value);
+    }
+  );
+
+  it.each([
+    "The token budget for the event is tight.",
+    "Prefers the secret menu at Cafe Rio.",
+    "Backup at app.js.bak.before-cleanup-20261117T190027Z.",
+    "The password is in the vault.",
+  ])("keeps %s as written", (text) => {
+    expect(earlierGateRefuses(text)).toBe(false);
     expect(withholdSecrets(text)).toEqual({ text, withheld: 0 });
   });
 
@@ -398,20 +483,381 @@ describe("checkDraft", () => {
     expect(result.body).not.toContain(fakeKey);
   });
 
-  it("tells a secret it withheld from one already withheld", () => {
-    const sent = draft(`Deploys use key ${fakeKey} from the team vault.`);
-    const saved = checkDraft({
-      draft: sent,
-      siblings: [],
-      updating: null,
-      userWords: "",
-      byUser: false,
-      now: NOW,
-    }) as Draft;
-    expect(saved.body).not.toContain(fakeKey);
-    expect(secretWithheld(sent)).toBe(true);
+  it("counts what it withheld, and nothing for a placeholder already there", () => {
+    const saved = check(`Deploys use key ${fakeKey} from the team vault.`);
+    expect(saved).toMatchObject({ withheld: 1 });
     // An update that carries a note's earlier placeholder withholds nothing new.
-    expect(secretWithheld(draft(saved.body))).toBe(false);
+    expect(check((saved as Draft).body)).toMatchObject({ withheld: 0 });
+  });
+
+  // Every shape a review found leaking past the withholding, and more: each is
+  // refused, or saved with no part of the credential left in any field.
+  const { base62, upper36, hex, base64url, base64 } = ALPHABETS;
+  const awsSecret = `${fake(base62, 18)}/${fake(base62, 10)}+${fake(base62, 10)}`;
+  const uuid = [8, 4, 4, 4, 12].map((n) => fake(hex, n)).join("-");
+  const stripeLive = `sk_live_${fake(base62, 24)}`;
+  const CREDENTIALS: Array<[string, string, string[]]> = [
+    [
+      "a project key",
+      (() => {
+        const k = `sk-proj-${fake(base62, 48)}`;
+        return `OpenAI key ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "an AWS key pair",
+      `AWS ${"AKIA" + fake(upper36, 16)} secret ${awsSecret}`,
+      [awsSecret],
+    ],
+    [
+      "an AWS secret after its env name",
+      `aws_secret_access_key = ${awsSecret}`,
+      [awsSecret],
+    ],
+    [
+      "an AWS secret with no symbols",
+      (() => {
+        const k = fake(base62, 40);
+        return `AWS secret ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a GCP key id",
+      (() => {
+        const k = fake(hex, 40);
+        return `GCP service account private_key_id ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a PEM body with no end line",
+      (() => {
+        const k = fake(base64, 64);
+        return `GCP json "private_key": "${pem("BEGIN", "")}\n${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "an RSA block",
+      (() => {
+        const k = fake(base64, 64);
+        return `${pem("BEGIN", "RSA")}\n${k}\n${pem("END", "RSA")}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a PGP block",
+      (() => {
+        const k = fake(base64, 64);
+        return `${pem("BEGIN", "PGP").replace("KEY-----", "KEY BLOCK-----")}\n${k}|${k}`;
+      })(),
+      [],
+    ],
+    ["a Stripe live key", `Stripe live ${stripeLive}`, [stripeLive]],
+    [
+      "a webhook signing secret",
+      (() => {
+        const k = `whsec_${fake(base62, 32)}`;
+        return `Stripe webhook signing ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a Slack app token",
+      (() => {
+        const k = `xapp-1-${fake(upper36, 11)}-${fake(DIGITS, 13)}-${fake(hex, 64)}`;
+        return `Slack app token ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a JWT",
+      (() => {
+        const k = `eyJ${fake(base64url, 17)}.${fake(base64url, 30)}.${fake(base64url, 30)}`;
+        return `JWT ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a base64 blob",
+      (() => {
+        const k = `${fake(base62, 20)}+${fake(base62, 10)}/${fake(base62, 9)}`;
+        return `base64 blob ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a key of mostly letters",
+      (() => {
+        const k = `${fake(LOWER, 20)}7${fake(LOWER, 19)}`;
+        return `mostly-letters key ${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a SendGrid key",
+      (() => {
+        const a = fake(base64url, 22);
+        const b = fake(base64url, 43);
+        return `SendGrid SG.${a}.${b}|${a}|${b}`;
+      })(),
+      [],
+    ],
+    ["a UUID-shaped key", `Heroku key ${uuid}`, [uuid]],
+    [
+      "a Mailchimp key",
+      (() => {
+        const k = fake(hex, 32);
+        return `Mailchimp ${k}-us21|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "an OAuth refresh token",
+      (() => {
+        const k = fake(base64url, 60);
+        return `Google OAuth refresh 1//0${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a Telegram bot token",
+      (() => {
+        const k = fake(base64url, 33);
+        return `Telegram bot token ${fake(DIGITS, 10)}:AA${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a Discord bot token",
+      (() => {
+        const a = fake(base62, 23);
+        const b = fake(base64url, 27);
+        return `Discord bot token M${a}.${fake(base64url, 6)}.${b}|${a}|${b}`;
+      })(),
+      [],
+    ],
+    [
+      "an Azure account key",
+      (() => {
+        const k = `${fake(base62, 40)}+${fake(base62, 20)}/${fake(base62, 25)}`;
+        return `Azure storage AccountKey=${k}==|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a DigitalOcean token",
+      (() => {
+        const k = fake(hex, 64);
+        return `DigitalOcean dop_v1_${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a password said in words",
+      "the password is hunter2 for the router",
+      ["hunter2"],
+    ],
+    [
+      "a password after a describing word",
+      "my password is the dog's name Rex1987",
+      ["Rex1987"],
+    ],
+    [
+      "a password after 'the word'",
+      "password is the word sunshine42",
+      ["sunshine42"],
+    ],
+    [
+      "a passphrase in words",
+      "the wifi password is fall in love forever",
+      ["fall", "love forever"],
+    ],
+    [
+      "a passphrase after a colon",
+      "password: correct horse battery staple",
+      ["horse battery staple"],
+    ],
+    [
+      "a password after '=' with a symbol",
+      "gmail password = Tr0ub4dor&3",
+      ["Tr0ub4dor", "&3"],
+    ],
+    ["a PIN after a hyphen", "pin-4821 debit card", ["4821"]],
+    [
+      "a password after a hyphen",
+      "password-Hunter22 is for gmail",
+      ["Hunter22"],
+    ],
+    [
+      "a password after 'still'",
+      "the gmail password is still Hunter2024",
+      ["Hunter2024"],
+    ],
+    [
+      "a password on the next line",
+      "password:\nhunter2 for router",
+      ["hunter2"],
+    ],
+    ["a password in capitals", "Password is HUNTER_TWO_X", ["HUNTER_TWO_X"]],
+    [
+      "a password after a variable",
+      "passphrase is ${DB_PASSWORD} actually Xy9",
+      ["Xy9"],
+    ],
+    [
+      "a key of letters only",
+      "api key is abcdefghijklmnopqrstuv",
+      ["abcdefghijklmnopqrstuv"],
+    ],
+    [
+      "a token after '='",
+      "token = abcdefghijklmnopqrstuv",
+      ["abcdefghijklmnopqrstuv"],
+    ],
+    [
+      "an access key in capitals",
+      "the access key is ABCDEFGHIJKLMNOP",
+      ["ABCDEFGHIJKLMNOP"],
+    ],
+    ["a one-time code", "OTP is 482193 from the bank", ["482193"]],
+    ["an env line", "PASSWORD=hunter2", ["hunter2"]],
+    [
+      "a webhook in a URL path",
+      (() => {
+        const k = fake(base64url, 68);
+        return `https://discord.com/api/webhooks/${fake(DIGITS, 18)}/${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a Slack webhook",
+      (() => {
+        const k = fake(base62, 24);
+        return `https://hooks.slack.com/services/T${fake(upper36, 8)}/B${fake(upper36, 8)}/${k}|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "a signed URL",
+      (() => {
+        const k = fake(hex, 64);
+        return `https://acme.s3.amazonaws.com/a.pdf?X-Amz-Algorithm=AWS4&X-Amz-Signature=${k}|${k}`;
+      })(),
+      [],
+    ],
+    ...["catch/123", "reset", "invite", "s", "download"].map(
+      (path): [string, string, string[]] => {
+        const k = fake(base62, 40);
+        return [
+          `a capability URL (/${path}/)`,
+          `https://example.com/${path}/${k}`,
+          [k],
+        ];
+      }
+    ),
+    [
+      "a private calendar feed",
+      (() => {
+        const k = fake(hex, 32);
+        return `https://calendar.google.com/calendar/ical/x%40gmail.com/private-${k}/basic.ics|${k}`;
+      })(),
+      [],
+    ],
+    [
+      "an IFTTT key",
+      (() => {
+        const k = fake(base62, 22);
+        return `https://maker.ifttt.com/trigger/x/with/key/${k}|${k}`;
+      })(),
+      [],
+    ],
+    ...[
+      "id",
+      "checksum",
+      "commit",
+      "zone",
+      "hash:",
+      "sha256",
+      "app id",
+      "The api id is",
+    ].map((word): [string, string, string[]] => {
+      const k = word === "checksum" ? stripeLive : fake(base62, 40);
+      return [`a key after "${word}"`, `${word} ${k}`, [k]];
+    }),
+  ].map((row): [string, string, string[]] => {
+    const [name, text, secrets] = row as [string, string, string[]];
+    // "said|secret|secret": the text, then the parts that must not be stored.
+    const [said, ...parts] = text.split("|");
+    return [name, said!, [...secrets, ...parts]];
+  });
+
+  it.each(CREDENTIALS)("never stores %s", (_, text, secrets) => {
+    const result = check(`Work setup for the Acme billing project: ${text}`);
+    if (typeof result === "string") {
+      expect(result).toMatch(/password, key or code/);
+      return;
+    }
+    for (const field of [
+      result.description,
+      result.body,
+      result.keywords ?? "",
+    ]) {
+      for (const secret of secrets) expect(field).not.toContain(secret);
+      expect(looksSecret(field)).toBe(false);
+      expect(earlierGateRefuses(field.replaceAll(SECRET_WITHHELD, '"'))).toBe(
+        false
+      );
+    }
+  });
+
+  it("never stores a random key the earlier gate refused, and stores none more often", () => {
+    for (const [name, alphabet] of Object.entries(ALPHABETS))
+      for (const length of [24, 32, 40, 64]) {
+        let earlier = 0;
+        let now = 0;
+        for (let n = 0; n < 200; n += 1) {
+          const key = fake(alphabet, length);
+          const text = `Notes for the deploy: value ${key} goes in config.`;
+          const refused = earlierGateRefuses(text);
+          if (refused) expect(looksSecret(text), `${name} ${key}`).toBe(true);
+          const result = check(text);
+          const stored =
+            typeof result !== "string" && result.body.includes(key);
+          if (refused) expect(stored, `${name} ${key}`).toBe(false);
+          if (!refused) earlier += 1;
+          if (stored) now += 1;
+        }
+        expect(now, `${name} ${length}`).toBeLessThanOrEqual(earlier);
+      }
+  });
+
+  it("reads 100,000 characters of any shape in linear time", () => {
+    const size = 100_000;
+    const shapes = [
+      "password is a ".repeat(size / 14),
+      "token: x ".repeat(size / 9),
+      `password${" ".repeat(size)}x`,
+      ("a".repeat(31) + "1 ").repeat(size / 33),
+      "aB1".repeat(size / 3),
+      `https://${"/a".repeat(size / 2)}`,
+      ('password "' + "a ".repeat(10)).repeat(size / 30),
+      pem("BEGIN", "RSA").repeat(size / 31),
+      "a-".repeat(size / 2),
+      "eyJ-".repeat(size / 4),
+      "aB1/".repeat(size / 4),
+      `password: x${"!".repeat(size)}`,
+    ];
+    for (const text of shapes) {
+      const started = performance.now();
+      looksSecret(text);
+      withholdSecrets(text);
+      expect(performance.now() - started, text.slice(0, 20)).toBeLessThan(
+        1_000
+      );
+    }
   });
 
   it("refuses a key on the user's own edit", () => {
@@ -441,10 +887,5 @@ describe("checkDraft", () => {
   it("does not take ordinary words for secrets", () => {
     expect(looksSecret("The token budget for the event is tight")).toBe(false);
     expect(looksSecret("Prefers the secret menu at Cafe Rio")).toBe(false);
-    expect(looksSecret("The refresh token is dead, sign in again")).toBe(false);
-    expect(looksSecret("Token-Streaming, chunked replies")).toBe(false);
-    expect(
-      looksSecret("Firmware file PUMP_V2__CTRL_B12_Main_ORI_20261012_214535")
-    ).toBe(false);
   });
 });

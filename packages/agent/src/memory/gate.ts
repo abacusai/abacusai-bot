@@ -24,76 +24,87 @@ const RELATED_OVERLAP = 0.2;
 
 // ── secrets ────────────────────────────────────────────────────────────────
 //
-// A secret is withheld where it stands, as ID numbers are: the rest of the
-// note is still worth keeping. Only shapes that are credentials count, so a
-// file name, a UUID or a dated id built from words is kept as written.
+// Two jobs. `looksSecret` detects: it flags at least everything the gate has
+// always flagged, and the refusals, the Memory page, the handover and the
+// migration use it. `withholdSecrets` redacts: a model's note is kept with its
+// secrets withheld only when `looksSecret` finds nothing left in the result.
 
 export const SECRET_WITHHELD = "[secret withheld]";
+/** Past this a text is treated as secret without reading it: notes are far shorter. */
+const MAX_SCAN_CHARS = 100_000;
+/** The longest value read after a label such as "password:". */
+const MAX_VALUE_CHARS = 300;
 
-/** Formats issued by known providers, and key material. */
+/** Not inside a longer run: keeps each format from rescanning a run it already failed on. */
+const RUN_START = "(?<![A-Za-z0-9_-])";
+
+/** Formats issued by known providers, and key material: withheld whole. */
 const SECRET_FORMATS: RegExp[] = [
-  /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}/g,
-  /\bgh[pousr]_[A-Za-z0-9]{20,}/g,
-  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
-  /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
-  /\bAKIA[0-9A-Z]{16}\b/g,
-  /\bAIza[0-9A-Za-z_-]{30,}/g,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
-  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/g,
-  /\bbearer\s+[A-Za-z0-9._~+/-]{16,}/gi,
-];
+  `${RUN_START}(?:sk|pk|rk)[-_][A-Za-z0-9_-]{16,}`,
+  `${RUN_START}gh[pousr]_[A-Za-z0-9]{20,}`,
+  `${RUN_START}github_pat_[A-Za-z0-9_]{20,}`,
+  `${RUN_START}glpat-[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}xox[abprs]-[A-Za-z0-9-]{10,}`,
+  `${RUN_START}xapp-\\d-[A-Za-z0-9-]{10,}`,
+  `${RUN_START}AKIA[0-9A-Z]{16}(?![0-9A-Z])`,
+  `${RUN_START}AIza[0-9A-Za-z_-]{30,}`,
+  `${RUN_START}GOCSPX-[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}ya29\\.[A-Za-z0-9._-]{20,}`,
+  `(?<![A-Za-z0-9/])1//0[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}SG\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}`,
+  `${RUN_START}(?:whsec|npm|hf|shpat|shpss|shpca|dop_v1|glsa|pypi)_[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}sq0(?:atp|csp)-[A-Za-z0-9_-]{20,}`,
+  `${RUN_START}\\d{8,10}:AA[A-Za-z0-9_-]{30,}`,
+  `${RUN_START}[MNO][A-Za-z0-9_-]{23,}\\.[A-Za-z0-9_-]{6}\\.[A-Za-z0-9_-]{27,}`,
+  `AccountKey=[A-Za-z0-9+/]{20,}={0,2}`,
+  // Webhook URLs whose path is the credential.
+  `(?<=hooks\\.slack\\.com/services/)[A-Za-z0-9/]{20,}`,
+  `(?<=maker\\.ifttt\\.com/[^\\s]{0,100}/key/)[A-Za-z0-9_-]{16,}`,
+  `-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----[\\s\\S]*?(?:-----END [A-Z ]*PRIVATE KEY(?: BLOCK)?-----|$)`,
+  `${RUN_START}eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{5,}`,
+  `\\bbearer\\s+[A-Za-z0-9._~+/-]{16,}`,
+  // 40+ characters of base64 with "+" or "/": an AWS secret key, a base64 key.
+  // Not from inside a URL or a path, whose segments the run rule below reads.
+  `(?<![A-Za-z0-9+/=.:])(?=[A-Za-z0-9+/]*[+/])(?=[A-Za-z0-9+/]*\\d)(?=[A-Za-z0-9+/]*[A-Z])(?=[A-Za-z0-9+/]*[a-z])[A-Za-z0-9+/]{40,}={0,2}`,
+].map((source) => new RegExp(source, source.includes("bearer") ? "gi" : "g"));
 
-/** Labels whose value is a credential however it is said: "the password is sunshine". */
-const STRONG_LABEL =
-  "password|passwd|passcode|passphrase|pass phrase|pin code|pin|otp|security code";
-/** Labels plain talk uses too: "the token is dead", "the secret is out". */
-const WEAK_LABEL = "api[ _-]?key|access[ _-]?key|secret|token";
-
+/** Words a secret is named by. A value after one, as in "PIN: 4821", is the secret. */
+const SECRET_LABEL =
+  "password|passwd|passcode|passphrase|pass phrase|pin code|pin|otp|security code|api[ _-]?key|access[ _-]?key|secret[ _-]?access[ _-]?key|client[ _-]?secret|auth[ _-]?token|private[ _-]?key|secret|token";
 const LABELLED_SECRET = new RegExp(
-  `\\b(?:(${STRONG_LABEL})|${WEAK_LABEL})(\\s*[:=]\\s*|\\s+-\\s+|\\s+(?:is|was)\\s*[:=]?\\s*)`,
+  `(?<![A-Za-z])(?:${SECRET_LABEL})(?![A-Za-z])(\\s*(?:is|was|=|:|-)\\s*)(?=["'\`]?[^\\s"'\`]{3,})`,
   "gi"
 );
-const CREDENTIAL_SHAPED = /\d|[^\p{L}\p{N}]|\p{Ll}\p{Lu}/u;
-/** A variable that holds the secret, not the secret: GITHUB_TOKEN, ${DB_PASSWORD}. */
-const VARIABLE_NAME = /^[$%{]*[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+[}%]*$/;
-/** First words after "password is" that describe it rather than give it. */
-const NOT_A_VALUE = new Set(
-  "the not required needed wrong correct incorrect invalid valid expired changed reset same different stored saved kept set still now also unknown missing empty blank too very being managed shared sent protected hidden there here inside with from for and but his her their our your its".split(
-    " "
-  )
-);
-/**
- * Where a password said in words ends: a clause break, or where the note goes
- * on to say where it is kept. A passphrase can have spaces.
- */
-const PHRASE_END =
-  /[,;](?=\s)|[.!?](?=\s|$)|\n|\s(?:in|inside|at|from|under|stored|saved|kept|on)\s/i;
 
-/** Where the value after a label starts and ends, or null when there is none. */
-const valueSpan = (
+/**
+ * Where a labelled value ends. A quoted value ends at its quote; one after
+ * "=" at the next space, as in a URL or an env line; any other runs to the end
+ * of its clause, so a passphrase with spaces is withheld whole.
+ */
+const valueEnd = (
   text: string,
   from: number,
-  gap: string,
-  strong: boolean
-): [number, number] | null => {
+  gap: string
+): [number, number] => {
+  const limit = Math.min(text.length, from + MAX_VALUE_CHARS);
   const quote = text[from];
-  if (quote === '"' || quote === "'" || quote === "`") {
-    const close = text.indexOf(quote, from + 1);
-    if (close > from + 1 && !text.slice(from, close).includes("\n"))
-      return [from + 1, close];
+  if (quote === '"' || quote === "'" || quote === "`")
+    for (let at = from + 1; at < limit && text[at] !== "\n"; at += 1)
+      if (text[at] === quote) return [from + 1, at];
+  const viaEquals = gap.includes("=");
+  for (let at = from; at < limit; at += 1) {
+    const char = text[at]!;
+    if (char === "\n") return [from, at];
+    const spaceNext = at + 1 >= text.length || /\s/.test(text[at + 1]!);
+    if (viaEquals) {
+      if (/\s/.test(char)) return [from, at];
+    } else if ((char === "," || char === ";") && spaceNext) return [from, at];
+    else if (/[.!?]/.test(char) && spaceNext) return [from, at + 1];
   }
-  const rest = text.slice(from);
-  // A key or a value after "=" (as in a URL) is one run; a password may be a phrase.
-  const stop =
-    strong && !gap.includes("=")
-      ? rest.search(PHRASE_END)
-      : rest.search(/[\s&]/);
-  let end = from + (stop < 0 ? rest.length : stop);
-  while (end > from && /[.,;:!?)\]]/.test(text[end - 1]!)) end -= 1;
-  return end - from >= 3 ? [from, end] : null;
+  return [from, limit];
 };
 
-/** Each value said after its label: a key as one run, a password to the end of its phrase. */
+/** Each value said after its label, withheld to the end of its clause. */
 const withholdLabelled = (text: string): { text: string; withheld: number } => {
   let out = "";
   let at = 0;
@@ -104,54 +115,19 @@ const withholdLabelled = (text: string): { text: string; withheld: number } => {
     match != null;
     match = LABELLED_SECRET.exec(text)
   ) {
-    const strong = match[1] != null;
-    const gap = match[2]!;
-    const span = valueSpan(text, match.index + match[0].length, gap, strong);
-    if (span == null) continue;
-    const value = text.slice(...span);
-    const first = value.split(/\s/)[0]!;
-    if (value.startsWith(SECRET_WITHHELD) || VARIABLE_NAME.test(first))
-      continue;
-    const said = /(?:is|was)/i.test(gap);
-    if (
-      strong
-        ? said && (first.length < 3 || NOT_A_VALUE.has(first.toLowerCase()))
-        : !CREDENTIAL_SHAPED.test(first)
-    )
-      continue;
-    out += text.slice(at, span[0]) + SECRET_WITHHELD;
-    at = span[1];
+    const from = match.index + match[0].length;
+    if (text.startsWith(SECRET_WITHHELD, from)) continue;
+    const [start, end] = valueEnd(text, from, match[1]!);
+    out += text.slice(at, start) + SECRET_WITHHELD;
+    at = end;
     withheld += 1;
-    LABELLED_SECRET.lastIndex = span[1];
+    LABELLED_SECRET.lastIndex = Math.max(end, LABELLED_SECRET.lastIndex);
   }
   return { text: out + text.slice(at), withheld };
 };
 
-/** A long run of letters and digits with no word structure: a random key or signed token. */
-const RANDOM_RUN = /[A-Za-z0-9_-]{32,}/g;
-/** Where a run splits into words: lower to upper case, letters to digits and back. */
-const WORD_BREAK = /(?<=\p{Ll})(?=\p{Lu})|(?<=\p{L})(?=\d)|(?<=\d)(?=\p{L})/u;
-/** Average word length from which a run reads as words (DocumentRoutingEngineV1), not noise. */
-const MIN_WORDY_LENGTH = 4;
-const isRandom = (run: string): boolean =>
-  run.split(/[_-]+/).some((part) => {
-    if (part.length < 16 || !/\d/.test(part) || !/[A-Za-z]/.test(part))
-      return false;
-    return part.length / part.split(WORD_BREAK).length < MIN_WORDY_LENGTH;
-  });
-/** A run the note names as an id or a checksum ("doc id …", "md5 …", "commit …"). */
-const NAMED_AS_ID =
-  /(?<![A-Za-z])(?:ids?|uuid|md5|sha-?\d*|hash|checksum|commit|revision|zone)\b[\s:=#(`'"]{0,3}$/i;
-/**
- * A run in a URL's path names a page or file (a Drive doc, a commit); a secret
- * in a URL rides its query, or the path of a webhook or bot URL.
- */
-const IN_URL_PATH = /https?:\/\/[^\s?#]*$/;
-const CREDENTIAL_URL = /hook|bot|token|secret|key|sig|auth|cred|pass/i;
-const inDocumentUrl = (before: string): boolean => {
-  const url = IN_URL_PATH.exec(before);
-  return url != null && !CREDENTIAL_URL.test(url[0]);
-};
+/** A run of 32+ letters, digits, "_" and "-" holding both letters and digits: a key or a token. */
+const RUN = /[A-Za-z0-9_-]{32,}/g;
 
 /** `text` with every secret replaced by `SECRET_WITHHELD`, and how many there were. */
 export const withholdSecrets = (
@@ -166,18 +142,57 @@ export const withholdSecrets = (
     });
   const labelled = withholdLabelled(out);
   withheld += labelled.withheld;
-  out = labelled.text.replace(RANDOM_RUN, (run, at: number, all: string) => {
-    const before = all.slice(Math.max(0, at - 200), at);
-    if (!isRandom(run) || NAMED_AS_ID.test(before) || inDocumentUrl(before))
-      return run;
+  out = labelled.text.replace(RUN, (run) => {
+    if (!/\d/.test(run) || !/[A-Za-z]/.test(run)) return run;
     withheld += 1;
     return SECRET_WITHHELD;
   });
   return { text: out, withheld };
 };
 
-export const looksSecret = (text: string): boolean =>
-  withholdSecrets(text).withheld > 0;
+/** Share of characters where the kind changes (lower, upper, digit, other): about 0.6 in a random key, low in words and paths. */
+const switchRate = (token: string): number => {
+  const kind = (char: string): number =>
+    /[a-z]/.test(char) ? 0 : /[A-Z]/.test(char) ? 1 : /\d/.test(char) ? 2 : 3;
+  let switches = 0;
+  for (let at = 1; at < token.length; at += 1)
+    if (kind(token[at]!) !== kind(token[at - 1]!)) switches += 1;
+  return switches / token.length;
+};
+const MIN_KEY_SWITCH_RATE = 0.4;
+/** A token beside a withheld secret that is shaped like its other half (an AWS key's secret). */
+const CREDENTIAL_TOKEN = (token: string): boolean =>
+  /^[A-Za-z0-9+/=_-]{12,}$/.test(token) &&
+  /\d/.test(token) &&
+  /[A-Z]/.test(token) &&
+  /[a-z]/.test(token) &&
+  switchRate(token) >= MIN_KEY_SWITCH_RATE;
+const credentialBeside = (text: string): boolean => {
+  if (!text.includes(SECRET_WITHHELD)) return false;
+  const tokens = text
+    .replaceAll(SECRET_WITHHELD, " \u0000 ")
+    .split(/\s+/)
+    .map((token) => token.replace(/^[("'`[]+|[)"'`\],.;:!?]+$/g, ""));
+  return tokens.some(
+    (token, at) =>
+      token === "\u0000" &&
+      [at - 2, at - 1, at + 1, at + 2].some(
+        (near) => tokens[near] != null && CREDENTIAL_TOKEN(tokens[near]!)
+      )
+  );
+};
+
+/**
+ * Whether `text` holds a secret. A withheld placeholder is read as an empty
+ * quoted value, so "PIN: [secret withheld]" is not taken for a new one.
+ */
+export const looksSecret = (text: string): boolean => {
+  if (text.length > MAX_SCAN_CHARS) return true;
+  return (
+    withholdSecrets(text.replaceAll(SECRET_WITHHELD, '"')).withheld > 0 ||
+    credentialBeside(text)
+  );
+};
 
 // ── claims that must not be saved ──────────────────────────────────────────
 
@@ -244,15 +259,15 @@ const userSaidIt = (claim: RegExp, text: string, userWords: string): boolean =>
   claim.test(userWords) &&
   containment(contentWords(text), contentWords(userWords)) >= 0.5;
 
-/** Clauses and list items: the unit a claim is made in, so one long sentence is not one claim. */
-const clausesOf = (text: string): string[] =>
+/** Sentences and list items: the unit a claim is made in. A list joined by commas is one claim. */
+const sentencesOf = (text: string): string[] =>
   text
-    .split(/(?<=[.!?;:,)])\s+|\s+[—–-]\s+|\s+\(|\r?\n+/)
+    .split(/(?<=[.!?;])\s+|\r?\n+/)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 
 /**
- * Whether the note is that claim: the clauses making it hold most of the
+ * Whether the note is that claim: the sentences making it hold most of the
  * note's words. A long note that mentions in passing that a branch does not
  * exist yet, or that a rule switches auto-reply off, is about something else
  * and is kept.
@@ -261,9 +276,9 @@ const isTheClaim = (claim: RegExp, text: string): boolean => {
   const all = contentWords(text).size;
   if (all === 0) return false;
   const claimed = new Set<string>();
-  for (const clause of clausesOf(text))
-    if (claim.test(clause))
-      for (const word of contentWords(clause)) claimed.add(word);
+  for (const sentence of sentencesOf(text))
+    if (claim.test(sentence))
+      for (const word of contentWords(sentence)) claimed.add(word);
   return claimed.size * 2 >= all;
 };
 
@@ -273,26 +288,36 @@ const SECRET_WORDS = contentWords(
 );
 const MIN_WORDS_BESIDE_SECRET = 3;
 
-/**
- * Whether `text` holds a secret and next to nothing else ("Stripe key: …",
- * "PIN: 4821"): withholding it would leave no fact worth keeping.
- */
-export const onlySecret = (text: string): boolean => {
-  const kept = withholdSecrets(text);
-  if (kept.withheld === 0) return false;
+/** Whether withholding the secrets in `text` would leave no fact worth keeping ("Stripe key: …", "PIN: 4821"). */
+const onlySecret = (withheld: string): boolean => {
   let left = 0;
-  for (const word of contentWords(kept.text))
+  for (const word of contentWords(withheld))
     if (!SECRET_WORDS.has(word)) left += 1;
   return left < MIN_WORDS_BESIDE_SECRET;
+};
+
+/**
+ * A model's text with its secrets withheld, `[main, ...rest]`, or null when it
+ * must be refused: the main text is a secret and little else, or withholding
+ * left something `looksSecret` still finds. Notes and journal lines both use it.
+ */
+export const withholdOrRefuse = (
+  texts: readonly [string, ...string[]]
+): { texts: string[]; withheld: number } | null => {
+  let withheld = 0;
+  const kept = texts.map((text) => {
+    const result = withholdSecrets(text);
+    withheld += result.withheld;
+    return result.text;
+  });
+  if (kept.some(looksSecret)) return null;
+  if (withheld > 0 && onlySecret(kept[0]!)) return null;
+  return { texts: kept, withheld };
 };
 
 /** Told to the model when a secret was withheld from what it saved. */
 export const SECRET_WITHHELD_NOTICE =
   "A password, key or code in it was withheld; suggest the user keeps it in the app's vault.";
-
-/** Whether saving `sent` withheld a secret from it: what checkDraft does when it keeps such a note. */
-export const secretWithheld = (sent: Draft): boolean =>
-  looksSecret(`${sent.description}\n${sent.body}\n${sent.keywords ?? ""}`);
 
 // ── the checks ─────────────────────────────────────────────────────────────
 
@@ -303,6 +328,11 @@ export interface Draft {
   body: string;
   expires?: string;
   keywords?: string;
+}
+
+/** A draft the gate let through, and how many secrets it withheld from it. */
+export interface Checked extends Draft {
+  withheld: number;
 }
 
 export interface GateInput {
@@ -335,30 +365,33 @@ export const coreChars = (
  * The draft, cleaned, or the one-line reason it cannot be saved. ID numbers
  * are withheld rather than refused: the rest of the note is still worth keeping.
  */
-export const checkDraft = (input: GateInput): Draft | string => {
+export const checkDraft = (input: GateInput): Checked | string => {
   const { draft, siblings, updating, userWords, byUser, now } = input;
-  let body = redactIdNumbers(draft.body.trim());
-  let description = (draft.description.trim() || firstSentence(body)).slice(
-    0,
-    MAX_DESCRIPTION_CHARS
-  );
-
-  let keywords = oneLine(draft.keywords ?? "").slice(0, MAX_KEYWORDS_CHARS);
+  let body = draft.body.trim();
+  let description = draft.description.trim();
+  let keywords = oneLine(draft.keywords ?? "");
 
   if (body.length === 0) return "Nothing to save: the text is empty.";
   if (body.length > sizeLimit(draft.type))
     return `That is ${body.length} characters; a ${draft.type === "card" ? "project card" : "note"} holds ${sizeLimit(draft.type)}. Keep one fact per note, or split it.`;
 
   // The user's own edit is told; a model's note keeps everything but the secret.
+  let withheld = 0;
   if (looksSecret(`${description}\n${body}\n${keywords}`)) {
     if (byUser)
       return "That looks like a password, key or code. Memory never keeps those; the vault is the place for them.";
-    if (onlySecret(body))
-      return "That is a password, key or code and nothing else. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
-    description = withholdSecrets(description).text;
-    body = withholdSecrets(body).text;
-    keywords = withholdSecrets(keywords).text;
+    const kept = withholdOrRefuse([body, description, keywords]);
+    if (kept == null)
+      return "That looks like a password, key or code. Memory never keeps those: suggest the user keeps it in the app's vault, and save only where it is kept.";
+    [body, description, keywords] = kept.texts as [string, string, string];
+    withheld = kept.withheld;
   }
+  body = redactIdNumbers(body);
+  description = (description || firstSentence(body)).slice(
+    0,
+    MAX_DESCRIPTION_CHARS
+  );
+  keywords = keywords.slice(0, MAX_KEYWORDS_CHARS);
 
   if (draft.type === "status") {
     const expires = Date.parse(draft.expires ?? "");
@@ -429,6 +462,7 @@ export const checkDraft = (input: GateInput): Draft | string => {
     body,
     description,
     ...(keywords.length > 0 ? { keywords } : {}),
+    withheld,
   };
 };
 

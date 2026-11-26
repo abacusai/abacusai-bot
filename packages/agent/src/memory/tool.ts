@@ -7,12 +7,9 @@ import { redactIdNumbers } from "../traveler/id-numbers.js";
 import { ageOf, ensureProject, projectSummary, withStatus } from "./core.js";
 import {
   checkDraft,
-  type Draft,
   contentWords,
-  onlySecret,
   SECRET_WITHHELD_NOTICE,
-  secretWithheld,
-  withholdSecrets,
+  withholdOrRefuse,
   MAX_CARD_CHARS,
   MAX_JOURNAL_CHARS,
   MAX_NOTE_CHARS,
@@ -261,27 +258,28 @@ export function buildMemoryTool(
         const replaced = siblings.find((note) => note.name === replaces);
         if (replaced != null && userWrote(replaced))
           return USER_WROTE(replaced.name);
-        const sent: Draft = {
-          name,
-          description: string(params.description) || current?.description || "",
-          type,
-          body: text.length > 0 ? text : (current?.body ?? ""),
-          ...(string(params.expires) || current?.expires
-            ? { expires: string(params.expires) || current!.expires! }
-            : {}),
-          ...(string(params.keywords) || current?.keywords
-            ? { keywords: string(params.keywords) || current!.keywords! }
-            : {}),
-        };
-        const draft = checkDraft({
-          draft: sent,
+        const checked = checkDraft({
+          draft: {
+            name,
+            description:
+              string(params.description) || current?.description || "",
+            type,
+            body: text.length > 0 ? text : (current?.body ?? ""),
+            ...(string(params.expires) || current?.expires
+              ? { expires: string(params.expires) || current!.expires! }
+              : {}),
+            ...(string(params.keywords) || current?.keywords
+              ? { keywords: string(params.keywords) || current!.keywords! }
+              : {}),
+          },
           siblings,
           updating: current?.name ?? (replaces || null),
           userWords: turn.userWords(),
           byUser: false,
           now,
         });
-        if (typeof draft === "string") return draft;
+        if (typeof checked === "string") return checked;
+        const { withheld, ...draft } = checked;
         const note: Note = {
           scope,
           ...draft,
@@ -302,7 +300,7 @@ export function buildMemoryTool(
           value: {
             note,
             related: relatedNotes(draft, siblings),
-            withheld: secretWithheld(sent),
+            withheld: withheld > 0,
           },
         };
       }
@@ -518,8 +516,7 @@ export function buildMemoryTool(
       }
 
       if (action === "note") {
-        // ID numbers are withheld here as in notes (gate.ts).
-        const text = redactIdNumbers(string(params.text).trim());
+        const text = string(params.text).trim();
         if (text.length === 0)
           return reply("Nothing to note: text is empty.", true);
         if (text.length > MAX_JOURNAL_CHARS)
@@ -541,20 +538,21 @@ export function buildMemoryTool(
             "This turn already added a journal line; one per task is enough.",
             true
           );
-        // Secrets are withheld here as in notes (gate.ts); the rest of the line is kept.
-        if (onlySecret(text))
+        // Secrets, then ID numbers, are withheld as in notes (gate.ts).
+        const kept = withholdOrRefuse([text]);
+        if (kept == null)
           return reply(
-            "That is a password, key or code and nothing else. Memory never keeps those.",
+            "That looks like a password, key or code. Memory never keeps those; suggest the user keeps it in the app's vault.",
             true
           );
-        const line = withholdSecrets(text);
+        const line = redactIdNumbers(kept.texts[0]!);
         const result = await commit({ by: authorOf(context) }, () => ({
-          writes: [journalAppend(scope, line.text)],
+          writes: [journalAppend(scope, line)],
           value: null,
         }));
         if (!result.ok) return reply(result.message, true);
         return reply(
-          line.withheld > 0
+          kept.withheld > 0
             ? `Noted in the journal. ${SECRET_WITHHELD_NOTICE}`
             : "Noted in the journal."
         );

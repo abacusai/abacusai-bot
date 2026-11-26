@@ -9,12 +9,7 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "../atomic-file.js";
-import {
-  checkDraft,
-  type Draft,
-  SECRET_WITHHELD_NOTICE,
-  secretWithheld,
-} from "../memory/gate.js";
+import { checkDraft, SECRET_WITHHELD_NOTICE } from "../memory/gate.js";
 import {
   commit,
   listNotes as listMemoryNotes,
@@ -179,22 +174,22 @@ export async function rememberFact(
   const now = new Date();
   const result = await commit({ by: "chat" }, () => {
     const siblings = listMemoryNotes(YOU);
-    const sent: Draft = {
-      name:
-        target?.name ?? noteName(content.split(/\s+/).slice(0, 6).join(" ")),
-      description: "",
-      type: target?.type ?? (options.userAsked === true ? "rule" : "fact"),
-      body: content,
-    };
-    const draft = checkDraft({
-      draft: sent,
+    const checked = checkDraft({
+      draft: {
+        name:
+          target?.name ?? noteName(content.split(/\s+/).slice(0, 6).join(" ")),
+        description: "",
+        type: target?.type ?? (options.userAsked === true ? "rule" : "fact"),
+        body: content,
+      },
       siblings,
       updating: target?.name ?? null,
       userWords: options.userAsked === true ? content : "",
       byUser: false,
       now,
     });
-    if (typeof draft === "string") return draft;
+    if (typeof checked === "string") return checked;
+    const { withheld, ...draft } = checked;
     let name = draft.name;
     for (
       let n = 2;
@@ -212,7 +207,7 @@ export async function rememberFact(
           by: "chat",
         }),
       ],
-      value: secretWithheld(sent),
+      value: withheld > 0,
     };
   });
   if (!result.ok) return { ok: false, message: result.message };
