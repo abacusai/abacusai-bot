@@ -367,57 +367,6 @@ describe("checkDraft", () => {
   });
 
   it.each([
-    {
-      case: "a passphrase with spaces after its label",
-      text: "Home WiFi is HomeNet-5G. WiFi password: purple monkey dishwasher.",
-      gone: ["purple", "monkey", "dishwasher"],
-      kept: ["HomeNet-5G"],
-    },
-    {
-      case: "a quoted passphrase",
-      text: 'Router admin user is admin. Password: "correct horse battery staple".',
-      gone: ["horse", "staple"],
-      kept: ["Router admin user is admin"],
-    },
-    {
-      case: "a password said in words, the clause after it kept",
-      text: "Netflix is the family account; password is hunter, shared with the kids.",
-      gone: ["hunter"],
-      kept: ["shared with the kids"],
-    },
-    {
-      case: "a password to the end of its clause",
-      text: "Router password: tiger lily in the drawer note, changed yearly.",
-      gone: ["tiger", "lily", "drawer"],
-      kept: ["changed yearly"],
-    },
-    {
-      case: "a token in a URL's query",
-      text: "The deploy hook is https://hooks.example.com/run?token=abc123def456&team=7 and posts to ops.",
-      gone: ["abc123def456", "&team=7"],
-      kept: ["The deploy hook is https://hooks.example.com/run?token="],
-    },
-    {
-      case: "a webhook secret in a URL's path",
-      text: `Alerts go to https://chat.example.com/api/webhooks/123/${randomRun} for the ops room.`,
-      gone: [randomRun],
-      kept: ["for the ops room"],
-    },
-    {
-      case: "a random run with nothing naming it",
-      text: `Use ${randomRun} for the reporting service.`,
-      gone: [randomRun],
-      kept: ["for the reporting service"],
-    },
-  ])("withholds $case", ({ text, gone, kept }) => {
-    const result = withholdSecrets(text);
-    expect(result.withheld).toBeGreaterThan(0);
-    expect(result.text).toContain(SECRET_WITHHELD);
-    for (const part of gone) expect(result.text).not.toContain(part);
-    for (const part of kept) expect(result.text).toContain(part);
-  });
-
-  it.each([
     [
       "a Drive id named as an id",
       `The lead list sheet (id ${driveId}) is shared with sales.`,
@@ -434,11 +383,6 @@ describe("checkDraft", () => {
       "a class name with a digit",
       "The bug is in InvoiceExportApplicationServicePostgresV2 at line 120.",
       "InvoiceExport",
-    ],
-    [
-      "a variable named after its label",
-      "The deploy bot reads the token: GITHUB_TOKEN in deploy/.env, rotated monthly by the ops team.",
-      "GITHUB_TOKEN",
     ],
   ])(
     "withholds %s, as the earlier gate refused it, and keeps the note",
@@ -486,19 +430,6 @@ describe("checkDraft", () => {
       `Stripe test key ${SECRET_WITHHELD} sits in the vault.`
     );
     expect(result.body).not.toContain(fakeKey);
-  });
-
-  it("counts what it withheld, and nothing for a placeholder already there", () => {
-    const saved = check(`Deploys use key ${fakeKey} from the team vault.`);
-    expect(saved).toMatchObject({ withheld: 1 });
-    // An update that carries a note's earlier placeholder withholds nothing new.
-    expect(check((saved as Draft).body)).toMatchObject({ withheld: 0 });
-    const pin = check("Shop admin PIN: 4821, changed monthly by the owner.");
-    expect(pin).toMatchObject({ withheld: 1 });
-    expect(check((pin as Draft).body)).toMatchObject({
-      body: (pin as Draft).body,
-      withheld: 0,
-    });
   });
 
   // Every shape a review found leaking past the withholding, and more: each is
@@ -1012,13 +943,6 @@ describe("checkDraft", () => {
     expect(check(text)).toMatch(/password, key or code/);
   });
 
-  it("never reads its own placeholder as a value, so a withheld note saves again", () => {
-    const saved = check("Shop admin PIN: 4821, changed monthly by the owner.");
-    expect(earlierGateRefuses((saved as Draft).body)).toBe(false);
-    expect(looksSecret((saved as Draft).body)).toBe(false);
-    expect(check((saved as Draft).body, true)).toMatchObject({ withheld: 0 });
-  });
-
   it.each([
     "Drive folder Clients/Acme/Contracts/2026/Signed/FinalVersions holds the signed contracts.",
     "Breadcrumb Home/Products/Laptops/Gaming/ASUS/ROG2026/StrixScar is the product page.",
@@ -1034,64 +958,6 @@ describe("checkDraft", () => {
     expect(earlierGateRefuses(text)).toBe(false);
     for (const byUser of [false, true])
       expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
-  });
-
-  it.each([
-    [
-      "Gmail password: hunter2. Shared with the family, rotated yearly.",
-      "hunter2",
-      `Gmail password: ${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
-    ],
-    [
-      "Gmail password is hunter2. Recovery email is on the family account.",
-      "hunter2",
-      `Gmail password is ${SECRET_WITHHELD}. Recovery email is on the family account.`,
-    ],
-    [
-      "The router PIN is 4821. Router sits in the hall closet upstairs.",
-      "4821",
-      `The router PIN is ${SECRET_WITHHELD}. Router sits in the hall closet upstairs.`,
-    ],
-    [
-      "Router password:\nhunter2 for the hall router, set by Bob.",
-      "hunter2",
-      `Router password:${SECRET_WITHHELD}, set by Bob.`,
-    ],
-  ])("keeps the sentence after a withheld value: %s", (text, value, saved) => {
-    const result = check(text);
-    expect(result).toMatchObject({ withheld: 1 });
-    expect((result as Draft).body).not.toContain(value);
-    expect((result as Draft).body).toBe(saved);
-  });
-
-  it.each([
-    `Gmail password: ${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
-    `Gmail password: ${SECRET_WITHHELD}, shared with the family and rotated yearly.`,
-    `Router password = ${SECRET_WITHHELD} Updated on Friday.`,
-  ])(
-    "keeps a note that restates its placeholder, on both paths: %s",
-    (text) => {
-      for (const byUser of [false, true])
-        expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
-    }
-  );
-
-  it("saves every withheld note again, unchanged, on both paths", () => {
-    for (const [, text] of CREDENTIALS) {
-      const first = check(`Work setup for the Acme billing project: ${text}`);
-      if (typeof first === "string") continue;
-      const body = first.body;
-      for (const again of [
-        body,
-        `${body} Updated on Friday.`,
-        body.replace(SECRET_WITHHELD, `${SECRET_WITHHELD}.`),
-      ])
-        for (const byUser of [false, true])
-          expect(check(again, byUser), JSON.stringify(again)).toMatchObject({
-            body: again,
-            withheld: 0,
-          });
-    }
   });
 
   const draftOf = (parts: {
@@ -1183,30 +1049,6 @@ describe("checkDraft", () => {
         )
       ).toBe(false);
     }
-  });
-
-  it("withholds a value split from its label, and keeps the note", () => {
-    expect(
-      checkParts({
-        description: "Gmail password:",
-        body: "hunter2. Shared with the family, rotated yearly.",
-      })
-    ).toMatchObject({
-      description: "Gmail password:",
-      body: `${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
-      withheld: 1,
-    });
-    expect(
-      checkParts({
-        description: "Router setup",
-        body: "The hall router password is",
-        keywords: "hunter2",
-      })
-    ).toMatchObject({
-      body: "The hall router password is",
-      keywords: SECRET_WITHHELD,
-      withheld: 1,
-    });
   });
 
   it.each([
@@ -1393,15 +1235,6 @@ describe("checkDraft", () => {
     }
   );
 
-  it("keeps years, quantities, dates and versions beside a withheld value", () => {
-    const text =
-      "Gmail password: hunter2. Office moved in 2026, 4821 km away; budget $4821 and 1500 users. Release v2026.1 shipped on 2026-11-20 at 10:30.";
-    const result = check(text) as Draft;
-    expect(result).toMatchObject({ withheld: 1 });
-    expect(result.body).not.toContain("hunter2");
-    expect(result.body).toContain("4821 km away; budget $4821 and 1500 users");
-  });
-
   it.each([
     [
       "Clients/Acme/Contracts/2026/Signed/FinalVersions holds the signed contracts.",
@@ -1429,48 +1262,125 @@ describe("checkDraft", () => {
     }
   );
 
-  it("never stores either of two secrets in one note, however it is phrased", () => {
-    const labelled = [
+  // A person's secret has no knowable shape or end: a note naming one is
+  // refused whole, as the earlier gate refused it. Only keys are withheld.
+  it.each([
+    "Home WiFi is HomeNet-5G. WiFi password: purple monkey dishwasher.",
+    'Router admin user is admin. Password: "correct horse battery staple".',
+    "Netflix is the family account; password is hunter, shared with the kids.",
+    "Router password: tiger lily in the drawer note, changed yearly.",
+    "Gmail password: hunter2. Shared with the family, rotated yearly.",
+    "The router PIN is 4821. Router sits in the hall closet upstairs.",
+    "Recovery phrase: abandon ability able about above absent, kept offline.",
+    "The card CVV is 123, for the family account.",
+    "The deploy bot reads the token: GITHUB_TOKEN in deploy/.env, rotated monthly by the ops team.",
+    "The deploy hook is https://hooks.example.com/run?token=abc123def456&team=7 and posts to ops.",
+    `Gmail password: ${SECRET_WITHHELD}. Shared with the family, rotated yearly.`,
+    `Router password = ${SECRET_WITHHELD} Updated on Friday.`,
+  ])("refuses a note naming a person's secret, on both paths: %s", (text) => {
+    for (const byUser of [false, true])
+      expect(check(text, byUser)).toMatch(/password, key or code/);
+  });
+
+  it.each([
+    [
+      {
+        description: "Gmail password:",
+        body: "hunter2. Shared with the family, rotated yearly.",
+      },
+    ],
+    [
+      {
+        description: "Router setup",
+        body: "The hall router password is",
+        keywords: "hunter2",
+      },
+    ],
+    [
+      {
+        description: "Router PIN:",
+        body: "Family account setup for the shared laptop.",
+        keywords: "4821",
+      },
+    ],
+  ])("refuses a person's secret split from its label: %j", (parts) => {
+    for (const byUser of [false, true])
+      expect(checkParts(parts, byUser)).toMatch(/password, key or code/);
+  });
+
+  it.each([
+    [
+      `Alerts go to https://chat.example.com/api/webhooks/123/${randomRun} for the ops room.`,
+      "for the ops room",
+    ],
+    [
+      `Use ${randomRun} for the reporting service.`,
+      "for the reporting service",
+    ],
+  ])("withholds a key and keeps the note: %s", (text, kept) => {
+    const result = withholdSecrets(text);
+    expect(result.withheld).toBe(1);
+    expect(result.text).not.toContain(randomRun);
+    expect(result.text).toContain(kept);
+  });
+
+  it("withholds a key split from its label, and keeps the note", () => {
+    const key = `sk-${mixed(30)}`;
+    expect(
+      checkParts({
+        description: "Stripe API key:",
+        body: `${key}. Shared with the payments team, rotated yearly.`,
+      })
+    ).toMatchObject({
+      description: "Stripe API key:",
+      body: `${SECRET_WITHHELD}. Shared with the payments team, rotated yearly.`,
+      withheld: 1,
+    });
+  });
+
+  it.each([
+    `Stripe key: ${SECRET_WITHHELD}. Shared with the payments team, rotated yearly.`,
+    `Deploy token = ${SECRET_WITHHELD} Updated on Friday.`,
+    `OpenAI key ${SECRET_WITHHELD} lives in the vault for the whole team.`,
+  ])("keeps a note that restates a withheld key, on both paths: %s", (text) => {
+    for (const byUser of [false, true])
+      expect(check(text, byUser)).toMatchObject({ body: text, withheld: 0 });
+  });
+
+  it("counts the keys it withheld, and nothing for a placeholder already there", () => {
+    const saved = check(`Deploys use key ${fakeKey} from the team vault.`);
+    expect(saved).toMatchObject({ withheld: 1 });
+    expect(check((saved as Draft).body)).toMatchObject({ withheld: 0 });
+    expect(check((saved as Draft).body, true)).toMatchObject({ withheld: 0 });
+  });
+
+  it("refuses a note with a person's secret and anything else beside it, whatever its shape", () => {
+    const first = [
       "Gmail password: hunter2.",
       "Router PIN is 4821.",
-      `Stripe key ${stripeLive}.`,
       "Wifi passphrase: purple monkey dishwasher.",
+      "Bank OTP: 482193.",
     ];
     const second = (): string =>
       [
+        () => fake(LOWER, 5 + Math.floor(random() * 6)),
+        () => fake(DIGITS, 3 + Math.floor(random() * 6)),
         () => `${fake(UPPER, 1)}${fake(LOWER, 5)}${fake(DIGITS, 2)}`,
-        () =>
-          `${fake(LOWER, 6)}${fake(DIGITS, 1)}${"&!#$"[Math.floor(random() * 4)]}`,
-        () => {
-          const number = fake(DIGITS, 4 + Math.floor(random() * 5));
-          // A year (1900–2099) is not read as a code; make it one that is not.
-          return /^(19|20)\d\d$/.test(number) ? `7${number.slice(1)}` : number;
-        },
-      ][Math.floor(random() * 3)]!();
+        () => `${fake(LOWER, 4)}-${fake(LOWER, 5)}-${fake(DIGITS, 2)}`,
+        () => `${fake(UPPER, 1)}@${fake(LOWER, 4)}${fake(DIGITS, 1)}rd`,
+        () => `${stripeLive}`,
+      ][Math.floor(random() * 6)]!();
     const phrasings = [
       (v: string) => `Backup password ${v} for the family account.`,
-      (v: string) => `The bank one: ${v} for the family account.`,
       (v: string) => `Also ${v} for the work laptop.`,
-      (v: string) => `Work laptop uses ${v} for login.`,
-      (v: string) => `Bank PIN ${v} for the family account.`,
       (v: string) => `Netflix: ${v} for the family account.`,
       (v: string) => `${v} is the backup for the family account.`,
+      (v: string) => `The garage takes ${v} at the door.`,
     ];
-    const joins = [" ", "\n", "; ", ", "];
     for (let n = 0; n < 400; n += 1) {
-      const first = labelled[Math.floor(random() * labelled.length)]!;
-      const value = second();
-      const phrase = phrasings[Math.floor(random() * phrasings.length)]!(value);
-      const text = `${first}${joins[Math.floor(random() * joins.length)]}${phrase}`;
-      if (!earlierGateRefuses(text)) continue;
-      for (const byUser of [false, true]) {
-        const result = check(text, byUser);
-        if (typeof result === "string") continue;
-        expect(fieldsOf(result), text).not.toMatch(
-          /hunter2|4821|sk_live_|monkey/
-        );
-        expect(fieldsOf(result), text).not.toContain(value);
-      }
+      const text = `${first[Math.floor(random() * first.length)]} ${phrasings[Math.floor(random() * phrasings.length)]!(second())}`;
+      for (const byUser of [false, true])
+        expect(check(text, byUser), text).toMatch(/password, key or code/);
     }
   });
 

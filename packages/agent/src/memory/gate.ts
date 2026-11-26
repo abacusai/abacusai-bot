@@ -27,8 +27,11 @@ const RELATED_OVERLAP = 0.2;
 // Two jobs. `looksSecret` detects: it runs the patterns the gate has always
 // refused on, unchanged in what they match, and adds to them; refusals, the
 // Memory page, the handover and the migration all use it. `withholdSecrets`
-// redacts: a model's note is kept with its secrets withheld only when
-// `looksSecret` finds nothing left in the result.
+// redacts keys only (provider formats and long random runs, which have known
+// edges): a model's note is kept with its keys withheld only when
+// `looksSecret` finds nothing left in the result. A person's secret (a
+// password, a PIN, a recovery phrase) has no knowable shape or end, so a note
+// naming one is refused whole, as it always was.
 
 /**
  * Stands where a secret was. The space after "[" keeps it from reading as a
@@ -199,9 +202,12 @@ const base64Spans = (view: string): { spans: Span[]; found: number } => {
   return { spans, found: spans.length };
 };
 
-/** Words a secret is named by. A value after one, as in "PIN: 4821", is the secret. */
-/** Label words may be split by spaces, a line break or "_"/"-" ("api\nkey", "secret_access_key"). */
-const SECRET_LABEL = [
+/**
+ * Words a secret is named by. A value after one, as in "PIN: 4821", is the
+ * secret. Label words may be split by spaces, a line break or "_"/"-"
+ * ("api\nkey", "secret_access_key").
+ */
+const HUMAN_LABELS = [
   "password",
   "passwd",
   "passcode",
@@ -211,6 +217,16 @@ const SECRET_LABEL = [
   "pin",
   "otp",
   "security code",
+  "cvv",
+  "cvc",
+  "recovery phrase",
+  "recovery code",
+  "seed phrase",
+  "seed words",
+  "backup code",
+];
+const SECRET_LABEL = [
+  ...HUMAN_LABELS,
   "api key",
   "access key",
   "secret access key",
@@ -222,6 +238,11 @@ const SECRET_LABEL = [
 ]
   .map((label) => label.replaceAll(" ", "[\\s_-]{0,3}"))
   .join("|");
+/** A label for a secret a person chose or was given: its value has no knowable shape or end. */
+const HUMAN_LABEL = new RegExp(
+  `^(?:${HUMAN_LABELS.map((label) => label.replaceAll(" ", "[\\s_-]{0,3}")).join("|")})s?$`,
+  "i"
+);
 /** Labels the earlier patterns did not have: a dash after one is prose ("the private key - ed25519 - is …"). */
 const ADDED_LABEL =
   /^(?:secret[\s_-]*access[\s_-]*key|client[\s_-]*secret|auth[\s_-]*token|private[\s_-]*key)$/i;
@@ -230,43 +251,9 @@ const LABELLED_SECRET = new RegExp(
   "gi"
 );
 
-/**
- * Where a labelled value ends. A quoted value ends at its quote; any other runs
- * to the end of its clause, so a passphrase with spaces is withheld whole.
- */
-const valueEnd = (text: string, from: number): [number, number] => {
-  const limit = Math.min(text.length, from + MAX_VALUE_CHARS);
-  const quote = text[from];
-  if (quote === '"' || quote === "'" || quote === "`")
-    for (let at = from + 1; at < limit && text[at] !== "\n"; at += 1)
-      if (text[at] === quote) return [from + 1, at];
-  for (let at = from; at < limit; at += 1) {
-    const char = text[at]!;
-    if (char === "\n") {
-      // A value cut by the end of a part goes on into the next part.
-      if (text.startsWith("\u2029\n", at + 1)) {
-        at += 2;
-        continue;
-      }
-      return [from, at];
-    }
-    const spaceNext = at + 1 >= text.length || /\s/.test(text[at + 1]!);
-    if ((char === "," || char === ";") && spaceNext) return [from, at];
-    // The full stop stays when it ends the sentence: the next word is a plain
-    // capitalised word ("hunter2. Shared …"), not more of the value ("abc. Def456").
-    if (/[.!?]/.test(char) && spaceNext && sentenceEndsAt(text, at + 1))
-      return [from, at];
-  }
-  return [from, limit];
-};
-
-/** Whether a sentence ends before `at`: the text ends, a line ends, or a plain capitalised word follows. */
-const sentenceEndsAt = (text: string, at: number): boolean => {
-  const rest = text.slice(at, at + 60);
-  if (/^[^\S\n]*(?:\n|$)/.test(rest)) return true;
-  const next = rest.trim().split(/\s/)[0] ?? "";
-  return /^\p{Lu}\p{Ll}*[.,;:!?'’)]*$/u.test(next);
-};
+/** The rest of the clause after `from`: what is said after a placeholder before the clause ends. */
+const clauseAfter = (text: string, from: number): string =>
+  text.slice(from, from + MAX_VALUE_CHARS).split(/\n|[,;.!?](?=\s|$)/)[0]!;
 
 /** Where a note says where a secret is kept rather than what it is: "is stored in ~/.ssh", "is in the .env file". */
 const KEPT_AT =
@@ -275,87 +262,9 @@ const KEPT_AT =
 type Span = [number, number];
 
 /**
- * A token shaped like a credential: 6+ characters with a password symbol in
- * it ("Tr0ub4dor&3"), or a piece of 4+ mixing letters and digits ("hunter2",
- * "Sunshine99"). Paths, URLs, emails, dates and version numbers are not, nor a
- * name whose pieces are words or numbers ("x86_64", "Setup-1.4.2").
- */
-const credentialToken = (token: string): boolean =>
-  token.length >= 6 &&
-  /\p{L}/u.test(token) &&
-  !/[/\\@]|:\/\/|^www\./i.test(token) &&
-  !/^v?\d+(?:\.\d+)+[a-z]?$/i.test(token) &&
-  !/^\d{4}-\d{2}(?:-\d{2})?/.test(token) &&
-  (/[&!#$%*+=?^~|]/.test(token) ||
-    token
-      .split(/[-_.]/)
-      .some(
-        (piece) => piece.length >= 4 && /\d/.test(piece) && /\p{L}/u.test(piece)
-      ));
-/** Units and currencies a number can be a quantity of ("4821 km", "$4821", "4821 users"). */
-const UNIT_AFTER =
-  /^\s?(?:%|(?:km|m|cm|mm|mi|kg|g|lb|lbs|kb|mb|gb|tb|ms|s|sec|secs|seconds?|mins?|minutes?|h|hrs?|hours?|days?|weeks?|months?|years?|px|pt|dpi|fps|hz|khz|mhz|ghz|w|kw|kwh|mah|rpm|usd|eur|gbp|inr|rs|rupees?|dollars?|euros?|credits?|tokens?|users?|people|rows?|lines?|words?|chars?|characters?|files?|items?|steps?|views?|downloads?|calls?|requests?|records?|pages?|members?|orders?)\b)/i;
-const UNIT_BEFORE = /(?:[$€£¥₹]|\b(?:rs|inr|usd|eur|gbp)\.?\s?)$/i;
-/** A word for a code right before a number ("PIN 1984", "code: 2019"). */
-const CODE_WORD_BEFORE =
-  /\b(?:pin|pins|code|codes|pass\w*|otp|cvv|cvc)\b[\s:=#-]*$/i;
-/**
- * A 4–8 digit number that could be a PIN or a code. Not a quantity with its
- * unit or currency, part of a date or time, or a version; a year (1900–2099)
- * only when a word for a code comes right before it.
- */
-const numberLeft = (text: string): boolean => {
-  for (const match of text.matchAll(
-    /(?<![\d.,:/\-\p{L}])\d{4,8}(?![\d\p{L}]|[.,:/-]\d)/gu
-  )) {
-    const number = match[0];
-    const before = text.slice(Math.max(0, match.index - 30), match.index);
-    const after = text.slice(
-      match.index + number.length,
-      match.index + number.length + 14
-    );
-    if (
-      UNIT_AFTER.test(after) ||
-      UNIT_BEFORE.test(before) ||
-      /v\s?$/i.test(before)
-    )
-      continue;
-    const year = number.length === 4 && +number >= 1900 && +number <= 2099;
-    if (year && !CODE_WORD_BEFORE.test(before)) continue;
-    return true;
-  }
-  return false;
-};
-/** A word a note names as another secret right after a withheld one ("[…]. Sunshine is the backup"). */
-const NAMED_BACKUP = new RegExp(
-  `${SECRET_WITHHELD.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[.!?;,]?\\s+\\p{Lu}\\p{L}*\\s+(?:is|was)\\s+(?:the|my|our|a|an)\\s+(?:backup|other|second|old|new|spare|recovery)`,
-  "u"
-);
-/**
- * Whether a note with something withheld still holds a credential: a
- * credential-shaped token, a number that could be a PIN or a code, a word it names as
- * another secret, or after a withheld key, a long run of letters (its other
- * half). Withholding is for a note with one secret in it; one with more is
- * refused, as the earlier gate refused it.
- */
-const credentialLeft = (text: string, afterKey: boolean): boolean => {
-  const plain = text.replaceAll(SECRET_WITHHELD, " ").replaceAll("\u2029", " ");
-  // A label's own "=" or ":" is not part of a token ("DB_PASSWORD=").
-  const tokens = tokensOf(plain)
-    .map((token) => token.replace(/[=:]+$/, ""))
-    .filter((token) => token.length > 0);
-  return (
-    tokens.some(credentialToken) ||
-    numberLeft(plain) ||
-    NAMED_BACKUP.test(text) ||
-    (afterKey && tokens.some((token) => /^[A-Za-z]{16,}$/.test(token)))
-  );
-};
-
-/**
  * Between the parts of a note read as one (description, body, keywords): a
- * line holding U+2029, whitespace to every pattern. A value that runs to the
- * end of one part goes on into the next; no line of one reads as the line
+ * line holding U+2029, whitespace to every pattern, so a label in one part
+ * still reads its value in the next, and no line of one reads as the line
  * after another.
  */
 const PART_BREAK = "\n\u2029\n";
@@ -364,10 +273,13 @@ const PART_BREAK = "\n\u2029\n";
 const CREDENTIAL_SHAPED =
   /\d|\p{L}[^\p{L}\p{N}\s.,;:!?)'’-]|[^\p{L}\p{N}\s("'`[’-]\p{L}|\p{Ll}\p{Lu}/u;
 
-/** Each value said after its label, to the end of its clause. A placeholder alone is not a new one. */
-const labelledSpans = (text: string): { spans: Span[]; found: number } => {
-  const spans: Span[] = [];
-  let found = 0;
+/**
+ * Whether a value is said after its label. A person's secret (a password, a
+ * PIN, a recovery phrase) has no knowable shape or end, so any value counts,
+ * a placeholder too. After a key's label ("token:", "api key ="), a withheld
+ * key followed by words is not a new value; a key-shaped token after it is.
+ */
+const labelledFinds = (text: string): boolean => {
   LABELLED_SECRET.lastIndex = 0;
   for (
     let match = LABELLED_SECRET.exec(text);
@@ -377,48 +289,12 @@ const labelledSpans = (text: string): { spans: Span[]; found: number } => {
     const from = match.index + match[0].length;
     if (ADDED_LABEL.test(match[1]!) && match[2]!.includes("-")) continue;
     if (KEPT_AT.test(text.slice(from, from + 30))) continue;
-    const span = valueEnd(text, from);
-    // A placeholder already there stays one. What follows it in the clause is
-    // a new value only when it is shaped like one ("[ … ] hunter2"); words
-    // ("[ … ] Updated on Friday") are the note going on.
-    if (text.startsWith(SECRET_WITHHELD, from)) {
-      const after = text.slice(from + SECRET_WITHHELD.length, span[1]);
-      const next = after.trim().split(/\s+/)[0] ?? "";
-      if (!CREDENTIAL_SHAPED.test(next)) {
-        spans.push([from, from + SECRET_WITHHELD.length]);
-        LABELLED_SECRET.lastIndex = Math.max(
-          from + SECRET_WITHHELD.length,
-          LABELLED_SECRET.lastIndex
-        );
-        continue;
-      }
-    }
-    // A value on the line after its label is withheld from the line break, so
-    // the placeholder stays on the label's line ("password:[ secret withheld ]").
-    const lineBreak = match[2]!.indexOf("\n");
-    spans.push(
-      lineBreak < 0
-        ? span
-        : [match.index + match[1]!.length + lineBreak, span[1]]
-    );
-    found += 1;
-    let last = span[1];
-    // A label that ends a part leaves its value unclear: the first clause of
-    // every part after it is withheld.
-    if (match[2]!.includes("\u2029"))
-      for (
-        let next = text.indexOf("\u2029\n", span[1]);
-        next >= 0;
-        next = text.indexOf("\u2029\n", next + 2)
-      ) {
-        const clause = valueEnd(text, next + 2);
-        if (text.slice(...clause).trim().length === 0) continue;
-        spans.push(clause);
-        last = Math.max(last, clause[1]);
-      }
-    LABELLED_SECRET.lastIndex = Math.max(last, LABELLED_SECRET.lastIndex);
+    if (HUMAN_LABEL.test(match[1]!)) return true;
+    if (!text.startsWith(SECRET_WITHHELD, from)) return true;
+    const after = clauseAfter(text, from + SECRET_WITHHELD.length);
+    if (CREDENTIAL_SHAPED.test(after.trim().split(/\s+/)[0] ?? "")) return true;
   }
-  return { spans, found };
+  return false;
 };
 
 /** A run of 32+ letters, digits, "_" and "-" holding both letters and digits: a key or a token. */
@@ -475,11 +351,9 @@ const merge = (spans: Span[]): Span[] => {
 };
 
 /** Where the secrets in `text` are, as written, and how many were new. */
-const secretSpans = (
-  text: string
-): { spans: Span[]; withheld: number; keys: number } => {
+const secretSpans = (text: string): { spans: Span[]; withheld: number } => {
   if (text.length > MAX_SCAN_CHARS)
-    return { spans: [[0, text.length]], withheld: 1, keys: 1 };
+    return { spans: [[0, text.length]], withheld: 1 };
   const read = fold(text);
   let spans: Span[] = [];
   let withheld = 0;
@@ -509,12 +383,8 @@ const secretSpans = (
     return { spans: found, found: found.length };
   });
   pass(base64Spans);
-  const keysBefore = withheld;
-  pass(labelledSpans);
-  const labelled = withheld - keysBefore;
   pass(matches(RUN, (run) => !/\d/.test(run) || !/[A-Za-z]/.test(run)));
   return {
-    keys: withheld - labelled,
     spans: spans.map(([start, end]): Span => [
       read.from[start]!,
       read.from[end]!,
@@ -576,6 +446,7 @@ const keyShaped = (token: string): boolean =>
     /\d/.test(token) &&
     /[A-Za-z]/.test(token)) ||
     /^[A-Z2-7]{16,}=*$/.test(token) ||
+    /^[A-Za-z]{16,}$/.test(token) ||
     /^[0-9a-f]{16,}$/i.test(token));
 const tokensOf = (text: string): string[] =>
   text
@@ -619,6 +490,7 @@ export const looksSecret = (text: string): boolean => {
   return (
     earlierFinds(text) ||
     secretSpans(text).withheld > 0 ||
+    labelledFinds(folded(text)) ||
     credentialBeside(folded(text))
   );
 };
@@ -753,18 +625,14 @@ export const withholdOrRefuse = (
     offset = end + PART_BREAK.length;
   }
   if (looksSecret(kept.join(PART_BREAK))) return null;
-  if (
-    found.withheld > 0 &&
-    (onlySecret(kept.slice(0, 2).join("\n")) ||
-      credentialLeft(kept.join(PART_BREAK), found.keys > 0))
-  )
+  if (found.withheld > 0 && onlySecret(kept.slice(0, 2).join("\n")))
     return null;
   return { texts: kept, withheld: found.withheld };
 };
 
 /** Told to the model when a secret was withheld from what it saved. */
 export const SECRET_WITHHELD_NOTICE =
-  "A password, key or code in it was withheld; suggest the user keeps it in the app's vault.";
+  "A key or token in it was withheld; suggest the user keeps it in the app's vault.";
 
 // ── the checks ─────────────────────────────────────────────────────────────
 
@@ -823,7 +691,7 @@ export const checkDraft = (input: GateInput): Checked | string => {
   if (body.length > sizeLimit(draft.type))
     return `That is ${body.length} characters; a ${draft.type === "card" ? "project card" : "note"} holds ${sizeLimit(draft.type)}. Keep one fact per note, or split it.`;
 
-  // The user's own edit is told; a model's note keeps everything but the secret.
+  // The user's own edit is told; a model's note keeps everything but its keys.
   // The note is read whole, and as the earlier gate read it (description filled
   // in, parts joined by a line), so nothing it refused is let through.
   const asEarlier = (): string =>
