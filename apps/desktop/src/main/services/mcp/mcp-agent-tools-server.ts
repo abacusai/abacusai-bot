@@ -889,6 +889,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       nextStep: this.options.nextStep?.() === true,
       routineDelivery: this.options.routineDelivery?.() === true,
       githubFix: this.options.githubFixOffered?.() === true,
+      freePlan: this.planTier() === "free",
     };
   }
 

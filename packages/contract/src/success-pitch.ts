@@ -18,11 +18,11 @@
  * card of its own: it is the plan's row in the next step's card, under the
  * tasks (`place: "next_step"`), on the same caps and events.
  *
- * One more shares the slot and the caps: a turn where the user asked about
- * plans and the agent fetched their upgrade links (billing_plan with
- * `upgrade: true`, `plan_ask`). Asked for free alternatives near the end of
- * the grant, the model's only offer was a link in text. It is the one card
- * past half the grant, where it is mostly asked for.
+ * One more shares the slot and the caps: a turn where a free user asked for
+ * something free or cheaper (billing_plan with `ask: "cheaper"`, `plan_ask`).
+ * Asked for free alternatives near the end of the grant, the model's only
+ * offer was a link in text. It is the one card past half the grant, where it
+ * is mostly asked for.
  */
 
 /** Why the card was offered; the funnel's detail. */

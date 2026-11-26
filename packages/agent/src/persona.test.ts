@@ -156,7 +156,7 @@ describe("questions about the app itself", () => {
    */
   it("sends a free account's asks for something free or cheaper to billing_plan, never a paid one's, and never to other AI products", () => {
     const ask =
-      /When the user \(never a contact you reply to for them\) asks for something free or cheaper \(more free credits, a free or cheaper way to keep going, a free alternative to this app\), or says their credits are low or gone: call billing_plan with upgrade: true before you answer/;
+      /When the user \(never a contact you reply to for them\) asks for something free or cheaper \(more free credits, a free or cheaper way to keep going, a free alternative to this app\), or says their credits are low or gone: call billing_plan with upgrade: true and ask: "cheaper" before you answer, and answer from it, the free ways first \(a model the model menu lists as free runs without credits, and so does a model on a provider key of their own\), never hiding one/;
     const free = planFactsPrompt({ tier: "free", name: null });
     expect(free).toMatch(ask);
     expect(free).toMatch(

@@ -752,17 +752,22 @@ describe("SuccessPitchWatch: results made", () => {
 
 /**
  * Asked for free alternatives with the free credits nearly gone, the model's
- * only offer was a link in text: a turn that read the plan with its links
- * gets the plan's card, at any point of the free grant.
+ * only offer was a link in text: a turn that asked billing_plan for it
+ * (`ask: "cheaper"`) gets the plan's card, at any point of the free grant.
  */
 describe("SuccessPitchWatch: a plan ask", () => {
-  const planRead = (upgrade: boolean) =>
-    tool("agent-tools_billing_plan", { upgrade }, "The user's plan: Free.");
+  /** The free-or-cheaper ask's read, or any other read with the upgrade links. */
+  const planRead = (cheaper: boolean) =>
+    tool(
+      "agent-tools_billing_plan",
+      cheaper ? { upgrade: true, ask: "cheaper" } : { upgrade: true },
+      "The user's plan: Free."
+    );
   const NEARLY_OUT = { ...FREE, credits_used: 1964 } as AbacusAccountInfo;
   const ANSWER =
     "You have 36 of your 2,000 free credits left. Basic gives you fresh credits every month.";
 
-  it("offers the plan's card after billing_plan with upgrade: true, past half the grant and under it", async () => {
+  it("offers the plan's card after billing_plan with ask: cheaper, past half the grant and under it", async () => {
     for (const account of [NEARLY_OUT, FREE]) {
       const t = setup({ account });
       await t.run("Is there a free way to keep going?", [
@@ -788,14 +793,37 @@ describe("SuccessPitchWatch: a plan ask", () => {
     expect(t.offer()?.trigger).toBe("plan_ask");
   });
 
-  it("never without upgrade: true, on a paid or unread plan, in a chat app, or beside another card", async () => {
-    const plain = setup({ account: NEARLY_OUT });
-    await plain.run("How many credits do I have?", [
-      planRead(false),
+  it("never for another read of the plan, and those spend none of the pitch's budget", async () => {
+    // A price question, a routine the free plan refused (withUpgradeNudge) and
+    // an always-on ask all read the plan with its links; their reply carries it.
+    const t = setup({ account: NEARLY_OUT });
+    for (const ask of [
+      "How much is Basic?",
+      "Set up a routine that runs every morning",
+      "Can my WhatsApp auto-reply keep going with the PC off?",
+    ]) {
+      await t.run(ask, [planRead(false), text(ANSWER)]);
+      expect(t.offer()).toBeNull();
+    }
+    // Nor ask: "cheaper" without upgrade: true, which the plan line never asks for.
+    await t.run("Add opening hours to the contact page", [
+      tool(
+        "agent-tools_billing_plan",
+        { ask: "cheaper" },
+        "The user's plan: Free."
+      ),
+      text(LONG_REPLY),
+    ]);
+    expect(t.mark()?.offer ?? null).toBeNull();
+    // The budget is untouched: the free-or-cheaper ask still gets its card.
+    await t.run("Is there a free way to keep going?", [
+      planRead(true),
       text(ANSWER),
     ]);
-    expect(plain.offer()).toBeNull();
+    expect(t.offer()?.trigger).toBe("plan_ask");
+  });
 
+  it("never on a paid or unread plan, in a chat app, or beside another card", async () => {
     for (const account of [
       { ...NEARLY_OUT, subscription_tier: "basic" } as AbacusAccountInfo,
       null,

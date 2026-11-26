@@ -74,6 +74,8 @@ export interface HostCapabilities {
   routineDelivery?: boolean;
   /** The user allowed fixes of what the GitHub watcher found from their chats. */
   githubFix?: boolean;
+  /** The account is on the free plan: billing_plan takes its free-or-cheaper `ask`. */
+  freePlan?: boolean;
 }
 
 export interface ToolDefinition {

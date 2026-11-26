@@ -23,9 +23,10 @@
  * its big build, once per chat. A tool that failed along the way does not
  * hold either back: a long build has some.
  *
- * A turn where the user asked about plans and the agent fetched their
- * upgrade links (billing_plan with `upgrade: true`) offers the plan's card
- * ahead of all of them, in the app only, at any point of the free grant.
+ * A turn where the user asked for something free or cheaper (billing_plan
+ * with `ask: "cheaper"`, which only a free account's plan line asks for)
+ * offers the plan's card ahead of all of them, in the app only, at any
+ * point of the free grant.
  *
  * Never on a routine, a host lane, a turn the app opened itself (a bot's
  * first-run note, a routine's fire), or a turn that showed another card.
@@ -34,6 +35,7 @@
  */
 import path from "node:path";
 
+import { askedCheaper } from "@abacus-ai/agent/plan-asks";
 import { visibleUserText } from "@abacus-ai/agent/user-text";
 import type {
   DesktopEvent,
@@ -112,7 +114,7 @@ interface TurnFacts {
   files: Set<string>;
   /** Something it left on that is not a site: a server or a routine. */
   keep: Keep | null;
-  /** billing_plan went through with `upgrade: true`: the user asked about plans. */
+  /** billing_plan went through with `ask: "cheaper"`: the user asked for something free or cheaper. */
   planAsked: boolean;
 }
 
@@ -330,7 +332,9 @@ export class SuccessPitchWatch {
     facts.tools += 1;
     const input = event.tool.input;
     if (isTool(name, "billing_plan")) {
-      if (input.upgrade === true) facts.planAsked = true;
+      // Only the free-or-cheaper ask: a price question, a plan-limit refusal or
+      // an always-on ask reads the plan too, and its reply already carries it.
+      if (askedCheaper(input)) facts.planAsked = true;
       return;
     }
     if (MAIL_TOOL.test(name)) facts.lead ??= "agents";
@@ -546,9 +550,10 @@ export class SuccessPitchWatch {
   }
 
   /**
-   * Whether a plan ask in `sessionId` gets the plan's card under its reply, so
-   * billing_plan's answer leaves the plan's list to the card. The same checks
-   * the card itself makes; the caller rules out a chat app's turn.
+   * Whether a free-or-cheaper ask in `sessionId` gets the plan's card under its
+   * reply, so billing_plan's answer gives the plan in a line with its link and
+   * the card adds the list. The card's own checks; the caller rules out a chat
+   * app's turn. The reply never names the card, in case it still does not come.
    */
   planCardFor(sessionId: string): boolean {
     if (!this.deps.pitchable(sessionId)) return false;
