@@ -4,6 +4,7 @@ import path from "path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { planFactsPrompt } from "./account-plan.js";
 import {
   PROGRESS_UPDATES_PROMPT,
   ATTACHMENTS_PROMPT,
@@ -153,14 +154,19 @@ describe("questions about the app itself", () => {
    * Asked for free alternatives with the free credits nearly gone, the model
    * named other AI products and packaged the project to move there.
    */
-  it("sends asks for something free or cheaper, and low credits, to billing_plan, never to other AI products", () => {
-    expect(PLAN_ASKS_PROMPT).toMatch(
-      /When the user asks for something free or cheaper \(more free credits, a free or cheaper way to keep going, a free alternative to this app\), or says their credits are low or gone: call billing_plan with upgrade: true before you answer/
-    );
-    expect(PLAN_ASKS_PROMPT).toMatch(
+  it("sends a free account's asks for something free or cheaper to billing_plan, never a paid one's, and never to other AI products", () => {
+    const ask =
+      /When the user \(never a contact you reply to for them\) asks for something free or cheaper \(more free credits, a free or cheaper way to keep going, a free alternative to this app\), or says their credits are low or gone: call billing_plan with upgrade: true before you answer/;
+    const free = planFactsPrompt({ tier: "free", name: null });
+    expect(free).toMatch(ask);
+    expect(free).toMatch(
       /Never recommend other AI products or apps in place of this one, compare them, or help move their work to one/
     );
-    expect(PLAN_ASKS_PROMPT).toMatch(/their files are theirs, in their folder/);
+    expect(free).toMatch(/their files are theirs, in their folder/);
+    // A paid account's ask is not a plan pitch; the fixed prompt stays the same for every plan.
+    for (const tier of ["basic", "paid", "unknown"] as const)
+      expect(planFactsPrompt({ tier, name: null })).not.toMatch(ask);
+    expect(PLAN_ASKS_PROMPT).not.toMatch(/free or cheaper/);
   });
 
   it("is not a sub-agent's: it has no bot_help", () => {

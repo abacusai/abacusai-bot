@@ -42,7 +42,10 @@ import type {
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
+import {
+  creditAccountKey,
+  pendingThreshold,
+} from "@abacus-ai/contract/credit-thresholds";
 import { isDeliverableUrl } from "@abacus-ai/contract/deliverables";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import { abacusPlanTier } from "@abacus-ai/contract/models";
@@ -538,6 +541,33 @@ export class SuccessPitchWatch {
         undefined,
         this.now(),
         KEEP_RUNNING_CAPS
+      )
+    );
+  }
+
+  /**
+   * Whether a plan ask in `sessionId` gets the plan's card under its reply, so
+   * billing_plan's answer leaves the plan's list to the card. The same checks
+   * the card itself makes; the caller rules out a chat app's turn.
+   */
+  planCardFor(sessionId: string): boolean {
+    if (!this.deps.pitchable(sessionId)) return false;
+    const account = this.deps.account();
+    if (account == null || abacusPlanTier(account) !== "free") return false;
+    const key = creditAccountKey(account);
+    const prefs = this.deps.prefs();
+    if (key == null || prefs == null) return false;
+    const row = prefs.get();
+    return (
+      pendingThreshold(
+        row.creditThresholds?.[key],
+        row.dismissals.creditThresholdCards?.[key],
+        account
+      ) == null &&
+      successPitchAllowed(
+        row.dismissals.successPitchCards?.[key],
+        row.successPitch?.[key],
+        this.now()
       )
     );
   }

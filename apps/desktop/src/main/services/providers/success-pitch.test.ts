@@ -818,6 +818,39 @@ describe("SuccessPitchWatch: a plan ask", () => {
     expect(withCard.offer()).toBeNull();
   });
 
+  it("tells billing_plan whether the card will show: a free account's own chat, under the caps, with no milestone card owed", () => {
+    expect(setup({ account: NEARLY_OUT }).watch.planCardFor("s1")).toBe(true);
+    expect(setup().watch.planCardFor("s1")).toBe(true);
+    for (const account of [
+      { ...NEARLY_OUT, subscription_tier: "basic" } as AbacusAccountInfo,
+      null,
+    ])
+      expect(setup({ account }).watch.planCardFor("s1")).toBe(false);
+    expect(
+      setup({ account: NEARLY_OUT, pitchable: false }).watch.planCardFor("s1")
+    ).toBe(false);
+    const capped = setup({ account: NEARLY_OUT });
+    capped.setCard(card(1, 100 * SUCCESS_PITCH_GAP_MS - 1000));
+    expect(capped.watch.planCardFor("s1")).toBe(false);
+    const owed = setup({
+      account: NEARLY_OUT,
+      prefs: {
+        creditThresholds: {
+          [KEY]: {
+            reached: 95,
+            at: 0,
+            used: 1964,
+            granted: 2000,
+            perTask: null,
+            kind: null,
+            told: null,
+          },
+        },
+      } as Partial<PrefsRow>,
+    });
+    expect(owed.watch.planCardFor("s1")).toBe(false);
+  });
+
   it("is held to the pitch's caps, and past half the grant a result alone still offers nothing", async () => {
     const capped = setup({ account: NEARLY_OUT });
     capped.setCard(card(1, 100 * SUCCESS_PITCH_GAP_MS - 1000));

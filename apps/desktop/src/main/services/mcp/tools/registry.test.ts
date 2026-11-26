@@ -441,18 +441,29 @@ describe("billing_plan for what only a plan does", () => {
 
   /**
    * Asked for free alternatives with the free credits nearly gone, the model
-   * named other AI products and packaged the project to move there.
+   * named other AI products and packaged the project to move there. Only the
+   * free plan's line sends that ask here (account-plan.ts).
    */
-  it("owns asks for something free or cheaper in its description", () => {
-    expect(
-      String(agentTool("billing_plan")?.description).replace(/\n/g, " ")
-    ).toContain(
-      "whenever they ask for something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app); and when they run into a plan limit or run low on credits"
+  it("does not name the free-or-cheaper ask in its description: the plan line routes it, free accounts only", () => {
+    expect(String(agentTool("billing_plan")?.description)).not.toContain(
+      "free or cheaper"
     );
   });
 
-  it("a free account asking for something free or cheaper is offered Basic, priced and linked, never other AI products or a move to one", async () => {
-    const text = await answer("free");
+  const answerWith = async (current: "free" | "basic", planCard: boolean) => {
+    const { appBillingResult } = await import("./billing");
+    const result = appBillingResult(
+      {
+        ok: (text: string) => ({ content: [{ type: "text", text }] }),
+      } as never,
+      plan(current),
+      planCard
+    ) as unknown as { content: Array<{ text: string }> };
+    return result.content[0]!.text;
+  };
+
+  it("a free account asking for something free or cheaper without the card is offered Basic, priced, listed and linked, never other AI products", async () => {
+    const text = await answerWith("free", false);
     expect(text).toContain(
       "Asked for something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app), or told their credits are low or gone: that is a question about plans, not a complaint. Say where their free credits stand (a one-time grant that never renews or resets), then offer Basic: its price, every feature line it has above as a short list, then their upgrade link, in their language."
     );
@@ -462,13 +473,22 @@ describe("billing_plan for what only a plan does", () => {
     expect(text).toContain("link: https://example.test/upgrade");
   });
 
-  it("a Basic account asking for something cheaper hears its own credits and renewal, no upsell, and no other AI products either", async () => {
-    const text = await answer("basic");
+  it("with the plan's card under the reply, the reply names Basic in a line and leaves the list and the link to the card", async () => {
+    const text = await answerWith("free", true);
     expect(text).toContain(
-      "or told their credits are low or gone: that is a question about plans, not a complaint. Say where their credits stand and when their plan renews"
+      "then name Basic and its first-month price in one line, and say its full list and Upgrade are in the card under this reply; for this ask, do not list its features or give its link in the reply, and do not bring up other plans."
+    );
+    expect(text).not.toContain(
+      "then offer Basic: its price, every feature line"
     );
     expect(text).toContain("Never recommend other AI products or apps");
-    expect(text).not.toContain("then offer Basic");
+  });
+
+  it("a paid account's answer carries no free-or-cheaper line, card or not", async () => {
+    for (const planCard of [false, true])
+      expect(await answerWith("basic", planCard)).not.toContain(
+        "free or cheaper"
+      );
   });
 });
 
@@ -546,9 +566,7 @@ describe("billing_plan on the phone", () => {
     );
     expect(description).toContain("with every feature line as written");
     expect(description).toContain("Never answer these from memory.");
-    expect(description).toContain(
-      "whenever they ask for something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app)"
-    );
+    expect(description).not.toContain("free or cheaper");
 
     const line =
       "Personal agents in Abacus AI Agent on the web that run 24/7, even with your computer off: WhatsApp, Discord and Telegram auto-replies, all your routines, and everything your bot does";

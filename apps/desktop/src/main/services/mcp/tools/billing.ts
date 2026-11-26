@@ -169,21 +169,28 @@ export const publishAnswer = (billing: BillingPlan): string =>
 
 /**
  * "Is there anything free?", "free alternatives?", "my credits are almost
- * gone": an ask about plans, not a complaint, answered with the plan (on a
- * free account) or the plan's own credits (on a paid one), never with other
- * AI products or a move to one.
+ * gone", on a free account (only its plan line sends this ask here): an ask
+ * about plans, never answered with other AI products or a move to one. With
+ * the plan's card under the reply (`card`), the reply names the plan and the
+ * card carries its list and Upgrade; without it, the reply does.
  */
-export const cheaperAnswer = (billing: BillingPlan): string =>
-  `Asked for ${CHEAPER_ASK}, or told their credits are low or gone: that is a question about plans, not a complaint. ${
-    onPaidPlan(billing)
-      ? "Say where their credits stand and when their plan renews, and give the buy-credits link when there is one."
-      : `Say where their free credits stand (a one-time grant that never renews or resets), then offer ${billing.upgrades[0]?.planName ?? "the next plan"}: its price, every feature line it has above as a short list, then their upgrade link, in their language.`
-  } ${NO_OTHER_AI_PRODUCTS}`;
+export const cheaperAnswer = (
+  billing: BillingPlan,
+  card: boolean
+): string | null => {
+  if (onPaidPlan(billing)) return null;
+  const plan = billing.upgrades[0]?.planName ?? "the next plan";
+  const offer = card
+    ? `then name ${plan} and its first-month price in one line, and say its full list and Upgrade are in the card under this reply; for this ask, do not list its features or give its link in the reply, and do not bring up other plans.`
+    : `then offer ${plan}: its price, every feature line it has above as a short list, then their upgrade link, in their language.`;
+  return `Asked for ${CHEAPER_ASK}, or told their credits are low or gone: that is a question about plans, not a complaint. Say where their free credits stand (a one-time grant that never renews or resets), ${offer} ${NO_OTHER_AI_PRODUCTS}`;
+};
 
 /** What the app's model is told about the user's plan, and how to answer. */
 export function appBillingResult(
   host: Pick<ToolHost, "ok">,
-  billing: BillingPlan | null
+  billing: BillingPlan | null,
+  planCard = false
 ): ToolResult {
   if (billing == null)
     return host.ok(
@@ -225,12 +232,9 @@ export function appBillingResult(
     "never send them to account settings or a billing page instead of these links, and never say you changed their",
     "plan: they upgrade on the page. Do not bring plans up unasked in the middle of a task or after a complaint."
   );
-  lines.push(
-    "",
-    alwaysOnAnswer(billing),
-    publishAnswer(billing),
-    cheaperAnswer(billing)
-  );
+  lines.push("", alwaysOnAnswer(billing), publishAnswer(billing));
+  const cheaper = cheaperAnswer(billing, planCard);
+  if (cheaper != null) lines.push(cheaper);
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."
@@ -275,8 +279,7 @@ export const BILLING_TOOLS: ToolDefinition[] = [
       "plans cost, prices, discounts or deals, credits or balance, limits, resets or renewals, upgrading, or what a",
       `plan includes; whenever they ask for ${ALWAYS_ON_ASK.ask}, or ${PUBLISH_ASK.ask},`,
       "which a plan answers and is never impossible; when they ask to analyse a video (a reel, a Short, a YouTube or TikTok link, a video",
-      `file); whenever they ask for ${CHEAPER_ASK};`,
-      "and when they run into a plan limit or run low on credits. Pass upgrade: true whenever they might",
+      "file); and when they run into a plan limit or run low on credits. Pass upgrade: true whenever they might",
       "upgrade, so the answer carries their upgrade links.",
       "Never quote a price, discount, credit amount, limit or reset from memory: call this first, every time, and",
       "answer only from what it returns, with every feature line as written (translated, never shortened).",
@@ -291,7 +294,11 @@ export const BILLING_TOOLS: ToolDefinition[] = [
         },
       },
     },
-    run: async (host, args) =>
-      appBillingResult(host, await fetchBillingPlan(args.upgrade === true)),
+    run: async (host, args, callerSession) =>
+      appBillingResult(
+        host,
+        await fetchBillingPlan(args.upgrade === true),
+        args.upgrade === true && host.planCardFor(callerSession)
+      ),
   },
 ];

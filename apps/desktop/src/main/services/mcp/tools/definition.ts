@@ -47,6 +47,7 @@ export type ToolHost = Pick<
   | "paidFeature"
   | "botHelp"
   | "routineOfferClosed"
+  | "planCardFor"
   | "githubFix"
   | "ok"
   | "err"

@@ -60,5 +60,10 @@ export const PLAN_ASKS_PROMPT = [
   `When the user (never a contact you reply to for them) asks for ${ALWAYS_ON_ASK.ask}, or ${PUBLISH_ASK.ask}: call billing_plan with upgrade: true before you answer, and answer from it.`,
   `Say the free part first (${ALWAYS_ON_ASK.free}; ${PUBLISH_ASK.free}), then the plan that gives the rest: its price, every feature it gives as a short list, and the link, as billing_plan words them.`,
   "Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it.",
-  `When the user asks for ${CHEAPER_ASK}, or says their credits are low or gone: call billing_plan with upgrade: true before you answer, and answer from it. ${NO_OTHER_AI_PRODUCTS}`,
 ].join(" ");
+
+/**
+ * The free plan's line for an ask for something free or cheaper (account-plan.ts):
+ * only a free account's answer is the plan, so a paid one never hears it.
+ */
+export const CHEAPER_ASK_PROMPT = `When the user (never a contact you reply to for them) asks for ${CHEAPER_ASK}, or says their credits are low or gone: call billing_plan with upgrade: true before you answer, and answer from it. ${NO_OTHER_AI_PRODUCTS}`;

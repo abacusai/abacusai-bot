@@ -1963,6 +1963,10 @@ export class ServiceHost {
         routineOfferClosed(account?.credits_used, account?.credits_granted)
       );
     },
+    // The card shows only in the app, never under a chat app's turn.
+    planCard: (sessionId) =>
+      this.turnLedger.channelOf(sessionId) == null &&
+      this.successPitch.planCardFor(sessionId),
     planName: () => cachedAbacusAccount()?.plan ?? null,
     models: () => listAvailableModels(),
     bots: () =>
