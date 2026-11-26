@@ -50,6 +50,19 @@ export interface UpdateStatus {
    * restart offer steps aside until the work ends. Absent from older shells.
    */
   workRunning?: boolean;
+  /**
+   * The terminals a restart would end, which hold the silent restart: the
+   * offer names them. A program is named where the platform tells it.
+   * Absent from older shells.
+   */
+  openTerminals?: UpdateOpenTerminal[];
+}
+
+export interface UpdateOpenTerminal {
+  /** What runs in place of the shell's prompt, if anything and if known. */
+  program: string | null;
+  /** The chat it belongs to; empty for a new chat. */
+  chat: string;
 }
 
 export interface UpdateManualInstall {

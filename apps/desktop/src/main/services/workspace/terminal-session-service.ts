@@ -306,14 +306,22 @@ export class TerminalSessionService {
   }
 
   /**
-   * Whether a restart nobody asked for would stop a program: a terminal
-   * running one, or on Windows any live terminal, since there the foreground
-   * program cannot be told from the shell's prompt.
+   * Whether reloading the window would disturb a program: a terminal running
+   * one in the foreground (a full-screen app's modes live in the screen), or
+   * on Windows any live terminal, where the foreground program is unknown.
+   * Shells themselves outlive a reload.
    */
-  holdsRestart(): boolean {
+  holdsRendererSwap(): boolean {
     return process.platform === "win32"
       ? this.registry.hasLiveRuntimes()
       : this.busyTerminals().length > 0;
+  }
+
+  /** A tab's shell, or all of a conversation's, ended whatever its generation. */
+  close(key: ConversationKey, terminalId?: string): boolean {
+    return terminalId == null
+      ? this.registry.disposeScope(key)
+      : this.registry.close(key, undefined, terminalId);
   }
 
   /** A deleted chat's terminals end, and any its new-chat page left. */

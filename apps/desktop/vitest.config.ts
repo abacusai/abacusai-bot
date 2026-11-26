@@ -54,6 +54,9 @@ const CONTENDS_FOR_THE_MACHINE = [
   // (spec 00 C); under the parallel project's load one matrix exceeds ten
   // minutes, so it runs alone with the 60 s per-test budget of this project.
   "src/main/migrations/runner.crash.test.ts",
+  // Real shells through a real PTY, waiting on their output: a loaded runner
+  // stretches a shell's start past the parallel project's budget.
+  "src/main/services/workspace/terminal-pty.test.ts",
 ];
 
 export default defineConfig({

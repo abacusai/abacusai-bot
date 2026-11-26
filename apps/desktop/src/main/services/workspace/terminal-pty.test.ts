@@ -8,9 +8,23 @@ import {
   conversationKey,
   sessionConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalSessionService } from "./terminal-session-service";
+
+/** Every real PTY the service spawned, and when each one exited. */
+const spawned: Promise<void>[] = [];
+vi.mock("@lydell/node-pty", async (original) => {
+  const real = await original<typeof import("@lydell/node-pty")>();
+  return {
+    ...real,
+    spawn: (...args: Parameters<typeof real.spawn>) => {
+      const pty = real.spawn(...args);
+      spawned.push(new Promise((resolve) => pty.onExit(() => resolve())));
+      return pty;
+    },
+  };
+});
 
 const windows = process.platform === "win32";
 // The command prompt starts in a blink and prints no profile; elsewhere the
@@ -40,15 +54,37 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   terminals.dispose();
+  // Windows holds a folder a live process sits in (EBUSY): the shells end
+  // first, then it goes.
+  await until("every shell to exit after dispose", () => false, {
+    settled: Promise.all(spawned.splice(0)),
+  });
   fs.rmSync(workspace, { recursive: true, force: true, maxRetries: 5 });
 });
 
-const until = async (what: string, check: () => boolean): Promise<void> => {
-  const deadline = Date.now() + 20_000;
-  while (!check()) {
-    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${what}`);
+/**
+ * Each wait has its own deadline, short enough that a test's waits fit the
+ * serial project's 60 s, and says what it waited for and what the shell
+ * printed, so a failure on another system reads without a rerun.
+ */
+const WAIT_MS = 10_000;
+const until = async (
+  what: string,
+  check: () => boolean,
+  { settled }: { settled?: Promise<unknown> } = {}
+): Promise<void> => {
+  let done = false;
+  void settled?.then(() => (done = true));
+  const deadline = Date.now() + WAIT_MS;
+  while (!(settled ? done : check())) {
+    if (Date.now() > deadline)
+      throw new Error(
+        `Timed out after ${WAIT_MS / 1000} s waiting for ${what}. Output so far: ${JSON.stringify(
+          [...output.keys()].map((id) => [id, plain(id).slice(-400)])
+        )}`
+      );
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 };
@@ -125,10 +161,12 @@ describe("a real terminal", () => {
       type("echo shell-pid-$$");
       await until("the shell's pid", () => /shell-pid-\d+/.test(plain("busy")));
       const pid = Number(/shell-pid-(\d+)/.exec(plain("busy"))![1]);
-      expect(terminals.holdsRestart()).toBe(false);
+      expect(terminals.holdsRendererSwap()).toBe(false);
 
       type("sleep 30");
-      await until("sleep in the foreground", () => terminals.holdsRestart());
+      await until("sleep in the foreground", () =>
+        terminals.holdsRendererSwap()
+      );
       expect(terminals.busyProgram(runtime.conversationKey, "busy")).toBe(
         "sleep"
       );
@@ -143,7 +181,7 @@ describe("a real terminal", () => {
           return true;
         }
       });
-      expect(terminals.holdsRestart()).toBe(false);
+      expect(terminals.holdsRendererSwap()).toBe(false);
     }
   );
 });

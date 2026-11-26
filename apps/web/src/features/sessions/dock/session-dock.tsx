@@ -89,8 +89,7 @@ import { Skeleton } from "#renderer/ui/skeleton";
 import { useGithubIntegration, useSessionsTransport } from "../data/queries";
 import {
   clearTerminal,
-  closeTerminalView,
-  disposeConversationViews,
+  disposeTerminalView,
   getTerminalView,
   peekTerminalView,
 } from "../terminal/terminal-registry";
@@ -105,7 +104,6 @@ import {
   nextTab,
   reopenTab,
   reconcileTerminals,
-  terminalExited,
   terminalTitle,
   updateTabs,
   focusTab,
@@ -262,16 +260,8 @@ export const SessionDock = ({
     enabled: shellsWanted,
   });
   // Main's generation of each running terminal, for a tab never shown here
-  // (an agent's): closing it still closes its shell.
+  // (an agent's): closing it still asks about a program running in it.
   const [running] = useState(() => new Map<string, number>());
-  // A chat left the screen: its terminals' screens go, their shells stay.
-  useEffect(
-    () => () =>
-      disposeConversationViews(key, (id) =>
-        terminalExited(key, `terminal:${id}`)
-      ),
-    [key]
-  );
   const active =
     search.tab ?? (entries.open ? (entries.last ?? undefined) : undefined);
   const prefs = usePrefs();
@@ -349,17 +339,12 @@ export const SessionDock = ({
     if (ref === "chat") return;
     if (ref.startsWith("terminal:")) {
       const id = ref.slice(9);
-      void closeTerminalView(
-        `${key}:${id}`,
-        (generation) =>
-          transport.client.terminal.hide({
-            conversationKey: key,
-            terminalId: id,
-            generation,
-            close: true,
-          }),
-        running.get(id)
-      ).catch(() => {});
+      // Main owns the shell: it closes by its tab, whatever generation it
+      // reached (one still starting too), with or without a screen here.
+      void transport.client.terminal
+        .close({ conversationKey: key, terminalId: id })
+        .catch(() => {});
+      disposeTerminalView(`${key}:${id}`);
     }
     if (ref.startsWith("browser:")) {
       if (IS_ELECTRON)

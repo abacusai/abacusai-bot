@@ -111,6 +111,29 @@ export const terminal = {
     .output(type<number | false>()),
   hide: mutation.input(TerminalRuntimeRequestSchema).output(type<boolean>()),
   /**
+   * Ends a tab's shell, or every shell of the conversation when no tab is
+   * named, whatever generation it reached (one still starting included).
+   * Main owns the shells: closing needs no screen in the window.
+   */
+  close: mutation
+    .input(
+      v.object({
+        conversationKey: ConversationKeySchema,
+        terminalId: v.optional(TerminalId),
+      })
+    )
+    .output(type<boolean>()),
+  /**
+   * The programs running in place of a prompt in a chat's terminals, or in a
+   * whole workspace's: what deleting it would stop. Empty where the platform
+   * can't tell (Windows).
+   */
+  busyIn: query
+    .input(
+      v.object({ workspaceId: v.string(), sessionId: v.optional(v.string()) })
+    )
+    .output(type<{ program: string; chat: string }[]>()),
+  /**
    * The program running in place of the shell's prompt (a dev server, an
    * editor), or null at the prompt or where the platform can't tell. Closing
    * such a terminal asks first.

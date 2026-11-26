@@ -21,7 +21,9 @@ const fakeHost = (): HarnessHost &
   createAgentSession: vi.fn(() => ({ id: "s1" })),
   updateAgentSessionLabel: vi.fn(),
   removeAgentSession: vi.fn(),
-  terminalsHoldRestart: vi.fn(() => true),
+  hasLiveTerminalSessions: vi.fn(() => true),
+  terminalsHoldRendererSwap: vi.fn(() => false),
+  openTerminals: vi.fn(() => [{ program: null, chat: "A chat" }]),
 });
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
@@ -110,11 +112,15 @@ describe("runHarnessOp", () => {
     expect(host.removeAgentSession).toHaveBeenCalledWith("w", "s1");
   });
 
-  it("reports whether the terminals hold the silent update restart", async () => {
+  it("reports what the terminals hold: the silent restart, the renderer swap", async () => {
     const host = fakeHost();
     await expect(
       runHarnessOp(host, { op: "updates.restartGate", input: {} })
-    ).resolves.toEqual({ terminalsHoldRestart: true });
+    ).resolves.toEqual({
+      silentRestartHeld: true,
+      rendererSwapHeld: false,
+      offerNames: [{ program: null, chat: "A chat" }],
+    });
   });
 
   it("rejects unknown ops and bad shapes", async () => {

@@ -17,6 +17,7 @@ import {
 import { Button } from "#renderer/ui/button";
 
 import { useSessionsTransport } from "../data/queries";
+import { BusyTerminalsNote } from "../terminal/busy-terminals-note";
 
 export const WorkspaceMissing = ({
   workspaceId,
@@ -75,6 +76,7 @@ export const WorkspaceMissing = ({
             <AlertDialogDescription>
               {t("sessions.missing.deleteBody")}
             </AlertDialogDescription>
+            {confirm ? <BusyTerminalsNote workspaceId={workspaceId} /> : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("sessions.common.cancel")}</AlertDialogCancel>

@@ -48,6 +48,24 @@ export const installNote = (
   installError != null && installError !== t("phase5.updates.installFailed")
     ? installError
     : null;
+/**
+ * The terminals a restart would close, which keep it from happening by
+ * itself: named on the offer, so the restart is the user's call.
+ */
+export const terminalsNote = (
+  status: UpdateStatus | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string | null => {
+  const open = status?.openTerminals ?? [];
+  if (open.length === 0) return null;
+  const list = open
+    .map(({ program, chat }) => {
+      const name = program ?? t("sessions.dock.terminal");
+      return chat ? `${name} (${chat})` : name;
+    })
+    .join(", ");
+  return t("updateBanner.closesTerminals", { list });
+};
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false
@@ -515,11 +533,21 @@ export const UpdatePillButton = ({
       data-slot={compact ? "rail-update" : undefined}
       title={
         compact
-          ? t(label, { percent: Math.round(status.progress?.percent ?? 0) })
+          ? [
+              t(label, { percent: Math.round(status.progress?.percent ?? 0) }),
+              install ? terminalsNote(status, t) : null,
+            ]
+              .filter(Boolean)
+              .join("\n")
           : install
-            ? t("phase5.updates.downloaded", {
-                version: status.updateInfo?.version,
-              })
+            ? [
+                t("phase5.updates.downloaded", {
+                  version: status.updateInfo?.version,
+                }),
+                terminalsNote(status, t),
+              ]
+                .filter(Boolean)
+                .join("\n")
             : manual
               ? t("phase5.updates.manualInstall")
               : undefined

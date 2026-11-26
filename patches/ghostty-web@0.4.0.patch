@@ -1,3 +1,21 @@
+ghostty-web 0.4.0, patched where the package has no option for it. Three changes:
+1. The canvas fills its container's width (Renderer `targetWidth`), and
+   Terminal.resize/fit leave the canvas size to the renderer.
+2. Output that arrives while the view is scrolled back keeps the view where
+   it is (`writeInternal` anchors `viewportY`) instead of snapping down.
+3. No frame is drawn while the terminal is off screen: `observeVisibility`
+   watches the element with an IntersectionObserver, stops the
+   requestAnimationFrame loop when it leaves the screen and draws it whole
+   when it returns; `startRenderLoop` runs only while `onScreen` is not false.
+   0.4.0 has no public way to pause the loop, and only it knows its frames.
+
+Re-porting after a bump: the dist file is bundled, not minified (method names
+survive, locals are single letters). Find `open(`, `startRenderLoop()`,
+`dispose()`, `resize(`, `writeInternal(` in dist/ghostty-web.js, apply the
+same edits with `pnpm patch ghostty-web@<version>`, then `pnpm patch-commit`
+and copy this header back. src/main/ghostty-scrollback.browser.test.ts
+(apps/desktop) fails if any of the three stops working.
+
 diff --git a/dist/ghostty-web.js b/dist/ghostty-web.js
 index a4ca427b95288e70c782ce303013cd644893dcec..aef5e9a286cc0b96c992267c83191eb89e519aa7 100644
 --- a/dist/ghostty-web.js

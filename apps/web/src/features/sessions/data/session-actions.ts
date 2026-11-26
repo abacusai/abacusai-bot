@@ -1,9 +1,12 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import type { Db } from "#renderer/data/db";
 import { isRpcError } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
 import { UserFacingError } from "#renderer/lib/error-text";
+
+import { disposeConversationViews } from "../terminal/terminal-registry";
 export const renameSession = async (
   db: Db,
   id: string,
@@ -31,6 +34,8 @@ export const deleteSession = async (
     if (!isRpcError(error) || error.code !== "NOT_FOUND") throw error;
   }
   await db.collections.sessions.delete(row.id).isPersisted.promise;
+  // Main ended its shells; their screens here go with them.
+  disposeConversationViews(sessionConversationKey(row.workspaceId, row.id));
 };
 /**
  * Move the chat onto `model`; a pick in the model picker becomes the app's

@@ -2156,6 +2156,7 @@
       "busyTitle": "Parar {{program}}?",
       "busyBody": "{{program}} ainda está em execução neste terminal. Fechar o terminal o interrompe.",
       "busyConfirm": "Fechar terminal",
+      "deleteStops": "Ainda em execução nos terminais, e encerrado ao excluir: {{list}}.",
       "folderMissing": "A pasta deste chat não existe mais: {{path}}. Coloque-a de volta e toque em Reiniciar.",
       "folderDenied": "Você não tem permissão para abrir a pasta deste chat: {{path}}. Corrija as permissões e toque em Reiniciar.",
       "signalled": "Processo interrompido (sinal {{signal}})"
@@ -2425,6 +2426,7 @@
     }
   },
   "updateBanner": {
+    "closesTerminals": "Reiniciar fecha seus terminais abertos: {{list}}.",
     "dismiss": "Dispensar",
     "stalled": "Não foi possível reiniciar automaticamente. Feche o app e abra novamente para concluir a atualização.",
     "subtitle": "Reinicie para obter as melhorias e correções mais recentes.",

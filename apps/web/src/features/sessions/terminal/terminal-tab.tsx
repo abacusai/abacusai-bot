@@ -283,27 +283,18 @@ export const TerminalTab = ({
           setExited(true);
         } else {
           starting = true;
-          // The generation is the view's before anyone waiting on the start
-          // resumes: a tab closed meanwhile closes the shell this started.
-          const pending = transport.client.terminal
-            .start({
-              terminalId: id,
-              conversationKey: key,
-              conversation: conversationRefFromKey(key)!,
-              generation: view.generation,
-              ...(shellToStart() ? { shell: shellToStart() } : {}),
-              cols: view.term.cols || 80,
-              rows: view.term.rows || 24,
-            })
-            .then((start) => {
-              if (start.success && start.state)
-                view.generation = start.state.generation;
-              return start;
-            });
-          view.starting = pending;
-          const start = await pending;
+          const start = await transport.client.terminal.start({
+            terminalId: id,
+            conversationKey: key,
+            conversation: conversationRefFromKey(key)!,
+            generation: view.generation,
+            ...(shellToStart() ? { shell: shellToStart() } : {}),
+            cols: view.term.cols || 80,
+            rows: view.term.rows || 24,
+          });
           if (!start.success || !start.state)
             throw new Error(start.error ?? "Terminal failed");
+          view.generation = start.state.generation;
           // Kept with the tab, so after an app restart it comes back with
           // the same shell (not whatever the default is by then).
           if (start.state.shell)

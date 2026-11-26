@@ -90,3 +90,42 @@ it("a manual .deb install pill leads to the steps and is inert without them", as
   );
   expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
 });
+it("a ready update names the terminals its restart closes", async () => {
+  await initI18n();
+  const { UpdateNotice } = await import("./update-notice");
+  const ready = {
+    ...status,
+    downloaded: true,
+    updateInfo: { version: "9.9.9" },
+    openTerminals: [
+      { program: "vim", chat: "Fix the parser" },
+      { program: null, chat: "" },
+    ],
+  } as UpdateStatus;
+  const install = vi.fn(async () => undefined);
+  const view = render(
+    <I18nextProvider i18n={i18n}>
+      <UpdateNotice
+        placement="composer"
+        update={
+          {
+            status: ready,
+            phase: "downloaded",
+            clicked: false,
+            installError: null,
+            install,
+            check: vi.fn(),
+          } as never
+        }
+      />
+    </I18nextProvider>
+  );
+  expect(
+    screen.getByText(
+      "Restarting closes your open terminals: vim (Fix the parser), Terminal."
+    )
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button"));
+  expect(install).toHaveBeenCalledOnce();
+  view.unmount();
+});

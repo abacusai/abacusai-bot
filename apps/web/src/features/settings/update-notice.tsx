@@ -8,6 +8,7 @@ import { Button } from "#renderer/ui/button";
 import {
   installNote,
   ManualInstallSteps,
+  terminalsNote,
   UpdatePillButton,
   updateVisible,
   useUpdateStatus,
@@ -67,7 +68,7 @@ export const UpdateNotice = ({
             </p>
             {ready && (
               <p className="text-muted-foreground text-xs">
-                {t("updateBanner.subtitle")}
+                {terminalsNote(update.status, t) ?? t("updateBanner.subtitle")}
               </p>
             )}
             {manual != null && (

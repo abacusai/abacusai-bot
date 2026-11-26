@@ -28,7 +28,10 @@ import {
   panelTabsStore,
   promoteTabs,
 } from "../dock/panel-tabs-store";
-import { closeTerminalView } from "../terminal/terminal-registry";
+import {
+  disposeConversationViews,
+  moveConversationViews,
+} from "../terminal/terminal-registry";
 import {
   hasDraftContent,
   saveSessionDraft,
@@ -89,19 +92,19 @@ const draftTerminals = (draftId: string) =>
           .map((tab) => ({ key: key as ConversationKey, ref: tab.ref }))
       : [];
   });
-/** Ends a left draft's shells: nothing can show that draft again. */
+/**
+ * Ends a left draft's shells: nothing can show that draft again. By its key,
+ * in main, which owns them: a tab whose screen is gone still has its shell.
+ */
 const closeTerminals = (terminals: { key: ConversationKey; ref: string }[]) => {
-  for (const { key, ref } of terminals) {
-    const terminalId = ref.slice("terminal:".length);
-    closeTab(key, ref);
-    void closeTerminalView(`${key}:${terminalId}`, async (generation) =>
-      (await getTransport()).client.terminal.hide({
-        conversationKey: key,
-        terminalId,
-        generation,
-        close: true,
-      })
-    ).catch(() => {});
+  for (const { key, ref } of terminals) closeTab(key, ref);
+  for (const key of new Set(terminals.map(({ key }) => key))) {
+    disposeConversationViews(key);
+    void getTransport()
+      .then((transport) =>
+        transport.client.terminal.close({ conversationKey: key })
+      )
+      .catch(() => {});
   }
 };
 
@@ -299,11 +302,15 @@ export const startSession = async (
       // The dock's tabs follow the shells to the chat as the app switches to
       // it: moved earlier, a slow handoff leaves the new-chat page empty.
       const { workspaceId, stage } = store.state;
-      if (workspaceId && (stage === "checkout-ready" || stage === "handed-off"))
-        promoteTabs(
-          draftConversationKey(workspaceId, sessionId),
-          sessionConversationKey(workspaceId, sessionId)
-        );
+      if (
+        workspaceId &&
+        (stage === "checkout-ready" || stage === "handed-off")
+      ) {
+        const from = draftConversationKey(workspaceId, sessionId);
+        const to = sessionConversationKey(workspaceId, sessionId);
+        promoteTabs(from, to);
+        moveConversationViews(from, to);
+      }
     }
     if (!managed || startDraftStore.state.id === sessionId)
       await deps.navigate(sessionId);

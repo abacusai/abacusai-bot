@@ -2156,6 +2156,7 @@
       "busyTitle": "¿Detener {{program}}?",
       "busyBody": "{{program}} sigue en ejecución en este terminal. Si cierras el terminal, se detendrá.",
       "busyConfirm": "Cerrar el terminal",
+      "deleteStops": "Aún se ejecuta en sus terminales y se detendrá al eliminar: {{list}}.",
       "folderMissing": "La carpeta de este chat ya no está: {{path}}. Vuelve a ponerla y luego pulsa Reiniciar.",
       "folderDenied": "No tienes permiso para abrir la carpeta de este chat: {{path}}. Corrige sus permisos y luego pulsa Reiniciar.",
       "signalled": "Proceso detenido (señal {{signal}})"
@@ -2425,6 +2426,7 @@
     }
   },
   "updateBanner": {
+    "closesTerminals": "Al reiniciar se cerrarán tus terminales abiertos: {{list}}.",
     "dismiss": "Descartar",
     "stalled": "No se pudo reiniciar automáticamente: cierra la app y vuelve a abrirla para completar la actualización.",
     "subtitle": "Reinicie para obtener las últimas mejoras y correcciones.",

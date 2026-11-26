@@ -112,10 +112,9 @@ it("a new chat's terminal opened while it hands off stays the chat's tab", async
   expect(panelTabsStore.state[chat]!.tabs.map((tab) => tab.ref)).toEqual([
     "terminal:late",
   ]);
+  // The start settles in the new-chat page's tab: the mark goes from the
+  // chat, where the tab now lives, so main's word decides again.
   started();
-  await Promise.resolve();
-  // The chat's page shows it and its start settles there.
-  retainTerminalStart(chat, "late")();
   await Promise.resolve();
   reconcileTerminals(chat, []);
   expect(panelTabsStore.state[chat]!.tabs).toEqual([]);

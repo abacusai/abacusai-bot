@@ -388,12 +388,14 @@ setBringToFront(() => {
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running. A
-// program in a terminal (a dev server, an editor) never ends by itself, so it
-// holds only the restart nobody asked for; a shell at its prompt holds none.
+// shell never ends by itself and a restart ends it with all it holds (jobs,
+// scrollback, folder, environment), so any live one holds the restart nobody
+// asked for; the update offer names them and the user restarts when ready.
 const updateService = new UpdateService({
   isSafeToRestart: ({ requested }) =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
-    (requested || !workspaceServiceHost.terminalsHoldRestart()),
+    (requested || !workspaceServiceHost.hasLiveTerminalSessions()),
+  openTerminals: () => workspaceServiceHost.openTerminals(),
 });
 /** Set by the app's own Restart: the quit relaunches once it goes through. */
 let relaunchAfterQuit = false;
@@ -476,7 +478,7 @@ const rendererSwaps = new RendererSwapScheduler({
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
-    workspaceServiceHost.terminalsHoldRestart() ||
+    workspaceServiceHost.terminalsHoldRendererSwap() ||
     Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.

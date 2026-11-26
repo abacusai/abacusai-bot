@@ -314,7 +314,7 @@ describe("conversation terminal session service", () => {
   );
 
   it.skipIf(process.platform === "win32")(
-    "holds the silent restart for a program, not for a shell at its prompt",
+    "holds a window reload for a program, not for a shell at its prompt",
     async () => {
       const terminals = service();
       const draft = draftRequest();
@@ -322,19 +322,19 @@ describe("conversation terminal session service", () => {
       const server = fakePty("python3");
       ptySpawn.mockReturnValueOnce(idle).mockReturnValueOnce(server);
       await terminals.startSession({ ...draft, terminalId: "idle" });
-      expect(terminals.holdsRestart()).toBe(false);
+      expect(terminals.holdsRendererSwap()).toBe(false);
       const { state } = await terminals.startSession({
         ...draft,
         terminalId: "server",
       });
-      expect(terminals.holdsRestart()).toBe(true);
+      expect(terminals.holdsRendererSwap()).toBe(true);
       terminals.hideSession({
         conversationKey: draft.conversationKey,
         terminalId: "server",
         generation: state.generation,
         close: true,
       });
-      expect(terminals.holdsRestart()).toBe(false);
+      expect(terminals.holdsRendererSwap()).toBe(false);
       expect(terminals.hasLiveSessions()).toBe(true);
     }
   );
@@ -367,6 +367,23 @@ describe("conversation terminal session service", () => {
 
     terminals.disposeWorkspace("workspace-1");
     expect(other.kill).toHaveBeenCalledOnce();
+    expect(terminals.hasLiveSessions()).toBe(false);
+  });
+
+  it("closes by key, a tab's shell or all of a conversation's, with no generation", async () => {
+    const terminals = service();
+    const ptys = [fakePty(), fakePty(), fakePty()];
+    for (const pty of ptys) ptySpawn.mockReturnValueOnce(pty);
+    const draft = draftRequest();
+    await terminals.startSession({ ...draft, terminalId: "a" });
+    await terminals.startSession({ ...draft, terminalId: "b" });
+    await terminals.startSession({ ...draft, terminalId: "c" });
+    expect(terminals.close(draft.conversationKey, "a")).toBe(true);
+    expect(ptys[0]!.kill).toHaveBeenCalledOnce();
+    expect(ptys[1]!.kill).not.toHaveBeenCalled();
+    expect(terminals.close(draft.conversationKey)).toBe(true);
+    expect(ptys[1]!.kill).toHaveBeenCalledOnce();
+    expect(ptys[2]!.kill).toHaveBeenCalledOnce();
     expect(terminals.hasLiveSessions()).toBe(false);
   });
 });

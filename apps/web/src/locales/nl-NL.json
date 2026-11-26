@@ -2156,6 +2156,7 @@
       "busyTitle": "{{program}} stoppen?",
       "busyBody": "{{program}} draait nog in deze terminal. Als je de terminal sluit, stopt het.",
       "busyConfirm": "Terminal sluiten",
+      "deleteStops": "Draait nog in de terminals en stopt bij verwijderen: {{list}}.",
       "folderMissing": "De map van deze chat is er niet meer: {{path}}. Zet hem terug en druk dan op Herstarten.",
       "folderDenied": "Je hebt geen toestemming om de map van deze chat te openen: {{path}}. Pas de rechten aan en druk dan op Herstarten.",
       "signalled": "Proces gestopt (signaal {{signal}})"
@@ -2425,6 +2426,7 @@
     }
   },
   "updateBanner": {
+    "closesTerminals": "Opnieuw starten sluit je open terminals: {{list}}.",
     "dismiss": "Sluiten",
     "stalled": "Automatisch herstarten is mislukt. Sluit de app en open hem opnieuw om de update te voltooien.",
     "subtitle": "Start opnieuw voor de nieuwste verbeteringen en oplossingen.",

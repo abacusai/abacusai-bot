@@ -4262,11 +4262,64 @@ export class ServiceHost {
   }
 
   /**
-   * Whether a terminal runs a program a restart nobody asked for would stop.
-   * A shell at its prompt does not hold one: it comes back with its tab.
+   * True while any terminal PTY is alive: a restart ends every shell with its
+   * jobs, scrollback, folder and environment, so only the user takes one.
    */
-  terminalsHoldRestart(): boolean {
-    return this.terminalSessionService.holdsRestart();
+  hasLiveTerminalSessions(): boolean {
+    return this.terminalSessionService.hasLiveSessions();
+  }
+
+  /** Whether a window reload would disturb a program running in a terminal. */
+  terminalsHoldRendererSwap(): boolean {
+    return this.terminalSessionService.holdsRendererSwap();
+  }
+
+  /** Main owns the shells: a tab, or a whole conversation, closes by key. */
+  closeTerminal(request: {
+    conversationKey: ConversationKey;
+    terminalId?: string;
+  }): boolean {
+    return this.terminalSessionService.close(
+      request.conversationKey,
+      request.terminalId
+    );
+  }
+
+  /** Programs a delete would stop: a chat's terminals, or a workspace's. */
+  busyTerminalsIn(scope: {
+    workspaceId: string;
+    sessionId?: string;
+  }): { program: string; chat: string }[] {
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return this.terminalSessionService
+      .busyTerminals()
+      .flatMap(({ key, program }) => {
+        const ref = conversationRefFromKey(key);
+        if (ref == null || ref.workspaceId !== scope.workspaceId) return [];
+        const sessionId = ref.kind === "session" ? ref.sessionId : ref.draftId;
+        if (scope.sessionId != null && sessionId !== scope.sessionId) return [];
+        const chat =
+          sessionId == null ? "" : (labels.get(sessionId)?.trim() ?? "");
+        return [{ program, chat }];
+      });
+  }
+
+  /** What an update restart would end, for the offer that names it. */
+  openTerminals(): { program: string | null; chat: string }[] {
+    const labels = new Map(
+      this.listAllAgentSessions().map((session) => [session.id, session.label])
+    );
+    return this.terminalSessionService
+      .listStates()
+      .map(({ conversationKey: key, terminalId, conversation }) => ({
+        program: this.terminalSessionService.busyProgram(key, terminalId),
+        chat:
+          conversation.kind === "session"
+            ? (labels.get(conversation.sessionId)?.trim() ?? "")
+            : "",
+      }));
   }
 
   /** Every agent process this run, as the log dump wants it. */
@@ -4780,9 +4833,6 @@ export class ServiceHost {
       return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
-    // Its shells end at the first delete, with its agents: nothing shows a
-    // deleted workspace's terminals.
-    this.terminalSessionService.disposeWorkspace(workspaceId);
     if (workspace.status !== "deleted") {
       for (const session of this.agentSessionManagerService.list(workspaceId)) {
         this.agentManagerService.stopSession(workspaceId, session.id);
@@ -4793,6 +4843,9 @@ export class ServiceHost {
       return { success: true };
     }
 
+    // Its shells outlive the tombstone, which can be restored, and end here
+    // with its chats; the confirmation named any program they ran.
+    this.terminalSessionService.disposeWorkspace(workspaceId);
     // Read while its chats are still there; removed once they are gone.
     const checkouts =
       this.agentSessionManagerService.handOffCheckoutsIn(workspaceId);

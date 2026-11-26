@@ -116,9 +116,14 @@ export const retainTerminalStart = (key: string, id: string): (() => void) => {
     released = true;
     entry.owners--;
     queueMicrotask(() => {
-      if (entry.owners || pending?.get(ref) !== entry) return;
-      pending.delete(ref);
-      if (!pending.size) pendingTerminalStarts.delete(key);
+      if (entry.owners) return;
+      // Wherever the tab lives now: a new chat's tab moves to its chat
+      // (promoteTabs) while its start is on its way.
+      for (const [owner, starts] of pendingTerminalStarts)
+        if (starts.get(ref) === entry) {
+          starts.delete(ref);
+          if (!starts.size) pendingTerminalStarts.delete(owner);
+        }
     });
   };
 };

@@ -2156,6 +2156,7 @@
       "busyTitle": "要停止 {{program}} 嗎？",
       "busyBody": "{{program}} 仍在此終端機中執行。關閉終端機會停止它。",
       "busyConfirm": "關閉終端機",
+      "deleteStops": "仍在其終端機中執行，刪除後會停止：{{list}}。",
       "folderMissing": "此聊天的資料夾已不存在：{{path}}。請放回原處，然後按「重新啟動」。",
       "folderDenied": "你沒有開啟此聊天資料夾的權限：{{path}}。請修正權限，然後按「重新啟動」。",
       "signalled": "程序已停止（訊號 {{signal}}）"
@@ -2425,6 +2426,7 @@
     }
   },
   "updateBanner": {
+    "closesTerminals": "重新啟動會關閉開啟中的終端機：{{list}}。",
     "dismiss": "關閉",
     "stalled": "無法自動重新啟動。請結束並重新開啟應用程式以完成更新。",
     "subtitle": "重新啟動就能取得最新的改善和修正。",
