@@ -113,3 +113,9 @@ export interface TerminalInUse {
   /** The chat it belongs to; empty for a new chat. */
   chat: string;
 }
+
+/**
+ * A start's error for a screen whose shell ended while it was away (its
+ * workspace deleted and restored): not a failure, the tab starts a new one.
+ */
+export const TERMINAL_GENERATION_STALE = "generation-stale";

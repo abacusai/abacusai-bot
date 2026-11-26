@@ -2161,6 +2161,7 @@
       "deleteWorkspaceStops": "Al eliminar este espacio de trabajo se detendrá lo que se ejecuta en sus terminales: {{list}}.",
       "deleteWorkspaceCloses": "Al eliminar este espacio de trabajo se cerrarán sus terminales abiertas: {{list}}.",
       "andMore": "{{list}} y {{count}} más",
+      "inChat": "{{terminal}} en {{chat}}",
       "folderMissing": "La carpeta de este chat ya no está: {{path}}. Vuelve a ponerla y luego pulsa Reiniciar.",
       "folderDenied": "No tienes permiso para abrir la carpeta de este chat: {{path}}. Corrige sus permisos y luego pulsa Reiniciar.",
       "signalled": "Proceso detenido (señal {{signal}})"
@@ -2430,7 +2431,7 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Al reiniciar se cerrarán tus terminales abiertas: {{list}}.",
+    "closesTerminals": "Al reiniciar se cierra {{list}}.",
     "dismiss": "Descartar",
     "stalled": "No se pudo reiniciar automáticamente: cierra la app y vuelve a abrirla para completar la actualización.",
     "subtitle": "Reinicie para obtener las últimas mejoras y correcciones.",

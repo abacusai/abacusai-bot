@@ -20,7 +20,10 @@ import {
   type ConversationKey,
   type ConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
-import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
+import {
+  TERMINAL_GENERATION_STALE,
+  type TerminalShellId,
+} from "@abacus-ai/contract/terminal-shells";
 
 import {
   ConversationTerminalRuntimeRegistry,
@@ -358,9 +361,8 @@ export class TerminalSessionService {
               request.generation,
               terminalId
             );
-      if (request.generation != null && attachment == null) {
-        throw new Error("Terminal generation is stale.");
-      }
+      if (request.generation != null && attachment == null)
+        throw new Error(TERMINAL_GENERATION_STALE);
       let created = false;
       if (attachment == null) {
         await learnTerminalShell(requestedShell(request.shell));
@@ -405,7 +407,8 @@ export class TerminalSessionService {
         success: false,
         error:
           message.startsWith(FOLDER_MISSING) ||
-          message.startsWith(FOLDER_DENIED)
+          message.startsWith(FOLDER_DENIED) ||
+          message === TERMINAL_GENERATION_STALE
             ? message
             : `Terminal backend unavailable: ${message}`,
         created: false,

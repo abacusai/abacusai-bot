@@ -2161,6 +2161,7 @@
       "deleteWorkspaceStops": "Eliminando questo spazio di lavoro si interrompe ciò che è in esecuzione nei suoi terminali: {{list}}.",
       "deleteWorkspaceCloses": "Eliminando questo spazio di lavoro si chiudono i suoi terminali aperti: {{list}}.",
       "andMore": "{{list}} e altri {{count}}",
+      "inChat": "{{terminal}} in {{chat}}",
       "folderMissing": "La cartella di questa chat non c’è più: {{path}}. Rimettila al suo posto, poi premi Riavvia.",
       "folderDenied": "Non hai il permesso di aprire la cartella di questa chat: {{path}}. Correggi i permessi, poi premi Riavvia.",
       "signalled": "Processo fermato (segnale {{signal}})"
@@ -2430,7 +2431,7 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Il riavvio chiuderà i terminali aperti: {{list}}.",
+    "closesTerminals": "Il riavvio chiude {{list}}.",
     "dismiss": "Ignora",
     "stalled": "Riavvio automatico non riuscito: chiudi l'app e riaprila per completare l'aggiornamento.",
     "subtitle": "Riavviare per ottenere gli ultimi miglioramenti e correzioni.",

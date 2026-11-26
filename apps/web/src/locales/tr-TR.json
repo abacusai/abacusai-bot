@@ -2161,6 +2161,7 @@
       "deleteWorkspaceStops": "Bu çalışma alanını silmek, terminallerinde çalışanları durdurur: {{list}}.",
       "deleteWorkspaceCloses": "Bu çalışma alanını silmek, açık terminallerini kapatır: {{list}}.",
       "andMore": "{{list}} ve {{count}} tane daha",
+      "inChat": "{{chat}} içindeki {{terminal}}",
       "folderMissing": "Bu sohbetin klasörü artık yok: {{path}}. Geri koyun, ardından Yeniden başlat’a basın.",
       "folderDenied": "Bu sohbetin klasörünü açma izniniz yok: {{path}}. İzinlerini düzeltin, ardından Yeniden başlat’a basın.",
       "signalled": "İşlem durduruldu (sinyal {{signal}})"
@@ -2430,7 +2431,7 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Yeniden başlatmak açık terminallerinizi kapatır: {{list}}.",
+    "closesTerminals": "Yeniden başlatma şunları kapatır: {{list}}.",
     "dismiss": "Kapat",
     "stalled": "Otomatik olarak yeniden başlatılamadı. Güncellemeyi tamamlamak için uygulamadan çıkıp yeniden aç.",
     "subtitle": "En son iyileştirmeleri ve düzeltmeleri almak için yeniden başlat.",

@@ -60,7 +60,7 @@ it("names what deleting a session stops, or the terminals it closes where progra
   const workspace = show({ workspaceId: "w" });
   expect(
     await screen.findByText(
-      "Deleting this workspace closes its open terminals: Dev server (Fix it)."
+      "Deleting this workspace closes its open terminals: Dev server in Fix it."
     )
   ).toBeTruthy();
   workspace.unmount();

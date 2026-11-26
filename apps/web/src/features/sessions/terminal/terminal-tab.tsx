@@ -5,6 +5,7 @@ import {
   sessionConversationRef,
   type ConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
+import { TERMINAL_GENERATION_STALE } from "@abacus-ai/contract/terminal-shells";
 import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
 import { ClipboardPaste, Copy, Eraser, RotateCcw } from "lucide-react";
@@ -283,15 +284,26 @@ export const TerminalTab = ({
           setExited(true);
         } else {
           starting = true;
-          const start = await transport.client.terminal.start({
-            terminalId: id,
-            conversationKey: key,
-            conversation: conversationRefFromKey(key)!,
-            generation: view.generation,
-            ...(shellToStart() ? { shell: shellToStart() } : {}),
-            cols: view.term.cols || 80,
-            rows: view.term.rows || 24,
-          });
+          const startShell = () =>
+            transport.client.terminal.start({
+              terminalId: id,
+              conversationKey: key,
+              conversation: conversationRefFromKey(key)!,
+              generation: view.generation,
+              ...(shellToStart() ? { shell: shellToStart() } : {}),
+              cols: view.term.cols || 80,
+              rows: view.term.rows || 24,
+            });
+          let start = await startShell();
+          // Its shell ended while this screen was away (its workspace was
+          // deleted, then restored): a new one, as Restart starts, under the
+          // old output. Expected, so nothing is reported.
+          if (start.error === TERMINAL_GENERATION_STALE) {
+            view.generation = null;
+            view.offset = undefined;
+            view.term.write(`\r${"\n".repeat(view.term.rows)}\x1b[H\x1b[?25h`);
+            start = await startShell();
+          }
           if (!start.success || !start.state)
             throw new Error(start.error ?? "Terminal failed");
           view.generation = start.state.generation;

@@ -2161,6 +2161,7 @@
       "deleteWorkspaceStops": "Wenn Sie diesen Arbeitsbereich löschen, wird beendet, was in seinen Terminals läuft: {{list}}.",
       "deleteWorkspaceCloses": "Wenn Sie diesen Arbeitsbereich löschen, werden seine offenen Terminals geschlossen: {{list}}.",
       "andMore": "{{list}} und noch {{count}}",
+      "inChat": "{{terminal}} in {{chat}}",
       "folderMissing": "Der Ordner dieses Chats ist nicht mehr da: {{path}}. Stell ihn wieder her und drück dann auf „Neu starten“.",
       "folderDenied": "Du hast keine Berechtigung, den Ordner dieses Chats zu öffnen: {{path}}. Korrigiere die Berechtigungen und drück dann auf „Neu starten“.",
       "signalled": "Prozess gestoppt (Signal {{signal}})"
@@ -2430,7 +2431,7 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Ein Neustart schließt Ihre offenen Terminals: {{list}}.",
+    "closesTerminals": "Ein Neustart schließt {{list}}.",
     "dismiss": "Entlassen",
     "stalled": "Automatischer Neustart nicht möglich. Beenden Sie die App und öffnen Sie sie erneut, um das Update abzuschließen.",
     "subtitle": "Starten Sie neu, um die neuesten Verbesserungen und Korrekturen zu erhalten.",

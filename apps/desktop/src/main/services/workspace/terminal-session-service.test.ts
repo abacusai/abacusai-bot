@@ -397,4 +397,16 @@ describe("conversation terminal session service", () => {
     expect(ptys[2]!.kill).toHaveBeenCalledOnce();
     expect(terminals.hasLiveSessions()).toBe(false);
   });
+
+  it("answers a start for a shell that already ended with a quiet code, not a failure", async () => {
+    const terminals = service();
+    const draft = draftRequest();
+    const { state } = await terminals.startSession(draft);
+    terminals.close(draft.conversationKey);
+    const stale = await terminals.startSession({
+      ...draft,
+      generation: state.generation,
+    });
+    expect(stale).toMatchObject({ success: false, error: "generation-stale" });
+  });
 });

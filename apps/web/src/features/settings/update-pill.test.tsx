@@ -90,41 +90,22 @@ it("a manual .deb install pill leads to the steps and is inert without them", as
   );
   expect(screen.getByRole("button").hasAttribute("disabled")).toBe(true);
 });
-it("a ready update names the terminals its restart closes, by their tabs, briefly", async () => {
+it("a ready update names a terminal by its tab and chat, a running program first, then counts the rest", async () => {
   await initI18n();
   const { UpdateNotice } = await import("./update-notice");
   const { openTab } = await import("../sessions/dock/panel-tabs-store");
-  const chat = '["conversation",1,"w","session","a"]';
-  const other = '["conversation",1,"w","session","b"]';
-  openTab(chat, { ref: "terminal:t1", title: "Terminal" });
-  openTab(chat, { ref: "terminal:t2", title: "Dev server" });
-  openTab(chat, { ref: "terminal:t3", title: "Terminal 3" });
-  openTab(other, { ref: "terminal:t4", title: "Terminal" });
-  openTab(other, { ref: "terminal:t5", title: "Logs" });
-  const open = (
-    conversationKey: string,
-    terminalId: string,
-    program: string | null = null
-  ) => ({
-    conversationKey,
-    terminalId,
-    program,
-    chat: "",
+  // Four chats, one terminal each, all named "Terminal" in their own chat.
+  const chats = [
+    ["b", "Write release notes", null],
+    ["a", "Fix the login page", "sleep"],
+    ["c", "Plan the launch", null],
+    ["d", "Tidy the README", null],
+  ] as const;
+  const openTerminals = chats.map(([id, chat, program]) => {
+    const conversationKey = `["conversation",1,"w","session","${id}"]`;
+    openTab(conversationKey, { ref: `terminal:t-${id}`, title: "Terminal" });
+    return { conversationKey, terminalId: `t-${id}`, program, chat };
   });
-  const ready = {
-    ...status,
-    downloaded: true,
-    updateInfo: { version: "9.9.9" },
-    openTerminals: [
-      open(chat, "t1"),
-      open(chat, "t2", "npm"),
-      open(chat, "t3"),
-      // The same name in another chat is said once.
-      open(other, "t4"),
-      open(other, "t5"),
-      open(other, "t6"),
-    ],
-  } as UpdateStatus;
   const install = vi.fn(async () => undefined);
   const view = render(
     <I18nextProvider i18n={i18n}>
@@ -132,7 +113,12 @@ it("a ready update names the terminals its restart closes, by their tabs, briefl
         placement="composer"
         update={
           {
-            status: ready,
+            status: {
+              ...status,
+              downloaded: true,
+              updateInfo: { version: "9.9.9" },
+              openTerminals,
+            } as UpdateStatus,
             phase: "downloaded",
             clicked: false,
             installError: null,
@@ -143,9 +129,10 @@ it("a ready update names the terminals its restart closes, by their tabs, briefl
       />
     </I18nextProvider>
   );
+  // Four shells, four counted: none folded into another.
   expect(
     screen.getByText(
-      "Restarting closes your open terminals: Terminal, Dev server (npm), Terminal 3 and 1 more."
+      "Restarting closes Terminal (sleep) in Fix the login page and 3 more."
     )
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button"));

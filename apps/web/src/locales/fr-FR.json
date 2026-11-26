@@ -2161,6 +2161,7 @@
       "deleteWorkspaceStops": "Supprimer cet espace de travail arrête ce qui s'exécute dans ses terminaux : {{list}}.",
       "deleteWorkspaceCloses": "Supprimer cet espace de travail ferme ses terminaux ouverts : {{list}}.",
       "andMore": "{{list}} et {{count}} de plus",
+      "inChat": "{{terminal}} dans {{chat}}",
       "folderMissing": "Le dossier de cette discussion n’existe plus : {{path}}. Remettez-le en place, puis appuyez sur Redémarrer.",
       "folderDenied": "Vous n’avez pas la permission d’ouvrir le dossier de cette discussion : {{path}}. Corrigez ses droits, puis appuyez sur Redémarrer.",
       "signalled": "Processus arrêté (signal {{signal}})"
@@ -2430,7 +2431,7 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "Le redémarrage fermera vos terminaux ouverts : {{list}}.",
+    "closesTerminals": "Le redémarrage ferme {{list}}.",
     "dismiss": "Rejeter",
     "stalled": "Redémarrage automatique impossible. Quittez l'application et rouvrez-la pour terminer la mise à jour.",
     "subtitle": "Relancez pour obtenir les dernières améliorations et correctifs.",

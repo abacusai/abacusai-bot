@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { useSessionsTransport } from "../data/queries";
-import { terminalList, terminalName } from "./terminal-names";
+import { terminalInChat, terminalList, terminalName } from "./terminal-names";
 
 /**
  * In a delete's confirmation: what the delete stops in its terminals (a dev
@@ -28,9 +28,7 @@ export const BusyTerminalsNote = ({
   const terminals = busy.data ?? [];
   const list = terminalList(terminals, t, (terminal) => {
     const name = terminal.program ?? terminalName(terminal, t);
-    return sessionId == null && terminal.chat
-      ? `${name} (${terminal.chat})`
-      : name;
+    return sessionId == null ? terminalInChat(terminal, name, t) : name;
   });
   if (list == null) return null;
   // Programs named where known; otherwise the terminals themselves.

@@ -37,6 +37,7 @@ import {
 import { Button } from "#renderer/ui/button";
 
 import {
+  terminalInChat,
   terminalList,
   terminalName,
 } from "../sessions/terminal/terminal-names";
@@ -60,10 +61,24 @@ export const terminalsNote = (
   status: UpdateStatus | undefined,
   t: (key: string, options?: Record<string, unknown>) => string
 ): string | null => {
-  const list = terminalList(status?.openTerminals ?? [], t, (terminal) => {
-    const name = terminalName(terminal, t);
-    return terminal.program ? `${name} (${terminal.program})` : name;
-  });
+  // One named (a running program first), the rest counted: with its chat's
+  // name that stays within two lines beside the Restart button.
+  const open = [...(status?.openTerminals ?? [])].sort(
+    (a, b) => Number(b.program != null) - Number(a.program != null)
+  );
+  const list = terminalList(
+    open,
+    t,
+    (terminal) => {
+      const name = terminalName(terminal, t);
+      return terminalInChat(
+        terminal,
+        terminal.program ? `${name} (${terminal.program})` : name,
+        t
+      );
+    },
+    1
+  );
   return list == null ? null : t("updateBanner.closesTerminals", { list });
 };
 export const updatePhase = (

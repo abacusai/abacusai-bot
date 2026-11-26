@@ -113,3 +113,26 @@ it("starts no shell and makes no screen for a tab until it is first shown", asyn
   expect(mocks.start).toHaveBeenCalledOnce();
   mounted.unmount();
 });
+
+it("a shell that ended while its screen was away starts again, with nothing reported", async () => {
+  mocks.get.mockReset();
+  mocks.start.mockReset();
+  mocks.peek.mockReset();
+  const view = {
+    ...makeView(),
+    generation: 4,
+    offset: 120,
+    term: { ...makeView().term, write: vi.fn() },
+  };
+  mocks.get.mockResolvedValue(view);
+  mocks.start
+    .mockResolvedValueOnce({ success: false, error: "generation-stale" })
+    .mockReturnValueOnce(new Promise(() => {}));
+  const mounted = render(<TerminalTab {...props} />);
+  await waitFor(() => expect(mocks.start).toHaveBeenCalledTimes(2));
+  expect(mocks.start.mock.calls[0]![0]).toMatchObject({ generation: 4 });
+  expect(mocks.start.mock.calls[1]![0]).toMatchObject({ generation: null });
+  expect(view.offset).toBeUndefined();
+  expect(mounted.queryByRole("alert")).toBeNull();
+  mounted.unmount();
+});

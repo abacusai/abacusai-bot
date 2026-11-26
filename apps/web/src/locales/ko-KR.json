@@ -2161,6 +2161,7 @@
       "deleteWorkspaceStops": "이 작업 공간을 삭제하면 터미널에서 실행 중인 항목이 중지됩니다: {{list}}.",
       "deleteWorkspaceCloses": "이 작업 공간을 삭제하면 열려 있는 터미널이 닫힙니다: {{list}}.",
       "andMore": "{{list}} 외 {{count}}개",
+      "inChat": "{{chat}}의 {{terminal}}",
       "folderMissing": "이 채팅의 폴더가 더 이상 없습니다: {{path}}. 폴더를 되돌린 뒤 재시작을 누르세요.",
       "folderDenied": "이 채팅의 폴더를 열 권한이 없습니다: {{path}}. 권한을 고친 뒤 재시작을 누르세요.",
       "signalled": "프로세스가 중지됨 (시그널 {{signal}})"
@@ -2430,7 +2431,7 @@
     }
   },
   "updateBanner": {
-    "closesTerminals": "다시 시작하면 열려 있는 터미널이 닫힙니다: {{list}}.",
+    "closesTerminals": "다시 시작하면 닫힙니다: {{list}}.",
     "dismiss": "닫기",
     "stalled": "자동으로 다시 시작하지 못했습니다. 업데이트를 완료하려면 앱을 종료한 후 다시 여세요.",
     "subtitle": "최신 개선 사항과 수정 사항을 얻으려면 다시 시작하세요.",
