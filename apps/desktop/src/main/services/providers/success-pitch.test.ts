@@ -750,6 +750,147 @@ describe("SuccessPitchWatch: results made", () => {
   });
 });
 
+/**
+ * Asked for free alternatives with the free credits nearly gone, the model's
+ * only offer was a link in text: a turn that asked billing_plan for it
+ * (`ask: "cheaper"`) gets the plan's card, at any point of the free grant.
+ */
+describe("SuccessPitchWatch: a plan ask", () => {
+  /** The free-or-cheaper ask's read, or any other read with the upgrade links. */
+  const planRead = (cheaper: boolean) =>
+    tool(
+      "agent-tools_billing_plan",
+      cheaper ? { upgrade: true, ask: "cheaper" } : { upgrade: true },
+      "The user's plan: Free."
+    );
+  const NEARLY_OUT = { ...FREE, credits_used: 1964 } as AbacusAccountInfo;
+  const ANSWER =
+    "You have 36 of your 2,000 free credits left. Basic gives you fresh credits every month.";
+
+  it("offers the plan's card after billing_plan with ask: cheaper, past half the grant and under it", async () => {
+    for (const account of [NEARLY_OUT, FREE]) {
+      const t = setup({ account });
+      await t.run("Is there a free way to keep going?", [
+        planRead(true),
+        text(ANSWER),
+      ]);
+      expect(t.offer()).toMatchObject({
+        trigger: "plan_ask",
+        moment: "plan_ask",
+        lead: null,
+        sessionId: "s1",
+      });
+    }
+  });
+
+  it("comes ahead of the result's own offer in the same turn", async () => {
+    const t = setup();
+    await t.run("Build it, and what does Basic cost?", [
+      presentSite,
+      planRead(true),
+      text(LONG_REPLY),
+    ]);
+    expect(t.offer()?.trigger).toBe("plan_ask");
+  });
+
+  it("never for another read of the plan, and those spend none of the pitch's budget", async () => {
+    // A price question, a routine the free plan refused (withUpgradeNudge) and
+    // an always-on ask all read the plan with its links; their reply carries it.
+    const t = setup({ account: NEARLY_OUT });
+    for (const ask of [
+      "How much is Basic?",
+      "Set up a routine that runs every morning",
+      "Can my WhatsApp auto-reply keep going with the PC off?",
+    ]) {
+      await t.run(ask, [planRead(false), text(ANSWER)]);
+      expect(t.offer()).toBeNull();
+    }
+    // Nor ask: "cheaper" without upgrade: true, which the plan line never asks for.
+    await t.run("Add opening hours to the contact page", [
+      tool(
+        "agent-tools_billing_plan",
+        { ask: "cheaper" },
+        "The user's plan: Free."
+      ),
+      text(LONG_REPLY),
+    ]);
+    expect(t.mark()?.offer ?? null).toBeNull();
+    // The budget is untouched: the free-or-cheaper ask still gets its card.
+    await t.run("Is there a free way to keep going?", [
+      planRead(true),
+      text(ANSWER),
+    ]);
+    expect(t.offer()?.trigger).toBe("plan_ask");
+  });
+
+  it("never on a paid or unread plan, in a chat app, or beside another card", async () => {
+    for (const account of [
+      { ...NEARLY_OUT, subscription_tier: "basic" } as AbacusAccountInfo,
+      null,
+    ]) {
+      const t = setup({ account });
+      await t.run("Anything cheaper?", [planRead(true), text(ANSWER)]);
+      expect(t.offer()).toBeNull();
+    }
+
+    const chat = setup({ account: NEARLY_OUT });
+    await chat.run("Anything free?", [planRead(true), text(ANSWER)], CHAT);
+    expect(chat.offer()).toBeNull();
+
+    const withCard = setup({ account: NEARLY_OUT });
+    await withCard.run("Make me a video, for free", [
+      tool("agent-tools_paid_feature", { feature: "video_generation" }),
+      planRead(true),
+      text(ANSWER),
+    ]);
+    expect(withCard.offer()).toBeNull();
+  });
+
+  it("tells billing_plan whether the card will show: a free account's own chat, under the caps, with no milestone card owed", () => {
+    expect(setup({ account: NEARLY_OUT }).watch.planCardFor("s1")).toBe(true);
+    expect(setup().watch.planCardFor("s1")).toBe(true);
+    for (const account of [
+      { ...NEARLY_OUT, subscription_tier: "basic" } as AbacusAccountInfo,
+      null,
+    ])
+      expect(setup({ account }).watch.planCardFor("s1")).toBe(false);
+    expect(
+      setup({ account: NEARLY_OUT, pitchable: false }).watch.planCardFor("s1")
+    ).toBe(false);
+    const capped = setup({ account: NEARLY_OUT });
+    capped.setCard(card(1, 100 * SUCCESS_PITCH_GAP_MS - 1000));
+    expect(capped.watch.planCardFor("s1")).toBe(false);
+    const owed = setup({
+      account: NEARLY_OUT,
+      prefs: {
+        creditThresholds: {
+          [KEY]: {
+            reached: 95,
+            at: 0,
+            used: 1964,
+            granted: 2000,
+            perTask: null,
+            kind: null,
+            told: null,
+          },
+        },
+      } as Partial<PrefsRow>,
+    });
+    expect(owed.watch.planCardFor("s1")).toBe(false);
+  });
+
+  it("is held to the pitch's caps, and past half the grant a result alone still offers nothing", async () => {
+    const capped = setup({ account: NEARLY_OUT });
+    capped.setCard(card(1, 100 * SUCCESS_PITCH_GAP_MS - 1000));
+    await capped.run("Anything free?", [planRead(true), text(ANSWER)]);
+    expect(capped.offer()).toBeNull();
+
+    const result = setup({ account: NEARLY_OUT });
+    await result.run("Build it", [presentSite, text(LONG_REPLY)]);
+    expect(result.offer()).toBeNull();
+  });
+});
+
 describe("SuccessPitchWatch: chat apps", () => {
   const praised = async (t: ReturnType<typeof setup>) => {
     await t.run(

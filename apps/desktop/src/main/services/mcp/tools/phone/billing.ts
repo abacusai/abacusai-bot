@@ -1,3 +1,4 @@
+import { askedCheaper } from "@abacus-ai/agent/plan-asks";
 import type { BillingPlan } from "@abacus-ai/contract/billing-plan";
 import { PAID_FEATURE_TOOL } from "@abacus-ai/contract/toolsets";
 
@@ -8,6 +9,7 @@ import {
 import {
   alwaysOnAnswer,
   bullets,
+  cheaperAnswer,
   creditsLine,
   creditStanding,
   planFacts,
@@ -19,7 +21,9 @@ import type { PhoneToolDefinition } from "./definition";
 /** What the phone's model is told about the user's plan, and how to answer. */
 export function phoneBillingResult(
   host: Pick<ToolHost, "ok">,
-  billing: BillingPlan | null
+  billing: BillingPlan | null,
+  /** The free-or-cheaper ask (`ask: "cheaper"`). */
+  cheaper = false
 ): ToolResult {
   if (billing == null)
     return host.ok(
@@ -64,6 +68,9 @@ export function phoneBillingResult(
     "on the page."
   );
   lines.push("", alwaysOnAnswer(billing, false));
+  // The phone shows no card: the reply carries the plan's list.
+  const cheaperLine = cheaper ? cheaperAnswer(billing, false) : null;
+  if (cheaperLine != null) lines.push(cheaperLine);
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."
@@ -104,7 +111,10 @@ export const PHONE_BILLING_TOOLS: PhoneToolDefinition[] = [
           args.upgrade === true,
           undefined,
           WHATSAPP_UPGRADE_SRC
-        )
+        ),
+        // Its schema stays the same on every plan (phone tools are fixed); a free
+        // account's plan line still names the ask.
+        askedCheaper(args)
       ),
   },
 ];

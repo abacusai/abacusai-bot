@@ -1,5 +1,10 @@
 import {
   ALWAYS_ON_ASK,
+  askedCheaper,
+  CHEAPER_ASK,
+  CHEAPER_ASK_ARG,
+  FREE_WAYS,
+  NO_OTHER_AI_PRODUCTS,
   type PlanAsk,
   PUBLISH_ASK,
 } from "@abacus-ai/agent/plan-asks";
@@ -165,10 +170,40 @@ export const alwaysOnAnswer = (billing: BillingPlan, app = true): string =>
 export const publishAnswer = (billing: BillingPlan): string =>
   planAskAnswer(billing, PUBLISH_ASK, abacusAgentPromptUrl(), true);
 
+/** billing_plan's `ask` argument, listed on the free plan only: set only as its plan line says (account-plan.ts). */
+export const BILLING_ASK_PROPERTY = {
+  type: "string",
+  enum: [CHEAPER_ASK_ARG],
+  description: `"${CHEAPER_ASK_ARG}" only when your plan line says to pass it; otherwise leave it out.`,
+} as const;
+
+/**
+ * "Is there anything free?", "free alternatives?", "my credits are almost
+ * gone", on a free account (only its plan line asks with `ask: "cheaper"`):
+ * the free ways this app really has first, then the plan, never other AI
+ * products. Where the plan's card will show (`card`), the reply gives the plan
+ * with its link and its whole list in one line, and the card shows the list as
+ * bullets; the reply never mentions the card, and has the whole plan when the
+ * card does not come.
+ */
+export const cheaperAnswer = (
+  billing: BillingPlan,
+  card: boolean
+): string | null => {
+  if (onPaidPlan(billing)) return null;
+  const plan = billing.upgrades[0]?.planName ?? "the next plan";
+  const offer = card
+    ? `${plan}: its first-month price and their upgrade link, then every feature line it has above in one line, comma-separated (translated, never shortened or dropped), and no other plans`
+    : `${plan}: its price, every feature line it has above as a short list, then their upgrade link`;
+  return `Asked for ${CHEAPER_ASK}, or told their credits are low or gone: that is a question about plans, not a complaint, and this replaces the plan list above for it. Answer in their language, in this order: the free ways this app really has (${FREE_WAYS}); where their free credits stand (a one-time grant that never renews or resets); then ${offer}. Never hide or deny a free way. ${NO_OTHER_AI_PRODUCTS}`;
+};
+
 /** What the app's model is told about the user's plan, and how to answer. */
 export function appBillingResult(
   host: Pick<ToolHost, "ok">,
-  billing: BillingPlan | null
+  billing: BillingPlan | null,
+  /** The free-or-cheaper ask, and whether the plan's card will show under the reply. */
+  cheaper: { card: boolean } | null = null
 ): ToolResult {
   if (billing == null)
     return host.ok(
@@ -211,6 +246,9 @@ export function appBillingResult(
     "plan: they upgrade on the page. Do not bring plans up unasked in the middle of a task or after a complaint."
   );
   lines.push("", alwaysOnAnswer(billing), publishAnswer(billing));
+  const cheaperLine =
+    cheaper != null ? cheaperAnswer(billing, cheaper.card) : null;
+  if (cheaperLine != null) lines.push(cheaperLine);
   if (billing.upgradeInMobileApp)
     lines.push(
       "Their plan is billed through the app store: they upgrade or buy credits in the mobile app, under Settings. Say so instead of sending a link."
@@ -260,7 +298,8 @@ export const BILLING_TOOLS: ToolDefinition[] = [
       "Never quote a price, discount, credit amount, limit or reset from memory: call this first, every time, and",
       "answer only from what it returns, with every feature line as written (translated, never shortened).",
     ].join("\n"),
-    inputSchema: {
+    // `ask` only on the free plan, whose plan line alone uses it: a paid account's tools are unchanged.
+    inputSchema: (_channel, host) => ({
       type: "object",
       properties: {
         upgrade: {
@@ -268,9 +307,16 @@ export const BILLING_TOOLS: ToolDefinition[] = [
           description:
             "True when they might upgrade: the answer then carries their upgrade links.",
         },
+        ...(host.freePlan === true ? { ask: BILLING_ASK_PROPERTY } : {}),
       },
+    }),
+    run: async (host, args, callerSession) => {
+      const cheaper = askedCheaper(args);
+      return appBillingResult(
+        host,
+        await fetchBillingPlan(args.upgrade === true),
+        cheaper ? { card: host.planCardFor(callerSession) } : null
+      );
     },
-    run: async (host, args) =>
-      appBillingResult(host, await fetchBillingPlan(args.upgrade === true)),
   },
 ];

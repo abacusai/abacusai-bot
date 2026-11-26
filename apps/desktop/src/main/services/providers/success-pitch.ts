@@ -23,6 +23,11 @@
  * its big build, once per chat. A tool that failed along the way does not
  * hold either back: a long build has some.
  *
+ * A turn where the user asked for something free or cheaper (billing_plan
+ * with `ask: "cheaper"`, which only a free account's plan line asks for)
+ * offers the plan's card ahead of all of them, in the app only, at any
+ * point of the free grant.
+ *
  * Never on a routine, a host lane, a turn the app opened itself (a bot's
  * first-run note, a routine's fire), or a turn that showed another card.
  * On every plan, a clean turn also marks whether the chat's latest result
@@ -30,6 +35,7 @@
  */
 import path from "node:path";
 
+import { askedCheaper } from "@abacus-ai/agent/plan-asks";
 import { visibleUserText } from "@abacus-ai/agent/user-text";
 import type {
   DesktopEvent,
@@ -38,7 +44,10 @@ import type {
 import { isSuggestTasksTool } from "@abacus-ai/contract/bots/suggested-tasks";
 import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { creditAccountKey } from "@abacus-ai/contract/credit-thresholds";
+import {
+  creditAccountKey,
+  pendingThreshold,
+} from "@abacus-ai/contract/credit-thresholds";
 import { isDeliverableUrl } from "@abacus-ai/contract/deliverables";
 import type { FunnelStep } from "@abacus-ai/contract/funnel";
 import { abacusPlanTier } from "@abacus-ai/contract/models";
@@ -52,6 +61,7 @@ import {
   type KeepKind,
   keepThingKey,
   pitchCaps,
+  pitchUnderHalfOnly,
   rememberOffered,
   isCleanReply,
   isComplaint,
@@ -104,6 +114,8 @@ interface TurnFacts {
   files: Set<string>;
   /** Something it left on that is not a site: a server or a routine. */
   keep: Keep | null;
+  /** billing_plan went through with `ask: "cheaper"`: the user asked for something free or cheaper. */
+  planAsked: boolean;
 }
 
 /** Something a turn left on, to keep running. */
@@ -237,6 +249,7 @@ export class SuccessPitchWatch {
         endedOnNextStep: false,
         files: new Set(),
         keep: null,
+        planAsked: false,
       };
       this.turns.set(sessionId, facts);
     }
@@ -317,9 +330,15 @@ export class SuccessPitchWatch {
     }
     if (CARD_TOOLS.some((tool) => isTool(name, tool))) facts.troubled = true;
     facts.tools += 1;
+    const input = event.tool.input;
+    if (isTool(name, "billing_plan")) {
+      // Only the free-or-cheaper ask: a price question, a plan-limit refusal or
+      // an always-on ask reads the plan too, and its reply already carries it.
+      if (askedCheaper(input)) facts.planAsked = true;
+      return;
+    }
     if (MAIL_TOOL.test(name)) facts.lead ??= "agents";
     if (MEDIA_TOOL.test(name)) facts.lead = "media";
-    const input = event.tool.input;
     const workspace = this.deps.workspacePath(sessionId);
     const resolve = (where: string): string | null =>
       path.isAbsolute(where)
@@ -433,6 +452,9 @@ export class SuccessPitchWatch {
     if (clean && facts.delivered != null)
       this.deps.funnel("result_delivered", facts.delivered);
     const signals: Signal[] = [];
+    // Asked about plans, with nothing else on screen: the plan's card, ahead of the rest.
+    if (facts.planAsked && !facts.troubled && where === "app")
+      signals.push({ trigger: "plan_ask", moment: "plan_ask", lead: null });
     if (settled && where === "app") {
       // A served site is mostly a preview: only a server or a routine is offered.
       const keep = facts.keep;
@@ -523,6 +545,34 @@ export class SuccessPitchWatch {
         undefined,
         this.now(),
         KEEP_RUNNING_CAPS
+      )
+    );
+  }
+
+  /**
+   * Whether a free-or-cheaper ask in `sessionId` gets the plan's card under its
+   * reply, so billing_plan's answer gives the plan in a line with its link and
+   * the card adds the list. The card's own checks; the caller rules out a chat
+   * app's turn. The reply never names the card, in case it still does not come.
+   */
+  planCardFor(sessionId: string): boolean {
+    if (!this.deps.pitchable(sessionId)) return false;
+    const account = this.deps.account();
+    if (account == null || abacusPlanTier(account) !== "free") return false;
+    const key = creditAccountKey(account);
+    const prefs = this.deps.prefs();
+    if (key == null || prefs == null) return false;
+    const row = prefs.get();
+    return (
+      pendingThreshold(
+        row.creditThresholds?.[key],
+        row.dismissals.creditThresholdCards?.[key],
+        account
+      ) == null &&
+      successPitchAllowed(
+        row.dismissals.successPitchCards?.[key],
+        row.successPitch?.[key],
+        this.now()
       )
     );
   }
@@ -620,8 +670,12 @@ export class SuccessPitchWatch {
     const key = creditAccountKey(account);
     const prefs = this.deps.prefs();
     if (key == null || prefs == null) return;
-    // Past half the grant, the credit milestone cards own the pitch.
-    if (!underHalfOfFreeCredits(account.credits_used, account.credits_granted))
+    // Past half the grant, the credit milestone cards own the pitch, but for a plan ask.
+    const underHalf = underHalfOfFreeCredits(
+      account.credits_used,
+      account.credits_granted
+    );
+    if (!underHalf && signals.every((each) => pitchUnderHalfOnly(each.trigger)))
       return;
     const row = prefs.get();
     const marks = row.successPitch ?? {};
@@ -638,6 +692,7 @@ export class SuccessPitchWatch {
       });
     const signal =
       signals.find((each) => {
+        if (!underHalf && pitchUnderHalfOnly(each.trigger)) return false;
         if (each.once != null && mark[each.once.list]?.includes(each.once.item))
           return false;
         return each.trigger === "keep_running"

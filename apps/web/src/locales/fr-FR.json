@@ -5726,6 +5726,10 @@
     "routinePromptOnce": "Crée une tâche planifiée nommée « {{name}} » qui tourne même ordinateur éteint. Ce qu'elle fait : {{prompt}}",
     "routinePromptNameOnly": "Crée une tâche planifiée qui tourne 24 h/24, comme ma routine AbacusAI Bot « {{name}} ». Demande-moi ce qu'elle doit faire et quand."
   },
+  "planAsk": {
+    "title": "Continuez avec {{plan}}",
+    "line": "De nouveaux crédits chaque mois, et tout ce qui suit."
+  },
   "coderPitch": {
     "router": "RouteLLM Code : notre routeur conçu pour le code, qui choisit le meilleur modèle de code à chaque étape",
     "codingAgent": "L’agent de code et la CLI",

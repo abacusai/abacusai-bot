@@ -438,6 +438,75 @@ describe("billing_plan for what only a plan does", () => {
       "Asked for a live link that stays up for a site of several pages or an app that runs a server, built here (hosting, deploying or publishing it): their plan already includes building apps and websites and deploying them to a live link in Abacus AI Agent on the web. Set it up there: https://apps.abacus.ai/chatllm/agent"
     );
   });
+
+  /**
+   * Asked for free alternatives with the free credits nearly gone, the model
+   * named other AI products and packaged the project to move there. Only the
+   * free plan's line sends that ask here (account-plan.ts).
+   */
+  it("does not name the free-or-cheaper ask in its description: the plan line routes it, free accounts only", () => {
+    expect(String(agentTool("billing_plan")?.description)).not.toContain(
+      "free or cheaper"
+    );
+  });
+
+  const answerWith = async (
+    current: "free" | "basic",
+    cheaper: { card: boolean } | null
+  ) => {
+    const { appBillingResult } = await import("./billing");
+    const result = appBillingResult(
+      {
+        ok: (text: string) => ({ content: [{ type: "text", text }] }),
+      } as never,
+      plan(current),
+      cheaper
+    ) as unknown as { content: Array<{ text: string }> };
+    return result.content[0]!.text;
+  };
+
+  it("lists ask: cheaper on the free plan only, so a paid account's schema is unchanged", () => {
+    const schema = agentTool("billing_plan")!.inputSchema as (
+      channel: unknown,
+      host: { freePlan?: boolean }
+    ) => { properties: Record<string, unknown> };
+    expect(schema({}, { freePlan: true }).properties.ask).toMatchObject({
+      enum: ["cheaper"],
+    });
+    expect(Object.keys(schema({}, { freePlan: false }).properties)).toEqual([
+      "upgrade",
+    ]);
+  });
+
+  it("a free account asking for something free or cheaper hears the real free ways first, then Basic, priced, listed and linked, never other AI products", async () => {
+    const text = await answerWith("free", { card: false });
+    expect(text).toContain(
+      "Answer in their language, in this order: the free ways this app really has (a model the model menu lists as free runs without credits, and so does a model on a provider key of their own); where their free credits stand (a one-time grant that never renews or resets); then Basic: its price, every feature line it has above as a short list, then their upgrade link. Never hide or deny a free way."
+    );
+    expect(text).toContain(
+      "Never recommend other AI products or apps in place of this one, compare them, or help move their work to one (packaging, exporting or migration steps for it), and say nothing against them either; if they still want to leave, say in one line that their files are theirs, in their folder."
+    );
+    expect(text).toContain("link: https://example.test/upgrade");
+  });
+
+  it("with the plan's card to come, the reply still has Basic's whole list, in one line with its link, and never names the card", async () => {
+    const text = await answerWith("free", { card: true });
+    expect(text).toContain(
+      "then Basic: its first-month price and their upgrade link, then every feature line it has above in one line, comma-separated (translated, never shortened or dropped), and no other plans."
+    );
+    expect(text).toContain("the free ways this app really has");
+    // The lines and link it gives come from the answer itself.
+    expect(text).toContain("link: https://example.test/upgrade");
+    expect(text).not.toContain("card");
+  });
+
+  it("only the free-or-cheaper ask's answer carries its line, and never a paid account's", async () => {
+    expect(await answerWith("free", null)).not.toContain("free or cheaper");
+    for (const cheaper of [null, { card: false }, { card: true }])
+      expect(await answerWith("basic", cheaper)).not.toContain(
+        "free or cheaper"
+      );
+  });
 });
 
 describe("billing_plan on what Basic gives this app", () => {
@@ -514,6 +583,7 @@ describe("billing_plan on the phone", () => {
     );
     expect(description).toContain("with every feature line as written");
     expect(description).toContain("Never answer these from memory.");
+    expect(description).not.toContain("free or cheaper");
 
     const line =
       "Personal agents in Abacus AI Agent on the web that run 24/7, even with your computer off: WhatsApp, Discord and Telegram auto-replies, all your routines, and everything your bot does";
@@ -551,13 +621,19 @@ describe("billing_plan on the phone", () => {
         ],
         topUpUrl: null,
         upgradeInMobileApp: false,
-      }
+      },
+      true
     ) as unknown as { content: Array<{ text: string }> };
     const text = result.content[0]!.text;
     // The server's line, whole, marked as the web's.
     expect(text).toContain(`  - ${line} [in Abacus AI Agent on the web`);
     expect(text).toContain("every feature line as written");
     expect(text).toContain("Never answer no or impossible");
+    // The phone shows no card: its free-or-cheaper answer lists the plan in full.
+    expect(text).toContain(
+      "then Basic: its price, every feature line it has above as a short list, then their upgrade link"
+    );
+    expect(text).toContain("Never recommend other AI products or apps");
     expect(text).not.toContain("Their plan's credits renew every month");
   });
 });

@@ -507,6 +507,77 @@ describe("SuccessPitchRow: keep it running", () => {
   });
 });
 
+const PLAN_ASK: SuccessPitchOffer = {
+  id: "turn-3",
+  sessionId: "thread-1",
+  trigger: "plan_ask",
+  moment: "plan_ask",
+  lead: null,
+  at: 1,
+};
+
+/** The incident's account: 36 of its 2,000 free credits left. */
+const NEARLY_OUT = { ...ACCOUNT, credits_used: 1964 };
+
+describe("SuccessPitchRow: a plan ask", () => {
+  it("near the end of the free grant, shows the plan's card: title, price, the whole list and Upgrade from its own source", async () => {
+    const h = await mount({ offer: PLAN_ASK, account: NEARLY_OUT });
+    const title = await screen.findByText("Keep going with Basic");
+    const box = title.closest('[data-slot="plan-ask"]')!;
+    expect(box.textContent).toContain(
+      "Fresh credits every month, plus everything below."
+    );
+    expect(box.textContent).toContain("$7 your first month, then $10/month");
+    expect(box.querySelector('[data-slot="upgrade-pitch"]')).not.toBeNull();
+    expect(box.textContent).not.toMatch(/renew|reset/i);
+    await waitFor(() =>
+      expect(h.steps()).toEqual([
+        { step: "success_pitch_shown", detail: "plan_ask" },
+        { step: "upgrade_shown", detail: "plan_ask" },
+      ])
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade to Basic" }));
+    expect(upgradeDialogStore.state.request).toMatchObject({
+      kind: "plan",
+      checkout: true,
+      src: "plan_ask",
+    });
+    await waitFor(() =>
+      expect(h.steps().map((step) => step.step)).toContain(
+        "success_pitch_upgrade"
+      )
+    );
+  });
+
+  it("never for a paid plan, over a credit milestone card owed, or past the pitch's caps", async () => {
+    for (const options of [
+      { account: { ...NEARLY_OUT, subscription_tier: "basic" } },
+      {
+        prefs: {
+          creditThresholds: {
+            "o1:u1": {
+              reached: 95 as const,
+              at: 1,
+              used: 1964,
+              granted: 2000,
+              perTask: null,
+              kind: null,
+              told: null,
+            },
+          },
+        },
+      },
+      { card: card({ shown: 3, lastShownAt: 0 }) },
+    ]) {
+      await mount({ offer: PLAN_ASK, account: NEARLY_OUT, ...options });
+      await settled();
+      expect(document.querySelector('[data-slot="plan-ask"]')).toBeNull();
+      await cleanup?.();
+      cleanup = undefined;
+    }
+  });
+});
+
 describe("NextStepPlanRow: the plan in the next step's card", () => {
   const NEXT: SuccessPitchOffer = { ...OFFER, place: "next_step" };
 

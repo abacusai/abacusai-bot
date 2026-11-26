@@ -393,6 +393,8 @@ export interface McpAgentToolsServerOptions {
   routineDeliversToSelf?: (sessionId: string, platform: string) => boolean;
   /** A free grant is nearly used: `suggest_tasks` offers no routine. */
   routineOfferClosed?: () => boolean;
+  /** The plan's card will show under this chat's reply when it reads the plan with its links (success-pitch.ts). */
+  planCard?: (sessionId: string) => boolean;
   /**
    * The conversation a deliverable from this session belongs to, so the
    * renderer opens it in that pane and no other. Null for an unknown session.
@@ -887,6 +889,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       nextStep: this.options.nextStep?.() === true,
       routineDelivery: this.options.routineDelivery?.() === true,
       githubFix: this.options.githubFixOffered?.() === true,
+      freePlan: this.planTier() === "free",
     };
   }
 
@@ -4219,6 +4222,10 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   routineOfferClosed(): boolean {
     return this.options.routineOfferClosed?.() === true;
+  }
+
+  planCardFor(sessionId: string | undefined): boolean {
+    return sessionId != null && this.options.planCard?.(sessionId) === true;
   }
 
   ok(text: string): ToolResult {

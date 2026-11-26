@@ -5,6 +5,8 @@
  * From memory the model told a paying user that chatting here is free.
  */
 
+import { CHEAPER_ASK_PROMPT } from "./plan-asks.js";
+
 /** Mirrors the desktop's AbacusPlanTier; unknown until the account is read. */
 export type AccountPlanTier = "free" | "basic" | "paid" | "unknown";
 
@@ -55,7 +57,7 @@ const WHOSE =
 export function planFactsPrompt(current: AccountPlan = plan): string {
   switch (current.tier) {
     case "free":
-      return `${WHOSE}: the free plan. Chats, bots and routines on Abacus AI models use its credits. For credits left and the paid plans, call billing_plan.`;
+      return `${WHOSE}: the free plan. Chats, bots and routines on Abacus AI models use its credits. For credits left and the paid plans, call billing_plan. ${CHEAPER_ASK_PROMPT}`;
     case "basic":
     case "paid":
       return `${WHOSE}: ${current.name != null ? `${current.name}, a paid plan` : "a paid plan"}. Chats, bots and routines on Abacus AI models use its credits. For credits left, call billing_plan.`;

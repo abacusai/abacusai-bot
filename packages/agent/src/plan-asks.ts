@@ -31,6 +31,34 @@ export const PUBLISH_ASK: PlanAsk = {
   short: "apps deployed to a live link",
 };
 
+/**
+ * An ask for something free or cheaper. Asked for free alternatives with its
+ * free credits nearly gone, the model named other AI products, said which was
+ * best for coding and packaged the project to move there, and never offered
+ * the plan: it goes to billing_plan, whose answer is the plan.
+ */
+export const CHEAPER_ASK =
+  "something free or cheaper (more free credits, a free or cheaper way to keep going, a free alternative to this app)";
+
+/** billing_plan's `ask` for it: the one call that answers it, and the only one that gets the plan's card. */
+export const CHEAPER_ASK_ARG = "cheaper";
+
+/**
+ * A billing_plan call made for the free-or-cheaper ask: `ask: "cheaper"` with
+ * `upgrade: true`, as the plan line says. Replayed, `ask` alone came only from
+ * a model poking the tool in the middle of an unrelated task.
+ */
+export const askedCheaper = (args: Record<string, unknown>): boolean =>
+  args.ask === CHEAPER_ASK_ARG && args.upgrade === true;
+
+/** The free ways this app really has, said before any plan: never hidden from a free-or-cheaper ask. */
+export const FREE_WAYS =
+  "a model the model menu lists as free runs without credits, and so does a model on a provider key of their own";
+
+/** What no answer about cost does; worded once for the prompt and billing_plan's answer. */
+export const NO_OTHER_AI_PRODUCTS =
+  "Never recommend other AI products or apps in place of this one, compare them, or help move their work to one (packaging, exporting or migration steps for it), and say nothing against them either; if they still want to leave, say in one line that their files are theirs, in their folder.";
+
 /** Everything Basic adds, in a few words, for an upgrade line too short for the server's feature lines. */
 export const PLAN_GIVES = `more credits, top models, image and video generation, ${ALWAYS_ON_ASK.short}, ${PUBLISH_ASK.short} and 100+ connectors`;
 
@@ -48,3 +76,9 @@ export const PLAN_ASKS_PROMPT = [
   `Say the free part first (${ALWAYS_ON_ASK.free}; ${PUBLISH_ASK.free}), then the plan that gives the rest: its price, every feature it gives as a short list, and the link, as billing_plan words them.`,
   "Never answer no or impossible, and never send them to another company's service for it (a host, a tunnel, a server to rent) unless they named it.",
 ].join(" ");
+
+/**
+ * The free plan's line for an ask for something free or cheaper (account-plan.ts):
+ * only a free account's answer is the plan, so a paid one never hears it.
+ */
+export const CHEAPER_ASK_PROMPT = `When the user (never a contact you reply to for them) asks for ${CHEAPER_ASK}, or says their credits are low or gone: call billing_plan with upgrade: true and ask: "${CHEAPER_ASK_ARG}" before you answer, and answer from it, the free ways first (${FREE_WAYS}), never hiding one. ${NO_OTHER_AI_PRODUCTS}`;

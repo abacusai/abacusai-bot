@@ -17,6 +17,12 @@
  * Where a result ends on the next step (next-step.ts), its offer is not a
  * card of its own: it is the plan's row in the next step's card, under the
  * tasks (`place: "next_step"`), on the same caps and events.
+ *
+ * One more shares the slot and the caps: a turn where a free user asked for
+ * something free or cheaper (billing_plan with `ask: "cheaper"`, `plan_ask`).
+ * Asked for free alternatives near the end of the grant, the model's only
+ * offer was a link in text. It is the one card past half the grant, where it
+ * is mostly asked for.
  */
 
 /** Why the card was offered; the funnel's detail. */
@@ -25,6 +31,7 @@ export const SUCCESS_PITCH_TRIGGERS = [
   "deliverable",
   "big_task",
   "keep_running",
+  "plan_ask",
 ] as const;
 export type SuccessPitchTrigger = (typeof SUCCESS_PITCH_TRIGGERS)[number];
 
@@ -36,6 +43,7 @@ export const SUCCESS_PITCH_MOMENTS = [
   "big_task",
   "server",
   "routine",
+  "plan_ask",
 ] as const;
 export type SuccessPitchMoment = (typeof SUCCESS_PITCH_MOMENTS)[number];
 
@@ -239,7 +247,7 @@ export const SUCCESS_PITCH_MOMENT_COPY = {
   file: "successPitch.moment.file",
   reaction: "successPitch.moment.reaction",
 } as const satisfies Record<
-  Exclude<SuccessPitchMoment, "big_task" | "server" | "routine">,
+  Exclude<SuccessPitchMoment, "big_task" | "server" | "routine" | "plan_ask">,
   string
 >;
 
@@ -608,3 +616,10 @@ const REFUSAL = wordsPattern(REFUSAL_WORDS);
  */
 export const isCleanReply = (reply: string): boolean =>
   !REFUSAL.test(normalizedText(reply).slice(0, CLEAN_REPLY_HEAD_LENGTH));
+
+/**
+ * Whether `trigger` stops once half the free grant is used, where the credit
+ * milestone cards take over: all but a plan ask, which the user asked for.
+ */
+export const pitchUnderHalfOnly = (trigger: SuccessPitchTrigger): boolean =>
+  trigger !== "plan_ask";

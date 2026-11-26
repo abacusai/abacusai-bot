@@ -8,7 +8,9 @@
  * The same slot holds the big-build card (the chat's task, the plan's top
  * model) and the free "keep it running 24/7" card (what was left on, which
  * a personal agent on the web keeps running), each with its own events and
- * upgrade source; "keep it running" keeps its own budget.
+ * upgrade source; "keep it running" keeps its own budget. The card for a
+ * turn where the user asked about plans (`plan_ask`) shares the pitch's
+ * budget, and is the one shown past half the free grant.
  */
 import {
   type BillingPlan,
@@ -27,6 +29,7 @@ import { retryOfferModel } from "@abacus-ai/contract/retry-offer";
 import {
   type KeepKind,
   pitchCaps,
+  pitchUnderHalfOnly,
   SUCCESS_PITCH_MOMENT_COPY,
   type SuccessPitchCard as SuccessPitchCardState,
   type SuccessPitchLead,
@@ -41,7 +44,7 @@ import {
 import type { UIMessage } from "@tanstack/ai-client";
 import { eq, useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Layers, Moon, Sparkles, X } from "lucide-react";
+import { ArrowRight, Gem, Layers, Moon, Sparkles, X } from "lucide-react";
 import { type ReactNode, useEffect, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -354,6 +357,30 @@ export const KeepRunningCard = ({
   );
 };
 
+/**
+ * The card for a turn where the user asked about plans (a free alternative,
+ * more credits, a cheaper way): the plan by name, its price and its whole
+ * list, so the offer is the card, not a link in the reply.
+ */
+export const PlanAskCard = (
+  props: Omit<SuccessPitchCardProps, "moment" | "lead">
+) => {
+  const { t } = useTranslation();
+  const offer = wallOffer(props.billing);
+  if (offer == null) return null;
+  return (
+    <PitchCardFrame
+      slot="plan-ask"
+      moment="plan_ask"
+      icon={<Gem className="size-4" />}
+      title={t("planAsk.title", { plan: offer.planName })}
+      line={t("planAsk.line")}
+      lead={null}
+      {...props}
+    />
+  );
+};
+
 /** Each trigger's events and upgrade source. */
 const TRIGGER_EVENTS: Record<
   SuccessPitchTrigger,
@@ -388,6 +415,12 @@ const TRIGGER_EVENTS: Record<
     notNow: "keep_running_not_now",
     src: "keep_running",
   },
+  plan_ask: {
+    shown: "success_pitch_shown",
+    upgrade: "success_pitch_upgrade",
+    notNow: "success_pitch_not_now",
+    src: "plan_ask",
+  },
 };
 
 /** The funnel's detail: the trigger, the big build's signal, or what to keep on. */
@@ -407,7 +440,8 @@ const cardsKey = (
 /**
  * This chat's offer where `place` shows it, under its latest reply while
  * nothing runs: the offer, the plan, and its answers. Only for a free
- * account under half its free grant, under the caps, and never over
+ * account under half its free grant (any point of it for a plan ask),
+ * under the caps, and never over
  * another card: the upgrade dialog, a credit milestone card owed, or the
  * payment screen. A read-only view never shows it. Without the plan it is
  * not shown at all, rather than half a pitch. Called only where `place` is
@@ -456,7 +490,11 @@ const useSuccessPitch = ({
     composer.readOnly == null &&
     !active &&
     creditsTier(account) === "free" &&
-    underHalfOfFreeCredits(account?.credits_used, account?.credits_granted) &&
+    (!pitchUnderHalfOnly(trigger) ||
+      underHalfOfFreeCredits(
+        account?.credits_used,
+        account?.credits_granted
+      )) &&
     !milestoneOwed &&
     payment.data == null;
   // Once on screen it stays until answered; a new one waits for the caps.
@@ -604,6 +642,7 @@ export const SuccessPitchRow = ({
       />
     );
   }
+  if (showing.trigger === "plan_ask") return <PlanAskCard {...answers} />;
   if (showing.trigger === "keep_running")
     return (
       <KeepRunningCard

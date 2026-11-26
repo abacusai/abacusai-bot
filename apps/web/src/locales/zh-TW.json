@@ -5726,6 +5726,10 @@
     "routinePromptOnce": "設定一個名為「{{name}}」的排程任務，電腦關機時也能運作。它要做的事：{{prompt}}",
     "routinePromptNameOnly": "設定一個全天候運作的排程任務，類似我在 AbacusAI Bot 的例行任務「{{name}}」。問我它該做什麼、什麼時候做。"
   },
+  "planAsk": {
+    "title": "用 {{plan}} 繼續",
+    "line": "每月都有新點數，還有下方的所有功能。"
+  },
   "coderPitch": {
     "router": "RouteLLM Code：專為程式碼打造的路由器，每一步都選最合適的程式模型",
     "codingAgent": "程式設計代理與 CLI",
