@@ -144,10 +144,23 @@ describe("questions about the app itself", () => {
     expect(FIRST_VERSION_PROMPT.indexOf("never done on a guess")).toBeLessThan(
       FIRST_VERSION_PROMPT.indexOf("gets a first version in this turn")
     );
+    // Open-ended ones list first; an exact command and a routine's saved
+    // instruction are the yes for exactly what they name.
     expect(FIRST_VERSION_PROMPT).toMatch(
-      /their request itself is not that yes/
+      /the open-ended ask itself is not that yes/
     );
-    expect(ASKED_FOR_PROMPT).toMatch(/still waits for their yes, as above/);
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /A request that names the exact target and the result is one/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /a saved instruction the user set up earlier, which a routine or check-in run carries out: do the steps it names/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /Anything either one does not name .* still waits for a yes/
+    );
+    expect(ASKED_FOR_PROMPT).toMatch(
+      /a delete, move, send or cancel follows the rule above/
+    );
     expect(FIRST_VERSION_PROMPT).toMatch(/a short sample of the result/);
     // One owner: the document rule points at it instead of its own copy.
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(
