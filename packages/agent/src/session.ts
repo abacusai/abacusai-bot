@@ -1,6 +1,9 @@
 import * as path from "node:path";
 
-import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+import {
+  connectorById,
+  GATEWAY_SERVER_NAME,
+} from "@abacus-ai/connectors/registry";
 import {
   createAgentSession,
   DefaultResourceLoader,
@@ -366,6 +369,12 @@ export function planModePrompt(
   ].join("\n");
 }
 
+/** A server another app ships and serves only while that app runs (Roblox Studio's). */
+const isLocalAppServer = (id: string): boolean => {
+  const connector = connectorById(id);
+  return connector?.kind === "mcp" && connector.local != null;
+};
+
 /**
  * The roster as the prompt describes it, for telling whether the prompt is
  * stale: a server added, gone, or its first tool arrived. Counts are left
@@ -400,12 +409,22 @@ export function mcpPrompt(statuses: readonly McpServerStatus[]): string | null {
   const connected = userServers.filter(
     (status) => status.status === "connected" && status.toolCount > 0
   );
+  // An app's own server (Roblox Studio's) connected with nothing to offer
+  // yet: the app is closed or not ready. Its tools join the list by themselves
+  // once it serves them (mcp/index.ts), so the model is told to wait, not hunt.
+  const waiting = userServers.filter(
+    (status) =>
+      status.status === "connected" &&
+      status.toolCount === 0 &&
+      isLocalAppServer(status.id)
+  );
   // A server the user switched off is not a fact worth prompt space: they know.
   const failed = userServers.filter(
     (status) => status.status === "error" || status.status === "auth-required"
   );
 
-  if (connected.length === 0 && failed.length === 0) return null;
+  if (connected.length === 0 && waiting.length === 0 && failed.length === 0)
+    return null;
 
   const lines = ["Connected services:", ""];
 
@@ -421,6 +440,18 @@ export function mcpPrompt(statuses: readonly McpServerStatus[]): string | null {
     );
   }
 
+  if (waiting.length > 0) {
+    const described = waiting.map((status) => `\`${status.name}\``).join(", ");
+
+    if (connected.length > 0) lines.push("");
+    lines.push(
+      `Connected, but serving no tools yet: ${described}. The app behind it is closed, still starting, or`,
+      "has its MCP server switched off. Its tools join your list by themselves once it serves them, so",
+      "never look for them in files, logs or settings. Only when what the user asks needs that app, tell",
+      "them in one line to open it (and switch its MCP server on); otherwise do not mention it."
+    );
+  }
+
   if (failed.length > 0) {
     const described = failed
       .map(
@@ -429,7 +460,7 @@ export function mcpPrompt(statuses: readonly McpServerStatus[]): string | null {
       )
       .join(", ");
 
-    if (connected.length > 0) lines.push("");
+    if (connected.length > 0 || waiting.length > 0) lines.push("");
     lines.push(
       `These are configured but not usable: ${described}. Say so plainly if the user asks for one,`,
       "rather than reporting work you could not do."
@@ -1532,6 +1563,10 @@ export class AbacusBotSession {
     // Their language, read before the prompt is, so this turn's prompt names it.
     if (this.mode !== AgentMode.Unattended && !isSenderChat())
       this.languageFollower.follow(words);
+    // A server that connected with no tools (an app not open yet) is asked
+    // again now, so a turn that follows "I opened it" has its tools, and the
+    // prompt rebuilt below says so.
+    await this.mcp.askWaiting?.();
     // Edited instructions apply to this turn, not the next session.
     await this.refreshCustomInstructions();
     this.userWords.beginTurn(words);

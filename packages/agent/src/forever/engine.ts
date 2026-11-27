@@ -990,6 +990,10 @@ export class ForeverEngine {
     // Their language, read before the prompt is, so this turn's prompt names it.
     if (turn?.continueCut !== true && this.speaksForUser())
       this.languageFollower.follow(ownWords(text, turn?.userText));
+    // A server that connected with no tools (an app not open yet) is asked
+    // again now, so a turn that follows "I opened it" has its tools, and the
+    // prompt rebuilt next says so.
+    await this.mcp.askWaiting?.();
     await this.refreshStandingPrompt();
     await this.startTurnOnBestPoolModel();
     // The sponsored window closing (or opening) changes the headers the

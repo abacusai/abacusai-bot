@@ -7,7 +7,10 @@
  */
 import * as fs from "node:fs";
 
-import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+import {
+  connectorById,
+  GATEWAY_SERVER_NAME,
+} from "@abacus-ai/connectors/registry";
 import {
   connectorToolMetaByName,
   gatewayToolMeta,
@@ -71,6 +74,12 @@ export interface ConnectedMcp {
   onToolsAdded?: () => void;
   /** Stop retrying failed servers; called before this set is replaced or the session ends. */
   retire?: () => void;
+  /**
+   * Ask every server that connected with no tools again now, rather than at
+   * its next timed check: the user's next message is often "I opened it".
+   * Resolves once those asks are answered, within a few seconds at most.
+   */
+  askWaiting?: () => Promise<void>;
   tools: Array<{
     name: string;
     description: string;
@@ -308,6 +317,18 @@ const RECOVERY_REPEAT_MS = 300_000;
 const KEY_REFUSED_RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
 /**
+ * Waits before asking again an app's own server (Roblox Studio's) that
+ * connected but listed no tools: it serves none until the app is open and
+ * ready, and the user is usually opening it right after connecting. Each ask
+ * starts the app's launcher again, so the timed asks stop after the last of
+ * these; from then on it is asked only when a turn starts (askWaiting).
+ */
+const EMPTY_RECHECK_DELAYS_MS = [
+  5_000, 10_000, 20_000, 30_000, 60_000, 120_000, 120_000, 120_000, 120_000,
+  120_000, 120_000, 120_000,
+];
+
+/**
  * A failure worth retrying: no answer from the network (undici's "fetch
  * failed") or a gateway saying it is briefly unavailable. A timeout, a sign-in
  * or a refusal would fail the same way again.
@@ -317,6 +338,18 @@ const isTransientConnectError = (error: unknown): boolean =>
     ? [429, 502, 503, 504].includes(error.status)
     : error instanceof TypeError && error.message === "fetch failed";
 
+/**
+ * How long a turn start waits on askWaiting before it goes ahead without the
+ * tools: a launcher answers in well under this, and a hung one is not waited on.
+ */
+const ASK_WAITING_LIMIT_MS = 1_500;
+
+/** A server another app ships and serves only while that app runs. */
+const isLocalAppServer = (name: string): boolean => {
+  const connector = connectorById(name);
+  return connector?.kind === "mcp" && connector.local != null;
+};
+
 const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
   new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
@@ -325,7 +358,9 @@ const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
   });
 
 export async function connectMcpServers(
-  configPath: string | undefined
+  configPath: string | undefined,
+  /** The timed asks of an app's own server with no tools (EMPTY_RECHECK_DELAYS_MS); for tests. */
+  emptyRecheckDelaysMs: readonly number[] = EMPTY_RECHECK_DELAYS_MS
 ): Promise<ConnectedMcp> {
   // Without a named file, fall back to the app's own server list so an agent
   // started outside the app still sees the connectors added there.
@@ -547,13 +582,20 @@ export async function connectMcpServers(
     return outcome;
   };
 
-  const stillDown: Array<[string, McpServerConfig, "network" | "key"]> = [];
+  const stillDown: Array<
+    [string, McpServerConfig, "network" | "key" | "empty"]
+  > = [];
   await Promise.all(
     Object.entries(servers).map(async ([name, config]) => {
       const outcome = await connectWithRetries(name, config);
       result.statuses.push(outcome.status);
-      if (outcome.client != null) register(name, config, outcome.client, true);
-      else if (outcome.transient === true)
+      if (outcome.client != null) {
+        register(name, config, outcome.client, true);
+        // An app's own server lists no tools while its app is closed; any
+        // other server with none has none to offer, and is not asked again.
+        if (outcome.client.tools.length === 0 && isLocalAppServer(name))
+          stillDown.push([name, config, "empty"]);
+      } else if (outcome.transient === true)
         stillDown.push([name, config, "network"]);
       else if (outcome.keyRefused === true)
         stillDown.push([name, config, "key"]);
@@ -600,35 +642,91 @@ export async function connectMcpServers(
     return attempt;
   };
 
+  // An app's own server waiting on its app: a wake cuts the wait before its
+  // next ask, and `asked` settles once that ask is answered. `idle` while it
+  // waits; an ask already under way (a launcher that hangs) is not waited on.
+  const waiting = new Map<
+    string,
+    { wake: () => void; asked: Promise<void>; idle: boolean }
+  >();
+  result.askWaiting = async (): Promise<void> => {
+    const asks = [...waiting.values()]
+      .filter((entry) => entry.idle)
+      .map((entry) => {
+        entry.wake();
+        return entry.asked;
+      });
+    if (asks.length === 0) return;
+    await Promise.race([
+      Promise.all(asks),
+      sleep(ASK_WAITING_LIMIT_MS, { unref: true }),
+    ]);
+  };
+
   let retired = false;
   result.retire = (): void => {
     retired = true;
+    // A loop waiting for a turn to start ends now.
+    for (const entry of waiting.values()) entry.wake();
   };
 
   // A server the network kept down keeps trying; one whose new key was
-  // refused tries a few times over the first minute. Its tools are advertised
+  // refused tries a few times over the first minute; one that connected with
+  // no tools is asked again until it lists some. Its tools are advertised
   // when it comes up, since the session never had them.
   const recover = async (
     name: string,
     config: McpServerConfig,
-    why: "network" | "key"
+    why: "network" | "key" | "empty"
   ): Promise<void> => {
     for (let attempt = 0; ; attempt++) {
       const delay =
         why === "key"
           ? KEY_REFUSED_RETRY_DELAYS_MS[attempt]
-          : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
+          : why === "empty"
+            ? (emptyRecheckDelaysMs[attempt] ?? Number.POSITIVE_INFINITY)
+            : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
       if (delay == null) return;
-      await sleep(delay, { unref: true });
-      if (retired) return;
+      let answered = (): void => {};
+      if (why === "empty") {
+        let wake = (): void => {};
+        const woken = new Promise<void>((resolve) => (wake = resolve));
+        const asked = new Promise<void>((resolve) => (answered = resolve));
+        const entry = { wake, asked, idle: true };
+        waiting.set(name, entry);
+        // Past the timed asks it waits for a turn to start.
+        await (Number.isFinite(delay)
+          ? Promise.race([sleep(delay, { unref: true }), woken])
+          : woken);
+        entry.idle = false;
+      } else await sleep(delay, { unref: true });
+      if (retired) {
+        answered();
+        return;
+      }
 
       const outcome = await connectOne(name, config);
 
       if (retired) {
         outcome.client?.close();
+        answered();
         return;
       }
-      if (
+      if (why === "empty") {
+        // Still nothing to offer, or not answering while its app starts: the
+        // empty connection stays as it is reported, and it is asked again.
+        if (outcome.client == null || outcome.client.tools.length === 0) {
+          outcome.client?.close();
+          answered();
+          continue;
+        }
+        waiting.delete(name);
+        const empty = result.clients.find((client) => client.name === name);
+        if (empty != null) {
+          result.clients = result.clients.filter((client) => client !== empty);
+          empty.close();
+        }
+      } else if (
         outcome.client == null &&
         (outcome.transient === true ||
           (why === "key" && outcome.keyRefused === true))
@@ -642,6 +740,7 @@ export async function connectMcpServers(
         result.onToolsAdded?.();
       }
       result.onStatusChange?.();
+      answered();
 
       return;
     }

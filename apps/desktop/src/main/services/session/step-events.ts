@@ -89,6 +89,10 @@ const list = (value: unknown): string[] =>
 const connectorFor = (key: string) =>
   connectorById(key) ?? connectorForService(key);
 
+const servedByLocalApp = (
+  connector: NonNullable<ReturnType<typeof connectorFor>>
+): boolean => connector.kind === "mcp" && connector.local != null;
+
 const connectedNote = (facts: StepFacts): string => {
   const connectors = list(facts.connected).flatMap(
     (key) => connectorFor(key) ?? []
@@ -116,8 +120,15 @@ const connectedNote = (facts: StepFacts): string => {
               : ""
           )
           .join("") +
-        (connectors.some((connector) => via(connector) == null)
+        (connectors.some(
+          (connector) => via(connector) == null && !servedByLocalApp(connector)
+        )
           ? "Its tools are in your tool list. "
+          : "") +
+        // An app's own server lists its tools only while the app is open and
+        // ready, which a connect does not prove: they join the list then.
+        (connectors.some(servedByLocalApp)
+          ? "Its tools join your tool list as soon as the app serves them. "
           : "")
       : "") +
     (missing.length > 0
