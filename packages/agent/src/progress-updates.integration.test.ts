@@ -23,6 +23,8 @@ import type { DesktopEvent } from "./protocol.js";
 import { AbacusBotSession } from "./session.js";
 
 const REMINDER = "heard nothing from you for";
+/** The first reminder of a turn whose reply has said nothing yet. */
+const FIRST_REMINDER = "has seen nothing from you since their message";
 const FASTER = "Do not run it again with a larger `timeout`";
 
 let provider: FakeProvider;
@@ -89,13 +91,16 @@ describe("a long silent turn", () => {
       expect(count(calls[3]!, FASTER)).toBe(3);
       expect(text(calls[3]!)).not.toContain("Re-run it with a larger");
       // A reminder after the first and second silent kills; two unanswered stop them.
-      expect(calls.map((call) => count(call, REMINDER))).toEqual([
-        0, 1, 2, 2, 2,
-      ]);
+      expect(
+        calls.map((call) => count(call, FIRST_REMINDER) + count(call, REMINDER))
+      ).toEqual([0, 1, 2, 2, 2]);
+      expect(count(calls[1]!, FIRST_REMINDER)).toBe(1);
       // Each reminder is the request's last message: appended, never inserted.
       for (const index of [1, 2]) {
         const messages = calls[index]!.body.messages as unknown[];
-        expect(JSON.stringify(messages.at(-1))).toContain(REMINDER);
+        expect(JSON.stringify(messages.at(-1))).toContain(
+          index === 1 ? FIRST_REMINDER : REMINDER
+        );
       }
 
       // The system prompt is byte-identical in every request, and each
