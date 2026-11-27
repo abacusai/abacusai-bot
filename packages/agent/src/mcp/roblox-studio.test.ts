@@ -300,11 +300,13 @@ describe("Roblox Studio over stdio", () => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-hang-"));
       dirs.push(dir);
       const hang = path.join(dir, "hang");
+      const starts = path.join(dir, "starts");
       const mcp = await connect(
         configWith({
           env: {
             STAND_IN_OPEN_WHEN: path.join(dir, "open"),
             STAND_IN_HANG_WHEN: hang,
+            STAND_IN_STARTS: starts,
           },
         })
       );
@@ -317,6 +319,14 @@ describe("Roblox Studio over stdio", () => {
       await mcp.askWaiting?.();
       expect(Date.now() - started).toBeLessThan(200);
       expect(mcp.tools).toEqual([]);
+      // The hung launcher is up (not still booting) before its files go.
+      await vi.waitFor(
+        () =>
+          expect(
+            fs.readFileSync(starts, "utf8").trim().split("\n")
+          ).toHaveLength(2),
+        { timeout: 15_000 }
+      );
     } finally {
       vi.useRealTimers();
     }
