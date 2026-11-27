@@ -16,7 +16,9 @@ import {
   killBackgroundJob,
   listBackgroundJobs,
   onBackgroundJobSettled,
+  onBackgroundOutput,
   onConversationQueueCleared,
+  onUserMessageWaiting,
   reportBackgroundJob,
   type BackgroundJob,
   type BackgroundReport,
@@ -24,6 +26,88 @@ import {
 
 /** Trimmed before it goes into the conversation: the tail is where the verdict is. */
 const NOTIFY_OUTPUT_BYTES = 4_000;
+
+/** The longest one wait may ask for: inside the tool's call budget (tool-timeouts). */
+export const MAX_WAIT_SECONDS = 120;
+/** How often the user's view of the output is redrawn while a wait runs. */
+const WAIT_UPDATE_MS = 1_000;
+
+/** Why a wait ended. */
+type WaitEnd = "finished" | "matched" | "user" | "stopped" | "time";
+
+/**
+ * Waits on background jobs until one of them finishes, `until` appears in
+ * their new output, the user writes, the call is stopped, or `ms` pass. Each
+ * redraw hands the jobs' output to `show`, which the user watches.
+ */
+const waitOn = (
+  ids: readonly string[],
+  ms: number,
+  until: string | null,
+  signal: AbortSignal | undefined,
+  show: () => void
+): Promise<WaitEnd> =>
+  new Promise((resolve) => {
+    const from = new Map(
+      ids.map((id) => [id, getBackgroundJob(id)?.output.length ?? 0])
+    );
+    const needle = until?.toLowerCase() ?? null;
+    let redraw: NodeJS.Timeout | null = null;
+    const cleanups: Array<() => void> = [];
+    const end = (why: WaitEnd): void => {
+      for (const cleanup of cleanups.splice(0)) cleanup();
+      if (redraw != null) clearTimeout(redraw);
+      show();
+      resolve(why);
+    };
+    cleanups.push(
+      onBackgroundJobSettled((job) => {
+        if (ids.includes(job.id)) end("finished");
+      }),
+      onBackgroundOutput(() => {
+        if (
+          needle != null &&
+          ids.some((id) =>
+            (getBackgroundJob(id)?.output ?? "")
+              .slice(from.get(id) ?? 0)
+              .toLowerCase()
+              .includes(needle)
+          )
+        ) {
+          end("matched");
+          return;
+        }
+        redraw ??= setTimeout(() => {
+          redraw = null;
+          show();
+        }, WAIT_UPDATE_MS);
+      }),
+      onUserMessageWaiting(() => end("user"))
+    );
+    const timer = setTimeout(() => end("time"), ms);
+    cleanups.push(() => clearTimeout(timer));
+    if (signal != null) {
+      const stop = (): void => end("stopped");
+      if (signal.aborted) {
+        stop();
+        return;
+      }
+      signal.addEventListener("abort", stop, { once: true });
+      cleanups.push(() => signal.removeEventListener("abort", stop));
+    }
+  });
+
+/** What the model is told about a wait that ended with the job(s) still running. */
+const STILL_RUNNING: Record<Exclude<WaitEnd, "finished">, string> = {
+  matched: "The text you waited for appeared; it is still running.",
+  user:
+    "The user wrote while you waited: answer them now. It is still running; wait again " +
+    "afterwards if the work still needs it.",
+  stopped: "The wait was stopped; it is still running.",
+  time:
+    "Still running when the wait ran out. Tell the user in one line where it stands, then wait " +
+    "again if the next step needs it, or carry on with something that does not.",
+};
 
 const describe = (job: BackgroundJob): string => {
   const state =
@@ -58,6 +142,8 @@ export default function (pi: ExtensionAPI) {
     report: BackgroundReport;
   }> = [];
   let busy = false;
+  /** Jobs a fetch_background_output call is waiting on: its answer carries their end. */
+  const waitedOn = new Set<string>();
 
   /** Nothing running will mention these, so the person hears from the app. */
   const tellThePerson = (): void => {
@@ -122,6 +208,8 @@ export default function (pi: ExtensionAPI) {
     // on purpose: it knows, it asked.
     if (!job.notifyOnExit) return;
     if (job.exit?.killed === true) return;
+    // A wait on it answers with its end; a notice would only say it again.
+    if (waitedOn.has(job.id)) return;
 
     const seconds = Math.max(
       1,
@@ -180,17 +268,91 @@ export default function (pi: ExtensionAPI) {
       "background: true. Works while it is still running and after it has finished, so it answers " +
       'both "how far has it got" and "what did it say".\n\n' +
       "Pass an id, or leave it off to see everything that is running and what became of it.\n\n" +
+      "To wait for a background job, pass wait_seconds: the call returns as soon as the job " +
+      "finishes (or as soon as the text you pass as until appears in its output), and the user " +
+      "watches its output meanwhile. It also returns early when the user writes, so you can " +
+      "answer them. Never wait with sleep: a sleep shows the user nothing and holds their " +
+      "messages until it ends.\n\n" +
       "You do not need this to find out that a backgrounded command finished while you are " +
-      "working: you are told, with its output. Reach for it when you want to look before then, " +
-      "or to read something again.",
+      "working: you are told, with its output. Reach for it to wait for one, to look before " +
+      "then, or to read something again.",
     parameters: Type.Object({
       id: Type.Optional(
         Type.String({
-          description: 'The id to read, e.g. "bg-1". Omit to list everything.',
+          description:
+            'The id to read, e.g. "bg-1". Omit to list everything, or with wait_seconds to wait ' +
+            "on every job still running.",
+        })
+      ),
+      wait_seconds: Type.Optional(
+        Type.Number({
+          description: `Wait up to this many seconds (at most ${MAX_WAIT_SECONDS}) for it to finish before answering.`,
+        })
+      ),
+      until: Type.Optional(
+        Type.String({
+          description:
+            'With wait_seconds: stop waiting once this text appears in its output (e.g. "Listening on").',
         })
       ),
     }),
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, signal, onUpdate) {
+      const waitSeconds = Math.min(
+        MAX_WAIT_SECONDS,
+        Math.max(0, Math.round(params.wait_seconds ?? 0))
+      );
+      const waitFor = (
+        params.id != null
+          ? [getBackgroundJob(params.id)].filter((job) => job != null)
+          : listBackgroundJobs()
+      ).filter((job) => job.exit == null);
+      if (waitSeconds > 0 && waitFor.length > 0) {
+        const ids = waitFor.map((job) => job.id);
+        for (const id of ids) waitedOn.add(id);
+        const startedWaiting = Date.now();
+        const output = (): string =>
+          ids
+            .map((id) => {
+              const job = getBackgroundJob(id);
+              return job == null
+                ? ""
+                : `${ids.length > 1 ? `${describe(job)}\n` : ""}${tail(job.output)}`;
+            })
+            .join("\n\n");
+        let why: WaitEnd;
+        try {
+          why = await waitOn(
+            ids,
+            waitSeconds * 1_000,
+            params.until?.trim() || null,
+            signal,
+            () =>
+              onUpdate?.({
+                content: [{ type: "text", text: output() }],
+                details: {},
+              })
+          );
+        } finally {
+          for (const id of ids) waitedOn.delete(id);
+        }
+        const waited = Math.max(
+          1,
+          Math.round((Date.now() - startedWaiting) / 1_000)
+        );
+        const states = ids.map((id) => {
+          const job = getBackgroundJob(id);
+          return job == null ? id : describe(job);
+        });
+        return text(
+          [
+            `Waited ${waited}s. ${why === "finished" ? "It finished." : STILL_RUNNING[why]}`,
+            ...states,
+            "",
+            output() || "(nothing printed yet)",
+          ].join("\n")
+        );
+      }
+
       if (params.id == null) {
         const jobs = listBackgroundJobs();
 

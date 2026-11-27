@@ -24,7 +24,10 @@ import {
   PYTHON_SETUP_TIMEOUT_MS,
   setPythonProvisioner,
 } from "./backends.js";
-import { notifyConversationQueueCleared } from "./background-processes.js";
+import {
+  notifyConversationQueueCleared,
+  notifyUserMessageWaiting,
+} from "./background-processes.js";
 import { basePrompt } from "./base-prompt.js";
 /**
  * The bridge: one pi `AgentSession`, presented as the desktop's event stream.
@@ -2943,6 +2946,8 @@ export class AbacusBotSession {
     this.pendingSteers.add(text, messageId);
     // Answered at once (mid-run-message.ts), unless it answers the model's own question.
     if (options.answer !== true) this.midRunMessages.note(text);
+    // A wait on a background job ends now, so this is answered first.
+    notifyUserMessageWaiting();
     this.userWords.add(ownWords(text));
     userSaid.note(text);
     // The user spoke: they go first, not a test run nobody asked for.

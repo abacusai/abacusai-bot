@@ -15,10 +15,14 @@ import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
  */
 import { afterEach, describe, expect, it } from "vitest";
 
-import { withBackgroundOption } from "./background-bash.js";
+import {
+  leadingSleepSeconds,
+  withBackgroundOption,
+} from "./background-bash.js";
 import {
   listBackgroundJobs,
   notifyConversationQueueCleared,
+  notifyUserMessageWaiting,
   resetBackgroundJobs,
   onBackgroundReport,
   type BackgroundReport,
@@ -632,5 +636,142 @@ describe("how a job reads at each stage", () => {
     expect((await killTool.execute("call-2", {})).content[0]?.text).toContain(
       "1 process:"
     );
+  });
+});
+
+describe("waiting on a background job", () => {
+  /** The wait's answer, its redraws, and how long it took. */
+  const wait = async (params: Record<string, unknown>) => {
+    const pi = withExtension();
+    const fetchTool = pi.tools.get("fetch_background_output") as FakeTool;
+    const shown: string[] = [];
+    const started = Date.now();
+    const result = await fetchTool.execute(
+      "call-wait",
+      params,
+      undefined,
+      (partial: { content: Array<{ text: string }> }) =>
+        shown.push(partial.content[0]?.text ?? "")
+    );
+    return {
+      pi,
+      text: result.content[0]?.text ?? "",
+      shown,
+      ms: Date.now() - started,
+    };
+  };
+
+  it("returns as soon as the job finishes, not when the wait runs out", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 1; echo built", background: true });
+    const { text, ms, pi } = await wait({ id: "bg-1", wait_seconds: 60 });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("It finished.");
+    expect(text).toContain("built");
+    // Seen in the wait: no finished notice says it again.
+    await pi.fire("agent_settled", {});
+    expect(
+      pi.messages.filter(
+        (m) => m.customType === "abacusai-bot-background-finished"
+      )
+    ).toHaveLength(0);
+  }, 20_000);
+
+  it("shows the user the job's output while it waits", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "echo step one; sleep 2; echo step two; sleep 1",
+      background: true,
+    });
+    const { shown, text } = await wait({ id: "bg-1", wait_seconds: 60 });
+
+    expect(shown.some((view) => view.includes("step one"))).toBe(true);
+    expect(text).toContain("step two");
+  }, 20_000);
+
+  it("ends early when the user writes, so they are answered now", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    setTimeout(() => notifyUserMessageWaiting(), 300);
+    const { text, ms } = await wait({ id: "bg-1", wait_seconds: 60 });
+
+    expect(ms).toBeLessThan(5_000);
+    expect(text).toContain("The user wrote while you waited");
+    expect(text).toContain("running");
+  }, 20_000);
+
+  it("stops at the text it was told to wait for", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "sleep 1; echo Listening on port 3000; sleep 30",
+      background: true,
+    });
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on",
+    });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("The text you waited for appeared");
+    expect(text).toContain("Listening on port 3000");
+  }, 20_000);
+
+  it("says it is still running when the wait runs out", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    const { text } = await wait({ id: "bg-1", wait_seconds: 1 });
+
+    expect(text).toContain("Still running when the wait ran out");
+  }, 20_000);
+
+  it("waits on every running job when given no id", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    await run(tool, { command: "sleep 1; echo second done", background: true });
+    const { text, ms } = await wait({ wait_seconds: 60 });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("It finished.");
+    expect(text).toContain("second done");
+  }, 20_000);
+});
+
+describe("a blind sleep while a job runs in the background", () => {
+  it("is answered with the way to wait instead, and not run", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    const result = await tool.execute("call-2", {
+      command: "sleep 90; tail -5 install.log",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain(
+      'fetch_background_output with id:"bg-1" and wait_seconds'
+    );
+    expect(base.calls).toHaveLength(0);
+  });
+
+  it("runs a sleep when nothing runs in the background, and a short one when something does", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, { command: "sleep 90; echo ok" });
+    await run(tool, { command: "sleep 30", background: true });
+    await run(tool, { command: "sleep 3; curl -s localhost:3000" });
+
+    expect(base.calls).toHaveLength(2);
+  });
+
+  const sleeps: [command: string, seconds: number | null][] = [
+    ["sleep 90; tail -5 install.log", 90],
+    ["cd 'C:/Users/x y/app' && sleep 2m && ls", 120],
+    ['cd "$TMPDIR" ; sleep 45', 45],
+    ["sleep 0.5", 0.5],
+    ["echo sleep 90", null],
+    ["sleepy 90", null],
+    ["npm run build && sleep 90", null],
+  ];
+  it.each(sleeps)("reads the leading sleep of %s", (command, seconds) => {
+    expect(leadingSleepSeconds(command)).toBe(seconds);
   });
 });

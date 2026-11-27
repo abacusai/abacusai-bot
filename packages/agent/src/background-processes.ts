@@ -168,6 +168,29 @@ const notifyBackgroundOutput = (): void => {
   }
 };
 
+/**
+ * The user sent a message while a run is working. A wait on a background job
+ * (fetch_background_output's wait_seconds) ends on it, so the message is
+ * answered now rather than after the wait.
+ */
+const userMessageListeners = new Set<() => void>();
+
+export function onUserMessageWaiting(listener: () => void): () => void {
+  userMessageListeners.add(listener);
+
+  return () => userMessageListeners.delete(listener);
+}
+
+export function notifyUserMessageWaiting(): void {
+  for (const listener of userMessageListeners) {
+    try {
+      listener();
+    } catch {
+      /* one bad listener must not stop the rest being told */
+    }
+  }
+}
+
 /** Jobs still running. */
 export function liveBackgroundJobCount(): number {
   let live = 0;

@@ -22,7 +22,10 @@ import { planFactsPrompt } from "../account-plan.js";
 import { Allowances } from "../allowances.js";
 import { freeBytes } from "../atomic-file.js";
 import { PYTHON_SETUP_TIMEOUT_MS, setPythonProvisioner } from "../backends.js";
-import { notifyConversationQueueCleared } from "../background-processes.js";
+import {
+  notifyConversationQueueCleared,
+  notifyUserMessageWaiting,
+} from "../background-processes.js";
 import { basePrompt } from "../base-prompt.js";
 import { tidyBotText } from "../bot/bot-output.js";
 import { BOT_REACTION_TOOL_NAME } from "../bot/bot-reaction-tool.js";
@@ -2175,6 +2178,8 @@ export class ForeverEngine {
     this.pendingSteers.add(text, messageId);
     // Answered at once (mid-run-message.ts), unless it answers the model's own question.
     if (options.answer !== true) this.midRunMessages.note(text);
+    // A wait on a background job ends now, so this is answered first.
+    notifyUserMessageWaiting();
     await this.requireSession().steer(text);
   }
 
