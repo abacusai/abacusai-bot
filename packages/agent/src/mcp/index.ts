@@ -71,6 +71,12 @@ export interface ConnectedMcp {
   onToolsAdded?: () => void;
   /** Stop retrying failed servers; called before this set is replaced or the session ends. */
   retire?: () => void;
+  /**
+   * Ask every server that connected with no tools again now, rather than at
+   * its next timed check: the user's next message is often "I opened it".
+   * Resolves once those asks are answered, within a few seconds at most.
+   */
+  askWaiting?: () => Promise<void>;
   tools: Array<{
     name: string;
     description: string;
@@ -308,6 +314,14 @@ const RECOVERY_REPEAT_MS = 300_000;
 const KEY_REFUSED_RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
 /**
+ * Waits before asking again a server that connected but listed no tools: an
+ * app's own server (Roblox Studio's) answers with none until the app is open
+ * and ready, and the user is usually opening it right after connecting.
+ */
+const EMPTY_RECHECK_DELAYS_MS = [5_000, 10_000, 20_000, 30_000, 60_000];
+const EMPTY_RECHECK_REPEAT_MS = 120_000;
+
+/**
  * A failure worth retrying: no answer from the network (undici's "fetch
  * failed") or a gateway saying it is briefly unavailable. A timeout, a sign-in
  * or a refusal would fail the same way again.
@@ -316,6 +330,9 @@ const isTransientConnectError = (error: unknown): boolean =>
   error instanceof McpHttpError
     ? [429, 502, 503, 504].includes(error.status)
     : error instanceof TypeError && error.message === "fetch failed";
+
+/** How long a turn waits on askWaiting before it goes ahead without the tools. */
+const ASK_WAITING_LIMIT_MS = 5_000;
 
 const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
   new Promise((resolve) => {
@@ -547,13 +564,20 @@ export async function connectMcpServers(
     return outcome;
   };
 
-  const stillDown: Array<[string, McpServerConfig, "network" | "key"]> = [];
+  const stillDown: Array<
+    [string, McpServerConfig, "network" | "key" | "empty"]
+  > = [];
   await Promise.all(
     Object.entries(servers).map(async ([name, config]) => {
       const outcome = await connectWithRetries(name, config);
       result.statuses.push(outcome.status);
-      if (outcome.client != null) register(name, config, outcome.client, true);
-      else if (outcome.transient === true)
+      if (outcome.client != null) {
+        register(name, config, outcome.client, true);
+        // The gateway's tools follow the account's connectors, which the
+        // desktop refreshes itself; any other server may list them late.
+        if (outcome.client.tools.length === 0 && name !== GATEWAY_SERVER_NAME)
+          stillDown.push([name, config, "empty"]);
+      } else if (outcome.transient === true)
         stillDown.push([name, config, "network"]);
       else if (outcome.keyRefused === true)
         stillDown.push([name, config, "key"]);
@@ -605,30 +629,73 @@ export async function connectMcpServers(
     retired = true;
   };
 
+  // Servers waiting on tools: a wake cuts the wait before their next ask, and
+  // `asked` settles once that ask has been answered.
+  const waiting = new Map<string, { wake: () => void; asked: Promise<void> }>();
+  result.askWaiting = async (): Promise<void> => {
+    if (waiting.size === 0) return;
+    const asks = [...waiting.values()].map((entry) => {
+      entry.wake();
+      return entry.asked;
+    });
+    await Promise.race([
+      Promise.all(asks),
+      sleep(ASK_WAITING_LIMIT_MS, { unref: true }),
+    ]);
+  };
+
   // A server the network kept down keeps trying; one whose new key was
-  // refused tries a few times over the first minute. Its tools are advertised
+  // refused tries a few times over the first minute; one that connected with
+  // no tools is asked again until it lists some. Its tools are advertised
   // when it comes up, since the session never had them.
   const recover = async (
     name: string,
     config: McpServerConfig,
-    why: "network" | "key"
+    why: "network" | "key" | "empty"
   ): Promise<void> => {
     for (let attempt = 0; ; attempt++) {
       const delay =
         why === "key"
           ? KEY_REFUSED_RETRY_DELAYS_MS[attempt]
-          : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
+          : why === "empty"
+            ? (EMPTY_RECHECK_DELAYS_MS[attempt] ?? EMPTY_RECHECK_REPEAT_MS)
+            : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
       if (delay == null) return;
-      await sleep(delay, { unref: true });
-      if (retired) return;
+      let answered = (): void => {};
+      if (why === "empty") {
+        let wake = (): void => {};
+        const woken = new Promise<void>((resolve) => (wake = resolve));
+        const asked = new Promise<void>((resolve) => (answered = resolve));
+        waiting.set(name, { wake, asked });
+        await Promise.race([sleep(delay, { unref: true }), woken]);
+      } else await sleep(delay, { unref: true });
+      if (retired) {
+        answered();
+        return;
+      }
 
       const outcome = await connectOne(name, config);
 
       if (retired) {
         outcome.client?.close();
+        answered();
         return;
       }
-      if (
+      if (why === "empty") {
+        // Still nothing to offer, or not answering while its app starts: the
+        // empty connection stays as it is reported, and it is asked again.
+        if (outcome.client == null || outcome.client.tools.length === 0) {
+          outcome.client?.close();
+          answered();
+          continue;
+        }
+        waiting.delete(name);
+        const empty = result.clients.find((client) => client.name === name);
+        if (empty != null) {
+          result.clients = result.clients.filter((client) => client !== empty);
+          empty.close();
+        }
+      } else if (
         outcome.client == null &&
         (outcome.transient === true ||
           (why === "key" && outcome.keyRefused === true))
@@ -642,6 +709,7 @@ export async function connectMcpServers(
         result.onToolsAdded?.();
       }
       result.onStatusChange?.();
+      answered();
 
       return;
     }

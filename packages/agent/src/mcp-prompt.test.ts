@@ -36,6 +36,23 @@ describe("the connected-services line", () => {
     ).not.toMatch(/abacus-connectors/);
   });
 
+  it("says an app's own server with no tools yet is waiting on its app, and drops that once it serves", () => {
+    const studio = (toolCount: number) =>
+      server({
+        id: "roblox-studio",
+        name: "roblox-studio",
+        transport: "stdio",
+        toolCount,
+      });
+    expect(mcpPrompt([studio(0)])).toContain(
+      "Connected, but serving no tools yet: `roblox-studio`"
+    );
+    expect(mcpPrompt([studio(0)])).toContain(
+      "Its tools join your list by themselves"
+    );
+    expect(mcpPrompt([studio(10)])).not.toContain("serving no tools yet");
+  });
+
   it("leaves the app's own servers out", () => {
     expect(mcpPrompt([server({ isBuiltin: true })])).toBeNull();
   });

@@ -15,8 +15,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { connectorById, mcpEntryOn } from "@abacus-ai/connectors/registry";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { mcpPrompt } from "../session.js";
 import { connectMcpServers, type ConnectedMcp } from "./index.js";
 import { buildMcpToolDefinitions } from "./tools.js";
 
@@ -56,7 +57,7 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
     message.method === "initialize"
       ? { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "Roblox_Studio", version: "1" } }
       : message.method === "tools/list"
-        ? { tools }
+        ? { tools: process.env.STAND_IN_OPEN_WHEN == null || require("node:fs").existsSync(process.env.STAND_IN_OPEN_WHEN) ? tools : [] }
         : message.method === "tools/call"
           ? call(message.params.name, message.params.arguments ?? {})
           : {};
@@ -211,5 +212,100 @@ describe("Roblox Studio over stdio", () => {
       expect.objectContaining({ id: "roblox-studio", status: "error" }),
     ]);
     expect(mcp.tools).toEqual([]);
+  }, 60_000);
+
+  it("offers Studio's tools once it serves them, when it connected with none while closed", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-closed-"));
+      dirs.push(dir);
+      const open = path.join(dir, "studio-open");
+      const mcp = await connect(
+        configWith({ env: { STAND_IN_OPEN_WHEN: open } })
+      );
+      let added = 0;
+      let changed = 0;
+      mcp.onToolsAdded = () => added++;
+      mcp.onStatusChange = () => changed++;
+      expect(mcp.statuses).toEqual([
+        expect.objectContaining({ status: "connected", toolCount: 0 }),
+      ]);
+      expect(mcpPrompt(mcp.statuses)).toContain(
+        "Connected, but serving no tools yet: `roblox-studio`"
+      );
+
+      // Still closed at the first recheck: nothing changes.
+      await vi.advanceTimersByTimeAsync(5_000);
+      await vi.waitFor(() => expect(mcp.clients).toHaveLength(1));
+      expect(added).toBe(0);
+      expect(mcp.tools).toEqual([]);
+
+      fs.writeFileSync(open, "");
+      await vi.advanceTimersByTimeAsync(10_000);
+      await vi.waitFor(() => expect(added).toBe(1));
+      expect(changed).toBe(1);
+      expect(mcp.statuses).toEqual([
+        expect.objectContaining({ status: "connected", toolCount: 8 }),
+      ]);
+      expect(mcp.tools).toHaveLength(8);
+      expect(mcp.clients).toHaveLength(1);
+      expect(
+        JSON.parse((await callAs(mcp, "list_roblox_studios")).text)
+      ).toEqual([expect.objectContaining({ studio_id: "studio-1" })]);
+      expect(mcpPrompt(mcp.statuses)).toContain(
+        "`roblox-studio` (tools named `roblox-studio_*`)"
+      );
+      expect(mcpPrompt(mcp.statuses)).not.toContain("serving no tools yet");
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 60_000);
+
+  it("asks again at once when a turn starts, so the message after opening Studio has its tools", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-closed-"));
+      dirs.push(dir);
+      const open = path.join(dir, "studio-open");
+      const mcp = await connect(
+        configWith({ env: { STAND_IN_OPEN_WHEN: open } })
+      );
+      let added = 0;
+      mcp.onToolsAdded = () => added++;
+      // Nothing to find yet: the ask answers, and nothing changes.
+      await mcp.askWaiting?.();
+      expect(added).toBe(0);
+
+      fs.writeFileSync(open, "");
+      await mcp.askWaiting?.();
+      expect(added).toBe(1);
+      expect(mcp.tools).toHaveLength(8);
+      // Served now: nothing is left waiting.
+      await mcp.askWaiting?.();
+      expect(added).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 60_000);
+
+  it("stops asking once the session's servers are replaced", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-closed-"));
+      dirs.push(dir);
+      const open = path.join(dir, "studio-open");
+      const mcp = await connect(
+        configWith({ env: { STAND_IN_OPEN_WHEN: open } })
+      );
+      let added = 0;
+      mcp.onToolsAdded = () => added++;
+      mcp.retire?.();
+      fs.writeFileSync(open, "");
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(added).toBe(0);
+      expect(mcp.tools).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   }, 60_000);
 });
