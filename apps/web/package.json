@@ -71,7 +71,7 @@
     "diff": "^8.0.3",
     "dockview-react": "8.4.1",
     "ghostty-web": "0.4.0",
-    "i18next": "^25.8.7",
+    "i18next": "^26.3.4",
     "jszip": "3.10.1",
     "linkify-it": "5.0.2",
     "lucide-react": "^1.49.0",
