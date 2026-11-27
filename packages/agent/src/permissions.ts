@@ -154,7 +154,76 @@ export function unescapedToolPath(
     : null;
 }
 
-/** Every path argument of a call, repaired in place (see unescapedToolPath). */
+/**
+ * A drive in the spelling of Git Bash, WSL or Cygwin (`/c/`, `/mnt/c/`,
+ * `/cygdrive/c/`) where a word starts in a shell command. A bare `/c` or `/f`
+ * is a Windows switch (`cmd /c`, `taskkill /f`), never a drive.
+ */
+const SHELL_DRIVE = /(^|[\s'"=(;|&<>])\/(?:mnt\/|cygdrive\/)?([a-zA-Z])\//g;
+
+/**
+ * The first path segment at `from`: up to the next `/`, and inside quotes up
+ * to the closing quote, else up to a space or shell operator (`\ ` escapes a
+ * space). Its name with escapes removed.
+ */
+const firstSegment = (
+  command: string,
+  from: number,
+  quote: string | null
+): string => {
+  let name = "";
+  for (let i = from; i < command.length; i++) {
+    const char = command[i]!;
+    if (char === "/" || char === quote) break;
+    if (quote == null) {
+      if (char === "\\" && i + 1 < command.length) {
+        name += command[++i];
+        continue;
+      }
+      if (/[\s'"\\;|&()<>$`]/.test(char)) break;
+    }
+    name += char;
+  }
+  return name;
+};
+
+/**
+ * A command whose `/c/Users/...` paths are written `C:/Users/...`. The shell
+ * on Windows (busybox ash) reads `/c/Users` as a folder named `c` on the
+ * current drive, so the command fails, or with `2>/dev/null` finds nothing,
+ * on a path the model meant. A path is rewritten only when the drive's own
+ * folder exists and no such `c` folder does, so a sed address or a real folder
+ * is left alone. Null when nothing changed.
+ */
+export function nativeDriveCommand(
+  command: string,
+  cwd: string,
+  exists: (target: string) => boolean = fs.existsSync
+): string | null {
+  let changed = false;
+  const repaired = command.replace(
+    SHELL_DRIVE,
+    (whole, lead: string, drive: string, offset: number) => {
+      const quote = lead === '"' || lead === "'" ? lead : null;
+      const name = firstSegment(command, offset + whole.length, quote);
+      if (name.length === 0) return whole;
+      const written = whole.slice(lead.length) + name;
+      if (
+        !exists(`${drive.toUpperCase()}:/${name}`) ||
+        exists(path.win32.resolve(cwd, written))
+      )
+        return whole;
+      changed = true;
+      return `${lead}${drive.toUpperCase()}:/`;
+    }
+  );
+  return changed ? repaired : null;
+}
+
+/**
+ * Every path argument of a call, repaired in place (see unescapedToolPath),
+ * and a shell command's drive paths written natively (see nativeDriveCommand).
+ */
 export function repairEscapedPaths(
   input: Record<string, unknown>,
   cwd: string,
@@ -171,6 +240,9 @@ export function repairEscapedPaths(
     if (Array.isArray(value)) input[key] = value.map(repair);
     else if (typeof value === "string") input[key] = repair(value);
   }
+  if (typeof input.command === "string")
+    input.command =
+      nativeDriveCommand(input.command, cwd, exists) ?? input.command;
 }
 
 /** Tools that change something on disk or run code. */

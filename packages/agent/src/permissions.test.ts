@@ -35,6 +35,7 @@ import {
   isMutatingTool,
   parseMode,
   parseModeStrict,
+  nativeDriveCommand,
   repairEscapedPaths,
   unescapedToolPath,
   type GateOptions,
@@ -1616,5 +1617,62 @@ describe("a path the model sent with an unescaped backslash", () => {
       paths: [`${routine}\\notes.md`, "plain.md"],
       content: "line one\nline two",
     });
+  });
+});
+
+describe("a shell command with Git Bash or WSL drive paths, on Windows", () => {
+  const cwd = "C:\\Users\\someone\\project";
+  // Forward slashes, the spelling the repair checks; the shell's own reading
+  // of `/c/x` is `C:\c\x`, which exists only where listed.
+  const existing = new Set([
+    "C:/",
+    "C:/Users",
+    "C:/Program Files",
+    "D:/",
+    "D:/Games",
+    "C:/c/Tools",
+  ]);
+  const exists = (target: string): boolean =>
+    existing.has(target.replaceAll("\\", "/").replace(/(?<=.)\/$/, "")) ||
+    existing.has(target.replaceAll("\\", "/"));
+
+  const rows: [command: string, repaired: string | null][] = [
+    [
+      "cd /c/Users/someone/.abacusai-bot/bot-home && ls",
+      "cd C:/Users/someone/.abacusai-bot/bot-home && ls",
+    ],
+    [
+      'ls "/c/Users/someone/My Game" | head',
+      'ls "C:/Users/someone/My Game" | head',
+    ],
+    [
+      "ls /c/Program\\ Files/GitHub\\ CLI/bin",
+      "ls C:/Program\\ Files/GitHub\\ CLI/bin",
+    ],
+    [
+      "grep -rn foo /mnt/c/Users/someone/src",
+      "grep -rn foo C:/Users/someone/src",
+    ],
+    ["cp out.exe /cygdrive/d/Games", "cp out.exe D:/Games"],
+    ['cmd /c "dir /b" && taskkill /f /im app.exe', null],
+    ["sed -n '/d/p' notes.txt", null],
+    ["curl https://example.com/c/Users", null],
+    ["ls /c/Tools", null],
+    ["ls /e/Users", null],
+    ["ls /tmp /dev/null", null],
+  ];
+
+  it.each(rows)("%s", (command, repaired) => {
+    expect(nativeDriveCommand(command, cwd, exists)).toBe(repaired);
+  });
+
+  it("is repaired in place on a call's command, and only on Windows", () => {
+    const call = { command: "cd /c/Users/someone && ls" };
+    repairEscapedPaths(call, cwd, "win32", exists);
+    expect(call.command).toBe("cd C:/Users/someone && ls");
+
+    const posix = { command: "cd /c/Users/someone && ls" };
+    repairEscapedPaths(posix, "/home/someone", "linux", exists);
+    expect(posix.command).toBe("cd /c/Users/someone && ls");
   });
 });
