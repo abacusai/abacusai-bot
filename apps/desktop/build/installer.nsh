@@ -197,5 +197,7 @@ Var abacusBaseDir
     DeleteRegKey SHELL_CONTEXT "Software\Classes\abacusaibot"
     DeleteRegKey HKCU "Software\Classes\abacusaibot"
     !insertmacro abacusRemoveAppShortcuts
+    ; A later install makes the removed shortcuts again (artifact-apps.ts).
+    Delete "$PROFILE\.abacusai-bot\installed-apps\launchers-version"
   ${EndIf}
 !macroend

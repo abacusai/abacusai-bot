@@ -4,6 +4,7 @@
  * (desktop only). The host decides what can be installed; decks, PDFs, other
  * files and sites elsewhere never offer it. Once installed, the row opens it.
  */
+import type { DeliverableKind } from "@abacus-ai/contract/deliverables";
 import { AppWindow, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,9 +34,11 @@ interface Props {
   /** The row's absolute path, or its URL. */
   target: string;
   sessionId: string | null;
+  /** What the agent said the page is; else the host's guess from the page. */
+  kind?: DeliverableKind;
 }
 
-const InstallApp = ({ target, sessionId }: Props) => {
+const InstallApp = ({ target, sessionId, kind }: Props) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const apps = transport.client.system.artifactApps;
@@ -54,7 +57,7 @@ const InstallApp = ({ target, sessionId }: Props) => {
           if (!live) return;
           setInstallable(status.installable);
           setInstalledId(status.installedId);
-          setSite(status.kind === "site");
+          setSite(kind != null ? kind === "site" : status.kind === "site");
         })
         .catch(() => undefined);
     refresh();
@@ -63,7 +66,7 @@ const InstallApp = ({ target, sessionId }: Props) => {
       live = false;
       window.removeEventListener(CHANGED, refresh);
     };
-  }, [apps, target]);
+  }, [apps, target, kind]);
   const run = () => {
     setBusy(true);
     const done = () => setBusy(false);
@@ -102,7 +105,7 @@ const InstallApp = ({ target, sessionId }: Props) => {
               data-slot="install-app-more"
               className="ml-0.5 size-7 shrink-0"
               disabled={busy}
-              aria-label={t("workspace.preview.moreActions")}
+              aria-label={t("shell.topBar.more")}
             />
           }
         >

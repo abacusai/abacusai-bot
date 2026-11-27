@@ -82,6 +82,8 @@ export const sessionDeliverablesCard = (
 ): ReactNode => {
   const resolve = (path: string): string =>
     resolveWorkspacePath(path, options.workspaceRoot);
+  // What the agent said each page is: the card's own rows carry only paths.
+  const kinds = new Map(items.map((item) => [item.path, item.kind]));
   return (
     <DeliverablesCard
       items={items}
@@ -109,6 +111,7 @@ export const sessionDeliverablesCard = (
           <InstallAppRowButton
             target={item.path}
             sessionId={options.sessionId ?? null}
+            kind={kinds.get(item.path)}
           />
         ) : (
           <>
@@ -121,6 +124,7 @@ export const sessionDeliverablesCard = (
             <InstallAppRowButton
               target={resolve(item.path)}
               sessionId={options.sessionId ?? null}
+              kind={kinds.get(item.path)}
             />
           </>
         )

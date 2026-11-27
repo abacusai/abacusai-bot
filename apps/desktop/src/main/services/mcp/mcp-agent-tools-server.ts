@@ -389,6 +389,10 @@ export interface McpAgentToolsServerOptions {
     target: string,
     sessionId: string | null
   ) => Promise<{ title: string }>;
+  /** Whether a page (path or local URL) can be installed, and is already. */
+  appStatus?: (
+    target: string
+  ) => Promise<{ installable: boolean; installedId: string | null }>;
   /** Start the fix of a watcher event; `ok: false` is a refusal the model words. */
   githubFix?: (
     eventId: string | null,
@@ -2092,6 +2096,21 @@ export class McpAgentToolsServer extends McpHttpServer {
    * named and an empty result is an error: a success with nothing behind it
    * is worse than a failure the model can correct.
    */
+  /** A presented page that can be installed and is not yet: the offer is due. */
+  private async offersInstall(
+    items: ReadonlyArray<{ target: string; isUrl: boolean }>
+  ): Promise<boolean> {
+    if (this.options.appStatus == null) return false;
+    const page = items.find((item) =>
+      item.isUrl
+        ? /^http:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(item.target)
+        : /\.html?$/i.test(item.target)
+    );
+    if (page == null) return false;
+    const status = await this.options.appStatus(page.target).catch(() => null);
+    return status?.installable === true && status.installedId == null;
+  }
+
   /** `install_app`: only in the app's own chat, after the user said yes. */
   async installApp(
     args: Record<string, unknown>,
@@ -2428,6 +2447,17 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     if (checked.length > 0) lines.push("", "Checked:", ...checked);
     lines.push(...problemLines);
+    if (
+      !forBot &&
+      channel.pane &&
+      unanswered.length === 0 &&
+      (args.kind === "tool" || args.kind === "game") &&
+      (await this.offersInstall(valid))
+    )
+      lines.push(
+        "",
+        "End your reply with one line, in the user's language, offering to keep it on their computer as an app (its own window, opens offline, data kept), before any other question. Call install_app only if they say yes."
+      );
     // The files card and the artifacts ledger read these, not the arguments.
     lines.push("", ...valid.map((item) => artifactPathLine(item.target)));
 

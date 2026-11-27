@@ -3,6 +3,7 @@ import {
   declaredArtifactTargets,
   isDeliverableUrl,
   presentedDeliverables,
+  type DeliverableKind,
 } from "@abacus-ai/contract/deliverables";
 /**
  * The files a bot turn handed over (spec 03 §11.3a), a port of the old
@@ -27,6 +28,8 @@ export interface TurnDeliverable {
   path: string;
   /** The agent's own name for it, when it gave one. */
   label?: string;
+  /** What the agent said the page is, when it said. */
+  kind?: DeliverableKind;
   isUrl: boolean;
 }
 
@@ -115,7 +118,7 @@ export function turnDeliverables(
     .filter((tool) => tool.settled);
   const seen = new Set<string>();
   const out: TurnDeliverable[] = [];
-  const add = (path: string, label?: string): void => {
+  const add = (path: string, label?: string, kind?: DeliverableKind): void => {
     // A tool declares `C:\x` where the model, shown `C:/x`, names the same file.
     const key = modelPath(path);
     if (seen.has(key)) return;
@@ -123,6 +126,7 @@ export function turnDeliverables(
     out.push({
       path,
       ...(label != null ? { label } : {}),
+      ...(kind != null ? { kind } : {}),
       isUrl: isDeliverableUrl(path),
     });
   };
@@ -130,7 +134,7 @@ export function turnDeliverables(
   for (const tool of tools) {
     if (componentToolBase(tool.name) !== "present_deliverable") continue;
     for (const item of presentedDeliverables(tool.input, tool.text))
-      add(item.path, item.label);
+      add(item.path, item.label, item.kind);
   }
   // A presentation that accepted nothing does not suppress the fallback.
   if (out.length > 0) return out;

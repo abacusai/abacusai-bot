@@ -411,6 +411,7 @@ import { WebhookService } from "./services/agent-tools/webhook-service";
 import { AguiRelayService } from "./services/agui/relay-service";
 import { agentBrowserRunListener } from "./services/artifact-apps/agent-runs";
 import {
+  appStatus,
   installApp,
   openInstalledAppWindow,
 } from "./services/artifact-apps/artifact-apps";
@@ -2052,6 +2053,7 @@ export class ServiceHost {
     routineSends: this.routineSends,
     routineDelivery: () => this.deliversRoutineReports(),
     githubFixOffered: () => this.githubFixOffered(),
+    appStatus: (target) => appStatus(target),
     installApp: async (target, sessionId) => {
       const { id, title } = await installApp(target, sessionId, "agent");
       openInstalledAppWindow(id, "chat");

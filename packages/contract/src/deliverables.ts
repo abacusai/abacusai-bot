@@ -32,10 +32,20 @@ export function declaredArtifactTargets(resultText: string): string[] {
 }
 
 /** One entry of `present_deliverable`'s ordered `items` argument. */
+/**
+ * What the agent said a presented page is: a tool keeping the user's data, a
+ * game, or a site for others to see. Decides whether its row offers Install.
+ */
+export type DeliverableKind = "tool" | "game" | "site";
+
 export interface DeliverableItem {
   path: string;
   label?: string;
+  kind?: DeliverableKind;
 }
+
+const kindOf = (raw: unknown): DeliverableKind | null =>
+  raw === "tool" || raw === "game" || raw === "site" ? raw : null;
 
 /**
  * The tool's `items` argument, read defensively: it is streamed model output,
@@ -45,6 +55,7 @@ export function requestedDeliverables(
   input: Record<string, unknown>
 ): DeliverableItem[] {
   const raw = Array.isArray(input.items) ? input.items : [];
+  const kind = kindOf(input.kind);
   const items: DeliverableItem[] = [];
   for (const entry of raw) {
     if (typeof entry !== "object" || entry == null) continue;
@@ -52,7 +63,11 @@ export function requestedDeliverables(
     const path = String(record.path ?? "").trim();
     if (path.length === 0) continue;
     const label = String(record.label ?? "").trim();
-    items.push(label.length > 0 ? { path, label } : { path });
+    items.push({
+      path,
+      ...(label.length > 0 ? { label } : {}),
+      ...(kind != null ? { kind } : {}),
+    });
   }
   return items;
 }
@@ -61,6 +76,7 @@ export interface PresentedDeliverable {
   /** Absolute path or URL, as the tool declared it. */
   path: string;
   label?: string;
+  kind?: DeliverableKind;
   isUrl: boolean;
 }
 
@@ -98,11 +114,13 @@ export function presentedDeliverables(
       isUrl: isDeliverableUrl(item.path),
     }));
 
+  const kind = kindOf(input.kind);
   return declared.map((path) => {
     const label = requested.find((item) => answers(path, item.path))?.label;
     return {
       path,
       ...(label != null ? { label } : {}),
+      ...(kind != null ? { kind } : {}),
       isUrl: isDeliverableUrl(path),
     };
   });

@@ -49,6 +49,7 @@ import { isLoopbackUrl } from "@abacus-ai/agent/deliverable-url";
 import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import { isArtifactPage } from "@abacus-ai/contract/share";
 import {
+  app,
   BaseWindow,
   dialog,
   Menu,
@@ -901,6 +902,43 @@ export const startInstalledApps = (appDeps: AppsDeps): void => {
       console.warn("[installed-app] update failed", entry.id, error);
     }
     watchSource(entry);
+  }
+  void restoreLaunchers();
+};
+
+/**
+ * The first run after this app was installed or updated: launchers missing
+ * for installed apps are made again (uninstalling the bot removed them, and a
+ * reinstall keeps the apps and their data). Only then, so a shortcut the user
+ * deleted on purpose is not brought back at every start. The uninstaller
+ * deletes the marker (build/installer.nsh).
+ */
+const restoreLaunchers = async (): Promise<void> => {
+  const marker = join(root(), "launchers-version");
+  let seen = "";
+  try {
+    seen = readFileSync(marker, "utf8").trim();
+  } catch {
+    // Never run, or the bot was uninstalled since.
+  }
+  const version = app.getVersion();
+  if (seen === version) return;
+  let changed = false;
+  for (const entry of installedApps()) {
+    if (entry.launchers.length > 0 && entry.launchers.every(existsSync))
+      continue;
+    try {
+      entry.launchers = await writeLaunchers(entry, appDir(entry.id));
+      changed = true;
+    } catch (error) {
+      console.warn("[installed-app] launcher not restored", entry.id, error);
+    }
+  }
+  if (changed) saveRegistry();
+  try {
+    writeAtomic(marker, version);
+  } catch {
+    // Checked again next start.
   }
 };
 

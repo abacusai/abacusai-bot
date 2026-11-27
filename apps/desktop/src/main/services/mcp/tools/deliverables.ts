@@ -53,16 +53,12 @@ const KEEPS_DATA = [
 ].join("\n");
 
 /**
- * The agent offers to keep a tool or game as an app; the user says yes in
- * chat and `install_app` does it. Sites and pitch pages keep Share.
+ * The agent says what a page is when it presents it; for a tool or game,
+ * present_deliverable's result asks for the one-line install offer (a tool
+ * result is followed far more reliably than a hint). Sites keep Share.
  */
-const OFFER_APP = [
-  "When you have presented a working tool that keeps what people enter (tracker, ledger,",
-  "planner, list) or a game, offer once, in one short line in the user's language, to keep",
-  "it on their computer as an app: its own window, opens offline, data kept. Not for a",
-  "website, landing or pitch page, a report or a one-off answer: for those Share stays",
-  "the way to show it. Call install_app only after they say yes.",
-].join("\n");
+const OFFER_APP =
+  "Present a page with its kind (tool, game or site); for a tool or game the result says how to offer keeping it as an app.";
 
 const offersApp = (channel: ChannelCapabilities): boolean =>
   channel.pane && !toChat(channel);
@@ -281,6 +277,16 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
           type: "string",
           description: "One line about what was produced.",
         },
+        ...(offersApp(channel)
+          ? {
+              kind: {
+                type: "string",
+                enum: ["tool", "game", "site"],
+                description:
+                  'For a web page: "tool" keeps the user\'s own data (tracker, ledger, planner, a quiz keeping scores), "game", or "site", a page for others to see (shop, portfolio, pitch, landing).',
+              },
+            }
+          : {}),
       },
       required: ["items"],
     }),
