@@ -56,8 +56,9 @@ const waitOn = (
 ): Promise<WaitEnd> =>
   new Promise((resolve) => {
     const needle = until != null ? outputText(until) : "";
-    // What each job printed since the wait began, normalized; only its tail
-    // is kept, long enough for a match split across two pieces.
+    // What each job printed since the wait began, as printed (pieces joined
+    // as they came, so a word split across two still matches); only a tail
+    // long enough for a match split across pieces is kept.
     const fresh = new Map<string, string>(ids.map((id) => [id, ""]));
     let redraw: NodeJS.Timeout | null = null;
     const cleanups: Array<() => void> = [];
@@ -81,12 +82,12 @@ const waitOn = (
       }),
       onBackgroundChunk((id, text) => {
         if (needle.length === 0 || !fresh.has(id)) return;
-        const seen = `${fresh.get(id)} ${outputText(text)}`;
-        if (seen.includes(needle)) {
+        const seen = `${fresh.get(id)}${text}`;
+        if (outputText(seen).includes(needle)) {
           end("matched");
           return;
         }
-        fresh.set(id, seen.slice(-Math.max(needle.length * 2, 256)));
+        fresh.set(id, seen.slice(-Math.max(needle.length * 4, 1_024)));
       }),
       onBackgroundOutput(() => {
         redraw ??= setTimeout(() => {

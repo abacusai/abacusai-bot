@@ -14,8 +14,8 @@ const MAX_OUTPUT_BYTES = 64_000;
 
 /**
  * Lines a job printed are also kept, normalized, so a ready line stays
- * findable after more than the kept output scrolled past it: up to this many
- * distinct lines of up to this length (a ready line is short and early).
+ * findable after more than the kept output scrolled past it: the most recent
+ * this many distinct lines, of up to this length (a ready line is short).
  */
 const MAX_INDEXED_LINES = 5_000;
 const MAX_INDEXED_LINE_CHARS = 400;
@@ -390,15 +390,23 @@ export function startBackgroundJob(options: {
         const text = data.toString();
         // Every finished line is indexed before the kept output trims it.
         const parts = (job.partial + text).split(/\r?\n|\r/);
-        job.partial = parts.pop() ?? "";
+        // An unfinished line keeps only what could still be indexed (one
+        // character past the limit marks it too long): a job printing one
+        // endless line (a binary, a minified file) costs no more than any other.
+        job.partial = (parts.pop() ?? "").slice(0, MAX_INDEXED_LINE_CHARS + 1);
         for (const part of parts) {
+          if (part.length > MAX_INDEXED_LINE_CHARS * 4) continue;
           const line = outputText(part);
-          if (
-            line.length > 0 &&
-            line.length <= MAX_INDEXED_LINE_CHARS &&
-            job.lines.size < MAX_INDEXED_LINES
-          )
-            job.lines.add(line);
+          if (line.length === 0 || line.length > MAX_INDEXED_LINE_CHARS)
+            continue;
+          // Most recent first out last: a line seen again moves to the end,
+          // and past the cap the oldest goes.
+          job.lines.delete(line);
+          job.lines.add(line);
+          if (job.lines.size > MAX_INDEXED_LINES) {
+            const oldest = job.lines.values().next().value;
+            if (oldest != null) job.lines.delete(oldest);
+          }
         }
         for (const listener of chunkListeners) {
           try {

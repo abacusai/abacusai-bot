@@ -793,6 +793,63 @@ describe("waiting on a background job", () => {
     expect(text).toContain("was already in its output when the wait began");
   }, 20_000);
 
+  it("matches a line split mid-word across two pieces of output", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command:
+        "sleep 1; printf Listen; sleep 1; printf 'ing on port 3000\\n'; sleep 30",
+      background: true,
+    });
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on",
+      since: "now",
+    });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("was printed while you waited");
+  }, 20_000);
+
+  it("keeps a ready line findable when thousands of other lines came before it", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command:
+        "i=0; while [ $i -lt 6000 ]; do echo installing package $i; i=$((i+1)); done; echo Ready on port 3000; i=0; while [ $i -lt 1500 ]; do echo log line $i padded with words to fill the kept output; i=$((i+1)); done; sleep 30",
+      background: true,
+    });
+    await waitFor(
+      () => (getFirstJobOutput() ?? "").includes("log line 1499"),
+      15_000
+    );
+    expect(getFirstJobOutput()).not.toContain("Ready on port 3000");
+    const { text } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "ready on port",
+    });
+
+    expect(text).toContain("was already in its output when the wait began");
+  }, 30_000);
+
+  it("stays cheap when a job prints one endless line", async () => {
+    const { tool } = bashTool();
+    const heapBefore = process.memoryUsage().heapUsed;
+    const started = Date.now();
+    // 40 MB with no line break, as a binary or a minified file sends it.
+    await run(tool, {
+      command: "head -c 40000000 /dev/zero | tr '\\0' 'a'; echo; echo done",
+      background: true,
+    });
+    await waitFor(() => listBackgroundJobs()[0]?.exit != null, 30_000);
+    const elapsed = Date.now() - started;
+    const grown = process.memoryUsage().heapUsed - heapBefore;
+
+    expect(getFirstJobOutput()?.length ?? 0).toBeLessThanOrEqual(64_000);
+    expect(elapsed).toBeLessThan(8_000);
+    expect(grown).toBeLessThan(150_000_000);
+  }, 40_000);
+
   it("says it is still running when the wait runs out", async () => {
     const { tool } = bashTool();
     await run(tool, { command: "sleep 30", background: true });
