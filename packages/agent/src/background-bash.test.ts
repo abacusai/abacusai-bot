@@ -715,7 +715,7 @@ describe("waiting on a background job", () => {
     });
 
     expect(ms).toBeLessThan(10_000);
-    expect(text).toContain("The text you waited for appeared");
+    expect(text).toContain("was printed while you waited");
     expect(text).toContain("Listening on port 3000");
   }, 20_000);
 
@@ -733,7 +733,64 @@ describe("waiting on a background job", () => {
     });
 
     expect(ms).toBeLessThan(2_000);
-    expect(text).toContain("The text you waited for appeared");
+    expect(text).toContain("was already in its output when the wait began");
+    expect(text).toContain('since: "now"');
+  }, 20_000);
+
+  it("waits for a fresh line after a rebuild when asked for new output only", async () => {
+    const { tool } = bashTool();
+    // A watch-mode build: compiled once, then (after an edit) compiling again.
+    await run(tool, {
+      command:
+        "echo compiled successfully; sleep 1; echo compiling...; sleep 2; echo compiled  successfully; sleep 30",
+      background: true,
+    });
+    await waitFor(() => (getFirstJobOutput() ?? "").includes("compiling"));
+    const fresh = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "compiled successfully",
+      since: "now",
+    });
+
+    // Not the old line from before the edit: the new one, two seconds on.
+    expect(fresh.ms).toBeGreaterThan(1_000);
+    expect(fresh.text).toContain("was printed while you waited");
+  }, 20_000);
+
+  it("ignores case and runs of spaces in the line it waits for", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "sleep 1; echo Listening  ON   port 3000; sleep 30",
+      background: true,
+    });
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on port",
+    });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("was printed while you waited");
+  }, 20_000);
+
+  it("still finds a ready line after more than the kept output scrolled past it", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command:
+        "echo Ready on port 3000; i=0; while [ $i -lt 2000 ]; do echo log line $i padded with words to fill the buffer quickly; i=$((i+1)); done; sleep 30",
+      background: true,
+    });
+    await waitFor(() => (getFirstJobOutput() ?? "").includes("log line 1999"));
+    expect(getFirstJobOutput()).not.toContain("Ready on port 3000");
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "ready on port",
+    });
+
+    expect(ms).toBeLessThan(2_000);
+    expect(text).toContain("was already in its output when the wait began");
   }, 20_000);
 
   it("says it is still running when the wait runs out", async () => {
@@ -773,7 +830,9 @@ describe("a blind sleep while a job runs in the background", () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain("Not run: bg-1 is still running");
-    expect(result.content[0]?.text).toContain('id:"bg-1" and wait_seconds');
+    expect(result.content[0]?.text).toContain('id:"bg-1" and wait_seconds:90');
+    expect(result.content[0]?.text).toContain("it waits the same time");
+    expect(result.content[0]?.text).not.toContain("up to 120");
     expect(base.calls).toHaveLength(0);
   });
 
@@ -786,7 +845,7 @@ describe("a blind sleep while a job runs in the background", () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain(
-      "fetch_background_output with wait_seconds (up to 120) and no id"
+      "fetch_background_output with wait_seconds:30 and no id"
     );
     expect(result.content[0]?.text).not.toContain("bg-1");
     expect(base.calls).toHaveLength(0);

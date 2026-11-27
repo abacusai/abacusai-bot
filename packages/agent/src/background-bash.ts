@@ -65,8 +65,9 @@ const BACKGROUND_GUIDANCE = [
   "next message. So do not end your reply on work that needs the result; wait for it, or say",
   "plainly that it is still running and what they should expect. To wait for it, call",
   "fetch_background_output with its id and wait_seconds: it returns as soon as it finishes, the",
-  "user watches its output meanwhile, and a message from the user ends the wait early. Never wait",
-  "with sleep.",
+  "user watches its output meanwhile, and a message from the user ends the wait early. Add until",
+  'to stop at a line (a server\'s "Listening on"), with since:"now" when an earlier copy of that',
+  "line is already in its output (a watch-mode rebuild after an edit). Never wait with sleep.",
   "",
   "A background run has no deadline unless you set timeout, and a timeout stops it: never set",
   "one on a server. Stop one early with kill_process. For a static page use serve instead.",
@@ -135,19 +136,21 @@ export const jobsTheCheckNames = (
 };
 
 /** The answer to a blind poll: how to wait instead, naming the job it is plausibly for. */
-const pollRefusal = (related: BackgroundJob | null): string =>
+const pollRefusal = (related: BackgroundJob | null, seconds: number): string =>
   related != null
     ? [
         `Not run: ${related.id} is still running in the background, and a sleep shows the user nothing`,
-        "and holds their messages until it ends. To wait for it, call fetch_background_output with",
-        `id:"${related.id}" and wait_seconds (up to 120); add until with a line you expect in its output`,
-        "(checked against what it already printed too). It returns as soon as the job finishes or the",
-        "line is there, shows its output to the user meanwhile, and ends early when the user writes.",
-        "Then run the check you meant to run after the sleep.",
+        "and holds their messages until it ends. Call fetch_background_output with",
+        `id:"${related.id}" and wait_seconds:${Math.min(seconds, 120)} instead: it waits the same time, but returns as soon as`,
+        "the job finishes, shows its output to the user meanwhile, and ends early when the user writes.",
+        "To stop at a line you expect in its output, add until. If the job already printed that line",
+        'before something you just changed (a watch-mode rebuild after an edit), also pass since:"now"',
+        "so only new output counts; for a server that is starting, leave since off. Then run the check",
+        "you meant to run after the sleep.",
       ].join("\n")
     : [
-        "Not run: a sleep shows the user nothing and holds their messages until it ends. To wait, call",
-        "fetch_background_output with wait_seconds (up to 120) and no id: it waits the same time, but",
+        "Not run: a sleep shows the user nothing and holds their messages until it ends. Call",
+        `fetch_background_output with wait_seconds:${Math.min(seconds, 120)} and no id instead: it waits the same time, but`,
         "ends early when the user writes or a background job finishes, and shows the running jobs'",
         "output meanwhile. Then run the check you meant to run after the sleep.",
       ].join("\n");
@@ -232,7 +235,8 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
               {
                 type: "text" as const,
                 text: pollRefusal(
-                  jobsTheCheckNames(command, running)[0] ?? null
+                  jobsTheCheckNames(command, running)[0] ?? null,
+                  sleep
                 ),
               },
             ],

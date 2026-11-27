@@ -12,6 +12,40 @@ import { collapseProgress } from "./terminal-progress.js";
 /** Kept small: this is "did it work", not a log aggregator. */
 const MAX_OUTPUT_BYTES = 64_000;
 
+/**
+ * Lines a job printed are also kept, normalized, so a ready line stays
+ * findable after more than the kept output scrolled past it: up to this many
+ * distinct lines of up to this length (a ready line is short and early).
+ */
+const MAX_INDEXED_LINES = 5_000;
+const MAX_INDEXED_LINE_CHARS = 400;
+
+/** Text as `until` compares it: lower case, every run of whitespace one space. */
+export const outputText = (text: string): string =>
+  text.toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Whether the job printed `needle` (already outputText) at any point: in the
+ * output kept now, or on a line kept from before it was trimmed.
+ */
+export function jobPrinted(id: string, needle: string): boolean {
+  const job = jobs.get(id);
+  if (job == null || needle.length === 0) return false;
+  if (outputText(job.output).includes(needle)) return true;
+  for (const line of job.lines) if (line.includes(needle)) return true;
+  return false;
+}
+
+type ChunkListener = (id: string, text: string) => void;
+const chunkListeners = new Set<ChunkListener>();
+
+/** Be handed each piece of output a job prints, as it arrives. */
+export function onBackgroundChunk(listener: ChunkListener): () => void {
+  chunkListeners.add(listener);
+
+  return () => chunkListeners.delete(listener);
+}
+
 export interface BackgroundExit {
   code: number | null;
   /** Set when the job was stopped by us rather than finishing on its own. */
@@ -44,6 +78,10 @@ export interface BackgroundReport {
 
 interface Tracked extends BackgroundJob {
   controller: AbortController;
+  /** Its distinct short lines, normalized (outputText), kept past the output's trim. */
+  lines: Set<string>;
+  /** The unfinished last line of what it printed so far. */
+  partial: string;
 }
 
 type SettledListener = (job: BackgroundJob) => void;
@@ -318,6 +356,8 @@ export function startBackgroundJob(options: {
     exit: null,
     notifyOnExit: options.notifyOnExit,
     controller,
+    lines: new Set(),
+    partial: "",
   };
 
   jobs.set(id, job);
@@ -347,9 +387,29 @@ export function startBackgroundJob(options: {
   void options.operations
     .exec(options.command, options.cwd, {
       onData: (data: Buffer) => {
+        const text = data.toString();
+        // Every finished line is indexed before the kept output trims it.
+        const parts = (job.partial + text).split(/\r?\n|\r/);
+        job.partial = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = outputText(part);
+          if (
+            line.length > 0 &&
+            line.length <= MAX_INDEXED_LINE_CHARS &&
+            job.lines.size < MAX_INDEXED_LINES
+          )
+            job.lines.add(line);
+        }
+        for (const listener of chunkListeners) {
+          try {
+            listener(job.id, text);
+          } catch {
+            /* one bad listener must not stop the rest being told */
+          }
+        }
         // Collapsed as it arrives: a progress bar would otherwise fill the
         // buffer with redraws and push out what the job actually said.
-        job.output = collapseProgress(job.output + data.toString()).slice(
+        job.output = collapseProgress(job.output + text).slice(
           -MAX_OUTPUT_BYTES
         );
         job.lastOutputAt = Date.now();
