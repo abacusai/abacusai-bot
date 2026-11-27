@@ -95,16 +95,25 @@ describe("a repeat against changed state", () => {
   const search: Step = [GMAIL, { action: "search_email", query: "is:unread" }];
   const label: Step = [GMAIL, { action: "modify_labels", ids: ["m1"] }];
   const draft: Step = [GMAIL, { action: "create_draft", to: "a@example.com" }];
-  // Roblox Studio's server, as the app installs it: its tools change the open
-  // place unless it marks them read-only.
+  // Roblox Studio's server, as the app installs it, with no hints: its edit
+  // and run tools change the open place, the rest are reads. And another
+  // server the user added, whose tools only read.
   const studio = (tool: string) => `roblox-studio_${tool}`;
-  noteUserMcpTools(
-    ["start_stop_play", "execute_luau", "get_console_output"].map(studio),
-    {}
-  );
+  for (const tool of [
+    "start_stop_play",
+    "execute_luau",
+    "multi_edit",
+    "get_console_output",
+  ])
+    noteUserMcpTools([studio(tool)], { name: tool });
   noteUserMcpTools([studio("script_read")], {
+    name: "script_read",
     annotations: { readOnlyHint: true },
   });
+  for (const tool of ["search", "get_page"])
+    noteUserMcpTools([`notes_${tool}`], { name: tool });
+  const searchNotes: Step = ["notes_search", { query: "plan" }];
+  const pageNote: Step = ["notes_get_page", { id: "p1" }];
   const play: Step = [studio("start_stop_play"), { is_start: true }];
   const stop: Step = [studio("start_stop_play"), { is_start: false }];
   const output: Step = [studio("get_console_output"), {}];
@@ -174,6 +183,17 @@ describe("a repeat against changed state", () => {
       "a read-only Studio script read again after a fix",
       [script, luau, script, luau, script],
       false,
+    ],
+    [
+      "a playtest loop with no fix between, 3rd start",
+      [play, output, stop, play, output, stop, play],
+      true,
+    ],
+    ["the same console read polled, 3rd", [output, output, output], true],
+    [
+      "two reads of a user server in turn, 3rd of one",
+      [searchNotes, pageNote, searchNotes, pageNote, searchNotes],
+      true,
     ],
     [
       "the same spilled output, 3rd",

@@ -112,8 +112,9 @@ const READS_THE_WEB = new Set(["web_fetch", "web_search"]);
 /**
  * Whether a call may change what a repeat would see: a file write or a
  * command, a connector call that is not a reviewed read, or a call to a
- * server the user added that the server does not mark read-only (Roblox
- * Studio's playtest and script edits change the place the next look sees).
+ * server the user added that edits, writes or runs something (by its hint or
+ * its name: Roblox Studio's execute_luau and multi_edit change the place the
+ * next playtest sees). Its other tools are reads, guarded like any read.
  */
 function changesState(
   toolName: string,

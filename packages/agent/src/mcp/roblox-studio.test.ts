@@ -207,11 +207,16 @@ describe("Roblox Studio over stdio", () => {
     );
   });
 
-  it("counts its playtest and script tools as changing the place, so a repeat after one is a new look", async () => {
-    await connect(configWith({}));
-    expect(userMcpToolChangesState("roblox-studio_start_stop_play")).toBe(true);
+  it("counts its edit tools as changing the place and the rest as reads, and forgets them once replaced", async () => {
+    const mcp = await connect(configWith({}));
     expect(userMcpToolChangesState("roblox-studio_multi_edit")).toBe(true);
+    expect(userMcpToolChangesState("roblox-studio_script_read")).toBe(false);
+    expect(userMcpToolChangesState("roblox-studio_start_stop_play")).toBe(
+      false
+    );
     expect(userMcpToolChangesState("read")).toBeNull();
+    mcp.retire?.();
+    expect(userMcpToolChangesState("roblox-studio_multi_edit")).toBeNull();
   });
 
   it("answers with no Studio, and an error per call, while Studio is not reachable", async () => {

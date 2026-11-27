@@ -290,19 +290,52 @@ const noServers = (error: string, expected = false): ConnectedMcp => {
 const registeredToolMeta = new Map<string, ConnectorToolMeta>();
 
 /**
- * Whether each tool of a server the user added (or an app installed, such as
- * Roblox Studio) can change what a later call sees, by every name it answers
- * to: yes unless the server marks it read-only. Filled as servers connect.
+ * A tool name that says it changes something: an edit, a write, a run. Used
+ * when the server gives no hint; any other unhinted tool is taken as a read,
+ * so the repeat guard still stops it looping.
  */
-const userToolChanges = new Map<string, boolean>();
+const WRITE_VERB =
+  /(?:^|[_-])(?:edit|multi_edit|write|create|update|delete|remove|set|insert|execute|exec|run|apply|move|rename|patch|put|post|send|upload|install|import|replace|add)(?:[_-]|$)/i;
 
-/** Records a user server's tools as they register (see userToolChanges). */
+/**
+ * Whether a call to a user server's tool may change what a later call sees:
+ * the server's own hint first (readOnlyHint, destructiveHint), else its name.
+ */
+export const userMcpToolChanges = (
+  tool: Pick<McpToolInfo, "name" | "annotations">
+): boolean => {
+  const hints = tool.annotations;
+  if (hints?.readOnlyHint === true) return false;
+  if (hints?.readOnlyHint === false || hints?.destructiveHint === true)
+    return true;
+  return WRITE_VERB.test(tool.name);
+};
+
+/**
+ * For each tool of a server the user added (or an app installed, such as
+ * Roblox Studio), by every name it answers to: whether a call changes state,
+ * and the server set that registered it. A set that is replaced takes its
+ * entries with it (retire), so a server that went away leaves nothing behind.
+ */
+const userToolChanges = new Map<string, { changes: boolean; owner: object }>();
+
+/** The set a test registers into when it names none. */
+const DEFAULT_OWNER = {};
+
+/** Records a user server's tool as it registers (see userToolChanges). */
 export const noteUserMcpTools = (
   names: readonly string[],
-  tool: Pick<McpToolInfo, "annotations">
+  tool: Pick<McpToolInfo, "name" | "annotations">,
+  owner: object = DEFAULT_OWNER
 ): void => {
-  for (const name of names)
-    userToolChanges.set(name, tool.annotations?.readOnlyHint !== true);
+  const changes = userMcpToolChanges(tool);
+  for (const name of names) userToolChanges.set(name, { changes, owner });
+};
+
+/** Forgets every tool a server set registered: it was replaced or retired. */
+const forgetUserMcpTools = (owner: object): void => {
+  for (const [name, entry] of userToolChanges)
+    if (entry.owner === owner) userToolChanges.delete(name);
 };
 
 /**
@@ -310,7 +343,7 @@ export const noteUserMcpTools = (
  * user added; null for any other tool (the app's own, the gateway's).
  */
 export const userMcpToolChangesState = (toolName: string): boolean | null =>
-  userToolChanges.get(toolName) ?? null;
+  userToolChanges.get(toolName)?.changes ?? null;
 
 /**
  * What the agent knows about a connector tool by its pi-side name, or null
@@ -578,7 +611,8 @@ export async function connectMcpServers(
           [qualified, alternate].filter(
             (routed) => result.routes.get(routed)?.client === client
           ),
-          tool
+          tool,
+          result
         );
 
       // A host's internal tool is routed but never offered to a model.
@@ -697,6 +731,7 @@ export async function connectMcpServers(
     retired = true;
     // A loop waiting for a turn to start ends now.
     for (const entry of waiting.values()) entry.wake();
+    forgetUserMcpTools(result);
   };
 
   // A server the network kept down keeps trying; one whose new key was
