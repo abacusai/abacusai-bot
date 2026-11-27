@@ -1993,7 +1993,11 @@ function revealOnRelaunch(): void {
 }
 // An installed artifact app's launcher (artifact-apps.ts): its own window,
 // and the main window stays as it was (hidden when the app was not open).
-let startHiddenForApp = artifactAppLinkInArgv(process.argv) != null;
+// On macOS the launcher's link comes as open-url, not in argv; before the
+// main window exists it is a cold start, opened once that window is made.
+let launchedApp = artifactAppLinkInArgv(process.argv);
+let mainWindowStarted = false;
+let startHiddenForApp = launchedApp != null;
 function takeStartHiddenForApp(): boolean {
   const hidden = startHiddenForApp;
   startHiddenForApp = false;
@@ -2059,7 +2063,10 @@ app.on("open-url", (event, url) => {
   event.preventDefault();
   const appId = artifactAppLinkId(url);
   if (appId != null) {
-    void app.whenReady().then(() => openInstalledApp(appId));
+    if (!mainWindowStarted) {
+      launchedApp = appId;
+      startHiddenForApp = true;
+    } else void app.whenReady().then(() => openInstalledApp(appId));
     return;
   }
   receiveOpenLink(url);
@@ -2293,10 +2300,10 @@ app
   })
   .then(() => {
     startApps();
+    mainWindowStarted = true;
     return createWindow();
   })
   .then(async () => {
-    const launchedApp = artifactAppLinkInArgv(process.argv);
     if (launchedApp != null && !openInstalledApp(launchedApp))
       revealMainWindow();
     updateService.checkForUpdatesOnStartup();
