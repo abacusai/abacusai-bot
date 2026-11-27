@@ -281,7 +281,10 @@ function approvalTimeoutMs(): number {
 
 export class ForeverEngine {
   private readonly pendingSteers = new PendingSteers();
-  private readonly midRunMessages = new MidRunMessages();
+  private readonly midRunMessages = new MidRunMessages({
+    progressTools: () => this.profile.checkIns?.tools,
+    unheard: isSenderChat,
+  });
   /** While a browser run takes the user's messages, the only place they go. */
   private readonly midTask = new MidTaskInbox((message) =>
     this.noteMidTaskRead(message)
@@ -938,6 +941,8 @@ export class ForeverEngine {
   // ---------------------------------------------------------------- commands
 
   async send(text: string, turn?: TurnHandle): Promise<void> {
+    // A new turn of the user's: a message steered into the last one is past.
+    this.midRunMessages.clear();
     const slot: { owned?: OwnedTurn } = {};
     try {
       await this.sendTurn(text, turn, slot);
@@ -2179,6 +2184,7 @@ export class ForeverEngine {
    */
   dropSteers(): void {
     this.pendingSteers.clear();
+    this.midRunMessages.clear();
     this.session?.clearQueue();
   }
 

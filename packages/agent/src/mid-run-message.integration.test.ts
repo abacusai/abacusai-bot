@@ -23,7 +23,7 @@ import {
 } from "vitest";
 
 import { BotSession } from "./bot/bot-session.js";
-import { MID_RUN_MESSAGE_NOTE } from "./mid-run-message.js";
+import { midRunMessageNote } from "./mid-run-message.js";
 import { AbacusBotSession } from "./session.js";
 
 let provider: FakeProvider;
@@ -101,12 +101,38 @@ describe.each(LOOPS)("%s", (_name, Loop) => {
     const calls = await run((loop) => loop.steer("is it nearly done?"));
     const second = calls[1] ?? "";
     expect(second).toContain("is it nearly done?");
-    expect(second).toContain(MID_RUN_MESSAGE_NOTE);
+    expect(second).toContain(midRunMessageNote());
     expect(second.indexOf("is it nearly done?")).toBeLessThan(
-      second.indexOf(MID_RUN_MESSAGE_NOTE)
+      second.indexOf(midRunMessageNote())
     );
     // Only the request that brought the message carries the note.
-    expect(calls[2] ?? "").not.toContain(MID_RUN_MESSAGE_NOTE);
+    expect(calls[2] ?? "").not.toContain(midRunMessageNote());
+  });
+
+  it("adds no note to a message that was dropped from the run and sent as its own turn", async () => {
+    const loop = new Loop({
+      cwd: fs.mkdtempSync(path.join(os.tmpdir(), "mid-run-cwd-")),
+      mode: "yolo",
+      hostServices: false,
+      emit: () => {},
+    } as never);
+    await loop.start();
+    let steered = false;
+    provider.script(async (_call, index) => {
+      if (index === 0 && !steered) {
+        steered = true;
+        await loop.steer("and add a dark mode");
+        (loop as unknown as { dropSteers(): void }).dropSteers();
+        return { say: "Done." };
+      }
+      return { say: "Dark mode added." };
+    });
+    await loop.send("build the page");
+    await loop.send("and add a dark mode");
+    loop.dispose?.();
+    expect(provider.calls.map(conversationOf).join("\n")).not.toContain(
+      midRunMessageNote()
+    );
   });
 
   it("adds no note to the answer of the model's own question", async () => {
@@ -114,6 +140,6 @@ describe.each(LOOPS)("%s", (_name, Loop) => {
       loop.steer('{"Which one?":"the first"}', undefined, { answer: true })
     );
     expect(calls.join("\n")).toContain("the first");
-    expect(calls.join("\n")).not.toContain(MID_RUN_MESSAGE_NOTE);
+    expect(calls.join("\n")).not.toContain(midRunMessageNote());
   });
 });

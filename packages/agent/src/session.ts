@@ -650,7 +650,9 @@ const APP_SERVERS: ReadonlySet<string> = new Set([
 
 export class AbacusBotSession {
   private readonly pendingSteers = new PendingSteers();
-  private readonly midRunMessages = new MidRunMessages();
+  private readonly midRunMessages = new MidRunMessages({
+    unheard: isSenderChat,
+  });
   /** What a send with an id answers (`turn_answer`, `turn_reply`), as the forever engine reports it. */
   private readonly reply = new TurnReply();
   private session: AgentSession | undefined;
@@ -1494,6 +1496,8 @@ export class AbacusBotSession {
   // ---------------------------------------------------------------- commands
 
   async send(text: string, turn?: TurnHandle): Promise<void> {
+    // A new turn of the user's: a message steered into the last one is past.
+    this.midRunMessages.clear();
     const slot: { owned?: OwnedTurn } = {};
     try {
       await this.sendTurn(text, turn, slot);
@@ -2952,6 +2956,7 @@ export class AbacusBotSession {
    */
   dropSteers(): void {
     this.pendingSteers.clear();
+    this.midRunMessages.clear();
     this.session?.clearQueue();
   }
 
