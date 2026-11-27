@@ -31,6 +31,17 @@ describe("the bot's reply rule", () => {
   });
 });
 
+describe("when the bot asks before working", () => {
+  it("defers to the base prompt's first-version rule instead of asking whenever two paths exist", () => {
+    // "More than one sensible path" sent a vague first ask straight to a
+    // question, and the user left; the bot now takes the likeliest path.
+    const flat = botOperatingPrompt().replace(/\s+/g, " ");
+    expect(flat).toMatch(/the first-version rule above says to ask/);
+    expect(flat).toMatch(/take the likeliest, say in one line which/);
+    expect(flat).not.toMatch(/more than one sensible path exists/);
+  });
+});
+
 describe("what the prompts say about the browser, per channel", () => {
   it("sends an app chat's user to the Browser pane, and a chat without one never there", () => {
     expect(botOperatingPrompt()).toMatch(/Browser pane/);

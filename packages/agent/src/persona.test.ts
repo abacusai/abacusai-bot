@@ -14,6 +14,7 @@ import {
   MEDIA_ASKS_PROMPT,
   PRODUCT_FACTS_PROMPT,
   FACTS_PROMPT,
+  FIRST_VERSION_PROMPT,
   USER_DATA_PROMPT,
   basePrompt,
   subAgentBasePrompt,
@@ -106,7 +107,7 @@ describe("questions about the app itself", () => {
       const prompt = basePrompt(edit);
       expect(
         prompt.startsWith(
-          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${USER_DATA_PROMPT}\n${FACTS_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
+          `${identityPrompt()}\n${PRODUCT_FACTS_PROMPT}\n${PROGRESS_UPDATES_PROMPT}\n${MEDIA_ASKS_PROMPT}\n${PLAN_ASKS_PROMPT}\n${USER_DATA_PROMPT}\n${FACTS_PROMPT}\n${FIRST_VERSION_PROMPT}\n${DELIVERABLE_QUALITY_PROMPT}\n${ATTACHMENTS_PROMPT}\n${CONNECTION_PROMPT}\n${ASKED_FOR_PROMPT}\n\n`
         )
       ).toBe(true);
       expect(basePrompt(edit)).toBe(prompt);
@@ -124,6 +125,53 @@ describe("questions about the app itself", () => {
       /paid_feature: its description says when to call it\. When you call it, call it before you write anything/
     );
     expect(MEDIA_ASKS_PROMPT).not.toMatch(/call it first/);
+    // A vague ask gets a first version and one line on what was assumed; asking
+    // is kept for what has no sensible default and for money, sends and deletes.
+    expect(FIRST_VERSION_PROMPT).toMatch(/gets a first version in this turn/);
+    expect(FIRST_VERSION_PROMPT).toMatch(/say in one line what you assumed/);
+    // Destructive and outward steps are named, come before "make it now",
+    // and wait for a yes on the exact list or draft, even when asked outright.
+    for (const step of [
+      "deleting or trashing anything",
+      "overwriting, moving, renaming or reorganizing the user's files",
+      "discarding uncommitted changes (git checkout, reset, restore, clean or stash)",
+      "cancelling or deleting calendar events",
+      "unsubscribing",
+      "sending, replying, posting or messaging anyone",
+      "buying, booking or paying",
+    ])
+      expect(FIRST_VERSION_PROMPT).toContain(step);
+    expect(FIRST_VERSION_PROMPT.indexOf("never done on a guess")).toBeLessThan(
+      FIRST_VERSION_PROMPT.indexOf("gets a first version in this turn")
+    );
+    // Open-ended ones list first; an exact command and a routine's saved
+    // instruction are the yes for exactly what they name.
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /the open-ended ask itself is not that yes/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /A request that names the exact target and the result is one/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /a saved instruction the user set up earlier, which a routine or check-in run carries out: do the steps it names/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /Anything either one does not name .* still waits for a yes/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /picked by a description rather than a name .* is open-ended: list them first/
+    );
+    expect(ASKED_FOR_PROMPT).toMatch(
+      /a delete, move, send or cancel follows the rule above/
+    );
+    expect(FIRST_VERSION_PROMPT).toMatch(/a short sample of the result/);
+    // One owner: the document rule points at it instead of its own copy.
+    expect(DELIVERABLE_QUALITY_PROMPT).toMatch(
+      /as the first-version rule above says/
+    );
+    expect(DELIVERABLE_QUALITY_PROMPT).not.toMatch(
+      /Do not ask which kind first/
+    );
     // A file is done when it opens; data is sourced or called sample; a long job counts.
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(
       /done only when it opens and nothing is left broken/
