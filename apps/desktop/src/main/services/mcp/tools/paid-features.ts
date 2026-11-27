@@ -157,7 +157,8 @@ const planFirstLines = (features: readonly PaidFeature[]): string[] => [
   "  the app puts a Generate button under your reply.",
   '- step generate: once your plan for it is in this chat and they ask to generate or make it (a yes, "generate it",',
   "  the Generate button). Its answer says which plan makes it, at what price, with the link, and the app shows the",
-  "  upgrade. Never write the plan again.",
+  "  upgrade. Never write the plan again. A yes that does not say which, after plans for more than one of these, is",
+  "  step generate too: call it once, for the first of them, since they all come with the same upgrade.",
   "In a routine's run, which nobody answers, use step generate at once.",
 ];
 
