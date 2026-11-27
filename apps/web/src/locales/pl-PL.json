@@ -3890,7 +3890,12 @@
       "webBody": "Plan Basic obejmuje tworzenie i edycję obrazów i filmów oraz generowanie dźwięku w Abacus AI Agent w przeglądarce.",
       "agentTitle": "{{feature}} jest dostępne w Abacus AI Agent w przeglądarce",
       "agentBody": "Twój plan obejmuje tworzenie i edycję obrazów i filmów oraz generowanie dźwięku w Abacus AI Agent w przeglądarce. Twoja prośba jest już tam wpisana – dołącz obraz, który chcesz edytować.",
-      "openAgent": "Otwórz w Abacus AI Agent"
+      "openAgent": "Otwórz w Abacus AI Agent",
+      "generate": {
+        "video_gen": "Wygeneruj ten film",
+        "image_gen": "Wygeneruj ten obraz",
+        "tts": "Nagraj ten lektor"
+      }
     },
     "botHelp": {
       "open": "Otwórz"

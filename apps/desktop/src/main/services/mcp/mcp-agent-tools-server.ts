@@ -4040,6 +4040,9 @@ export class McpAgentToolsServer extends McpHttpServer {
       typeof args.prompt === "string" && args.prompt.trim().length > 0
         ? args.prompt
         : null;
+    // Only the free plan's creative asks have steps. A call naming none is
+    // answered as generate, as the app draws it: the card.
+    const step = tier === "free" && args.step === "plan" ? "plan" : null;
     return paidFeatureResult(this, {
       feature,
       tier,
@@ -4048,6 +4051,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       reply,
       plan,
       prompt,
+      step,
     });
   }
 

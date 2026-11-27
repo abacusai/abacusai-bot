@@ -3746,7 +3746,12 @@
       "webBody": "Met Basic kun je op het web in Abacus AI Agent afbeeldingen en video's maken en bewerken, en audio maken.",
       "agentTitle": "{{feature}} vind je in Abacus AI Agent op het web",
       "agentBody": "Met je abonnement kun je op het web in Abacus AI Agent afbeeldingen en video's maken en bewerken, en audio maken. Je verzoek staat daar al ingevuld; voeg een afbeelding toe als je die wilt laten bewerken.",
-      "openAgent": "Openen in Abacus AI Agent"
+      "openAgent": "Openen in Abacus AI Agent",
+      "generate": {
+        "video_gen": "Deze video maken",
+        "image_gen": "Deze afbeelding maken",
+        "tts": "Deze voice-over maken"
+      }
     },
     "botHelp": {
       "open": "Openen"

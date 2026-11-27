@@ -3,9 +3,12 @@ import type { AbacusPlanTier } from "@abacus-ai/contract/models";
 import {
   abacusAgentPromptUrl,
   CHATLLM_APP_URLS,
+  PAID_FEATURE_STEPS,
   PAID_FEATURE_TOOL,
   PAID_FEATURES,
+  PLAN_FIRST_FEATURES,
   type PaidFeature,
+  type PaidFeatureStep,
 } from "@abacus-ai/contract/toolsets";
 
 import { botUpgradePage } from "../../providers/abacus-upgrade";
@@ -64,6 +67,8 @@ interface PaidFeatureCall {
   plan: BillingPlan | null;
   /** The request in the user's words, carried to the web. */
   prompt: string | null;
+  /** The free plan's step for a creative ask; null on a paid or unread plan, or when not given. */
+  step?: PaidFeatureStep | null;
 }
 
 const capitalized = (text: string): string =>
@@ -144,22 +149,16 @@ const CREATIVE_PLAN: Partial<Record<string, string>> = {
 
 /** What the free plan's description says about the asks that get a plan first. */
 const planFirstLines = (features: readonly PaidFeature[]): string[] => [
-  `On this plan, ${names(features)} go in two steps.`,
-  "Step 1, an ask for one whose plan is not in this chat yet (to create, generate or edit an image, make a video, make",
-  "speech or audio, reading a text aloud included; even when it says generate, and asking whether you can make one",
-  "counts too): do not call this. Your reply is the creative plan, written by you in text, in their language:",
-  ...features.map(
-    (feature) => `- ${feature.name}: ${CREATIVE_PLAN[feature.feature]}.`
-  ),
-  "Open straight on the plan; where a detail is missing, pick a sensible one instead of asking. Say nothing about",
-  "plans, prices, upgrades or what this chat cannot do, and never say it is being made. End with one short question:",
-  'whether to generate it now; when suggest_tasks is in your tool list, call it last with two tasks, "Generate it"',
-  "(in their language, naming the image, video or voice-over) first and one change to the plan. A change they ask for",
-  "(shorter, another style) is step 1 again, with the revised plan.",
-  'Step 2, once your plan for it is in this chat and they ask to generate or make it (a yes to that question, "generate',
-  'it", "make it"): call this at once, before you write anything, and never write the plan again. It says which plan',
-  "makes it, at what price, with the link and how to word your reply, and the app shows the upgrade.",
-  "In a routine's run, which nobody answers, call it at once instead.",
+  `On this plan, ${names(features)} go in two steps, and both call this first, before you write anything (no preamble,`,
+  'no "let me check", nothing about what this chat lacks):',
+  "- step plan: an ask for one whose plan is not in this chat yet (to create, generate or edit an image, make a video,",
+  "  make speech or audio, reading a text aloud included; even when it says generate, and asking whether you can make",
+  "  one counts too), or a change to a plan you wrote (shorter, another style). Its answer says what the plan holds;",
+  "  the app puts a Generate button under your reply.",
+  '- step generate: once your plan for it is in this chat and they ask to generate or make it (a yes, "generate it",',
+  "  the Generate button). Its answer says which plan makes it, at what price, with the link, and the app shows the",
+  "  upgrade. Never write the plan again.",
+  "In a routine's run, which nobody answers, use step generate at once.",
 ];
 
 /**
@@ -168,6 +167,20 @@ const planFirstLines = (features: readonly PaidFeature[]): string[] => [
  */
 const PREFILL_ONLY =
   "The link only types their request into Abacus AI Agent; it sends nothing, and nothing is made until they send it there. Never say it is being made, that they will see it there, or that you started it: say they open it there and send it.";
+
+/**
+ * The free plan's first step: the creative plan, free, with no price and no
+ * card. The app draws the Generate button from this call, so every plan
+ * reply ends on it whatever the model chooses to offer.
+ */
+const planStep = (call: PaidFeatureCall, plan: string): string[] => [
+  `Write the creative plan for their ${call.feature.name} now, in text, in their language: ${plan}.`,
+  "Open straight on the plan; where a detail is missing, pick a sensible one instead of asking. Say nothing about plans, prices, upgrades or what this chat cannot do, and never say it is being made.",
+  call.reply === "card"
+    ? "End with one short question: whether to generate it now. The app shows a Generate button under your reply that answers it: do not call suggest_tasks in this reply, and do not list the button in your text."
+    : "End with one short question: whether to generate it now.",
+  `When they ask to generate it, call ${PAID_FEATURE_TOOL} with step generate. A change they ask for first: step plan again, then the revised plan.`,
+];
 
 /** The paid plan's answer: the plan already has it, on the web. */
 const webAnswer = (call: PaidFeatureCall): string[] => {
@@ -207,6 +220,11 @@ export function paidFeatureResult(
       );
     return host.ok(webAnswer(call).join("\n"));
   }
+  const creative = PLAN_FIRST_FEATURES.has(feature.feature)
+    ? CREATIVE_PLAN[feature.feature]
+    : undefined;
+  if (call.step === "plan" && creative != null && reply !== "routine")
+    return host.ok(planStep(call, creative).join("\n"));
   const next = plan?.upgrades[0];
   const where = elsewhere(call);
   if (next == null)
@@ -408,8 +426,8 @@ const description = (host: HostCapabilities): string => {
   // media is made on the web, so its asks go straight here.
   const planFirst =
     host.freePlan === true
-      ? host.withheldFeatures.filter(
-          (feature) => CREATIVE_PLAN[feature.feature] != null
+      ? host.withheldFeatures.filter((feature) =>
+          PLAN_FIRST_FEATURES.has(feature.feature)
         )
       : [];
   if (planFirst.length === 0)
@@ -446,10 +464,22 @@ const description = (host: HostCapabilities): string => {
 
 /** The schema both the app and the phone take. */
 export const paidFeatureSchema = (
-  features: readonly PaidFeature[]
+  features: readonly PaidFeature[],
+  /** The free plan's image, video and voice-over asks name their step. */
+  steps = false
 ): Record<string, unknown> => ({
   type: "object",
   properties: {
+    ...(steps
+      ? {
+          step: {
+            type: "string",
+            enum: [...PAID_FEATURE_STEPS],
+            description:
+              "plan: a new ask, or a change to your plan; generate: they asked to generate what you planned. Required for an image, video or voice-over.",
+          },
+        }
+      : {}),
     feature: {
       type: "string",
       enum: features.map((feature) => feature.feature),
@@ -473,7 +503,14 @@ export const PAID_FEATURE_TOOLS: ToolDefinition[] = [
     toolsets: "always",
     offered: (host) => host.withheldFeatures.length > 0,
     description: (_channel, host) => description(host),
-    inputSchema: (_channel, host) => paidFeatureSchema(host.withheldFeatures),
+    inputSchema: (_channel, host) =>
+      paidFeatureSchema(
+        host.withheldFeatures,
+        host.freePlan === true &&
+          host.withheldFeatures.some((feature) =>
+            PLAN_FIRST_FEATURES.has(feature.feature)
+          )
+      ),
     run: (host, args, callerSession) => host.paidFeature(args, callerSession),
   },
 ];

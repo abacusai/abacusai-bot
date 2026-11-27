@@ -795,8 +795,8 @@ const tasksCopy = (): RelayEvent[] =>
 
 /**
  * A free plan's video ask, as a real model answered it: the storyboard first,
- * free, with a Generate button; with `generate`, the tap that follows, where
- * the plan and its card come.
+ * free, under the Generate button its plan-step call draws; with `generate`,
+ * the tap that follows, where the plan's line and its card come.
  */
 const paidFeaturePlanFirst = (generate: boolean) => (): RelayEvent[] =>
   seqd([
@@ -808,6 +808,14 @@ const paidFeaturePlanFirst = (generate: boolean) => (): RelayEvent[] =>
       at(6)
     ),
     b.textStart("a1"),
+    ...b.toolCall("c1", "paid_feature", "a1", {
+      feature: "video_gen",
+      step: "plan",
+      prompt: "A 30-second TikTok video for a bakery's new croissant",
+    }),
+    b.toolResult("c1", {
+      text: "Write the creative plan for their video generation now.",
+    }),
     b.textDelta(
       "a1",
       [
@@ -827,13 +835,6 @@ const paidFeaturePlanFirst = (generate: boolean) => (): RelayEvent[] =>
         "Want me to generate it now?",
       ].join("\n")
     ),
-    ...b.toolCall("c1", "suggest_tasks", "a1", {
-      tasks: [
-        { text: "Generate the 30-second croissant video" },
-        { text: "Make it 15 seconds and punchier" },
-      ],
-    }),
-    b.toolResult("c1", { text: "The user sees 2 buttons under your reply." }),
     b.textEnd("a1"),
     b.runFinished("r1", "success", { timestamp: at(5) }),
     ...(generate ? paidFeatureGenerate() : []),
@@ -841,10 +842,11 @@ const paidFeaturePlanFirst = (generate: boolean) => (): RelayEvent[] =>
 
 /** The Generate tap under the storyboard: Basic's line, its link and the card. */
 const paidFeatureGenerate = (): StreamChunk[] => [
-  ...userTurn("r2", "u2", "Generate the 30-second croissant video", at(3)),
+  ...userTurn("r2", "u2", "Generate this video", at(3)),
   b.textStart("a2"),
   ...b.toolCall("c2", "paid_feature", "a2", {
     feature: "video_gen",
+    step: "generate",
     prompt: "A 30-second TikTok video for a bakery's new croissant",
   }),
   b.toolResult("c2", {

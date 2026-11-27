@@ -3746,7 +3746,12 @@
       "webBody": "Basic incluye crear y editar imágenes y vídeos, y generar audio, en la web en Abacus AI Agent.",
       "agentTitle": "{{feature}} está en Abacus AI Agent en la web",
       "agentBody": "Tu plan incluye crear y editar imágenes y vídeos, y generar audio, en la web en Abacus AI Agent. Tu petición ya está escrita allí; adjunta allí cualquier imagen que quieras editar.",
-      "openAgent": "Abrir en Abacus AI Agent"
+      "openAgent": "Abrir en Abacus AI Agent",
+      "generate": {
+        "video_gen": "Generar este vídeo",
+        "image_gen": "Generar esta imagen",
+        "tts": "Crear esta locución"
+      }
     },
     "botHelp": {
       "open": "Abrir"

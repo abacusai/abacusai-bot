@@ -3746,7 +3746,12 @@
       "webBody": "Basic 包含建立和編輯圖片與影片，以及製作音訊，這些功能可在網頁版 Abacus AI Agent 中使用。",
       "agentTitle": "{{feature}} 位於網頁版 Abacus AI Agent 中",
       "agentBody": "你的方案包含建立和編輯圖片與影片，以及製作音訊，這些功能可在網頁版 Abacus AI Agent 中使用。你的要求已在那裡填好；如要編輯圖片，請附上該圖片。",
-      "openAgent": "在 Abacus AI Agent 中開啟"
+      "openAgent": "在 Abacus AI Agent 中開啟",
+      "generate": {
+        "video_gen": "生成這部影片",
+        "image_gen": "生成這張圖片",
+        "tts": "製作這段配音"
+      }
     },
     "botHelp": {
       "open": "開啟"

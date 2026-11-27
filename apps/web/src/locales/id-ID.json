@@ -3746,7 +3746,12 @@
       "webBody": "Basic mencakup membuat dan mengedit gambar dan video, serta membuat audio, di web dalam Abacus AI Agent.",
       "agentTitle": "{{feature}} ada di Abacus AI Agent di web",
       "agentBody": "Paket Anda mencakup membuat dan mengedit gambar dan video, serta membuat audio, di web dalam Abacus AI Agent. Permintaan Anda sudah terisi di sana; lampirkan gambar apa pun yang ingin Anda edit.",
-      "openAgent": "Buka di Abacus AI Agent"
+      "openAgent": "Buka di Abacus AI Agent",
+      "generate": {
+        "video_gen": "Buat video ini",
+        "image_gen": "Buat gambar ini",
+        "tts": "Buat sulih suara ini"
+      }
     },
     "botHelp": {
       "open": "Buka"

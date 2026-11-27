@@ -6,21 +6,26 @@
 import {
   abacusAgentPromptUrl,
   PAID_FEATURES,
+  PLAN_FIRST_FEATURES,
 } from "@abacus-ai/contract/toolsets";
-import { parsePartialJSON } from "@tanstack/ai-client";
+import { parsePartialJSON, type UIMessage } from "@tanstack/ai-client";
 import type { ToolProps } from "@tanstack/ai-react/ui";
 import { ExternalLink, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { UpgradeSeen } from "#renderer/components/upgrade-seen";
+import { isPaidFeatureTool } from "#renderer/lib/bot-turns/turns";
 import { onPlanActive } from "#renderer/lib/upgrade";
 import { requestPlanDialog } from "#renderer/lib/upgrade-dialog";
 import { Button } from "#renderer/ui/button";
 
 import type { ChatHostActions } from "../../runtime/host-actions";
+import { useHost, useThreadStore } from "../../store/selectors";
 import { useChatView } from "../context";
+import { useSendAsUser } from "../send-as-user";
 import { toolInput } from "./normalize";
+import { isLatestOffer, SuggestedTaskList } from "./suggested-tasks";
 
 type Tier = Awaited<ReturnType<ChatHostActions["accountTier"]>>;
 
@@ -115,11 +120,68 @@ export const PaidFeatureCard = ({
   );
 };
 
-/** The tool row: the card for the feature the call names. */
+/** The newest plan-step call for `feature`: a plan written twice still gets one button. */
+const lastPlanStep = (
+  messages: readonly UIMessage[],
+  feature: string
+): string | null => {
+  let last: string | null = null;
+  for (const message of messages)
+    for (const part of message.parts) {
+      if (part.type !== "tool-call" || !isPaidFeatureTool(part.name)) continue;
+      const input = toolInput(part as never, parsePartialJSON);
+      if (input.step === "plan" && input.feature === feature) last = part.id;
+    }
+  return last;
+};
+
+/**
+ * The free plan's plan step: one Generate button under the plan, whatever the
+ * reply offers, until the user writes again. Its tap is their "generate it".
+ */
+const GenerateOffer = ({ id, feature }: { id: string; feature: string }) => {
+  const { t } = useTranslation();
+  const { session, composer } = useChatView();
+  const sendAsUser = useSendAsUser();
+  const messages = useHost(session, (state) => state.messages);
+  const running = useThreadStore(session, (state) => state.runs.active != null);
+  // A tap answers it at once: a second tap must not send again.
+  const [sent, setSent] = useState(false);
+  if (
+    sent ||
+    running ||
+    composer.readOnly != null ||
+    !isLatestOffer(messages, id) ||
+    lastPlanStep(messages, feature) !== id
+  )
+    return null;
+  const text = t(`chat.paidFeature.generate.${feature}`);
+  return (
+    <div data-slot="paid-feature-generate" data-feature={feature}>
+      <SuggestedTaskList
+        tasks={[{ text, copy: false, routine: false }]}
+        nextStep={false}
+        copied={null}
+        onTap={() => {
+          setSent(true);
+          sendAsUser(text, {
+            accepted: () => {},
+            failed: () => setSent(false),
+          });
+        }}
+      />
+    </div>
+  );
+};
+
+/** The tool row: the plan step's Generate button, else the card for the feature the call names. */
 export const PaidFeatureToolCard = ({ part }: ToolProps<unknown>) => {
   const { runtime } = useChatView();
   const input = toolInput(part, parsePartialJSON);
-  return part.input == null || typeof input.feature !== "string" ? null : (
+  if (part.input == null || typeof input.feature !== "string") return null;
+  if (input.step === "plan" && PLAN_FIRST_FEATURES.has(input.feature))
+    return <GenerateOffer id={part.id} feature={input.feature} />;
+  return (
     <PaidFeatureCard
       feature={input.feature}
       {...(typeof input.prompt === "string" ? { prompt: input.prompt } : {})}
