@@ -323,34 +323,31 @@ describe("Roblox Studio over stdio", () => {
   }, 60_000);
 
   it("stops the timed asks after a while, and then asks only when a turn starts", async () => {
-    vi.useFakeTimers({ toFake: ["setTimeout"] });
-    try {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-closed-"));
-      dirs.push(dir);
-      const starts = path.join(dir, "starts");
-      const mcp = await connect(
-        configWith({
-          env: {
-            STAND_IN_OPEN_WHEN: path.join(dir, "open"),
-            STAND_IN_STARTS: starts,
-          },
-        })
-      );
-      const count = () =>
-        fs.readFileSync(starts, "utf8").split("\n").length - 1;
-      for (let minute = 0; minute < 20; minute++) {
-        await vi.advanceTimersByTimeAsync(60_000);
-        await vi.waitFor(() => expect(count()).toBeGreaterThan(0));
-      }
-      const afterSchedule = count();
-      await vi.advanceTimersByTimeAsync(60 * 60_000);
-      expect(count()).toBe(afterSchedule);
-      await mcp.askWaiting?.();
-      await vi.waitFor(() => expect(count()).toBe(afterSchedule + 1));
-    } finally {
-      vi.useRealTimers();
-    }
-  }, 120_000);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-closed-"));
+    dirs.push(dir);
+    const starts = path.join(dir, "starts");
+    // Two short timed asks stand in for the real schedule.
+    const mcp = await connectMcpServers(
+      configWith({
+        env: {
+          STAND_IN_OPEN_WHEN: path.join(dir, "open"),
+          STAND_IN_STARTS: starts,
+        },
+      }),
+      [20, 20]
+    );
+    connected.push(mcp);
+    const count = () =>
+      fs.existsSync(starts)
+        ? fs.readFileSync(starts, "utf8").split("\n").length - 1
+        : 0;
+    // The first connect and the two timed asks; then nothing on its own.
+    await vi.waitFor(() => expect(count()).toBe(3), { timeout: 20_000 });
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(count()).toBe(3);
+    await mcp.askWaiting?.();
+    await vi.waitFor(() => expect(count()).toBe(4), { timeout: 20_000 });
+  }, 60_000);
 
   it("does not ask again a server with no tools that is not an app's own", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout"] });

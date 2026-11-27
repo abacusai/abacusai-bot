@@ -358,7 +358,9 @@ const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
   });
 
 export async function connectMcpServers(
-  configPath: string | undefined
+  configPath: string | undefined,
+  /** The timed asks of an app's own server with no tools (EMPTY_RECHECK_DELAYS_MS); for tests. */
+  emptyRecheckDelaysMs: readonly number[] = EMPTY_RECHECK_DELAYS_MS
 ): Promise<ConnectedMcp> {
   // Without a named file, fall back to the app's own server list so an agent
   // started outside the app still sees the connectors added there.
@@ -682,7 +684,7 @@ export async function connectMcpServers(
         why === "key"
           ? KEY_REFUSED_RETRY_DELAYS_MS[attempt]
           : why === "empty"
-            ? (EMPTY_RECHECK_DELAYS_MS[attempt] ?? Number.POSITIVE_INFINITY)
+            ? (emptyRecheckDelaysMs[attempt] ?? Number.POSITIVE_INFINITY)
             : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
       if (delay == null) return;
       let answered = (): void => {};
