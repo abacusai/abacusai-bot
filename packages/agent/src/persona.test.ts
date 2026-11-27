@@ -118,10 +118,12 @@ describe("questions about the app itself", () => {
     expect(PROGRESS_UPDATES_PROMPT).toMatch(
       /in the same message as your next tool call/
     );
-    // A media ask calls paid_feature before any words, so the reply opens with the plan.
+    // When to call paid_feature is the tool's word (the free plan plans first);
+    // a call still comes before any words, so no reply opens on a refusal.
     expect(MEDIA_ASKS_PROMPT).toMatch(
-      /paid_feature: call it first, before you write anything/
+      /paid_feature: its description says when to call it\. When you call it, call it before you write anything/
     );
+    expect(MEDIA_ASKS_PROMPT).not.toMatch(/call it first/);
     // A file is done when it opens; data is sourced or called sample; a long job counts.
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(
       /done only when it opens and nothing is left broken/
