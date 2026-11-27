@@ -158,6 +158,9 @@ describe("questions about the app itself", () => {
     expect(FIRST_VERSION_PROMPT).toMatch(
       /Anything either one does not name .* still waits for a yes/
     );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /picked by a description rather than a name .* is open-ended: list them first/
+    );
     expect(ASKED_FOR_PROMPT).toMatch(
       /a delete, move, send or cancel follows the rule above/
     );
