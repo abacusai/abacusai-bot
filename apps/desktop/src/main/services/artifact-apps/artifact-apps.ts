@@ -53,11 +53,13 @@ import {
   dialog,
   Menu,
   net,
+  screen,
   session,
   shell,
   webContents,
   WebContentsView,
   type MenuItemConstructorOptions,
+  type Rectangle,
   type WebContents,
 } from "electron";
 
@@ -700,7 +702,7 @@ export const uninstallApp = async (
   watchers.delete(id);
   removeLaunchers(entry.launchers);
   delete readRegistry()[id];
-  for (const name of ["versions", "icon.png", "icon.ico"])
+  for (const name of ["versions", "icon.png", "icon.ico", "window.json"])
     rmSync(join(appDir(id), name), { recursive: true, force: true });
   // Its folder's data, unless another installed page of that folder uses it.
   const dataId = dataOf(entry);
@@ -890,6 +892,42 @@ export const relabelAppWindows = (): void => {
 };
 
 /** Opens (or focuses) the window of an installed app. False when unknown. */
+/** Where each app's window was last; none saved: a step down from the others. */
+const windowBounds = (id: string): Partial<Rectangle> => {
+  try {
+    const saved = JSON.parse(
+      readFileSync(join(appDir(id), "window.json"), "utf8")
+    ) as Rectangle;
+    const area = screen.getDisplayMatching(saved).workArea;
+    const onScreen =
+      saved.x < area.x + area.width - 80 &&
+      saved.x + saved.width > area.x + 80 &&
+      saved.y >= area.y - 20 &&
+      saved.y < area.y + area.height - 80;
+    if (onScreen && saved.width >= 360 && saved.height >= 300) return saved;
+  } catch {
+    // Never opened, or the file is unreadable: the default spot.
+  }
+  const area = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(1040, area.width);
+  const height = Math.min(760, area.height);
+  const step = 32 * (windows.size % 8);
+  return {
+    width,
+    height,
+    x: area.x + Math.max(0, Math.round((area.width - width) / 2) + step - 112),
+    y:
+      area.y + Math.max(0, Math.round((area.height - height) / 2) + step - 112),
+  };
+};
+const saveWindowBounds = (id: string, bounds: Rectangle): void => {
+  try {
+    writeFileSync(join(appDir(id), "window.json"), JSON.stringify(bounds));
+  } catch {
+    // Not kept: the next open uses the default spot.
+  }
+};
+
 export const openInstalledAppWindow = (
   id: string,
   source: "launcher" | "chat" | "list"
@@ -921,8 +959,7 @@ export const openInstalledAppWindow = (
   handleScheme(appSession, id);
 
   const window = new BaseWindow({
-    width: 1040,
-    height: 760,
+    ...windowBounds(id),
     minWidth: 360,
     minHeight: 300,
     title: entry.title,
@@ -1016,6 +1053,20 @@ export const openInstalledAppWindow = (
   else void contents.loadURL(missingPage(entry.title));
   contents.once("did-finish-load", () => window.show());
 
+  // Kept as it moves, not only on close: a quit can skip the close.
+  let boundsTimer: ReturnType<typeof setTimeout> | undefined;
+  const keepBounds = (): void => {
+    clearTimeout(boundsTimer);
+    boundsTimer = setTimeout(() => {
+      if (!window.isDestroyed()) saveWindowBounds(id, window.getNormalBounds());
+    }, 500);
+  };
+  window.on("move", keepBounds);
+  window.on("resize", keepBounds);
+  window.on("close", () => {
+    clearTimeout(boundsTimer);
+    saveWindowBounds(id, window.getNormalBounds());
+  });
   window.on("closed", () => {
     if (!contents.isDestroyed()) contents.close();
     windows.delete(id);
