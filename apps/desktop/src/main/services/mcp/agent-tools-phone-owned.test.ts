@@ -583,8 +583,33 @@ describe("paid-plan capabilities", () => {
     );
     expect(tool?.description).toMatch(/Never tell the user you cannot/);
     expect(tool?.description).toMatch(/Canva, Hugging Face/);
-    // Watching a video is the plan's; a plain edit of their own file is local work.
-    expect(tool?.description).toMatch(/watch or\ndescribe what is in a video/);
+    // Asked for an image, a video or a voice-over, the free plan writes the
+    // creative plan first and calls only when they ask to generate it.
+    expect(tool?.description).toMatch(
+      /Step 1, an ask for one whose plan is not in this chat yet/
+    );
+    expect(tool?.description).toMatch(
+      /- video generation: a bold one-line title; a storyboard of 4 to 8 scenes/
+    );
+    expect(tool?.description).toMatch(
+      /- image generation and editing: what it will show, in one line; the composition/
+    );
+    expect(tool?.description).toMatch(
+      /Say nothing about\nplans, prices, upgrades or what this chat cannot do/
+    );
+    expect(tool?.description).toMatch(
+      /End with one short question:\nwhether to generate it now/
+    );
+    expect(tool?.description).toMatch(
+      /Step 2, once your plan for it is in this chat and they ask to generate or make it/
+    );
+    expect(tool?.description).toMatch(
+      /In a routine's run, which nobody answers, call it at once instead\./
+    );
+    // Watching a video is the plan's at once; a plain edit of their own file is local work.
+    expect(tool?.description).toMatch(
+      /When the user asks you to watch or describe what is in a video, call this first, before you/
+    );
     expect(tool?.description).toMatch(
       /Not one of these: describing an image, and plain edits of the user's own media file that add nothing new \(cut, trim/
     );
@@ -620,12 +645,14 @@ describe("paid-plan capabilities", () => {
     );
     expect(text).not.toContain("https://upgrade.example/basic");
     expect(text).toMatch(/Give the upgrade link exactly as written/);
-    // The script first, then the plan: the user leaves with something made.
+    // Called when they ask to generate what was planned: the plan stays as
+    // written, made here only when the chat has none yet.
     expect(text).toMatch(
-      /Your reply first does, right now and in text, the part this chat makes for their request: the script, laid out to read at a glance/
+      /They asked to generate what you planned\. When an earlier reply in this chat holds its plan, your reply is only the lines below: never write the plan, storyboard, script or prompt again, not even shortened\. Only when no earlier reply has a plan for it \(they asked to generate it straight away\), write one first, in text and in their language: a bold one-line title; a storyboard/
     );
+    expect(text).not.toMatch(/Your reply first does/);
     expect(text).toMatch(
-      /Then tell them .*Open those lines with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web: \$7 for the first month \(30% off the usual \$10\/mo\), then \$10\/mo\."/
+      /Tell them .*Open those lines with the yes: .*"Basic gives you video generation in Abacus AI Agent on the web: \$7 for the first month \(30% off the usual \$10\/mo\), then \$10\/mo\."/
     );
     expect(text).toMatch(/Never say you cannot do it/);
     expect(text).toMatch(/no Canva, Hugging Face or other connector/);
@@ -633,11 +660,11 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(
       /A plain edit of their own file \(cut, trim, compress, convert\) is not this: do that here as usual\./
     );
-    // No question to end on, so a yes still means only the plan; a no ends the pitch.
-    expect(text).not.toMatch(/Offer no other work in this reply/);
+    // One question, the plan's: a yes then means only the upgrade.
     expect(text).toMatch(
-      /End with no question: when suggest_tasks is in your tool list, call it last, even beside the card/
+      /Offer no other work in this reply beyond the plan, and end with at most one short question: whether they want Basic\./
     );
+    expect(text).not.toMatch(/End with no question/);
     expect(text).toMatch(
       /A yes \(yes, ok, sure, sim, evet, dale .*: .*the upgrade link again, exactly as written, on its own line\. Nothing else: do not start their request or any other work, and call no tool\./
     );
@@ -646,7 +673,7 @@ describe("paid-plan capabilities", () => {
     );
     expect(text).toMatch(/Never say you are making it/);
     expect(text).toMatch(
-      /A no or not now: one short line that it is fine, and nothing else: no plan, price or link.*Do not offer the plan again in this chat/
+      /A no or not now: say that is fine in one short line and carry on\. Do not offer it again in this chat/
     );
   });
 
@@ -679,9 +706,11 @@ describe("paid-plan capabilities", () => {
       /image generation and editing on the web in Abacus AI Agent/
     );
     expect(text).toMatch(/attach it there/);
-    // The prompt first; a chat app shows no buttons, so the link ends it.
-    expect(text).toMatch(/first does, .*the prompt, ready to paste/);
-    expect(text).toMatch(/End on the link, with no question\./);
+    // The plan came first in the chat; this answer only falls back to it.
+    expect(text).toMatch(
+      /Only when no earlier reply has a plan for it .*the exact prompt, ready to paste/
+    );
+    expect(text).toMatch(/whether they want Basic\./);
     // A chat app has no Settings to point at.
     expect(text).not.toMatch(/Settings, API keys/);
   });
@@ -756,6 +785,18 @@ describe("paid-plan capabilities", () => {
     expect(text).toMatch(/Do not offer an upgrade/);
     expect(text).toMatch(/attach it there/);
     expect(text).toMatch(/no Canva, Hugging Face/);
+  });
+
+  it("keeps a paid account's media asks calling first, with no plan-first step", () => {
+    mediaKeys.set("ABACUS_API_KEY", "key");
+    const tool = listed(planServer("basic", ["todo"])).find(
+      (entry) => entry.name === "paid_feature"
+    );
+    expect(tool?.description).toMatch(
+      /call this first, before you\nwrite anything/
+    );
+    expect(tool?.description).not.toMatch(/creative plan/);
+    expect(tool?.description).not.toMatch(/Step 1/);
   });
 
   it("gives a paid account's chat app the web link with the request filled in", async () => {

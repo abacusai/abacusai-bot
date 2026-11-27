@@ -117,38 +117,49 @@ const answers = (again: string, no = NO_THANKS): string[] => [
  * answered "yes" and got a document; so the reply offers one thing, and a
  * yes, a no or a new ask each have one answer. `again` is what a yes gets.
  */
-const afterOffer = (question: string, again: string, no?: string): string[] => [
-  `Offer no other work in this reply (no script, storyboard or plan instead), and end with at most one short question: ${question}. A yes then means only that.`,
+const afterOffer = (
+  question: string,
+  again: string,
+  no?: string,
+  otherWork = "(no script, storyboard or plan instead)"
+): string[] => [
+  `Offer no other work in this reply ${otherWork}, and end with at most one short question: ${question}. A yes then means only that.`,
   "When they answer it:",
   ...answers(again, no),
 ];
 
 /**
- * What a free app chat makes itself for the ask, in text, before the plan.
- * Given only the pitch, first-day users got nothing for their ask and left.
+ * The creative plan a free account gets for a media ask, made in text and
+ * free, before anything is generated. Given a script and the upgrade in one
+ * reply, first-day users read only "paid feature" and left; the upgrade now
+ * waits until they ask to generate what was planned.
  */
-const FREE_PART: Partial<Record<string, string>> = {
+const CREATIVE_PLAN: Partial<Record<string, string>> = {
   video_gen:
-    'the script, laid out to read at a glance: a bold one-line title, then 4 to 6 shots as a list, one short line each (the time in bold, what is on screen, then the on-screen text or voice-over in quotes), then "Caption:" with one line and a few hashtags for where it will be posted. No table and no extra notes',
+    'a bold one-line title; a storyboard of 4 to 8 scenes as a list, one or two short lines each (the time in bold, what is on screen and how the camera moves, then the voice-over or on-screen text in quotes); then one line with the length, format and music, and "Caption:" with one line and a few hashtags for where it will be posted. No table',
   image_gen:
-    "the prompt, ready to paste: one quote block of two to four sentences (subject, layout, style and colours, any text on it in quotes; for an edit, the exact change), then one line with the size for where it goes. No extra notes",
-  tts: "the text to be read, in one quote block of short lines with (pause) marks where the voice should rest, then one line on tone and length. No extra notes",
+    "what it will show, in one line; the composition (what sits where, the framing); the style, light and colours; any text on it in quotes; the size for where it goes; then the exact prompt, ready to paste, in one quote block of two to four sentences (for an edit of their own image, the exact change)",
+  tts: "the text to be read, in one quote block of short lines with (pause) marks where the voice should rest, then one line on the voice, tone and length",
 };
 
-/** Told "carry on", a no got the script and the link all over again. */
-const NO_AFTER_FREE_PART =
-  "one short line that it is fine, and nothing else: no plan, price or link, and no repeat of what you made. Then offer the next step on it (suggest_tasks as above, where you have it). Do not offer the plan again in this chat unless they ask for one of these again.";
-
-/**
- * How a reply that made the free part ends: on no question, so the plan
- * stays the only thing a typed yes can mean. An app chat ends on buttons.
- */
-const afterFreePart = (reply: PaidFeatureReply, again: string): string[] => [
-  reply === "card"
-    ? 'End with no question: when suggest_tasks is in your tool list, call it last, even beside the card, with one or two tasks of at most four or five words each, so they sit side by side, that carry the text you made further ("Write 3 more hooks", "Make a Reels version", "Caption in Spanish"), never one that makes the media itself.'
-    : "End on the link, with no question.",
-  "Their next message:",
-  ...answers(again, NO_AFTER_FREE_PART),
+/** What the free plan's description says about the asks that get a plan first. */
+const planFirstLines = (features: readonly PaidFeature[]): string[] => [
+  `On this plan, ${names(features)} go in two steps.`,
+  "Step 1, an ask for one whose plan is not in this chat yet (to create, generate or edit an image, make a video, make",
+  "speech or audio, reading a text aloud included; even when it says generate, and asking whether you can make one",
+  "counts too): do not call this. Your reply is the creative plan, written by you in text, in their language:",
+  ...features.map(
+    (feature) => `- ${feature.name}: ${CREATIVE_PLAN[feature.feature]}.`
+  ),
+  "Open straight on the plan; where a detail is missing, pick a sensible one instead of asking. Say nothing about",
+  "plans, prices, upgrades or what this chat cannot do, and never say it is being made. End with one short question:",
+  'whether to generate it now; when suggest_tasks is in your tool list, call it last with two tasks, "Generate it"',
+  "(in their language, naming the image, video or voice-over) first and one change to the plan. A change they ask for",
+  "(shorter, another style) is step 1 again, with the revised plan.",
+  'Step 2, once your plan for it is in this chat and they ask to generate or make it (a yes to that question, "generate',
+  'it", "make it"): call this at once, before you write anything, and never write the plan again. It says which plan',
+  "makes it, at what price, with the link and how to word your reply, and the app shows the upgrade.",
+  "In a routine's run, which nobody answers, call it at once instead.",
 ];
 
 /**
@@ -238,15 +249,16 @@ export function paidFeatureResult(
       ? `${next.planName} gives you ${feature.name} right here: ${priceLine(next)}.`
       : `${next.planName} gives you ${feature.name} in Abacus AI Agent on the web: ${priceLine(next)}.`;
   // Nobody answers a routine's result: it keeps the pitch alone.
-  const part = reply === "routine" ? undefined : FREE_PART[feature.feature];
+  const creativePlan =
+    reply === "routine" ? undefined : CREATIVE_PLAN[feature.feature];
   lines.push(
     "",
-    ...(part != null
+    ...(creativePlan != null
       ? [
-          `Your reply first does, right now and in text, the part this chat makes for their request: ${part}. Short and ready to use, in their language: open straight on it, with at most one short lead-in such as "Here's your 30-second script, ready to shoot:", and say nothing about checking what this chat can do. Make it, never offer it; where a detail is missing, pick a sensible one instead of asking.`,
+          `They asked to generate what you planned. When an earlier reply in this chat holds its plan, your reply is only the lines below: never write the plan, storyboard, script or prompt again, not even shortened. Only when no earlier reply has a plan for it (they asked to generate it straight away), write one first, in text and in their language: ${creativePlan}.`,
         ]
       : []),
-    `${part != null ? "Then tell them" : "Tell them"} in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example, part != null ? "those lines" : "your reply")}${call.place === "web" ? ` ${ATTACHED}` : ""}`,
+    `Tell them in their language, in one or two short lines, that ${includes}, naming (in their language) the feature above that covers it, and its price. ${leadWithYes(example, creativePlan != null ? "those lines" : "your reply")}${call.place === "web" ? ` ${ATTACHED}` : ""}`,
     offer,
     `If no feature above covers ${feature.name}, do not say the plan includes it. ${NEVER_CANNOT} ${NO_DETOURS} Do not call ${PAID_FEATURE_TOOL} again for this request.`
   );
@@ -254,9 +266,15 @@ export function paidFeatureResult(
     link == null
       ? "where they upgrade again (the mobile app, under Settings)"
       : "the upgrade link again, exactly as written, on its own line";
-  if (part != null) lines.push(...afterFreePart(reply, again));
-  else if (reply !== "routine")
-    lines.push(...afterOffer(`whether they want ${next.planName}`, again));
+  if (reply !== "routine")
+    lines.push(
+      ...afterOffer(
+        `whether they want ${next.planName}`,
+        again,
+        undefined,
+        creativePlan != null ? "beyond the plan" : undefined
+      )
+    );
   return host.ok(lines.join("\n"));
 }
 
@@ -370,21 +388,61 @@ export function phoneHandoffResult(
 }
 
 /** Asked to cut the dull parts of their own recording, the model pitched video analysis: plain edits stay local. */
-const description = (host: HostCapabilities): string =>
-  [
-    `${capitalized(names(host.withheldFeatures))}: the paid plans include these, and this account does not have them here.`,
-    "When the user asks for one (to create, generate or edit an image, make a video or change what one shows, watch or",
-    "describe what is in a video, or make speech or audio, reading a text aloud included), call this first, before you",
-    'write anything: no preamble, no "let me check", nothing about what this chat lacks. It says which plan includes it',
-    "and where, at what price, with the link and how to word and order your reply (on the free plan, the part this chat",
-    "makes in text comes first); the app offers them the upgrade or Abacus AI Agent on the web.",
-    "Never tell the user you cannot do one of these or that it is not available, and never make one through a connector",
-    "(Canva, Hugging Face) or a local script (ffmpeg, Blender, Python) instead, unless the user named that app.",
-    "Not one of these: describing an image, and plain edits of the user's own media file that add nothing new (cut, trim,",
-    "split, join, compress, convert, extract audio, resize, rotate, crop, or keep only the parts they want: ask which, or",
-    "find the silences and scene changes). Do those on this computer with ffmpeg or the like, installing it with their OK",
-    "if missing. Adding or changing what an image or video shows (a person, object, outfit or motion) is one of these.",
+const NOT_THESE = [
+  "Never tell the user you cannot do one of these or that it is not available, and never make one through a connector",
+  "(Canva, Hugging Face) or a local script (ffmpeg, Blender, Python) instead, unless the user named that app.",
+  "Not one of these: describing an image, and plain edits of the user's own media file that add nothing new (cut, trim,",
+  "split, join, compress, convert, extract audio, resize, rotate, crop, or keep only the parts they want: ask which, or",
+  "find the silences and scene changes). Do those on this computer with ffmpeg or the like, installing it with their OK",
+  "if missing. Adding or changing what an image or video shows (a person, object, outfit or motion) is one of these.",
+];
+
+/** What each withheld feature the free plan's description sends straight here is, in the user's terms. */
+const CALL_FIRST_ASK: Partial<Record<string, string>> = {
+  video: "watch or describe what is in a video",
+};
+
+const description = (host: HostCapabilities): string => {
+  const header = `${capitalized(names(host.withheldFeatures))}: the paid plans include these, and this account does not have them here.`;
+  // The free plan plans what it would make before any upgrade; a paid plan's
+  // media is made on the web, so its asks go straight here.
+  const planFirst =
+    host.freePlan === true
+      ? host.withheldFeatures.filter(
+          (feature) => CREATIVE_PLAN[feature.feature] != null
+        )
+      : [];
+  if (planFirst.length === 0)
+    return [
+      header,
+      "When the user asks for one (to create, generate or edit an image, make a video or change what one shows, watch or",
+      "describe what is in a video, or make speech or audio, reading a text aloud included), call this first, before you",
+      'write anything: no preamble, no "let me check", nothing about what this chat lacks. It says which plan includes it',
+      "and where, at what price, with the link and how to word your reply; the app offers them the upgrade or Abacus AI",
+      "Agent on the web.",
+      ...NOT_THESE,
+    ].join("\n");
+  const callFirst = host.withheldFeatures.filter(
+    (feature) => !planFirst.includes(feature)
+  );
+  return [
+    header,
+    ...planFirstLines(planFirst),
+    ...(callFirst.length > 0
+      ? [
+          `When the user asks ${callFirst
+            .map((feature) => {
+              const ask = CALL_FIRST_ASK[feature.feature];
+              return ask != null ? `you to ${ask}` : `for ${feature.name}`;
+            })
+            .join(" or ")}, call this first, before you`,
+          'write anything: no preamble, no "let me check", nothing about what this chat lacks. It says which plan includes it',
+          "and where, at what price, with the link and how to word your reply; the app offers them the upgrade.",
+        ]
+      : []),
+    ...NOT_THESE,
   ].join("\n");
+};
 
 /** The schema both the app and the phone take. */
 export const paidFeatureSchema = (

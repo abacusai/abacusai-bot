@@ -793,54 +793,78 @@ const tasksCopy = (): RelayEvent[] =>
     b.runFinished("r1", "success", { timestamp: at(1) }),
   ]);
 
-/** A free plan's video ask, as a real model answered it: the script, then the plan, its buttons and card. */
-const paidFeatureFreePart = (): RelayEvent[] =>
+/**
+ * A free plan's video ask, as a real model answered it: the storyboard first,
+ * free, with a Generate button; with `generate`, the tap that follows, where
+ * the plan and its card come.
+ */
+const paidFeaturePlanFirst = (generate: boolean) => (): RelayEvent[] =>
   seqd([
     ...b.sessionReady("inc-1", "YOLO"),
     ...userTurn(
       "r1",
       "u1",
       "Make a 30-second TikTok video for my bakery's new croissant",
-      at(3)
+      at(6)
     ),
     b.textStart("a1"),
-    ...b.toolCall("c1", "paid_feature", "a1", {
-      feature: "video_gen",
-      prompt: "A 30-second TikTok video for a bakery's new croissant",
-    }),
-    b.toolResult("c1", {
-      text: "Video generation is not on this account's free plan.",
-    }),
-    b.textEnd("a1"),
-    b.textStart("a2"),
     b.textDelta(
-      "a2",
+      "a1",
       [
-        "Here's your 30-second script, ready to shoot:",
+        '**"The 3 A.M. Croissant" — 30s TikTok**',
         "",
-        '**"The New Croissant" — 30 seconds, vertical 9:16**',
+        '- **0:00–0:03** — Black screen, then a match strikes; warm light spills across a floured steel bench. Camera pushes in slowly. Text: *"3:04 AM. Most of the city is asleep."*',
+        '- **0:03–0:08** — Hands laminate butter into dough, fold, roll, fold. Overhead shot, fast rhythmic cuts on each roll. VO: *"Twenty-seven layers. Every single morning."*',
+        '- **0:08–0:13** — Dough rests, then is cut into triangles and rolled into crescents in one continuous motion. Close macro on the tight spiral. Text: *"No shortcuts. No freezer."*',
+        '- **0:13–0:19** — Oven door opens, tray slides in; time-lapse of the bake, the pastry blooming gold. Camera locked off, warm glow. VO: *"Twenty minutes. That\'s all it takes to fall apart."*',
+        '- **0:19–0:25** — Slow-motion tear: the crackle of the crust, steam, the honeycomb inside pulling apart. Handheld, very close. Text: *"Listen to that."*',
+        '- **0:25–0:30** — Croissant lands in a paper bag on the counter, shop door light behind it. Camera pulls back. Text: *"Out of the oven at 7. [Bakery name] — while they last."*',
         "",
-        '- **0:00–0:04** — Close-up: golden croissants pulled hot from the oven, steam rising. "Something new just came out of the oven…"',
-        '- **0:04–0:10** — Slow pan over the tray, butter sheen glinting. "72 layers. Real butter. Baked at 6 a.m."',
-        '- **0:10–0:16** — Hands lift one, gentle squeeze; flakes fall. "Listen to that crunch."',
-        '- **0:16–0:23** — The bite, pulled apart to show the honeycomb crumb. "Flaky outside. Buttery, airy inside."',
-        '- **0:23–0:28** — Croissant on the counter with a coffee, shop name in frame. "The New Croissant — in store this week only."',
-        '- **0:28–0:30** — Logo card. "Come early. They go fast."',
+        "**Length:** 30 seconds, vertical 9:16, 1080×1920. **Music:** warm, lo-fi acoustic with a soft build from 0:13, natural bake and crunch sounds kept loud on top.",
         "",
-        "Caption: The croissant you'll set an alarm for 🥐✨ In store now — #croissant #bakerytok #freshbaked #smallbusiness #fyp",
+        "**Caption:** Fresh out of the oven at 7 AM — 27 layers, zero shortcuts. 🥐 #croissant #bakery #freshbaked #fyp #smallbusiness",
         "",
-        "Basic gives you video generation in Abacus AI Agent on the web: $7 for the first month (30% off the usual $10/mo), then $10/mo.",
-        "",
-        "https://apps.abacus.ai/bot/link/upgrade?src=paid_feature",
+        "Want me to generate it now?",
       ].join("\n")
     ),
-    ...b.toolCall("c2", "suggest_tasks", "a2", {
-      tasks: [{ text: "Write 3 more hooks" }, { text: "Caption in Spanish" }],
+    ...b.toolCall("c1", "suggest_tasks", "a1", {
+      tasks: [
+        { text: "Generate the 30-second croissant video" },
+        { text: "Make it 15 seconds and punchier" },
+      ],
     }),
-    b.toolResult("c2", { text: "The user sees 2 buttons under your reply." }),
-    b.textEnd("a2"),
-    b.runFinished("r1", "success", { timestamp: at(2) }),
+    b.toolResult("c1", { text: "The user sees 2 buttons under your reply." }),
+    b.textEnd("a1"),
+    b.runFinished("r1", "success", { timestamp: at(5) }),
+    ...(generate ? paidFeatureGenerate() : []),
   ]);
+
+/** The Generate tap under the storyboard: Basic's line, its link and the card. */
+const paidFeatureGenerate = (): StreamChunk[] => [
+  ...userTurn("r2", "u2", "Generate the 30-second croissant video", at(3)),
+  b.textStart("a2"),
+  ...b.toolCall("c2", "paid_feature", "a2", {
+    feature: "video_gen",
+    prompt: "A 30-second TikTok video for a bakery's new croissant",
+  }),
+  b.toolResult("c2", {
+    text: "Video generation is not on this account's free plan.",
+  }),
+  b.textEnd("a2"),
+  b.textStart("a3"),
+  b.textDelta(
+    "a3",
+    [
+      "Basic gives you video generation in Abacus AI Agent on the web: $7 for the first month (30% off the usual $10/mo), then $10/mo. That's where the croissant video gets made.",
+      "",
+      "https://apps.abacus.ai/bot/link/upgrade?src=paid_feature",
+      "",
+      "Do you want to go ahead with Basic?",
+    ].join("\n")
+  ),
+  b.textEnd("a3"),
+  b.runFinished("r2", "success", { timestamp: at(2) }),
+];
 
 const VIDEO_ASK = "Make a 30-second TikTok video for my bakery's new croissant";
 
@@ -1768,17 +1792,24 @@ export const SCENARIOS: Scenario[] = [
     view: { placeholder: "Message your bot..." },
   },
   {
-    id: "paid-feature-free-part",
-    canvas: ["PaidFeatureCard", "free plan"],
+    id: "paid-feature-plan-first",
+    canvas: ["PaidFeatureCard", "free plan", "the plan"],
     skin: "session",
-    events: paidFeatureFreePart,
+    events: paidFeaturePlanFirst(false),
     view: { accountTier: "free", upgradeDialog: true },
   },
   {
-    id: "paid-feature-free-part-bot",
-    canvas: ["PaidFeatureCard", "free plan", "bot"],
+    id: "paid-feature-plan-first-generate",
+    canvas: ["PaidFeatureCard", "free plan", "generate it"],
+    skin: "session",
+    events: paidFeaturePlanFirst(true),
+    view: { accountTier: "free", upgradeDialog: true },
+  },
+  {
+    id: "paid-feature-plan-first-generate-bot",
+    canvas: ["PaidFeatureCard", "free plan", "generate it", "bot"],
     skin: "bot",
-    events: paidFeatureFreePart,
+    events: paidFeaturePlanFirst(true),
     view: {
       accountTier: "free",
       upgradeDialog: true,
