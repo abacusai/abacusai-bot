@@ -6,7 +6,8 @@
  * (spend-governor.ts); these only steer.
  * Repetition: the third identical tool call against the same state is blocked
  * (the second, for a connector call, which is billed); a successful write,
- * command or connector change in between makes the next one a new look.
+ * command, connector change or user server's change in between makes the
+ * next one a new look.
  * Connector calls: every fifth one, the model is reminded what they cost and
  * asked whether it already has enough. There is no cap, only a nudge. Show your work: a run that has written
  * files but presented nothing is told, unseen by the user, to present what it
@@ -22,7 +23,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
 import { closesReply, hasWords } from "../forever/reply-end.js";
-import { connectorToolMeta } from "../mcp/index.js";
+import { connectorToolMeta, userMcpToolChangesState } from "../mcp/index.js";
 import { isOwnerAudience } from "../owner-tools.js";
 import { WRITE_TOOLS } from "../permissions.js";
 import { RunNotes } from "../repeated-notes.js";
@@ -110,7 +111,10 @@ const READS_THE_WEB = new Set(["web_fetch", "web_search"]);
 
 /**
  * Whether a call may change what a repeat would see: a file write or a
- * command, or a connector call that is not a reviewed read.
+ * command, a connector call that is not a reviewed read, or a call to a
+ * server the user added that edits, writes or runs something (by its hint or
+ * its name: Roblox Studio's execute_luau and multi_edit change the place the
+ * next playtest sees). Its other tools are reads, guarded like any read.
  */
 function changesState(
   toolName: string,
@@ -123,6 +127,8 @@ function changesState(
       ownEntry(UNATTENDED_CONNECTOR_READS, connector.tool) ?? []
     ).includes(action);
   }
+  const userTool = userMcpToolChangesState(toolName);
+  if (userTool != null) return userTool;
   const kind = toToolKind(toolName);
   return (
     WRITE_TOOLS.has(toolName) ||

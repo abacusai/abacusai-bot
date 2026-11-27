@@ -11,6 +11,7 @@ import { fakePi } from "@abacus-ai/test-support/fake-pi";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BOT_TIME_TOOL_NAME } from "../bot/bot-time-tool.js";
+import { noteUserMcpTools } from "../mcp/index.js";
 import budgets, { createBudgets } from "./budgets.js";
 import { SpendGovernor } from "./spend-governor.js";
 
@@ -94,6 +95,30 @@ describe("a repeat against changed state", () => {
   const search: Step = [GMAIL, { action: "search_email", query: "is:unread" }];
   const label: Step = [GMAIL, { action: "modify_labels", ids: ["m1"] }];
   const draft: Step = [GMAIL, { action: "create_draft", to: "a@example.com" }];
+  // Roblox Studio's server, as the app installs it, with no hints: its edit
+  // and run tools change the open place, the rest are reads. And another
+  // server the user added, whose tools only read.
+  const studio = (tool: string) => `roblox-studio_${tool}`;
+  for (const tool of [
+    "start_stop_play",
+    "execute_luau",
+    "multi_edit",
+    "get_console_output",
+  ])
+    noteUserMcpTools([studio(tool)], { name: tool });
+  noteUserMcpTools([studio("script_read")], {
+    name: "script_read",
+    annotations: { readOnlyHint: true },
+  });
+  for (const tool of ["search", "get_page"])
+    noteUserMcpTools([`notes_${tool}`], { name: tool });
+  const searchNotes: Step = ["notes_search", { query: "plan" }];
+  const pageNote: Step = ["notes_get_page", { id: "p1" }];
+  const play: Step = [studio("start_stop_play"), { is_start: true }];
+  const stop: Step = [studio("start_stop_play"), { is_start: false }];
+  const output: Step = [studio("get_console_output"), {}];
+  const luau: Step = [studio("execute_luau"), { code: "fix()" }];
+  const script: Step = [studio("script_read"), { target_file: "Main" }];
   const rows: [name: string, steps: Step[], blocked: boolean][] = [
     ["polling a running job", Array(6).fill(poll), false],
     [
@@ -142,6 +167,33 @@ describe("a repeat against changed state", () => {
       "a chat that said ask again",
       Array(4).fill(["read_telegram_messages", { chat: "c1" }]),
       false,
+    ],
+    [
+      "a playtest started again after each fix in Studio",
+      [play, output, stop, luau, play, output, stop, luau, play, output],
+      false,
+    ],
+    ["the same playtest started back to back, 3rd", [play, play, play], true],
+    [
+      "a read-only Studio script read three times with nothing between, 3rd",
+      [script, script, script],
+      true,
+    ],
+    [
+      "a read-only Studio script read again after a fix",
+      [script, luau, script, luau, script],
+      false,
+    ],
+    [
+      "a playtest loop with no fix between, 3rd start",
+      [play, output, stop, play, output, stop, play],
+      true,
+    ],
+    ["the same console read polled, 3rd", [output, output, output], true],
+    [
+      "two reads of a user server in turn, 3rd of one",
+      [searchNotes, pageNote, searchNotes, pageNote, searchNotes],
+      true,
     ],
     [
       "the same spilled output, 3rd",
