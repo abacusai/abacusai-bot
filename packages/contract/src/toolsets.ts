@@ -95,6 +95,21 @@ export const CHATLLM_APP_URLS = {
 /** The tool that tells the agent about a paid-plan capability this account lacks. */
 export const PAID_FEATURE_TOOL = "paid_feature";
 
+/**
+ * The free plan's two steps for an image, video or voice-over ask: `plan`
+ * (the creative plan, free, with a Generate button) and `generate` (the
+ * upgrade). The call names its step, so the app draws the right one.
+ */
+export const PAID_FEATURE_STEPS = ["plan", "generate"] as const;
+export type PaidFeatureStep = (typeof PAID_FEATURE_STEPS)[number];
+
+/** The features whose free-plan asks get the plan step: what they make can be planned in text first. */
+export const PLAN_FIRST_FEATURES: ReadonlySet<string> = new Set([
+  "image_gen",
+  "video_gen",
+  "tts",
+]);
+
 /** Long enough for any request, short enough for every browser and chat app. */
 const WEB_PROMPT_MAX = 1500;
 

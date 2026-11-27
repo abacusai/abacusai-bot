@@ -296,6 +296,74 @@ it.each(["session", "bot"] as const)(
   }
 );
 
+it.each(["session", "bot"] as const)(
+  "draws the plan step's Generate button under the plan, never the upgrade card, and sends it as the user's yes (%s)",
+  async (skin) => {
+    const relay = new FakeRelay();
+    relay.emitAll([
+      ...b.sessionReady(),
+      b.runStarted("plan-step"),
+      b.textStart("calls"),
+      ...b.toolCall("c1", "paid_feature", "calls", {
+        feature: "video_gen",
+        step: "plan",
+      }),
+      b.toolResult("c1", { text: "ok" }),
+      b.textEnd("calls"),
+      b.textStart("reply"),
+      b.textDelta("reply", "Your storyboard. Want me to generate it now?"),
+      b.textEnd("reply"),
+      b.runFinished("plan-step"),
+    ]);
+    current = await renderRelay(relay, skin);
+    const reply = await screen.findByText(
+      "Your storyboard. Want me to generate it now?"
+    );
+    const button = await screen.findByText("Generate this video");
+    expect(
+      (reply.compareDocumentPosition(button) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0
+    ).toBe(true);
+    expect(document.querySelector('[data-slot="paid-feature"]')).toBeNull();
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(
+        relay.stats.send.some((message) =>
+          JSON.stringify(message).includes("Generate this video")
+        )
+      ).toBe(true)
+    );
+  }
+);
+
+it("draws one Generate button when the plan step is called twice for the same feature", async () => {
+  const relay = new FakeRelay();
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("plan-twice"),
+    b.textStart("calls"),
+    ...b.toolCall("c1", "paid_feature", "calls", {
+      feature: "image_gen",
+      step: "plan",
+    }),
+    b.toolResult("c1", { text: "ok" }),
+    ...b.toolCall("c2", "paid_feature", "calls", {
+      feature: "image_gen",
+      step: "plan",
+    }),
+    b.toolResult("c2", { text: "ok" }),
+    b.textEnd("calls"),
+    ...b.text("reply", "assistant", "Your image plan. Generate it now?"),
+    b.runFinished("plan-twice"),
+  ]);
+  current = await renderRelay(relay, "session");
+  await screen.findByText("Generate this image");
+  expect(
+    document.querySelectorAll('[data-slot="paid-feature-generate"]')
+  ).toHaveLength(1);
+});
+
 it("keeps one collapsed run for every kind of tool call while streaming", async () => {
   const relay = new FakeRelay();
   relay.emitAll([

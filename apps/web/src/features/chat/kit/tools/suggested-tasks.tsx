@@ -67,7 +67,7 @@ const offersTasks = (part: UIMessage["parts"][number]): boolean =>
  * there, no later call offers others, and the user has written nothing
  * since (the app's own notes do not count).
  */
-const isLatestOffer = (
+export const isLatestOffer = (
   messages: readonly UIMessage[],
   toolCallId: string
 ): boolean => {
@@ -297,7 +297,7 @@ export const SuggestedTasksCard = ({ part, result }: ToolProps<unknown>) => {
  * text and an arrow. The first row's tile is filled, as the likeliest answer.
  * `plan`, when given, is the last row.
  */
-const SuggestedTaskList = ({
+export const SuggestedTaskList = ({
   tasks,
   nextStep,
   copied,

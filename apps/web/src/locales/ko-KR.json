@@ -3746,7 +3746,12 @@
       "webBody": "Basic에는 웹의 Abacus AI Agent에서 이미지와 동영상을 만들고 편집하고 오디오를 만드는 기능이 포함됩니다.",
       "agentTitle": "{{feature}}은(는) 웹의 Abacus AI Agent에서 사용할 수 있습니다",
       "agentBody": "요금제에 웹의 Abacus AI Agent에서 이미지와 동영상을 만들고 편집하고 오디오를 만드는 기능이 포함되어 있습니다. 요청이 미리 입력되어 있으니, 편집할 이미지는 그곳에서 첨부하세요.",
-      "openAgent": "Abacus AI Agent에서 열기"
+      "openAgent": "Abacus AI Agent에서 열기",
+      "generate": {
+        "video_gen": "이 동영상 생성",
+        "image_gen": "이 이미지 생성",
+        "tts": "이 내레이션 만들기"
+      }
     },
     "botHelp": {
       "open": "열기"

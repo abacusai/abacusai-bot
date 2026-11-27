@@ -583,29 +583,28 @@ describe("paid-plan capabilities", () => {
     );
     expect(tool?.description).toMatch(/Never tell the user you cannot/);
     expect(tool?.description).toMatch(/Canva, Hugging Face/);
-    // Asked for an image, a video or a voice-over, the free plan writes the
-    // creative plan first and calls only when they ask to generate it.
+    // Asked for an image, a video or a voice-over, the free plan calls first
+    // with step plan; the app draws the Generate button from that call.
     expect(tool?.description).toMatch(
-      /Step 1, an ask for one whose plan is not in this chat yet/
+      /go in two steps, and both call this first, before you write anything/
     );
     expect(tool?.description).toMatch(
-      /- video generation: a bold one-line title; a storyboard of 4 to 8 scenes/
+      /- step plan: an ask for one whose plan is not in this chat yet/
     );
     expect(tool?.description).toMatch(
-      /- image generation and editing: what it will show, in one line; the composition/
+      /the app puts a Generate button under your reply/
     );
     expect(tool?.description).toMatch(
-      /Say nothing about\nplans, prices, upgrades or what this chat cannot do/
+      /- step generate: once your plan for it is in this chat/
     );
+    expect(tool?.description).toMatch(/Never write the plan again\./);
     expect(tool?.description).toMatch(
-      /End with one short question:\nwhether to generate it now/
+      /In a routine's run, which nobody answers, use step generate at once\./
     );
-    expect(tool?.description).toMatch(
-      /Step 2, once your plan for it is in this chat and they ask to generate or make it/
-    );
-    expect(tool?.description).toMatch(
-      /In a routine's run, which nobody answers, call it at once instead\./
-    );
+    expect(
+      (tool!.inputSchema as { properties: { step?: { enum: string[] } } })
+        .properties.step?.enum
+    ).toEqual(["plan", "generate"]);
     // Watching a video is the plan's at once; a plain edit of their own file is local work.
     expect(tool?.description).toMatch(
       /When the user asks you to watch or describe what is in a video, call this first, before you/
@@ -795,8 +794,40 @@ describe("paid-plan capabilities", () => {
     expect(tool?.description).toMatch(
       /call this first, before you\nwrite anything/
     );
-    expect(tool?.description).not.toMatch(/creative plan/);
-    expect(tool?.description).not.toMatch(/Step 1/);
+    expect(tool?.description).not.toMatch(/step plan/);
+    expect(
+      (tool!.inputSchema as { properties: Record<string, unknown> }).properties
+        .step
+    ).toBeUndefined();
+  });
+
+  it("answers a free account's plan step with the plan to write, no price, no link, and the button left to the app", async () => {
+    mediaKeys.set("ABACUS_API_KEY", "key");
+    billingPlan.mockResolvedValue(BASIC_FIRST_MONTH);
+    const result = (await planServer("free").executeTool(
+      "paid_feature",
+      { feature: "image_gen", step: "plan" },
+      "ui-session"
+    )) as { content: Array<{ text?: string }> };
+    const text = result.content.map((part) => part.text ?? "").join("\n");
+    expect(text).toMatch(
+      /^Write the creative plan for their image generation and editing now, in text, in their language: what it will show/
+    );
+    expect(text).toMatch(/the exact prompt, ready to paste/);
+    expect(text).toMatch(/Say nothing about plans, prices, upgrades/);
+    expect(text).toMatch(
+      /The app shows a Generate button under your reply that answers it: do not call suggest_tasks in this reply/
+    );
+    expect(text).toMatch(/call paid_feature with step generate/);
+    expect(text).not.toMatch(/\$7|upgrade link|https:/);
+  });
+
+  it("answers a call naming no step as the generate step, as the app draws the card for it", async () => {
+    mediaKeys.set("ABACUS_API_KEY", "key");
+    billingPlan.mockResolvedValue(BASIC_FIRST_MONTH);
+    const { text } = await callOn(planServer("free"), "video_gen");
+    expect(text).toMatch(/They asked to generate what you planned/);
+    expect(text).toMatch(/Basic, \$7 for the first month/);
   });
 
   it("gives a paid account's chat app the web link with the request filled in", async () => {

@@ -3746,7 +3746,12 @@
       "webBody": "Basic, web'de Abacus AI Agent'ta görsel ve video oluşturmayı ve düzenlemeyi, ayrıca ses oluşturmayı içerir.",
       "agentTitle": "{{feature}} web'de Abacus AI Agent'ta",
       "agentBody": "Planınız, web'de Abacus AI Agent'ta görsel ve video oluşturmayı ve düzenlemeyi, ayrıca ses oluşturmayı içerir. İsteğiniz orada hazır; düzenlemek istediğiniz görseli orada ekleyin.",
-      "openAgent": "Abacus AI Agent'ta aç"
+      "openAgent": "Abacus AI Agent'ta aç",
+      "generate": {
+        "video_gen": "Bu videoyu oluştur",
+        "image_gen": "Bu görseli oluştur",
+        "tts": "Bu seslendirmeyi oluştur"
+      }
     },
     "botHelp": {
       "open": "Aç"

@@ -3746,7 +3746,12 @@
       "webBody": "Basicでは、Web版のAbacus AI Agentで画像や動画の作成・編集、音声の作成ができます。",
       "agentTitle": "{{feature}}はWeb版のAbacus AI Agentで利用できます",
       "agentBody": "ご利用のプランでは、Web版のAbacus AI Agentで画像や動画の作成・編集、音声の作成ができます。リクエストは入力済みです。編集したい画像はそちらで添付してください。",
-      "openAgent": "Abacus AI Agentで開く"
+      "openAgent": "Abacus AI Agentで開く",
+      "generate": {
+        "video_gen": "この動画を生成",
+        "image_gen": "この画像を生成",
+        "tts": "このナレーションを作成"
+      }
     },
     "botHelp": {
       "open": "開く"

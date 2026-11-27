@@ -3746,7 +3746,12 @@
       "webBody": "Basic umfasst das Erstellen und Bearbeiten von Bildern und Videos sowie das Erzeugen von Audio, im Web in Abacus AI Agent.",
       "agentTitle": "{{feature}} gibt es in Abacus AI Agent im Web",
       "agentBody": "Dein Plan umfasst das Erstellen und Bearbeiten von Bildern und Videos sowie das Erzeugen von Audio, im Web in Abacus AI Agent. Deine Anfrage ist dort schon eingetragen; hänge dort jedes Bild an, das du bearbeiten möchtest.",
-      "openAgent": "In Abacus AI Agent öffnen"
+      "openAgent": "In Abacus AI Agent öffnen",
+      "generate": {
+        "video_gen": "Dieses Video erstellen",
+        "image_gen": "Dieses Bild erstellen",
+        "tts": "Dieses Voice-over erstellen"
+      }
     },
     "botHelp": {
       "open": "Öffnen"
