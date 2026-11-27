@@ -1620,7 +1620,7 @@ describe("a path the model sent with an unescaped backslash", () => {
   });
 });
 
-describe("a shell command with Git Bash or WSL drive paths, on Windows", () => {
+describe("a shell command with Git Bash drive paths, on Windows", () => {
   const cwd = "C:\\Users\\someone\\project";
   // Forward slashes, the spelling the repair checks; the shell's own reading
   // of `/c/x` is `C:\c\x`, which exists only where listed.
@@ -1649,12 +1649,24 @@ describe("a shell command with Git Bash or WSL drive paths, on Windows", () => {
       "ls /c/Program\\ Files/GitHub\\ CLI/bin",
       "ls C:/Program\\ Files/GitHub\\ CLI/bin",
     ],
-    [
-      "grep -rn foo /mnt/c/Users/someone/src",
-      "grep -rn foo C:/Users/someone/src",
-    ],
-    ["cp out.exe /cygdrive/d/Games", "cp out.exe D:/Games"],
     ['cmd /c "dir /b" && taskkill /f /im app.exe', null],
+    // WSL, other hosts and containers own their paths: left as written.
+    ["grep -rn foo /mnt/c/Users/someone/src", null],
+    [
+      `wsl.exe -d Debian -e bash -c "cd '/mnt/c/Users/someone/app' && ls /c/Users"`,
+      null,
+    ],
+    ['ssh build-box "ls /c/Users/someone"', null],
+    ["docker exec web ls /c/Users/someone", null],
+    ["cp out.exe /cygdrive/d/Games", null],
+    // Text that is printed or handed to an interpreter is not a path to run.
+    ['echo "Files are in /c/Users/someone"', null],
+    [`python -c "print(open('/c/Users/someone/a.txt').read())"`, null],
+    // A heredoc's body is data; the command before it is still repaired.
+    [
+      "ls /c/Users/someone && cat > notes.md <<'EOF'\nSee /c/Users/someone\nEOF",
+      "ls C:/Users/someone && cat > notes.md <<'EOF'\nSee /c/Users/someone\nEOF",
+    ],
     ["sed -n '/d/p' notes.txt", null],
     ["curl https://example.com/c/Users", null],
     ["ls /c/Tools", null],
