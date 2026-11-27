@@ -598,6 +598,10 @@ describe("paid-plan capabilities", () => {
       /- step generate: once your plan for it is in this chat/
     );
     expect(tool?.description).toMatch(/Never write the plan again\./);
+    // A bare yes after two plans (a video and an image) reaches the one upgrade.
+    expect(tool?.description).toMatch(
+      /A yes that does not say which, after plans for more than one of these, is\n  step generate too/
+    );
     expect(tool?.description).toMatch(
       /In a routine's run, which nobody answers, use step generate at once\./
     );
