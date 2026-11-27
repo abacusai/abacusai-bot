@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "重新啟動應用程式以載入更新後的技能。",
     "reveal": "顯示位置",
+    "installApp": "安裝為應用程式",
+    "uninstallApp": "解除安裝應用程式",
+    "installedApp": "已安裝，現在可以在應用程式選單中找到它。",
+    "openApp": "開啟應用程式",
     "searchArtifacts": "搜尋成果",
     "searchConnectors": "搜尋連接器",
     "searchSkills": "搜尋技能",
@@ -4494,11 +4498,7 @@
       "allowed": "允許",
       "blocked": "封鎖",
       "signOut": "登出"
-    },
-    "installApp": "安裝為應用程式",
-    "uninstallApp": "解除安裝應用程式",
-    "installedApp": "已安裝，現在可以在應用程式選單中找到它。",
-    "openApp": "開啟應用程式"
+    }
   },
   "browserPermission": {
     "allow": "允許",

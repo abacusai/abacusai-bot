@@ -1,5 +1,6 @@
 export { dispatchPreview } from "./preview-consumers";
 export { requestBrowserOpen } from "./browser-open";
+export { InstalledAppsHost } from "./installed-apps";
 export { OpenLinkHost, openChatWithText } from "./open-link";
 export {
   CREDITS_SIDEBAR_GALLERY_LEVELS,

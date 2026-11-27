@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "Mulai ulang aplikasi untuk memuat keterampilan yang diperbarui.",
     "reveal": "Reveal",
+    "installApp": "Pasang sebagai aplikasi",
+    "uninstallApp": "Copot aplikasi",
+    "installedApp": "Terpasang. Sekarang ada di menu aplikasimu.",
+    "openApp": "Buka aplikasi",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search konektor",
     "searchSkills": "Search skills",
@@ -4494,11 +4498,7 @@
       "allowed": "Diizinkan",
       "blocked": "Diblokir",
       "signOut": "Keluar"
-    },
-    "installApp": "Pasang sebagai aplikasi",
-    "uninstallApp": "Copot aplikasi",
-    "installedApp": "Terpasang. Sekarang ada di menu aplikasimu.",
-    "openApp": "Buka aplikasi"
+    }
   },
   "browserPermission": {
     "allow": "Izinkan",

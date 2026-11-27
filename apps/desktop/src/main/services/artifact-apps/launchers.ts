@@ -9,7 +9,8 @@
  *   macOS    ~/Applications/AbacusAI Bot apps/<name>.app, a small bundle
  *            whose script opens the link.
  */
-import { chmodSync, mkdirSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { chmodSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -64,6 +65,34 @@ const plistEscape = (text: string): string =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /**
+ * The app's icon file in `dir` ("png" or "ico"), or null. Its name carries a
+ * hash of the icon, so a new icon is a new path: Windows caches icons by path
+ * and would keep showing the old one.
+ */
+export const iconFile = (dir: string, ext: "png" | "ico"): string | null => {
+  try {
+    // The plain name: an app installed by an earlier build.
+    const name = readdirSync(dir).find((n) =>
+      new RegExp(`^icon(-[0-9a-f]+)?\\.${ext}$`).test(n)
+    );
+    return name == null ? null : join(dir, name);
+  } catch {
+    return null;
+  }
+};
+
+/** Every icon file the app had: the hashed ones and the plain names before. */
+export const removeIconFiles = (dir: string): void => {
+  try {
+    for (const name of readdirSync(dir))
+      if (/^icon(-[0-9a-f]+)?\.(png|ico)$/.test(name))
+        rmSync(join(dir, name), { force: true });
+  } catch {
+    // No folder: nothing to remove.
+  }
+};
+
+/**
  * Writes the app's launcher entries and icons into `dir`; returns every path
  * it made, for removal later.
  */
@@ -72,12 +101,15 @@ export const writeLaunchers = async (
   dir: string
 ): Promise<string[]> => {
   const png = await appIconPng(entry.title, entry.id);
-  writeAtomic(join(dir, "icon.png"), png);
+  const tag = createHash("sha256").update(png).digest("hex").slice(0, 12);
+  removeIconFiles(dir);
+  const pngFile = join(dir, `icon-${tag}.png`);
+  writeAtomic(pngFile, png);
   const link = appLink(entry.id);
   const name = fileName(entry.title);
 
   if (process.platform === "win32") {
-    const ico = join(dir, "icon.ico");
+    const ico = join(dir, `icon-${tag}.ico`);
     writeAtomic(ico, pngToIco(png));
     const [target, ...args] = launchCommand();
     const startMenu = join(
@@ -143,7 +175,7 @@ export const writeLaunchers = async (
       "Type=Application",
       `Name=${entry.title.replace(/[\r\n]/g, " ")}`,
       `Exec=${exec}`,
-      `Icon=${join(dir, "icon.png")}`,
+      `Icon=${pngFile}`,
       "Terminal=false",
       "Categories=Utility;",
       `StartupWMClass=abacusai-bot-app-${entry.id}`,

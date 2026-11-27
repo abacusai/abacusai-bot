@@ -30,7 +30,7 @@ import {
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
 import { continueInNewChat } from "#renderer/features/sessions/data/continue-chat";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
-import { OpenLinkHost } from "#renderer/features/shell";
+import { InstalledAppsHost, OpenLinkHost } from "#renderer/features/shell";
 import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
 import {
   ShellLayout,
@@ -152,6 +152,7 @@ const ShellRoute = () => {
       {!provisional && IS_ELECTRON && (
         <>
           <OpenLinkHost transport={transport} db={db} />
+          <InstalledAppsHost transport={transport} />
           <ResumeCardReturn />
         </>
       )}

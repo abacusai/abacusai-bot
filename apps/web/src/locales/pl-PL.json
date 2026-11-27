@@ -4502,6 +4502,10 @@
     "autoReplyTurnOn": "Włącz",
     "restartSkills": "Uruchom aplikację ponownie, aby wczytać zaktualizowane umiejętności.",
     "reveal": "Pokaż",
+    "installApp": "Zainstaluj jako aplikację",
+    "uninstallApp": "Odinstaluj aplikację",
+    "installedApp": "Zainstalowano. Jest teraz w menu aplikacji.",
+    "openApp": "Otwórz aplikację",
     "searchArtifacts": "Szukaj artefaktów",
     "searchConnectors": "Szukaj konektorów",
     "searchSkills": "Szukaj umiejętności",
@@ -4638,11 +4642,7 @@
       "allowed": "Dozwolone",
       "blocked": "Zablokowane",
       "signOut": "Wyloguj"
-    },
-    "installApp": "Zainstaluj jako aplikację",
-    "uninstallApp": "Odinstaluj aplikację",
-    "installedApp": "Zainstalowano. Jest teraz w menu aplikacji.",
-    "openApp": "Otwórz aplikację"
+    }
   },
   "browserPermission": {
     "allow": "Zezwól",

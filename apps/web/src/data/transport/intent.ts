@@ -61,7 +61,8 @@ const READS: Record<string, string> = {
   sites: "progress",
   status: "connectivity events list",
   skills: "listInstalled search",
-  system: "events info loginItem.get quitGuard",
+  system:
+    "artifactApps.list artifactApps.status events info loginItem.get quitGuard",
   terminal: "busy events output shell.get",
   update: "events status",
   voice: "language whisper.progress",

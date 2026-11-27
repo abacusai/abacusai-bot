@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "重启应用以加载更新后的技能。",
     "reveal": "显示位置",
+    "installApp": "安装为应用",
+    "uninstallApp": "卸载应用",
+    "installedApp": "已安装，现在可以在应用菜单中找到它。",
+    "openApp": "打开应用",
     "searchArtifacts": "搜索成果",
     "searchConnectors": "搜索连接器",
     "searchSkills": "搜索技能",
@@ -4494,11 +4498,7 @@
       "allowed": "允许",
       "blocked": "阻止",
       "signOut": "退出登录"
-    },
-    "installApp": "安装为应用",
-    "uninstallApp": "卸载应用",
-    "installedApp": "已安装，现在可以在应用菜单中找到它。",
-    "openApp": "打开应用"
+    }
   },
   "browserPermission": {
     "allow": "允许",

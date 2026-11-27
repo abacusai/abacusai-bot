@@ -8,7 +8,6 @@ import { AppWindow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { followNotice } from "#renderer/data/queries/notices";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
@@ -17,9 +16,11 @@ import { Button } from "#renderer/ui/button";
 const PAGE = /\.html?$/i;
 /**
  * Every row of the same page (its URL and its file) follows an install; an
- * uninstall from the app's own window comes from the host.
+ * install or uninstall elsewhere (the app's own window) comes from the host,
+ * passed on by the shell (InstalledAppsHost).
  */
-const CHANGED = "abacus-installed-apps-changed";
+export const INSTALLED_APPS_CHANGED = "abacus-installed-apps-changed";
+const CHANGED = INSTALLED_APPS_CHANGED;
 const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i;
 
 interface Props {
@@ -48,21 +49,11 @@ const InstallApp = ({ target, sessionId }: Props) => {
         .catch(() => undefined);
     refresh();
     window.addEventListener(CHANGED, refresh);
-    const abort = new AbortController();
-    followNotice(
-      "system",
-      transport,
-      (event) => {
-        if (event.type === "installed-apps-changed") refresh();
-      },
-      abort.signal
-    );
     return () => {
       live = false;
-      abort.abort();
       window.removeEventListener(CHANGED, refresh);
     };
-  }, [apps, target, transport]);
+  }, [apps, target]);
   const run = () => {
     setBusy(true);
     const done = () => setBusy(false);
@@ -84,9 +75,7 @@ const InstallApp = ({ target, sessionId }: Props) => {
       // The host's reason (too big, ...) is written for the user.
       .catch((error: unknown) =>
         showError(
-          error instanceof Error && error.message !== ""
-            ? error.message
-            : t("phase5.failed")
+          (error instanceof Error && error.message) || t("phase5.failed")
         )
       )
       .finally(done);

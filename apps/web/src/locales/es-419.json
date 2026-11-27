@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "Reinicia la aplicación para cargar las habilidades actualizadas.",
     "reveal": "Reveal",
+    "installApp": "Instalar como app",
+    "uninstallApp": "Desinstalar app",
+    "installedApp": "Instalada. Ya está en tu menú de apps.",
+    "openApp": "Abrir app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search conectores",
     "searchSkills": "Search skills",
@@ -4494,11 +4498,7 @@
       "allowed": "Permitido",
       "blocked": "Bloqueado",
       "signOut": "Cerrar sesión"
-    },
-    "installApp": "Instalar como app",
-    "uninstallApp": "Desinstalar app",
-    "installedApp": "Instalada. Ya está en tu menú de apps.",
-    "openApp": "Abrir app"
+    }
   },
   "browserPermission": {
     "allow": "Permitir",

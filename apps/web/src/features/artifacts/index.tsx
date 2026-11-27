@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "#renderer/components/empty-state";
 import { ArtifactsIllustration } from "#renderer/components/empty-state/illustrations";
 import { FilePreview } from "#renderer/components/file-preview";
+import { INSTALLED_APPS_CHANGED } from "#renderer/components/file-preview/install-app-button";
 import {
   SaveAllButton,
   useSaveFiles,
@@ -17,7 +18,6 @@ import { Segments } from "#renderer/components/form-kit/controls";
 import { PageToolbar } from "#renderer/components/form-kit/page";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
-import { followNotice } from "#renderer/data/queries/notices";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showInfo, showError } from "#renderer/lib/toast";
@@ -207,18 +207,10 @@ export const ArtifactsPage = ({
   // elsewhere (the app's own window).
   const [appsChanged, setAppsChanged] = useState(0);
   useEffect(() => {
-    const abort = new AbortController();
-    followNotice(
-      "system",
-      transport,
-      (event) => {
-        if (event.type === "installed-apps-changed")
-          setAppsChanged((n) => n + 1);
-      },
-      abort.signal
-    );
-    return () => abort.abort();
-  }, [transport]);
+    const bump = () => setAppsChanged((n) => n + 1);
+    globalThis.addEventListener(INSTALLED_APPS_CHANGED, bump);
+    return () => globalThis.removeEventListener(INSTALLED_APPS_CHANGED, bump);
+  }, []);
   // oxlint-disable-next-line exhaustive-deps -- only the triggers above.
   useEffect(refreshInstalled, [pagePaths, appsChanged]);
   const list = search.view === "list" || !!search.item;
@@ -329,9 +321,8 @@ export const ArtifactsPage = ({
                     })
                     .catch((error: unknown) =>
                       showError(
-                        error instanceof Error && error.message !== ""
-                          ? error.message
-                          : t("phase5.failed")
+                        (error instanceof Error && error.message) ||
+                          t("phase5.failed")
                       )
                     ),
               },

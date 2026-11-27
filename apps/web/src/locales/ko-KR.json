@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "업데이트된 스킬을 불러오려면 앱을 다시 시작하세요.",
     "reveal": "Reveal",
+    "installApp": "앱으로 설치",
+    "uninstallApp": "앱 제거",
+    "installedApp": "설치했어요. 이제 앱 메뉴에 있어요.",
+    "openApp": "앱 열기",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search 커넥터",
     "searchSkills": "Search skills",
@@ -4494,11 +4498,7 @@
       "allowed": "허용",
       "blocked": "차단",
       "signOut": "로그아웃"
-    },
-    "installApp": "앱으로 설치",
-    "uninstallApp": "앱 제거",
-    "installedApp": "설치했어요. 이제 앱 메뉴에 있어요.",
-    "openApp": "앱 열기"
+    }
   },
   "browserPermission": {
     "allow": "허용",

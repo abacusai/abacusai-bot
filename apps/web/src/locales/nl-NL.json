@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Inschakelen",
     "restartSkills": "Start de app opnieuw om de bijgewerkte skills te laden.",
     "reveal": "Tonen",
+    "installApp": "Installeren als app",
+    "uninstallApp": "App verwijderen",
+    "installedApp": "Geïnstalleerd. Hij staat nu in je appmenu.",
+    "openApp": "App openen",
     "searchArtifacts": "Artefacten zoeken",
     "searchConnectors": "Connectors zoeken",
     "searchSkills": "Skills zoeken",
@@ -4494,11 +4498,7 @@
       "allowed": "Toegestaan",
       "blocked": "Geblokkeerd",
       "signOut": "Afmelden"
-    },
-    "installApp": "Installeren als app",
-    "uninstallApp": "App verwijderen",
-    "installedApp": "Geïnstalleerd. Hij staat nu in je appmenu.",
-    "openApp": "App openen"
+    }
   },
   "browserPermission": {
     "allow": "Toestaan",

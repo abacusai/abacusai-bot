@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "Güncellenen becerileri yüklemek için uygulamayı yeniden başlat.",
     "reveal": "Göster",
+    "installApp": "Uygulama olarak yükle",
+    "uninstallApp": "Uygulamayı kaldır",
+    "installedApp": "Yüklendi. Artık uygulamalar menünde.",
+    "openApp": "Uygulamayı aç",
     "searchArtifacts": "Çıktılarda ara",
     "searchConnectors": "Bağlayıcılarda ara",
     "searchSkills": "Becerilerde ara",
@@ -4494,11 +4498,7 @@
       "allowed": "İzin verildi",
       "blocked": "Engellendi",
       "signOut": "Oturumu kapat"
-    },
-    "installApp": "Uygulama olarak yükle",
-    "uninstallApp": "Uygulamayı kaldır",
-    "installedApp": "Yüklendi. Artık uygulamalar menünde.",
-    "openApp": "Uygulamayı aç"
+    }
   },
   "browserPermission": {
     "allow": "İzin ver",

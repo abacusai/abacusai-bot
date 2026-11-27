@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "更新されたスキルを読み込むにはアプリを再起動してください。",
     "reveal": "Reveal",
+    "installApp": "アプリとしてインストール",
+    "uninstallApp": "アプリをアンインストール",
+    "installedApp": "インストールしました。アプリメニューから開けます。",
+    "openApp": "アプリを開く",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search コネクタ",
     "searchSkills": "Search skills",
@@ -4494,11 +4498,7 @@
       "allowed": "許可",
       "blocked": "ブロック",
       "signOut": "サインアウト"
-    },
-    "installApp": "アプリとしてインストール",
-    "uninstallApp": "アプリをアンインストール",
-    "installedApp": "インストールしました。アプリメニューから開けます。",
-    "openApp": "アプリを開く"
+    }
   },
   "browserPermission": {
     "allow": "許可",

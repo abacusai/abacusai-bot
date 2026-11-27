@@ -4358,6 +4358,10 @@
     "autoReplyTurnOn": "Turn on",
     "restartSkills": "Starte die App neu, um die aktualisierten Skills zu laden.",
     "reveal": "Reveal",
+    "installApp": "Als App installieren",
+    "uninstallApp": "App deinstallieren",
+    "installedApp": "Installiert. Sie ist jetzt in deinem App-Menü.",
+    "openApp": "App öffnen",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search Konnektoren",
     "searchSkills": "Search skills",
@@ -4494,11 +4498,7 @@
       "allowed": "Erlaubt",
       "blocked": "Gesperrt",
       "signOut": "Abmelden"
-    },
-    "installApp": "Als App installieren",
-    "uninstallApp": "App deinstallieren",
-    "installedApp": "Installiert. Sie ist jetzt in deinem App-Menü.",
-    "openApp": "App öffnen"
+    }
   },
   "browserPermission": {
     "allow": "Zulassen",

@@ -73,10 +73,14 @@ import {
 import { htmlPagesIn } from "../agent-tools/static-server";
 import { BROWSER_PARTITION } from "../browser/connected-sites";
 import { nativeT } from "../config/native-language";
-import { appUserModelId, removeLaunchers, writeLaunchers } from "./launchers";
 import {
-  agentBrowserRunEnded,
-  agentBrowserRunStarted,
+  appUserModelId,
+  iconFile,
+  removeIconFiles,
+  removeLaunchers,
+  writeLaunchers,
+} from "./launchers";
+import {
   deleteStore,
   exportCsv,
   exportJson,
@@ -89,7 +93,7 @@ import {
   writeAtomic,
 } from "./store";
 
-export { agentBrowserRunEnded, agentBrowserRunStarted, flushAllStores };
+export { flushAllStores };
 
 export const APP_SCHEME = "abacus-app";
 
@@ -746,7 +750,8 @@ export const uninstallApp = async (
   watchers.delete(id);
   removeLaunchers(entry.launchers);
   delete readRegistry()[id];
-  for (const name of ["versions", "icon.png", "icon.ico", "window.json"])
+  removeIconFiles(appDir(id));
+  for (const name of ["versions", "window.json"])
     rmSync(join(appDir(id), name), { recursive: true, force: true });
   // Its folder's data, unless another installed page of that folder uses it.
   const dataId = dataOf(entry);
@@ -846,8 +851,6 @@ export const startInstalledApps = (appDeps: AppsDeps): void => {
 
 const windows = new Map<string, BaseWindow>();
 const views = new Map<string, WebContents>();
-
-export const artifactAppWindowCount = (): number => windows.size;
 
 const reloadWindow = (id: string): void => {
   const contents = views.get(id);
@@ -1011,13 +1014,13 @@ export const openInstalledAppWindow = (
     minWidth: 360,
     minHeight: 300,
     title: entry.title,
-    icon: join(appDir(id), "icon.png"),
+    icon: iconFile(appDir(id), "png") ?? undefined,
     show: false,
   });
   if (process.platform === "win32")
     window.setAppDetails({
       appId: appUserModelId(id),
-      appIconPath: join(appDir(id), "icon.ico"),
+      appIconPath: iconFile(appDir(id), "ico") ?? "",
     });
   windows.set(id, window);
   refreshMenu(id);
