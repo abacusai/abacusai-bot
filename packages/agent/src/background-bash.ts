@@ -7,6 +7,7 @@
 import { Type } from "typebox";
 
 import {
+  type BackgroundJob,
   listBackgroundJobs,
   startBackgroundJob,
 } from "./background-processes.js";
@@ -104,16 +105,52 @@ export const leadingSleepSeconds = (command: string): number | null => {
   return Number(match[1]) * unit;
 };
 
-/** The answer to a blind poll of running jobs: how to wait for them instead. */
-const pollRefusal = (ids: readonly string[]): string =>
-  [
-    `Not run: ${ids.join(", ")} ${ids.length === 1 ? "is" : "are"} still running in the background, and a`,
-    "sleep shows the user nothing and holds their messages until it ends. To wait, call",
-    `fetch_background_output with id:"${ids[0]}" and wait_seconds (up to 120); add until with a`,
-    "line you expect in its output to stop at that. It returns as soon as the job finishes, shows",
-    "its output to the user meanwhile, and ends early when the user writes. Leave id off to wait on",
-    "every running job. Then run the check you meant to run after the sleep.",
-  ].join("\n");
+/** Words that say nothing about which job a check is for. */
+const CHECK_WORDS = new Set(
+  (
+    "sleep echo printf tail head cat grep egrep less more curl wget http https localhost " +
+    "true false done then else test ls dir find wc sed awk sort uniq cut tr xargs exit null " +
+    "dev tmp tmpdir 127.0.0.1 0.0.0.0 -s -sS -m -c -n -f -i"
+  ).split(" ")
+);
+
+/**
+ * The running jobs a check after the sleep is plausibly about: one whose
+ * command, label or recent output names a file, folder, port or word the check
+ * names (`sleep 60; tail install.log` and a job writing install.log).
+ */
+export const jobsTheCheckNames = (
+  command: string,
+  jobs: readonly BackgroundJob[]
+): BackgroundJob[] => {
+  const check = command.replace(/^[\s\S]*?sleep\s+\S+/, "");
+  const words = [...check.matchAll(/[A-Za-z0-9_.:-]{3,}/g)]
+    .map((match) => match[0]!.toLowerCase().replace(/^[.:-]+|[.:-]+$/g, ""))
+    .filter((word) => word.length >= 3 && !CHECK_WORDS.has(word));
+  return jobs.filter((job) => {
+    const seen =
+      `${job.command}\n${job.label ?? ""}\n${job.output.slice(-4_000)}`.toLowerCase();
+    return words.some((word) => seen.includes(word));
+  });
+};
+
+/** The answer to a blind poll: how to wait instead, naming the job it is plausibly for. */
+const pollRefusal = (related: BackgroundJob | null): string =>
+  related != null
+    ? [
+        `Not run: ${related.id} is still running in the background, and a sleep shows the user nothing`,
+        "and holds their messages until it ends. To wait for it, call fetch_background_output with",
+        `id:"${related.id}" and wait_seconds (up to 120); add until with a line you expect in its output`,
+        "(checked against what it already printed too). It returns as soon as the job finishes or the",
+        "line is there, shows its output to the user meanwhile, and ends early when the user writes.",
+        "Then run the check you meant to run after the sleep.",
+      ].join("\n")
+    : [
+        "Not run: a sleep shows the user nothing and holds their messages until it ends. To wait, call",
+        "fetch_background_output with wait_seconds (up to 120) and no id: it waits the same time, but",
+        "ends early when the user writes or a background job finishes, and shows the running jobs'",
+        "output meanwhile. Then run the check you meant to run after the sleep.",
+      ].join("\n");
 
 /** A short, plain title for the user; never the command itself. */
 const LABEL_MAX = 80;
@@ -188,12 +225,17 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
         const command =
           typeof params.command === "string" ? params.command : "";
         const sleep = leadingSleepSeconds(command);
-        const running = listBackgroundJobs()
-          .filter((job) => job.exit == null)
-          .map((job) => job.id);
+        const running = listBackgroundJobs().filter((job) => job.exit == null);
         if (sleep != null && sleep >= POLL_SLEEP_SECONDS && running.length > 0)
           return {
-            content: [{ type: "text" as const, text: pollRefusal(running) }],
+            content: [
+              {
+                type: "text" as const,
+                text: pollRefusal(
+                  jobsTheCheckNames(command, running)[0] ?? null
+                ),
+              },
+            ],
             details: {},
             isError: true,
           };

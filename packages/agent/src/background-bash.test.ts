@@ -16,6 +16,7 @@ import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  jobsTheCheckNames,
   leadingSleepSeconds,
   withBackgroundOption,
 } from "./background-bash.js";
@@ -718,6 +719,23 @@ describe("waiting on a background job", () => {
     expect(text).toContain("Listening on port 3000");
   }, 20_000);
 
+  it("returns at once when the line it waits for was printed before the wait began", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "echo Listening on port 3000; sleep 30",
+      background: true,
+    });
+    await waitFor(() => (getFirstJobOutput() ?? "").includes("Listening"));
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on",
+    });
+
+    expect(ms).toBeLessThan(2_000);
+    expect(text).toContain("The text you waited for appeared");
+  }, 20_000);
+
   it("says it is still running when the wait runs out", async () => {
     const { tool } = bashTool();
     await run(tool, { command: "sleep 30", background: true });
@@ -733,23 +751,44 @@ describe("waiting on a background job", () => {
     const { text, ms } = await wait({ wait_seconds: 60 });
 
     expect(ms).toBeLessThan(10_000);
-    expect(text).toContain("It finished.");
+    expect(text).toContain("bg-2 finished; bg-1 is still running.");
+    expect(text).not.toContain("It finished.");
     expect(text).toContain("second done");
+    // Each job's state line once.
+    expect(text.split("bg-1  running").length - 1).toBe(1);
+    expect(text.split("bg-2  exited").length - 1).toBe(1);
   }, 20_000);
 });
 
 describe("a blind sleep while a job runs in the background", () => {
-  it("is answered with the way to wait instead, and not run", async () => {
+  it("is answered with the way to wait for the job it checks, and not run", async () => {
     const { tool, base } = bashTool();
-    await run(tool, { command: "sleep 30", background: true });
+    await run(tool, {
+      command: "echo installing > install.log; sleep 30",
+      background: true,
+    });
     const result = await tool.execute("call-2", {
       command: "sleep 90; tail -5 install.log",
     });
 
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Not run: bg-1 is still running");
+    expect(result.content[0]?.text).toContain('id:"bg-1" and wait_seconds');
+    expect(base.calls).toHaveLength(0);
+  });
+
+  it("names no job when the check is about none of them, and offers the plain interruptible wait", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, { command: "sleep 30; echo dev server", background: true });
+    const result = await tool.execute("call-2", {
+      command: "sleep 30; ls screenshots",
+    });
+
+    expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain(
-      'fetch_background_output with id:"bg-1" and wait_seconds'
+      "fetch_background_output with wait_seconds (up to 120) and no id"
     );
+    expect(result.content[0]?.text).not.toContain("bg-1");
     expect(base.calls).toHaveLength(0);
   });
 
@@ -773,5 +812,35 @@ describe("a blind sleep while a job runs in the background", () => {
   ];
   it.each(sleeps)("reads the leading sleep of %s", (command, seconds) => {
     expect(leadingSleepSeconds(command)).toBe(seconds);
+  });
+});
+
+describe("which running job a check after a sleep is about", () => {
+  const job = (id: string, command: string, output = "") =>
+    ({
+      id,
+      command,
+      label: null,
+      cwd: ".",
+      startedAt: 0,
+      lastOutputAt: null,
+      output,
+      exit: null,
+      notifyOnExit: true,
+    }) as never;
+  const jobs = [
+    job("bg-1", "npm run dev", "Local: http://localhost:5173"),
+    job("bg-2", "./install.sh > install.log 2>&1"),
+  ];
+  const rows: [command: string, ids: string[]][] = [
+    ["sleep 60; tail -5 install.log", ["bg-2"]],
+    ["sleep 20; curl -s http://localhost:5173/health", ["bg-1"]],
+    ["sleep 30; ls screenshots", []],
+    ["sleep 45; echo ok", []],
+  ];
+  it.each(rows)("%s", (command, ids) => {
+    expect(
+      jobsTheCheckNames(command, jobs).map((j) => (j as { id: string }).id)
+    ).toEqual(ids);
   });
 });

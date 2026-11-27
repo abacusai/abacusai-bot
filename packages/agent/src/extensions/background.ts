@@ -48,10 +48,14 @@ const waitOn = (
   show: () => void
 ): Promise<WaitEnd> =>
   new Promise((resolve) => {
-    const from = new Map(
-      ids.map((id) => [id, getBackgroundJob(id)?.output.length ?? 0])
-    );
     const needle = until?.toLowerCase() ?? null;
+    // Matched against everything the job printed: a server prints its ready
+    // line before anyone waits for it.
+    const printed = (): boolean =>
+      needle != null &&
+      ids.some((id) =>
+        (getBackgroundJob(id)?.output ?? "").toLowerCase().includes(needle)
+      );
     let redraw: NodeJS.Timeout | null = null;
     const cleanups: Array<() => void> = [];
     const end = (why: WaitEnd): void => {
@@ -65,15 +69,7 @@ const waitOn = (
         if (ids.includes(job.id)) end("finished");
       }),
       onBackgroundOutput(() => {
-        if (
-          needle != null &&
-          ids.some((id) =>
-            (getBackgroundJob(id)?.output ?? "")
-              .slice(from.get(id) ?? 0)
-              .toLowerCase()
-              .includes(needle)
-          )
-        ) {
+        if (printed()) {
           end("matched");
           return;
         }
@@ -84,6 +80,10 @@ const waitOn = (
       }),
       onUserMessageWaiting(() => end("user"))
     );
+    if (printed()) {
+      end("matched");
+      return;
+    }
     const timer = setTimeout(() => end("time"), ms);
     cleanups.push(() => clearTimeout(timer));
     if (signal != null) {
@@ -310,13 +310,14 @@ export default function (pi: ExtensionAPI) {
         const ids = waitFor.map((job) => job.id);
         for (const id of ids) waitedOn.add(id);
         const startedWaiting = Date.now();
+        // Each job once: its state line, then the tail of its output.
         const output = (): string =>
           ids
             .map((id) => {
               const job = getBackgroundJob(id);
-              return job == null
-                ? ""
-                : `${ids.length > 1 ? `${describe(job)}\n` : ""}${tail(job.output)}`;
+              if (job == null) return "";
+              const printed = tail(job.output);
+              return `${describe(job)}\n${printed.length > 0 ? printed : "(nothing printed yet)"}`;
             })
             .join("\n\n");
         let why: WaitEnd;
@@ -339,18 +340,17 @@ export default function (pi: ExtensionAPI) {
           1,
           Math.round((Date.now() - startedWaiting) / 1_000)
         );
-        const states = ids.map((id) => {
-          const job = getBackgroundJob(id);
-          return job == null ? id : describe(job);
-        });
-        return text(
-          [
-            `Waited ${waited}s. ${why === "finished" ? "It finished." : STILL_RUNNING[why]}`,
-            ...states,
-            "",
-            output() || "(nothing printed yet)",
-          ].join("\n")
-        );
+        const done = ids.filter((id) => getBackgroundJob(id)?.exit != null);
+        const running = ids.filter((id) => !done.includes(id));
+        const outcome =
+          why !== "finished"
+            ? STILL_RUNNING[why]
+            : running.length === 0
+              ? ids.length === 1
+                ? "It finished."
+                : "They all finished."
+              : `${done.join(", ")} finished; ${running.join(", ")} ${running.length === 1 ? "is" : "are"} still running.`;
+        return text([`Waited ${waited}s. ${outcome}`, "", output()].join("\n"));
       }
 
       if (params.id == null) {
