@@ -505,6 +505,9 @@ describe("progress updates", () => {
     );
     expect(String(reminder.content)).toContain("before your next tool call");
     expect(String(reminder.content)).toContain("in their language");
+    // It asks for a line and more work, never for wrapping up.
+    expect(String(reminder.content)).toContain("Then carry on with the work.");
+    expect(String(reminder.content)).not.toContain("final answer");
     expect((reminder as { display?: boolean }).display).toBe(false);
     expect(reminder.options?.deliverAs).toBe("steer");
   });
@@ -734,13 +737,24 @@ describe("progress updates", () => {
 
     it("names the progress tool, and words that never reach the chat do not count", async () => {
       const pi = await started(phone);
-      for (let i = 0; i < 3; i++)
-        await round(pi, { text: "Thinking out loud." });
+      for (let i = 0; i < 6; i++)
+        await round(pi, { text: `Thinking out loud ${i}.` });
       expect(reminders(pi)).toHaveLength(1);
       const text = String(reminders(pi)[0]!.content);
       expect(text).toContain("send_progress");
       expect(text).toContain("present_deliverable");
       expect(text).not.toMatch(/preview|pane/i);
+    });
+
+    it("keeps the long wait: each line is a push to their phone", async () => {
+      const pi = await started({ ...phone, spoke: false });
+      for (let i = 0; i < 5; i++) await round(pi);
+      expect(reminders(pi)).toHaveLength(0);
+      await round(pi);
+      expect(reminders(pi)).toHaveLength(1);
+      expect(String(reminders(pi)[0]!.content)).toContain(
+        "heard nothing from you for 3 minutes"
+      );
     });
 
     it("counts a progress line or a file handed over as the user hearing", async () => {
