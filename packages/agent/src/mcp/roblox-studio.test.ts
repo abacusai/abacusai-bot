@@ -18,7 +18,11 @@ import { connectorById, mcpEntryOn } from "@abacus-ai/connectors/registry";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mcpPrompt } from "../session.js";
-import { connectMcpServers, type ConnectedMcp } from "./index.js";
+import {
+  connectMcpServers,
+  type ConnectedMcp,
+  userMcpToolChangesState,
+} from "./index.js";
 import { buildMcpToolDefinitions } from "./tools.js";
 
 /** Newline-delimited JSON-RPC over stdio, as Studio's server speaks it. */
@@ -201,6 +205,13 @@ describe("Roblox Studio over stdio", () => {
     expect((await callAs(mcp, "get_console_output")).text).toContain(
       "Hello from Luau"
     );
+  });
+
+  it("counts its playtest and script tools as changing the place, so a repeat after one is a new look", async () => {
+    await connect(configWith({}));
+    expect(userMcpToolChangesState("roblox-studio_start_stop_play")).toBe(true);
+    expect(userMcpToolChangesState("roblox-studio_multi_edit")).toBe(true);
+    expect(userMcpToolChangesState("read")).toBeNull();
   });
 
   it("answers with no Studio, and an error per call, while Studio is not reachable", async () => {

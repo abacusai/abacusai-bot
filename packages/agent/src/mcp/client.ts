@@ -18,6 +18,8 @@ export interface McpToolInfo {
   inputSchema?: Record<string, unknown>;
   /** Whatever the server attached (MCP `_meta`); the gateway puts pricing here. */
   _meta?: Record<string, unknown>;
+  /** The server's hints; `readOnlyHint` says a call changes nothing. */
+  annotations?: { readOnlyHint?: boolean };
 }
 
 interface JsonRpcResponse {

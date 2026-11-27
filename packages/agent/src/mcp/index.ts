@@ -290,6 +290,29 @@ const noServers = (error: string, expected = false): ConnectedMcp => {
 const registeredToolMeta = new Map<string, ConnectorToolMeta>();
 
 /**
+ * Whether each tool of a server the user added (or an app installed, such as
+ * Roblox Studio) can change what a later call sees, by every name it answers
+ * to: yes unless the server marks it read-only. Filled as servers connect.
+ */
+const userToolChanges = new Map<string, boolean>();
+
+/** Records a user server's tools as they register (see userToolChanges). */
+export const noteUserMcpTools = (
+  names: readonly string[],
+  tool: Pick<McpToolInfo, "annotations">
+): void => {
+  for (const name of names)
+    userToolChanges.set(name, tool.annotations?.readOnlyHint !== true);
+};
+
+/**
+ * Whether a call to this tool may change state, for a tool of a server the
+ * user added; null for any other tool (the app's own, the gateway's).
+ */
+export const userMcpToolChangesState = (toolName: string): boolean | null =>
+  userToolChanges.get(toolName) ?? null;
+
+/**
  * What the agent knows about a connector tool by its pi-side name, or null
  * for any other tool. Registered metadata first (it may carry the server's
  * own price); the registry answers for a name seen before any server did.
@@ -550,7 +573,13 @@ export async function connectMcpServers(
       if (meta != null) {
         registeredToolMeta.set(qualified, meta);
         registeredToolMeta.set(alternate, meta);
-      }
+      } else if (!isAppServer(name, config))
+        noteUserMcpTools(
+          [qualified, alternate].filter(
+            (routed) => result.routes.get(routed)?.client === client
+          ),
+          tool
+        );
 
       // A host's internal tool is routed but never offered to a model.
       if (advertise && !HOST_INTERNAL_TOOLS.has(tool.name))
