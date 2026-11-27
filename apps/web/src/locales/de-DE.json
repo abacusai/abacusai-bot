@@ -4363,6 +4363,10 @@
     "uninstallApp": "App deinstallieren",
     "installedApp": "Installiert. Sie ist jetzt in deinem App-Menü.",
     "openApp": "App öffnen",
+    "sendCopy": "Kopie senden (eine Datei)",
+    "sendCopyHint": "Ohne deine gespeicherten Daten",
+    "copySaved": "Kopie gespeichert",
+    "deleteApp": "App löschen",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search Konnektoren",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Deinstallieren",
     "installedAppCancel": "Abbrechen",
     "installedAppUninstallQuestion": "„{{name}}“ deinstallieren?",
-    "installedAppUninstallDetail": "Fenster und Starter werden entfernt. Die Daten bleiben auf diesem Computer, außer du löschst sie auch.",
+    "installedAppUninstallDetail": "Der Starter wird entfernt. App und Daten bleiben unter Artefakte, außer du löschst die Daten auch.",
     "installedAppDeleteData": "Auch die Daten löschen",
     "installedAppExportTitle": "Daten exportieren",
     "installedAppExportFile": "{{name}} Daten",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "Der Ordner dieser Seite kann nicht installiert werden: Es ist dein Benutzerordner oder er liegt außerhalb des Ordners dieses Chats. Bitte den Agenten, die App in einen eigenen Ordner in diesem Chat zu legen.",
     "installedAppSavedNotice": "Auf diesem Computer gespeichert · täglich gesichert",
     "installedAppLastBackup": "Letzte Sicherung: {{time}}",
-    "installedAppNoBackupYet": "Noch keine Sicherung: Sie entsteht, sobald Daten da sind"
+    "installedAppNoBackupYet": "Noch keine Sicherung: Sie entsteht, sobald Daten da sind",
+    "installedAppChangesNotice": "Ändert sich, wenn du den Agenten bittest; Rückgängig im Menü",
+    "installedAppCopyMenu": "Kopie senden (eine Datei)…",
+    "installedAppCopyTitle": "Kopie speichern (eine Datei, ohne deine Daten)",
+    "installedAppCopyTooBig": "Diese Seite ist als eine Datei größer als 25 MB und kann daher nicht als Kopie gespeichert werden.",
+    "installedAppCopyFailed": "Diese Seite ließ sich nicht in eine Datei packen.",
+    "installedAppDeleteMenu": "App löschen…",
+    "installedAppDelete": "Löschen",
+    "installedAppDeleteQuestion": "„{{name}}“ löschen?",
+    "installedAppDeleteDetail": "Die App wird von diesem Computer entfernt. Die Daten bleiben, außer du löschst sie auch."
   },
   "channels": {
     "sidebar": {

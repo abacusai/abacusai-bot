@@ -34,9 +34,11 @@ export function declaredArtifactTargets(resultText: string): string[] {
 /** One entry of `present_deliverable`'s ordered `items` argument. */
 /**
  * What the agent said a presented page is: a tool keeping the user's data, a
- * game, or a site for others to see. Decides whether its row offers Install.
+ * game, a site for others to see, or a document to read (report, dashboard,
+ * one-pager, diagram). A tool or game is kept as an app and its row offers
+ * Install; a site or document keeps Share, with Install in its ⋯ menu.
  */
-export type DeliverableKind = "tool" | "game" | "site";
+export type DeliverableKind = "tool" | "game" | "site" | "document";
 
 export interface DeliverableItem {
   path: string;
@@ -45,7 +47,9 @@ export interface DeliverableItem {
 }
 
 const kindOf = (raw: unknown): DeliverableKind | null =>
-  raw === "tool" || raw === "game" || raw === "site" ? raw : null;
+  raw === "tool" || raw === "game" || raw === "site" || raw === "document"
+    ? raw
+    : null;
 
 /**
  * The tool's `items` argument, read defensively: it is streamed model output,

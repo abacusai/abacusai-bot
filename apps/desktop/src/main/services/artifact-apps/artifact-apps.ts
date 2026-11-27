@@ -1,8 +1,13 @@
 /**
- * "Install as app": a page the agent made in a chat (a served folder, an html
- * file, an `artifact` page) gets its own launcher entry and window.
+ * Apps the agent made in a chat (a served folder, an html file, an `artifact`
+ * page). A page presented as a tool or game is kept the moment it is presented:
+ * its own copy and its own data store, so what the user enters in the chat
+ * preview is safe from the first minute. "Install as app" then only adds the
+ * launcher (Start menu, Applications, the app launcher); Uninstall takes it
+ * away again. A kept app is listed on the Artifacts page (Open, Install,
+ * Delete).
  *
- * Installing copies the page's folder into the app's own place, so the app
+ * Keeping copies the page's folder into the app's own place, so the app
  * keeps working when the chat's folder is cleaned up or its server is gone:
  * the window serves the copy itself (`abacus-app://<id>/`), offline, with the
  * bot's main window closed and nobody signed in. When the agent changes the
@@ -74,6 +79,8 @@ import {
 import { htmlPagesIn } from "../agent-tools/static-server";
 import { BROWSER_PARTITION } from "../browser/connected-sites";
 import { nativeLocaleTag, nativeT } from "../config/native-language";
+import { scrubForShare } from "../providers/abacus-share-service";
+import { bundlePage } from "../providers/share-bundle";
 import {
   appUserModelId,
   iconFile,
@@ -126,6 +133,11 @@ export interface InstalledApp {
   /** When the agent's last change was copied (ms). */
   updatedAt?: number;
   launchers: string[];
+  /**
+   * It has launchers: the user installed it. False: kept only (the agent
+   * presented it as a tool or game). Absent: installed by an earlier build.
+   */
+  installed?: boolean;
   /** The first open's line that its data is kept here was shown. */
   noticeShown?: boolean;
 }
@@ -239,6 +251,20 @@ const saveRegistry = (): void => {
 
 export const installedApps = (): InstalledApp[] =>
   Object.values(readRegistry());
+
+const hasLauncher = (entry: InstalledApp): boolean => entry.installed !== false;
+
+/** Kept and installed apps, for the main window's list. */
+export const appsList = (): Array<{
+  id: string;
+  title: string;
+  installed: boolean;
+}> =>
+  installedApps().map((a) => ({
+    id: a.id,
+    title: a.title,
+    installed: hasLauncher(a),
+  }));
 
 // ---- What a page is ----------------------------------------------------------
 
@@ -571,24 +597,78 @@ const pageKind = (dir: string, entry: string): "app" | "site" => {
   return scripts(dir, 2) ? "app" : "site";
 };
 
-export const appStatus = async (
-  target: string
-): Promise<{
+export interface AppStatus {
   installable: boolean;
-  installedId: string | null;
+  /** Its app's id when it is kept or installed, else null. */
+  appId: string | null;
+  /** It has launchers. */
+  installed: boolean;
   kind: "app" | "site";
-}> => {
+}
+
+export const appStatus = async (target: string): Promise<AppStatus> => {
   const source = await sourceOf(target).catch(() => null);
   if (source == null)
-    return { installable: false, installedId: null, kind: "site" };
+    return { installable: false, appId: null, installed: false, kind: "site" };
   const id = appIdFor(source.dir, source.entry);
+  const entry = readRegistry()[id];
   return {
     installable: true,
-    installedId: readRegistry()[id] ? id : null,
+    appId: entry ? id : null,
+    installed: entry != null && hasLauncher(entry),
     kind: pageKind(source.dir, source.entry),
   };
 };
 
+/**
+ * When this build first ran: a page made since is kept from its first
+ * presentation, so whatever its own localStorage holds is the agent's testing,
+ * never read in. A page from before may hold the user's rows there.
+ */
+const keptSince = (): number => {
+  const marker = join(root(), "kept-since");
+  try {
+    return Number(readFileSync(marker, "utf8").trim()) || 0;
+  } catch {
+    const now = Date.now();
+    try {
+      writeAtomic(marker, String(now));
+    } catch {
+      // Asked again next time.
+    }
+    return now;
+  }
+};
+
+const madeSince = (file: string, since: number): boolean => {
+  const stat = statSync(file, { throwIfNoEntry: false });
+  if (stat == null) return false;
+  const born = stat.birthtimeMs > 0 ? stat.birthtimeMs : stat.mtimeMs;
+  return born >= since;
+};
+
+/**
+ * Keeps a presented tool or game: its copy and its store, no launcher. The
+ * same rules as an install (one app per page, the chat's own folder, the size
+ * caps); a page that is already kept or installed is left as it is.
+ */
+export const keepApp = async (
+  target: string,
+  sessionId: string | null
+): Promise<{ id: string } | null> => {
+  const source = await sourceOf(target);
+  if (source == null) return null;
+  const id = appIdFor(source.dir, source.entry);
+  if (readRegistry()[id]) return { id };
+  await registerApp(source, sessionId, false);
+  deps.funnel("installed_app_kept");
+  return { id };
+};
+
+/**
+ * Gives a kept app its launchers, or keeps the page and gives it launchers in
+ * one go (a page from before auto-keep, a site's Install).
+ */
 export const installApp = async (
   target: string,
   sessionId: string | null,
@@ -599,10 +679,46 @@ export const installApp = async (
   if (source == null)
     throw new AppInstallError(nativeT("installedAppCannotInstall"));
   const id = appIdFor(source.dir, source.entry);
+  const existing = readRegistry()[id];
+  if (existing && hasLauncher(existing)) return { id, title: existing.title };
+  if (existing) await addLaunchers(existing);
+  else await registerApp(source, sessionId, true);
+  const entry = readRegistry()[id]!;
+  deps.funnel(
+    "installed_app_install",
+    source.artifact ? "artifact" : source.url != null ? "site" : "file"
+  );
+  if (by === "agent") deps.funnel("installed_app_agent_install");
+  return { id, title: entry.title };
+};
+
+/** By its id: the Artifacts page's Install on a kept app. */
+export const installKeptApp = async (id: string): Promise<boolean> => {
+  const entry = readRegistry()[id];
+  if (!entry) return false;
+  if (!hasLauncher(entry)) {
+    await addLaunchers(entry);
+    deps.funnel("installed_app_install", "kept");
+  }
+  return true;
+};
+
+const addLaunchers = async (entry: InstalledApp): Promise<void> => {
+  entry.launchers = await writeLaunchers(entry, appDir(entry.id));
+  entry.installed = true;
+  saveRegistry();
+  deps.changed();
+};
+
+/** A new app: its first copy, its data, and launchers when `launcher`. */
+const registerApp = async (
+  source: Source,
+  sessionId: string | null,
+  launcher: boolean
+): Promise<void> => {
+  const id = appIdFor(source.dir, source.entry);
   const dataId = dataIdFor(source.dir);
   const registry = readRegistry();
-  const existing = registry[id];
-  if (existing) return { id, title: existing.title };
 
   const copies = usesFilesBeside(join(source.dir, source.entry))
     ? "folder"
@@ -617,7 +733,10 @@ export const installApp = async (
     !within(realDir(workspace), real) ||
     (copies === "folder" && (real === parse(real).root || within(real, home)))
   ) {
-    deps.funnel("installed_app_refused", "too_broad");
+    deps.funnel(
+      "installed_app_refused",
+      launcher ? "too_broad" : "keep_too_broad"
+    );
     throw new AppInstallError(nativeT("installedAppTooBroad"));
   }
   let files: SourceFile[];
@@ -628,12 +747,19 @@ export const installApp = async (
       copies === "page" ? source.entry : null
     );
   } catch (error) {
-    deps.funnel("installed_app_refused", "too_big");
+    deps.funnel("installed_app_refused", launcher ? "too_big" : "keep_too_big");
     throw error;
   }
   copyVersion(id, 1, source.dir, files);
 
-  if (source.url != null && !wasImported(dataId))
+  // A page made since auto-keep has only the agent's tests in its own
+  // localStorage: nothing to read in, ever.
+  if (
+    !wasImported(dataId) &&
+    madeSince(join(source.dir, source.entry), keptSince())
+  )
+    markImported(dataId);
+  else if (source.url != null && !wasImported(dataId))
     try {
       // The port's origin is every server that ever had it: only its data
       // when it only ever served this folder.
@@ -666,13 +792,15 @@ export const installApp = async (
     sourceSig: signature(files),
     seen: 0,
     launchers: [],
+    installed: launcher,
   };
-  try {
-    entry.launchers = await writeLaunchers(entry, appDir(id));
-  } catch (error) {
-    rmSync(join(appDir(id), "versions"), { recursive: true, force: true });
-    throw error;
-  }
+  if (launcher)
+    try {
+      entry.launchers = await writeLaunchers(entry, appDir(id));
+    } catch (error) {
+      rmSync(join(appDir(id), "versions"), { recursive: true, force: true });
+      throw error;
+    }
   registry[id] = entry;
   saveRegistry();
   watchSource(entry);
@@ -680,12 +808,6 @@ export const installApp = async (
   for (const contents of webContents.getAllWebContents())
     if (storeIdForUrl(contents.getURL()) === dataId) contents.reload();
   deps.changed();
-  deps.funnel(
-    "installed_app_install",
-    source.artifact ? "artifact" : source.url != null ? "site" : "file"
-  );
-  if (by === "agent") deps.funnel("installed_app_agent_install");
-  return { id, title: entry.title };
 };
 
 /** Copies the source folder again when the agent changed it. True when it did. */
@@ -779,30 +901,30 @@ export const undoLastChange = (id: string): boolean => {
   return true;
 };
 
-/**
- * Asks, then removes the app's window, launchers and code; its data too
- * when the user ticks it. False when they cancelled.
- */
-export const uninstallApp = async (
-  id: string,
-  parent?: BaseWindow
-): Promise<boolean> => {
-  const entry = readRegistry()[id];
-  if (!entry) return false;
+const askKeepData = async (
+  entry: InstalledApp,
+  parent: BaseWindow | undefined,
+  words: { action: string; question: string; detail: string }
+): Promise<{ yes: boolean; deleteData: boolean }> => {
   const options: Electron.MessageBoxOptions = {
     type: "question",
-    buttons: [nativeT("installedAppUninstall"), nativeT("installedAppCancel")],
+    buttons: [nativeT(words.action), nativeT("installedAppCancel")],
     defaultId: 0,
     cancelId: 1,
-    message: nativeT("installedAppUninstallQuestion", { name: entry.title }),
-    detail: nativeT("installedAppUninstallDetail"),
+    message: nativeT(words.question, { name: entry.title }),
+    detail: nativeT(words.detail),
     checkboxLabel: nativeT("installedAppDeleteData"),
     checkboxChecked: false,
   };
   const answer = await (parent
     ? dialog.showMessageBox(parent, options)
     : dialog.showMessageBox(options));
-  if (answer.response !== 0) return false;
+  return { yes: answer.response === 0, deleteData: answer.checkboxChecked };
+};
+
+/** The app gone from this computer: window, launchers, code; its data when asked. */
+const removeApp = (entry: InstalledApp, deleteData: boolean): void => {
+  const id = entry.id;
   windows.get(id)?.close();
   watchers.get(id)?.close();
   watchers.delete(id);
@@ -811,10 +933,10 @@ export const uninstallApp = async (
   removeIconFiles(appDir(id));
   for (const name of ["versions", "window.json"])
     rmSync(join(appDir(id), name), { recursive: true, force: true });
-  // Its folder's data, unless another installed page of that folder uses it.
+  // Its folder's data, unless another app of that folder uses it.
   const dataId = dataOf(entry);
   if (
-    answer.checkboxChecked &&
+    deleteData &&
     !installedApps().some((other) => dataOf(other) === dataId)
   ) {
     deleteStore(dataId);
@@ -828,11 +950,134 @@ export const uninstallApp = async (
   }
   saveRegistry();
   deps.changed();
+};
+
+/**
+ * Asks, then removes the app's launchers: it stays kept (the Artifacts page),
+ * with its data. Ticking "Also delete its data" removes the app as Delete does.
+ * False when they cancelled.
+ */
+export const uninstallApp = async (
+  id: string,
+  parent?: BaseWindow
+): Promise<boolean> => {
+  const entry = readRegistry()[id];
+  if (!entry || !hasLauncher(entry)) return false;
+  const answer = await askKeepData(entry, parent, {
+    action: "installedAppUninstall",
+    question: "installedAppUninstallQuestion",
+    detail: "installedAppUninstallDetail",
+  });
+  if (!answer.yes) return false;
+  if (answer.deleteData) removeApp(entry, true);
+  else {
+    windows.get(id)?.close();
+    removeLaunchers(entry.launchers);
+    entry.launchers = [];
+    entry.installed = false;
+    saveRegistry();
+    deps.changed();
+  }
   deps.funnel(
     "installed_app_uninstall",
-    answer.checkboxChecked ? "delete_data" : "keep_data"
+    answer.deleteData ? "delete_data" : "keep_data"
   );
   return true;
+};
+
+/** Asks, then removes a kept or installed app; its data too when ticked. */
+export const deleteApp = async (
+  id: string,
+  parent?: BaseWindow
+): Promise<boolean> => {
+  const entry = readRegistry()[id];
+  if (!entry) return false;
+  const answer = await askKeepData(entry, parent, {
+    action: "installedAppDelete",
+    question: "installedAppDeleteQuestion",
+    detail: "installedAppDeleteDetail",
+  });
+  if (!answer.yes) return false;
+  removeApp(entry, answer.deleteData);
+  deps.funnel(
+    "installed_app_delete",
+    answer.deleteData ? "delete_data" : "keep_data"
+  );
+  return true;
+};
+
+/** Over this, a copy is refused: a file people mail or message. */
+const COPY_MAX_BYTES = 25 * 1024 * 1024;
+
+const safeFileName = (title: string): string =>
+  title
+    .replace(/[<>:"/\\|?*]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "App";
+
+/**
+ * "Send a copy": the page as one html file (what Share would publish, the
+ * files beside it folded in), saved where the user picks. Code only: the
+ * data the user saved in it is never in the file. False when cancelled.
+ */
+const saveCopy = async (
+  dir: string,
+  entry: string,
+  title: string,
+  parent: BaseWindow | undefined
+): Promise<boolean> => {
+  const page = join(dir, entry);
+  let html: string;
+  try {
+    html = await bundlePage(
+      readFileSync(page, "utf8"),
+      realDir(dirname(page)),
+      scrubForShare
+    );
+  } catch {
+    throw new AppInstallError(nativeT("installedAppCopyFailed"));
+  }
+  if (Buffer.byteLength(html, "utf8") > COPY_MAX_BYTES)
+    throw new AppInstallError(nativeT("installedAppCopyTooBig"));
+  const options: Electron.SaveDialogOptions = {
+    title: nativeT("installedAppCopyTitle"),
+    message: nativeT("installedAppCopyTitle"),
+    defaultPath: join(app.getPath("documents"), `${safeFileName(title)}.html`),
+    filters: [{ name: "HTML", extensions: ["html"] }],
+  };
+  const { canceled, filePath } = await (parent
+    ? dialog.showSaveDialog(parent, options)
+    : dialog.showSaveDialog(options));
+  if (canceled || !filePath) return false;
+  writeFileSync(filePath, html);
+  deps.funnel("installed_app_copy");
+  return true;
+};
+
+/** A presented page (URL or path), or an app's current copy by its id. */
+export const sendCopy = async (
+  target: { page: string } | { id: string },
+  parent?: BaseWindow
+): Promise<boolean> => {
+  if ("id" in target) {
+    const entry = readRegistry()[target.id];
+    if (!entry) return false;
+    return saveCopy(
+      versionDir(entry.id, entry.current),
+      entry.entry,
+      entry.title,
+      parent
+    );
+  }
+  const source = await sourceOf(target.page);
+  if (source == null)
+    throw new AppInstallError(nativeT("installedAppCannotInstall"));
+  return saveCopy(
+    source.dir,
+    source.entry,
+    pageTitle(join(source.dir, source.entry)) ?? parse(source.entry).name,
+    parent
+  );
 };
 
 /** Saves the app's data where the user picks, as a CSV table or JSON. */
@@ -892,6 +1137,8 @@ const watchSource = (entry: InstalledApp): void => {
 export const startInstalledApps = (appDeps: AppsDeps): void => {
   deps = appDeps;
   setStoreRoot(root());
+  // Written at this build's first start, before any page is kept.
+  keptSince();
   // An earlier build wrote the uninstaller's list as UTF-8: written again now.
   if (process.platform === "win32" && installedApps().length > 0)
     saveRegistry();
@@ -925,6 +1172,7 @@ const restoreLaunchers = async (): Promise<void> => {
   if (seen === version) return;
   let changed = false;
   for (const entry of installedApps()) {
+    if (!hasLauncher(entry)) continue;
     if (entry.launchers.length > 0 && entry.launchers.every(existsSync))
       continue;
     try {
@@ -1043,12 +1291,27 @@ const menuItems = (id: string): MenuItemConstructorOptions[] => {
       click: () => void exportData(id, window),
     },
     { label: backupLine(entry), enabled: false },
+    {
+      label: nativeT("installedAppCopyMenu"),
+      click: () =>
+        void sendCopy({ id }, window).catch((error: unknown) =>
+          dialog.showMessageBox(window, {
+            type: "warning",
+            message: (error as Error).message,
+          })
+        ),
+    },
     { label: nativeT("installedAppReload"), click: () => reloadWindow(id) },
     { type: "separator" },
-    {
-      label: nativeT("installedAppUninstallMenu"),
-      click: () => void uninstallApp(id, window),
-    },
+    hasLauncher(entry)
+      ? {
+          label: nativeT("installedAppUninstallMenu"),
+          click: () => void uninstallApp(id, window),
+        }
+      : {
+          label: nativeT("installedAppDeleteMenu"),
+          click: () => void deleteApp(id, window),
+        },
   ];
 };
 
@@ -1191,7 +1454,9 @@ export const openInstalledAppWindow = (
     notice = shown;
     void shown.webContents.loadURL(
       `data:text/html;charset=utf-8,${encodeURIComponent(
-        noticeHtml(nativeT("installedAppSavedNotice"))
+        noticeHtml(
+          `${nativeT("installedAppSavedNotice")} · ${nativeT("installedAppChangesNotice")}`
+        )
       )}`
     );
     window.contentView.addChildView(shown);

@@ -4507,6 +4507,10 @@
     "uninstallApp": "Odinstaluj aplikację",
     "installedApp": "Zainstalowano. Jest teraz w menu aplikacji.",
     "openApp": "Otwórz aplikację",
+    "sendCopy": "Wyślij kopię (jeden plik)",
+    "sendCopyHint": "Bez zapisanych danych",
+    "copySaved": "Kopia zapisana",
+    "deleteApp": "Usuń aplikację",
     "searchArtifacts": "Szukaj artefaktów",
     "searchConnectors": "Szukaj konektorów",
     "searchSkills": "Szukaj umiejętności",
@@ -5746,7 +5750,7 @@
     "installedAppUninstall": "Odinstaluj",
     "installedAppCancel": "Anuluj",
     "installedAppUninstallQuestion": "Odinstalować „{{name}}”?",
-    "installedAppUninstallDetail": "Okno i skrót zostaną usunięte. Dane zostaną na tym komputerze, chyba że też je usuniesz.",
+    "installedAppUninstallDetail": "Skrót zostanie usunięty. Aplikacja i jej dane zostaną w Artefaktach, chyba że usuniesz też dane.",
     "installedAppDeleteData": "Usuń też dane",
     "installedAppExportTitle": "Eksportuj dane",
     "installedAppExportFile": "Dane {{name}}",
@@ -5757,7 +5761,16 @@
     "installedAppTooBroad": "Nie można zainstalować folderu tej strony: to twój folder domowy albo leży poza folderem tego czatu. Poproś agenta, żeby umieścił aplikację w osobnym folderze w tym czacie.",
     "installedAppSavedNotice": "Zapisane na tym komputerze · codzienna kopia zapasowa",
     "installedAppLastBackup": "Ostatnia kopia zapasowa: {{time}}",
-    "installedAppNoBackupYet": "Brak kopii zapasowej: powstanie, gdy pojawią się dane"
+    "installedAppNoBackupYet": "Brak kopii zapasowej: powstanie, gdy pojawią się dane",
+    "installedAppChangesNotice": "Zmienia się, gdy poprosisz agenta; Cofnij w menu",
+    "installedAppCopyMenu": "Wyślij kopię (jeden plik)…",
+    "installedAppCopyTitle": "Zapisz kopię (jeden plik, bez twoich danych)",
+    "installedAppCopyTooBig": "Ta strona jako jeden plik ma ponad 25 MB, więc nie można jej zapisać jako kopii.",
+    "installedAppCopyFailed": "Nie udało się złożyć tej strony w jeden plik.",
+    "installedAppDeleteMenu": "Usuń aplikację…",
+    "installedAppDelete": "Usuń",
+    "installedAppDeleteQuestion": "Usunąć „{{name}}”?",
+    "installedAppDeleteDetail": "Aplikacja zostanie usunięta z tego komputera. Dane zostaną, chyba że też je usuniesz."
   },
   "channels": {
     "sidebar": {

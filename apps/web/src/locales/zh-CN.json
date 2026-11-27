@@ -4363,6 +4363,10 @@
     "uninstallApp": "卸载应用",
     "installedApp": "已安装，现在可以在应用菜单中找到它。",
     "openApp": "打开应用",
+    "sendCopy": "发送副本（单个文件）",
+    "sendCopyHint": "不含你保存的数据",
+    "copySaved": "副本已保存",
+    "deleteApp": "删除应用",
     "searchArtifacts": "搜索成果",
     "searchConnectors": "搜索连接器",
     "searchSkills": "搜索技能",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "卸载",
     "installedAppCancel": "取消",
     "installedAppUninstallQuestion": "要卸载“{{name}}”吗？",
-    "installedAppUninstallDetail": "它的窗口和快捷方式会被删除。除非你一起删除，它的数据会保留在这台电脑上。",
+    "installedAppUninstallDetail": "它的快捷方式会被删除。除非你也删除数据，应用和数据会保留在“成果”中。",
     "installedAppDeleteData": "同时删除它的数据",
     "installedAppExportTitle": "导出数据",
     "installedAppExportFile": "{{name}} 数据",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "无法安装这个页面的文件夹：它是你的主文件夹，或不在这个聊天的文件夹里。请让智能体把应用放进这个聊天中的单独文件夹。",
     "installedAppSavedNotice": "已保存在这台电脑上 · 每天备份",
     "installedAppLastBackup": "上次备份：{{time}}",
-    "installedAppNoBackupYet": "还没有备份：有数据后会自动备份"
+    "installedAppNoBackupYet": "还没有备份：有数据后会自动备份",
+    "installedAppChangesNotice": "让智能体修改时才会变化；可在菜单中撤销",
+    "installedAppCopyMenu": "发送副本（单个文件）…",
+    "installedAppCopyTitle": "保存副本（单个文件，不含你的数据）",
+    "installedAppCopyTooBig": "这个页面合成单个文件后超过 25 MB，无法保存为副本。",
+    "installedAppCopyFailed": "无法把这个页面合成单个文件。",
+    "installedAppDeleteMenu": "删除应用…",
+    "installedAppDelete": "删除",
+    "installedAppDeleteQuestion": "删除“{{name}}”？",
+    "installedAppDeleteDetail": "应用会从这台电脑上删除。除非你一起删除，它的数据会保留。"
   },
   "channels": {
     "sidebar": {

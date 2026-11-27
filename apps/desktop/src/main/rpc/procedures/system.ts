@@ -114,7 +114,8 @@ export const systemRouter = impl.system.router({
       async ({ input, context }) =>
         (await context.deps.app.artifactApps?.status(input.target)) ?? {
           installable: false,
-          installedId: null,
+          appId: null,
+          installed: false,
           kind: "site" as const,
         }
     ),
@@ -132,6 +133,28 @@ export const systemRouter = impl.system.router({
         return (
           (await context.deps.app.artifactApps?.uninstall(input.id)) ?? false
         );
+      }
+    ),
+    installKept: impl.system.artifactApps.installKept.handler(
+      async ({ input, context }) => {
+        requireMainRenderer(context);
+        return (
+          (await context.deps.app.artifactApps?.installKept(input.id)) ?? false
+        );
+      }
+    ),
+    remove: impl.system.artifactApps.remove.handler(
+      async ({ input, context }) => {
+        requireMainRenderer(context);
+        return (await context.deps.app.artifactApps?.remove(input.id)) ?? false;
+      }
+    ),
+    sendCopy: impl.system.artifactApps.sendCopy.handler(
+      async ({ input, context }) => {
+        requireMainRenderer(context);
+        const apps = context.deps.app.artifactApps;
+        if (!apps) throw forbidden("Saving a copy needs the desktop app.");
+        return { saved: await apps.sendCopy(input.target) };
       }
     ),
     open: impl.system.artifactApps.open.handler(({ input, context }) => {

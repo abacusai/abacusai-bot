@@ -203,20 +203,23 @@ export const system = {
    */
   takeOpenLink: mutation.input(NoInput).output(type<OpenLink | null>()),
   /**
-   * "Install as app": a page the agent made in a chat (a served URL, an html
-   * file) gets a launcher entry and a window of its own. Desktop only.
+   * Apps the agent made in a chat (a served URL, an html file): a tool or game
+   * is kept (its own copy and data) when presented; "Install as app" adds a
+   * launcher entry. Each opens in a window of its own. Desktop only.
    */
   artifactApps: {
     list: query
       .input(NoInput)
-      .output(type<Array<{ id: string; title: string }>>()),
-    /** Whether a presented page (URL or path) can be installed, and its app's id when it is. */
+      .output(type<Array<{ id: string; title: string; installed: boolean }>>()),
+    /** Whether a presented page (URL or path) can be installed, and its app's id when it is kept or installed. */
     status: query
       .input(v.object({ target: v.pipe(v.string(), v.nonEmpty()) }))
       .output(
         type<{
           installable: boolean;
-          installedId: string | null;
+          appId: string | null;
+          /** It has launchers (not only kept). */
+          installed: boolean;
           /** "app": a tool or game (keeps data, draws, animates); "site": a page to read. */
           kind: "app" | "site";
         }>()
@@ -230,10 +233,22 @@ export const system = {
         })
       )
       .output(type<{ id: string; title: string }>()),
-    /** Asks the user first; false when they cancelled. */
+    /** Gives a kept app its launchers; false when there is no such app. */
+    installKept: mutation
+      .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
+      .output(type<boolean>()),
+    /** Removes the launchers (the app stays kept); asks first, false when cancelled. */
     uninstall: mutation
       .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
       .output(type<boolean>()),
+    /** Removes a kept or installed app; asks first (and about its data), false when cancelled. */
+    remove: mutation
+      .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
+      .output(type<boolean>()),
+    /** Saves the page as one html file, without its data, where the user picks. */
+    sendCopy: mutation
+      .input(v.object({ target: v.pipe(v.string(), v.nonEmpty()) }))
+      .output(type<{ saved: boolean }>()),
     open: mutation
       .input(v.object({ id: v.pipe(v.string(), v.regex(/^[a-f0-9]{16}$/)) }))
       .output(type<void>()),

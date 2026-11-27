@@ -4363,6 +4363,10 @@
     "uninstallApp": "アプリをアンインストール",
     "installedApp": "インストールしました。アプリメニューから開けます。",
     "openApp": "アプリを開く",
+    "sendCopy": "コピーを送る（1ファイル）",
+    "sendCopyHint": "保存したデータは含まれません",
+    "copySaved": "コピーを保存しました",
+    "deleteApp": "アプリを削除",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search コネクタ",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "アンインストール",
     "installedAppCancel": "キャンセル",
     "installedAppUninstallQuestion": "「{{name}}」をアンインストールしますか？",
-    "installedAppUninstallDetail": "ウィンドウとショートカットが削除されます。データは削除しない限りこのコンピューターに残ります。",
+    "installedAppUninstallDetail": "ショートカットが削除されます。アプリとデータは、データも削除しない限り成果物に残ります。",
     "installedAppDeleteData": "データも削除する",
     "installedAppExportTitle": "データをエクスポート",
     "installedAppExportFile": "{{name}} データ",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "このページのフォルダーはインストールできません。ホームフォルダーか、このチャットのフォルダーの外にあります。エージェントに、このチャット内の専用フォルダーにアプリを入れるよう頼んでください。",
     "installedAppSavedNotice": "このコンピューターに保存 · 毎日バックアップ",
     "installedAppLastBackup": "最終バックアップ: {{time}}",
-    "installedAppNoBackupYet": "バックアップはまだありません。データが入ると作成されます"
+    "installedAppNoBackupYet": "バックアップはまだありません。データが入ると作成されます",
+    "installedAppChangesNotice": "エージェントに頼むと変わります・元に戻すはメニューから",
+    "installedAppCopyMenu": "コピーを送る（1ファイル）…",
+    "installedAppCopyTitle": "コピーを保存（1ファイル、データは含まれません）",
+    "installedAppCopyTooBig": "このページは1ファイルにすると25 MBを超えるため、コピーとして保存できません。",
+    "installedAppCopyFailed": "このページを1つのファイルにまとめられませんでした。",
+    "installedAppDeleteMenu": "アプリを削除…",
+    "installedAppDelete": "削除",
+    "installedAppDeleteQuestion": "「{{name}}」を削除しますか？",
+    "installedAppDeleteDetail": "アプリはこのコンピューターから削除されます。データは一緒に削除しない限り残ります。"
   },
   "channels": {
     "sidebar": {

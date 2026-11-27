@@ -1717,7 +1717,16 @@
       "installedAppTooBroad",
       "installedAppSavedNotice",
       "installedAppLastBackup",
-      "installedAppNoBackupYet"
+      "installedAppNoBackupYet",
+      "installedAppChangesNotice",
+      "installedAppCopyMenu",
+      "installedAppCopyTitle",
+      "installedAppCopyTooBig",
+      "installedAppCopyFailed",
+      "installedAppDeleteMenu",
+      "installedAppDelete",
+      "installedAppDeleteQuestion",
+      "installedAppDeleteDetail"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",

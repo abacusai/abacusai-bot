@@ -4363,6 +4363,10 @@
     "uninstallApp": "Uygulamayı kaldır",
     "installedApp": "Yüklendi. Artık uygulamalar menünde.",
     "openApp": "Uygulamayı aç",
+    "sendCopy": "Kopya gönder (tek dosya)",
+    "sendCopyHint": "Kaydettiğin veriler olmadan",
+    "copySaved": "Kopya kaydedildi",
+    "deleteApp": "Uygulamayı sil",
     "searchArtifacts": "Çıktılarda ara",
     "searchConnectors": "Bağlayıcılarda ara",
     "searchSkills": "Becerilerde ara",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Kaldır",
     "installedAppCancel": "İptal",
     "installedAppUninstallQuestion": "\"{{name}}\" kaldırılsın mı?",
-    "installedAppUninstallDetail": "Penceresi ve kısayolu kaldırılır. Verileri, sen de silmedikçe bu bilgisayarda kalır.",
+    "installedAppUninstallDetail": "Kısayolu kaldırılır. Uygulama ve verileri, verileri de silmedikçe Çıktılar'da kalır.",
     "installedAppDeleteData": "Verilerini de sil",
     "installedAppExportTitle": "Verileri dışa aktar",
     "installedAppExportFile": "{{name}} verileri",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "Bu sayfanın klasörü yüklenemez: ana klasörün ya da bu sohbetin klasörünün dışında. Ajandan uygulamayı bu sohbette kendi klasörüne koymasını iste.",
     "installedAppSavedNotice": "Bu bilgisayara kaydedildi · her gün yedeklenir",
     "installedAppLastBackup": "Son yedek: {{time}}",
-    "installedAppNoBackupYet": "Henüz yedek yok: veri olunca alınır"
+    "installedAppNoBackupYet": "Henüz yedek yok: veri olunca alınır",
+    "installedAppChangesNotice": "Ajana söylediğinde değişir; Geri al menüde",
+    "installedAppCopyMenu": "Kopya gönder (tek dosya)…",
+    "installedAppCopyTitle": "Kopya kaydet (tek dosya, verilerin olmadan)",
+    "installedAppCopyTooBig": "Bu sayfa tek dosya olarak 25 MB'tan büyük, bu yüzden kopya olarak kaydedilemiyor.",
+    "installedAppCopyFailed": "Bu sayfa tek bir dosyaya dönüştürülemedi.",
+    "installedAppDeleteMenu": "Uygulamayı sil…",
+    "installedAppDelete": "Sil",
+    "installedAppDeleteQuestion": "\"{{name}}\" silinsin mi?",
+    "installedAppDeleteDetail": "Uygulama bu bilgisayardan kaldırılır. Verileri, sen de silmedikçe kalır."
   },
   "channels": {
     "sidebar": {

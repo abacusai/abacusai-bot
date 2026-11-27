@@ -392,7 +392,12 @@ export interface McpAgentToolsServerOptions {
   /** Whether a page (path or local URL) can be installed, and is already. */
   appStatus?: (
     target: string
-  ) => Promise<{ installable: boolean; installedId: string | null }>;
+  ) => Promise<{ installable: boolean; installed: boolean }>;
+  /**
+   * Keeps a page presented as a tool or game (its own copy and data store,
+   * no launcher); throws when it cannot be kept (too big, outside the chat).
+   */
+  keepApp?: (target: string, sessionId: string | null) => Promise<void>;
   /** Start the fix of a watcher event; `ok: false` is a refusal the model words. */
   githubFix?: (
     eventId: string | null,
@@ -829,6 +834,12 @@ const printedSourceOf = async (file: string): Promise<string | null> => {
     ? pdf
     : null;
 };
+
+/** A presented page that can become an app: a local URL or an html file. */
+const isPageItem = (item: { target: string; isUrl: boolean }): boolean =>
+  item.isUrl
+    ? /^http:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(item.target)
+    : /\.html?$/i.test(item.target);
 
 export class McpAgentToolsServer extends McpHttpServer {
   constructor(private readonly options: McpAgentToolsServerOptions) {
@@ -2101,14 +2112,10 @@ export class McpAgentToolsServer extends McpHttpServer {
     items: ReadonlyArray<{ target: string; isUrl: boolean }>
   ): Promise<boolean> {
     if (this.options.appStatus == null) return false;
-    const page = items.find((item) =>
-      item.isUrl
-        ? /^http:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(item.target)
-        : /\.html?$/i.test(item.target)
-    );
+    const page = items.find(isPageItem);
     if (page == null) return false;
     const status = await this.options.appStatus(page.target).catch(() => null);
-    return status?.installable === true && status.installedId == null;
+    return status?.installable === true && !status.installed;
   }
 
   /** `install_app`: only in the app's own chat, after the user said yes. */
@@ -2411,6 +2418,21 @@ export class McpAgentToolsServer extends McpHttpServer {
     // files card. A bot's turn opens nothing: a document jumping open over
     // the user's unrelated work reads as the app misbehaving.
     const forBot = this.isBotCaller(callerSession);
+    // A tool or game is kept now, before the pane shows it: what the user
+    // enters in the preview is saved with the app from the first row.
+    if (
+      !forBot &&
+      channel.pane &&
+      unanswered.length === 0 &&
+      (args.kind === "tool" || args.kind === "game") &&
+      this.options.keepApp != null
+    )
+      for (const page of valid.filter(isPageItem))
+        await this.options
+          .keepApp(page.target, callerSession ?? null)
+          .catch((error: unknown) =>
+            console.warn("[present] not kept:", (error as Error)?.message)
+          );
     const pane =
       !forBot && channel.pane
         ? await this.openInPane(first.target, callerSession)

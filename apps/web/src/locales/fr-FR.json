@@ -4363,6 +4363,10 @@
     "uninstallApp": "Désinstaller l'app",
     "installedApp": "Installée. Elle est maintenant dans ton menu d'apps.",
     "openApp": "Ouvrir l'app",
+    "sendCopy": "Envoyer une copie (un fichier)",
+    "sendCopyHint": "Sans tes données enregistrées",
+    "copySaved": "Copie enregistrée",
+    "deleteApp": "Supprimer l'app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search connecteurs",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Désinstaller",
     "installedAppCancel": "Annuler",
     "installedAppUninstallQuestion": "Désinstaller « {{name}} » ?",
-    "installedAppUninstallDetail": "Sa fenêtre et son raccourci sont supprimés. Ses données restent sur cet ordinateur, sauf si tu les supprimes aussi.",
+    "installedAppUninstallDetail": "Son raccourci est supprimé. L'app et ses données restent dans Artefacts, sauf si tu supprimes aussi ses données.",
     "installedAppDeleteData": "Supprimer aussi ses données",
     "installedAppExportTitle": "Exporter les données",
     "installedAppExportFile": "Données {{name}}",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "Le dossier de cette page ne peut pas être installé : c'est ton dossier personnel, ou il est hors du dossier de ce chat. Demande à l'agent de mettre l'app dans son propre dossier dans ce chat.",
     "installedAppSavedNotice": "Enregistré sur cet ordinateur · sauvegardé chaque jour",
     "installedAppLastBackup": "Dernière sauvegarde : {{time}}",
-    "installedAppNoBackupYet": "Pas encore de sauvegarde : elle se fait dès qu'il y a des données"
+    "installedAppNoBackupYet": "Pas encore de sauvegarde : elle se fait dès qu'il y a des données",
+    "installedAppChangesNotice": "Change quand tu le demandes à l'agent ; Annuler dans le menu",
+    "installedAppCopyMenu": "Envoyer une copie (un fichier)…",
+    "installedAppCopyTitle": "Enregistrer une copie (un fichier, sans tes données)",
+    "installedAppCopyTooBig": "Cette page dépasse 25 Mo en un seul fichier, elle ne peut donc pas être enregistrée en copie.",
+    "installedAppCopyFailed": "Impossible de réunir cette page en un seul fichier.",
+    "installedAppDeleteMenu": "Supprimer l'app…",
+    "installedAppDelete": "Supprimer",
+    "installedAppDeleteQuestion": "Supprimer « {{name}} » ?",
+    "installedAppDeleteDetail": "L'app est supprimée de cet ordinateur. Ses données restent, sauf si tu les supprimes aussi."
   },
   "channels": {
     "sidebar": {

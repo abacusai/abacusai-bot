@@ -413,6 +413,7 @@ import { agentBrowserRunListener } from "./services/artifact-apps/agent-runs";
 import {
   appStatus,
   installApp,
+  keepApp,
   openInstalledAppWindow,
 } from "./services/artifact-apps/artifact-apps";
 import {
@@ -2054,6 +2055,9 @@ export class ServiceHost {
     routineDelivery: () => this.deliversRoutineReports(),
     githubFixOffered: () => this.githubFixOffered(),
     appStatus: (target) => appStatus(target),
+    keepApp: async (target, sessionId) => {
+      await keepApp(target, sessionId);
+    },
     installApp: async (target, sessionId) => {
       const { id, title } = await installApp(target, sessionId, "agent");
       openInstalledAppWindow(id, "chat");

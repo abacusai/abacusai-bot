@@ -4363,6 +4363,10 @@
     "uninstallApp": "Desinstalar app",
     "installedApp": "Instalado. Agora está no seu menu de apps.",
     "openApp": "Abrir app",
+    "sendCopy": "Enviar uma cópia (um arquivo)",
+    "sendCopyHint": "Sem os seus dados salvos",
+    "copySaved": "Cópia salva",
+    "deleteApp": "Apagar app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search conectores",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Desinstalar",
     "installedAppCancel": "Cancelar",
     "installedAppUninstallQuestion": "Desinstalar \"{{name}}\"?",
-    "installedAppUninstallDetail": "A janela e o atalho são removidos. Os dados ficam neste computador, a menos que você também os apague.",
+    "installedAppUninstallDetail": "O atalho é removido. O app e os dados continuam em Artefatos, a menos que você também apague os dados.",
     "installedAppDeleteData": "Apagar também os dados",
     "installedAppExportTitle": "Exportar dados",
     "installedAppExportFile": "Dados de {{name}}",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "A pasta desta página não pode ser instalada: é sua pasta pessoal ou fica fora da pasta deste chat. Peça ao agente para colocar o app em uma pasta própria neste chat.",
     "installedAppSavedNotice": "Salvo neste computador · backup diário",
     "installedAppLastBackup": "Último backup: {{time}}",
-    "installedAppNoBackupYet": "Ainda sem backup: ele é feito quando houver dados"
+    "installedAppNoBackupYet": "Ainda sem backup: ele é feito quando houver dados",
+    "installedAppChangesNotice": "Muda quando você pede ao agente; Desfazer no menu",
+    "installedAppCopyMenu": "Enviar uma cópia (um arquivo)…",
+    "installedAppCopyTitle": "Salvar uma cópia (um arquivo, sem os seus dados)",
+    "installedAppCopyTooBig": "Esta página passa de 25 MB como um só arquivo, então não pode ser salva como cópia.",
+    "installedAppCopyFailed": "Não foi possível juntar esta página em um só arquivo.",
+    "installedAppDeleteMenu": "Apagar app…",
+    "installedAppDelete": "Apagar",
+    "installedAppDeleteQuestion": "Apagar \"{{name}}\"?",
+    "installedAppDeleteDetail": "O app é removido deste computador. Os dados ficam, a menos que você também os apague."
   },
   "channels": {
     "sidebar": {

@@ -168,9 +168,12 @@ export const ArtifactsPage = ({
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const saver = useSaveFiles();
-  // Pages the agent made, and which of them are installed as apps (desktop
-  // only), by page path: the app's id. The host decides what is installable.
-  const [installed, setInstalled] = useState<Map<string, string>>(new Map());
+  // Pages the agent made, and which of them are apps (desktop only), by page
+  // path: the app's id, and whether it is installed or only kept (a tool or
+  // game is kept when presented). The host decides what is installable.
+  const [apps, setApps] = useState<
+    Map<string, { id: string; installed: boolean }>
+  >(new Map());
   const [installable, setInstallable] = useState<Set<string>>(new Set());
   const pagePaths = rows
     .filter((a) =>
@@ -192,11 +195,13 @@ export const ArtifactsPage = ({
         setInstallable(
           new Set(paths.filter((_, i) => statuses[i]!.installable))
         );
-        setInstalled(
+        setApps(
           new Map(
             paths.flatMap((path, i) => {
-              const id = statuses[i]!.installedId;
-              return id == null ? [] : [[path, id] as const];
+              const { appId, installed } = statuses[i]!;
+              return appId == null
+                ? []
+                : [[path, { id: appId, installed }] as const];
             })
           )
         );
@@ -257,6 +262,86 @@ export const ArtifactsPage = ({
       showError(t("phase5.failed"));
     }
   };
+  const artifactApps = transport.client.system.artifactApps;
+  const failed = (error: unknown) =>
+    // The host's reason (too big, ...) is written for the user.
+    showError((error instanceof Error && error.message) || t("phase5.failed"));
+  /** A page's app: Open, Install or Uninstall, Delete; Send a copy for any page. */
+  const appActions = (a: ArtifactRow) => {
+    const app = apps.get(a.location);
+    const copy =
+      app != null || installable.has(a.location)
+        ? [
+            {
+              label: t("phase5.sendCopy"),
+              run: () =>
+                void artifactApps
+                  .sendCopy({ target: a.location })
+                  .then(({ saved }) => {
+                    if (saved) showInfo(t("phase5.copySaved"));
+                  })
+                  .catch(failed),
+            },
+          ]
+        : [];
+    if (app == null)
+      return [
+        ...(installable.has(a.location)
+          ? [
+              {
+                label: t("phase5.installApp"),
+                run: () =>
+                  void artifactApps
+                    .install({ target: a.location, sessionId: a.sessionId })
+                    .then(() => {
+                      refreshInstalled();
+                      showInfo(t("phase5.installedApp"));
+                    })
+                    .catch(failed),
+              },
+            ]
+          : []),
+        ...copy,
+      ];
+    return [
+      {
+        label: t("phase5.openApp"),
+        run: () =>
+          void artifactApps
+            .open({ id: app.id })
+            .catch(() => showError(t("phase5.failed"))),
+      },
+      app.installed
+        ? {
+            label: t("phase5.uninstallApp"),
+            run: () =>
+              void artifactApps
+                .uninstall({ id: app.id })
+                .then(refreshInstalled)
+                .catch(() => showError(t("phase5.failed"))),
+          }
+        : {
+            label: t("phase5.installApp"),
+            run: () =>
+              void artifactApps
+                .installKept({ id: app.id })
+                .then(() => {
+                  refreshInstalled();
+                  showInfo(t("phase5.installedApp"));
+                })
+                .catch(failed),
+          },
+      ...copy,
+      {
+        label: t("phase5.deleteApp"),
+        run: () =>
+          void artifactApps
+            .remove({ id: app.id })
+            .then(refreshInstalled)
+            .catch(() => showError(t("phase5.failed"))),
+      },
+    ];
+  };
   const actionItems = (a: ArtifactRow) => {
     const target = artifactTarget(sources.get(a.id)!, a.sessionId);
     return [
@@ -287,47 +372,7 @@ export const ArtifactsPage = ({
             .then(() => showInfo(t("phase5.copied")))
             .catch(() => showError(t("phase5.failed"))),
       },
-      ...(installed.has(a.location)
-        ? [
-            {
-              label: t("phase5.openApp"),
-              run: () =>
-                void transport.client.system.artifactApps
-                  .open({ id: installed.get(a.location)! })
-                  .catch(() => showError(t("phase5.failed"))),
-            },
-            {
-              label: t("phase5.uninstallApp"),
-              run: () =>
-                void transport.client.system.artifactApps
-                  .uninstall({ id: installed.get(a.location)! })
-                  .then(refreshInstalled)
-                  .catch(() => showError(t("phase5.failed"))),
-            },
-          ]
-        : installable.has(a.location)
-          ? [
-              {
-                label: t("phase5.installApp"),
-                run: () =>
-                  void transport.client.system.artifactApps
-                    .install({
-                      target: a.location,
-                      sessionId: a.sessionId,
-                    })
-                    .then(() => {
-                      refreshInstalled();
-                      showInfo(t("phase5.installedApp"));
-                    })
-                    .catch((error: unknown) =>
-                      showError(
-                        (error instanceof Error && error.message) ||
-                          t("phase5.failed")
-                      )
-                    ),
-              },
-            ]
-          : []),
+      ...appActions(a),
       ...(target
         ? [
             {

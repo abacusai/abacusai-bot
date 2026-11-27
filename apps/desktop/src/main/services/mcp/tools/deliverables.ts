@@ -55,10 +55,10 @@ const KEEPS_DATA = [
 /**
  * The agent says what a page is when it presents it; for a tool or game,
  * present_deliverable's result asks for the one-line install offer (a tool
- * result is followed far more reliably than a hint). Sites keep Share.
+ * result is followed far more reliably than a hint). Sites and documents keep Share.
  */
 const OFFER_APP =
-  "Present a page with its kind (tool, game or site); for a tool or game the result says how to offer keeping it as an app.";
+  "Present a page with its kind: tool, game, site, or document (a report, dashboard, one-pager or diagram). For a tool or game the result says how to offer keeping it as an app.";
 
 const offersApp = (channel: ChannelCapabilities): boolean =>
   channel.pane && !toChat(channel);
@@ -281,9 +281,9 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
           ? {
               kind: {
                 type: "string",
-                enum: ["tool", "game", "site"],
+                enum: ["tool", "game", "site", "document"],
                 description:
-                  'For a web page: "tool" keeps the user\'s own data (tracker, ledger, planner, a quiz keeping scores), "game", or "site", a page for others to see (shop, portfolio, pitch, landing).',
+                  'For a web page: "tool" keeps the user\'s own data (tracker, ledger, planner, a quiz keeping scores), "game", "site", a page for others to see (shop, portfolio, pitch, landing), or "document", a page to read (report, dashboard, one-pager, diagram).',
               },
             }
           : {}),

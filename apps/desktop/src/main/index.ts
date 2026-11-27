@@ -126,8 +126,11 @@ import {
   artifactAppLinkId,
   artifactAppLinkInArgv,
   flushAllStores,
+  appsList,
+  deleteApp,
   installApp,
-  installedApps,
+  installKeptApp,
+  sendCopy,
   isPagePreviewUrl,
   openInstalledAppWindow,
   relabelAppWindows,
@@ -1786,10 +1789,13 @@ const appOperations: AppOperations = {
 
   takeOpenLink: () => openLinks.take(),
   artifactApps: {
-    list: () => installedApps(),
+    list: () => appsList(),
     status: (target) => appStatus(target),
     install: (target, sessionId) => installApp(target, sessionId),
+    installKept: (id) => installKeptApp(id),
     uninstall: (id) => uninstallApp(id),
+    remove: (id) => deleteApp(id),
+    sendCopy: (target) => sendCopy({ page: target }),
     open: (id) => void openInstalledApp(id, "chat"),
   },
 

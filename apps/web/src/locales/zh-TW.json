@@ -4363,6 +4363,10 @@
     "uninstallApp": "解除安裝應用程式",
     "installedApp": "已安裝，現在可以在應用程式選單中找到它。",
     "openApp": "開啟應用程式",
+    "sendCopy": "傳送副本（單一檔案）",
+    "sendCopyHint": "不含你儲存的資料",
+    "copySaved": "副本已儲存",
+    "deleteApp": "刪除應用程式",
     "searchArtifacts": "搜尋成果",
     "searchConnectors": "搜尋連接器",
     "searchSkills": "搜尋技能",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "解除安裝",
     "installedAppCancel": "取消",
     "installedAppUninstallQuestion": "要解除安裝「{{name}}」嗎？",
-    "installedAppUninstallDetail": "它的視窗和捷徑會被移除。除非你一併刪除，它的資料會保留在這台電腦上。",
+    "installedAppUninstallDetail": "它的捷徑會被移除。除非你也刪除資料，應用程式和資料會保留在「成果」中。",
     "installedAppDeleteData": "同時刪除它的資料",
     "installedAppExportTitle": "匯出資料",
     "installedAppExportFile": "{{name}} 資料",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "無法安裝這個頁面的資料夾：它是你的主資料夾，或不在這個聊天的資料夾內。請讓代理把應用程式放進這個聊天中的專用資料夾。",
     "installedAppSavedNotice": "已儲存在這台電腦上 · 每天備份",
     "installedAppLastBackup": "上次備份：{{time}}",
-    "installedAppNoBackupYet": "尚未備份：有資料後會自動備份"
+    "installedAppNoBackupYet": "尚未備份：有資料後會自動備份",
+    "installedAppChangesNotice": "請代理修改時才會變更；可在選單中復原",
+    "installedAppCopyMenu": "傳送副本（單一檔案）…",
+    "installedAppCopyTitle": "儲存副本（單一檔案，不含你的資料）",
+    "installedAppCopyTooBig": "這個頁面合成單一檔案後超過 25 MB，無法儲存為副本。",
+    "installedAppCopyFailed": "無法將這個頁面合成單一檔案。",
+    "installedAppDeleteMenu": "刪除應用程式…",
+    "installedAppDelete": "刪除",
+    "installedAppDeleteQuestion": "刪除「{{name}}」？",
+    "installedAppDeleteDetail": "應用程式會從這台電腦上移除。除非你一併刪除，它的資料會保留。"
   },
   "channels": {
     "sidebar": {

@@ -186,6 +186,9 @@ export const FUNNEL_STEPS = [
   "installed_app_undo",
   "installed_app_export",
   "installed_app_uninstall",
+  "installed_app_kept",
+  "installed_app_delete",
+  "installed_app_copy",
   // Google cut a reply off on a model the user picked (the cut-off card);
   // the card's detail is its state: credits, out, held or paid.
   "cutoff_card_shown",

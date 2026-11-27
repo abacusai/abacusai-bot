@@ -4363,6 +4363,10 @@
     "uninstallApp": "Uninstall app",
     "installedApp": "Installed. It is in your apps menu now.",
     "openApp": "Open app",
+    "sendCopy": "Send a copy (one file)",
+    "sendCopyHint": "Without your saved data",
+    "copySaved": "Copy saved",
+    "deleteApp": "Delete app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search connectors",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Uninstall",
     "installedAppCancel": "Cancel",
     "installedAppUninstallQuestion": "Uninstall \"{{name}}\"?",
-    "installedAppUninstallDetail": "Its window and launcher are removed. Its data stays on this computer unless you delete it too.",
+    "installedAppUninstallDetail": "Its launcher is removed. The app and its data stay in Artifacts unless you delete its data too.",
     "installedAppDeleteData": "Also delete its data",
     "installedAppExportTitle": "Export data",
     "installedAppExportFile": "{{name}} data",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "This page's folder can't be installed: it is your home folder, or outside this chat's folder. Ask the agent to put the app in a folder of its own in this chat.",
     "installedAppSavedNotice": "Saved on this computer · backed up daily",
     "installedAppLastBackup": "Last backup: {{time}}",
-    "installedAppNoBackupYet": "No backup yet: one is made once it has data"
+    "installedAppNoBackupYet": "No backup yet: one is made once it has data",
+    "installedAppChangesNotice": "Changes when you ask the agent; Undo in the menu",
+    "installedAppCopyMenu": "Send a copy (one file)…",
+    "installedAppCopyTitle": "Save a copy (one file, without your data)",
+    "installedAppCopyTooBig": "This page is over 25 MB as one file, so it can't be saved as a copy.",
+    "installedAppCopyFailed": "This page couldn't be made into one file.",
+    "installedAppDeleteMenu": "Delete app…",
+    "installedAppDelete": "Delete",
+    "installedAppDeleteQuestion": "Delete \"{{name}}\"?",
+    "installedAppDeleteDetail": "The app is removed from this computer. Its data stays unless you delete it too."
   },
   "channels": {
     "sidebar": {

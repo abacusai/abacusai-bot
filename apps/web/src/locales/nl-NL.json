@@ -4363,6 +4363,10 @@
     "uninstallApp": "App verwijderen",
     "installedApp": "Geïnstalleerd. Hij staat nu in je appmenu.",
     "openApp": "App openen",
+    "sendCopy": "Kopie sturen (één bestand)",
+    "sendCopyHint": "Zonder je opgeslagen gegevens",
+    "copySaved": "Kopie opgeslagen",
+    "deleteApp": "App wissen",
     "searchArtifacts": "Artefacten zoeken",
     "searchConnectors": "Connectors zoeken",
     "searchSkills": "Skills zoeken",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Verwijderen",
     "installedAppCancel": "Annuleren",
     "installedAppUninstallQuestion": "\"{{name}}\" verwijderen?",
-    "installedAppUninstallDetail": "Het venster en de snelkoppeling worden verwijderd. De gegevens blijven op deze computer, tenzij je ze ook verwijdert.",
+    "installedAppUninstallDetail": "De snelkoppeling wordt verwijderd. De app en de gegevens blijven in Artefacten, tenzij je de gegevens ook wist.",
     "installedAppDeleteData": "Ook de gegevens verwijderen",
     "installedAppExportTitle": "Gegevens exporteren",
     "installedAppExportFile": "Gegevens {{name}}",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "De map van deze pagina kan niet worden geïnstalleerd: het is je thuismap, of hij staat buiten de map van deze chat. Vraag de agent om de app in een eigen map in deze chat te zetten.",
     "installedAppSavedNotice": "Opgeslagen op deze computer · dagelijks geback-upt",
     "installedAppLastBackup": "Laatste back-up: {{time}}",
-    "installedAppNoBackupYet": "Nog geen back-up: die komt zodra er gegevens zijn"
+    "installedAppNoBackupYet": "Nog geen back-up: die komt zodra er gegevens zijn",
+    "installedAppChangesNotice": "Verandert als je het de agent vraagt; Ongedaan maken in het menu",
+    "installedAppCopyMenu": "Kopie sturen (één bestand)…",
+    "installedAppCopyTitle": "Kopie opslaan (één bestand, zonder je gegevens)",
+    "installedAppCopyTooBig": "Deze pagina is als één bestand groter dan 25 MB en kan daarom niet als kopie worden opgeslagen.",
+    "installedAppCopyFailed": "Deze pagina kon niet tot één bestand worden gemaakt.",
+    "installedAppDeleteMenu": "App wissen…",
+    "installedAppDelete": "Wissen",
+    "installedAppDeleteQuestion": "\"{{name}}\" wissen?",
+    "installedAppDeleteDetail": "De app wordt van deze computer gewist. De gegevens blijven, tenzij je ze ook wist."
   },
   "channels": {
     "sidebar": {

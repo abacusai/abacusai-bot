@@ -4363,6 +4363,10 @@
     "uninstallApp": "Copot aplikasi",
     "installedApp": "Terpasang. Sekarang ada di menu aplikasimu.",
     "openApp": "Buka aplikasi",
+    "sendCopy": "Kirim salinan (satu file)",
+    "sendCopyHint": "Tanpa data yang kamu simpan",
+    "copySaved": "Salinan disimpan",
+    "deleteApp": "Hapus aplikasi",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search konektor",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Copot",
     "installedAppCancel": "Batal",
     "installedAppUninstallQuestion": "Copot \"{{name}}\"?",
-    "installedAppUninstallDetail": "Jendela dan pintasannya dihapus. Datanya tetap ada di komputer ini, kecuali kamu juga menghapusnya.",
+    "installedAppUninstallDetail": "Pintasannya dihapus. Aplikasi dan datanya tetap ada di Artefak, kecuali kamu juga menghapus datanya.",
     "installedAppDeleteData": "Hapus juga datanya",
     "installedAppExportTitle": "Ekspor data",
     "installedAppExportFile": "Data {{name}}",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "Folder halaman ini tidak bisa dipasang: itu folder utamamu, atau berada di luar folder chat ini. Minta agen menaruh aplikasinya di folder sendiri di chat ini.",
     "installedAppSavedNotice": "Disimpan di komputer ini · dicadangkan setiap hari",
     "installedAppLastBackup": "Cadangan terakhir: {{time}}",
-    "installedAppNoBackupYet": "Belum ada cadangan: dibuat setelah ada data"
+    "installedAppNoBackupYet": "Belum ada cadangan: dibuat setelah ada data",
+    "installedAppChangesNotice": "Berubah saat kamu meminta agen; Urungkan ada di menu",
+    "installedAppCopyMenu": "Kirim salinan (satu file)…",
+    "installedAppCopyTitle": "Simpan salinan (satu file, tanpa datamu)",
+    "installedAppCopyTooBig": "Halaman ini lebih dari 25 MB sebagai satu file, jadi tidak bisa disimpan sebagai salinan.",
+    "installedAppCopyFailed": "Halaman ini tidak bisa dijadikan satu file.",
+    "installedAppDeleteMenu": "Hapus aplikasi…",
+    "installedAppDelete": "Hapus",
+    "installedAppDeleteQuestion": "Hapus \"{{name}}\"?",
+    "installedAppDeleteDetail": "Aplikasi dihapus dari komputer ini. Datanya tetap ada, kecuali kamu juga menghapusnya."
   },
   "channels": {
     "sidebar": {

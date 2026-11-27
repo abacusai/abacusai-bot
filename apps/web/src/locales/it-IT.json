@@ -4363,6 +4363,10 @@
     "uninstallApp": "Disinstalla app",
     "installedApp": "Installata. Ora è nel tuo menu delle app.",
     "openApp": "Apri app",
+    "sendCopy": "Invia una copia (un file)",
+    "sendCopyHint": "Senza i tuoi dati salvati",
+    "copySaved": "Copia salvata",
+    "deleteApp": "Elimina app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search connettori",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Disinstalla",
     "installedAppCancel": "Annulla",
     "installedAppUninstallQuestion": "Disinstallare \"{{name}}\"?",
-    "installedAppUninstallDetail": "La finestra e il collegamento vengono rimossi. I dati restano su questo computer, a meno che non li elimini anche tu.",
+    "installedAppUninstallDetail": "Il collegamento viene rimosso. L'app e i suoi dati restano in Artefatti, a meno che non elimini anche i dati.",
     "installedAppDeleteData": "Elimina anche i dati",
     "installedAppExportTitle": "Esporta dati",
     "installedAppExportFile": "Dati {{name}}",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "La cartella di questa pagina non si può installare: è la tua cartella personale, o è fuori dalla cartella di questa chat. Chiedi all'agente di mettere l'app in una cartella tutta sua in questa chat.",
     "installedAppSavedNotice": "Salvato su questo computer · backup giornaliero",
     "installedAppLastBackup": "Ultimo backup: {{time}}",
-    "installedAppNoBackupYet": "Nessun backup ancora: viene creato quando ci sono dati"
+    "installedAppNoBackupYet": "Nessun backup ancora: viene creato quando ci sono dati",
+    "installedAppChangesNotice": "Cambia quando lo chiedi all'agente; Annulla nel menu",
+    "installedAppCopyMenu": "Invia una copia (un file)…",
+    "installedAppCopyTitle": "Salva una copia (un file, senza i tuoi dati)",
+    "installedAppCopyTooBig": "Questa pagina supera i 25 MB come file unico, quindi non si può salvare come copia.",
+    "installedAppCopyFailed": "Non è stato possibile riunire questa pagina in un solo file.",
+    "installedAppDeleteMenu": "Elimina app…",
+    "installedAppDelete": "Elimina",
+    "installedAppDeleteQuestion": "Eliminare \"{{name}}\"?",
+    "installedAppDeleteDetail": "L'app viene rimossa da questo computer. I dati restano, a meno che non elimini anche quelli."
   },
   "channels": {
     "sidebar": {

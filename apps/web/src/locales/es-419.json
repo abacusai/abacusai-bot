@@ -4363,6 +4363,10 @@
     "uninstallApp": "Desinstalar app",
     "installedApp": "Instalada. Ya está en tu menú de apps.",
     "openApp": "Abrir app",
+    "sendCopy": "Enviar una copia (un archivo)",
+    "sendCopyHint": "Sin tus datos guardados",
+    "copySaved": "Copia guardada",
+    "deleteApp": "Borrar app",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search conectores",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "Desinstalar",
     "installedAppCancel": "Cancelar",
     "installedAppUninstallQuestion": "¿Desinstalar \"{{name}}\"?",
-    "installedAppUninstallDetail": "Se quitan su ventana y su acceso directo. Sus datos se quedan en esta computadora, a menos que también los borres.",
+    "installedAppUninstallDetail": "Se quita su acceso directo. La app y sus datos siguen en Artefactos, a menos que también borres sus datos.",
     "installedAppDeleteData": "Borrar también sus datos",
     "installedAppExportTitle": "Exportar datos",
     "installedAppExportFile": "Datos de {{name}}",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "La carpeta de esta página no se puede instalar: es tu carpeta personal o está fuera de la carpeta de este chat. Pídele al agente que ponga la app en una carpeta propia en este chat.",
     "installedAppSavedNotice": "Guardado en esta computadora · copia de seguridad diaria",
     "installedAppLastBackup": "Última copia de seguridad: {{time}}",
-    "installedAppNoBackupYet": "Aún no hay copia de seguridad: se hace cuando haya datos"
+    "installedAppNoBackupYet": "Aún no hay copia de seguridad: se hace cuando haya datos",
+    "installedAppChangesNotice": "Cambia cuando se lo pides al agente; Deshacer en el menú",
+    "installedAppCopyMenu": "Enviar una copia (un archivo)…",
+    "installedAppCopyTitle": "Guardar una copia (un archivo, sin tus datos)",
+    "installedAppCopyTooBig": "Esta página pesa más de 25 MB como un solo archivo, así que no se puede guardar como copia.",
+    "installedAppCopyFailed": "No se pudo convertir esta página en un solo archivo.",
+    "installedAppDeleteMenu": "Borrar app…",
+    "installedAppDelete": "Borrar",
+    "installedAppDeleteQuestion": "¿Borrar \"{{name}}\"?",
+    "installedAppDeleteDetail": "La app se quita de esta computadora. Sus datos se quedan, a menos que también los borres."
   },
   "channels": {
     "sidebar": {

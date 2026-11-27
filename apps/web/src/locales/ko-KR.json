@@ -4363,6 +4363,10 @@
     "uninstallApp": "앱 제거",
     "installedApp": "설치했어요. 이제 앱 메뉴에 있어요.",
     "openApp": "앱 열기",
+    "sendCopy": "사본 보내기(파일 하나)",
+    "sendCopyHint": "저장한 데이터는 포함되지 않아요",
+    "copySaved": "사본을 저장했어요",
+    "deleteApp": "앱 삭제",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search 커넥터",
     "searchSkills": "Search skills",
@@ -5566,7 +5570,7 @@
     "installedAppUninstall": "제거",
     "installedAppCancel": "취소",
     "installedAppUninstallQuestion": "\"{{name}}\"을(를) 제거할까요?",
-    "installedAppUninstallDetail": "창과 바로가기가 삭제돼요. 데이터는 함께 삭제하지 않으면 이 컴퓨터에 남아요.",
+    "installedAppUninstallDetail": "바로가기가 삭제돼요. 앱과 데이터는 데이터까지 삭제하지 않으면 산출물에 남아요.",
     "installedAppDeleteData": "데이터도 삭제",
     "installedAppExportTitle": "데이터 내보내기",
     "installedAppExportFile": "{{name}} 데이터",
@@ -5577,7 +5581,16 @@
     "installedAppTooBroad": "이 페이지의 폴더는 설치할 수 없어요. 홈 폴더이거나 이 채팅의 폴더 밖에 있어요. 에이전트에게 이 채팅 안의 전용 폴더에 앱을 넣어 달라고 하세요.",
     "installedAppSavedNotice": "이 컴퓨터에 저장됨 · 매일 백업",
     "installedAppLastBackup": "마지막 백업: {{time}}",
-    "installedAppNoBackupYet": "아직 백업이 없습니다. 데이터가 생기면 만들어집니다"
+    "installedAppNoBackupYet": "아직 백업이 없습니다. 데이터가 생기면 만들어집니다",
+    "installedAppChangesNotice": "에이전트에게 요청하면 바뀌어요 · 실행 취소는 메뉴에서",
+    "installedAppCopyMenu": "사본 보내기(파일 하나)…",
+    "installedAppCopyTitle": "사본 저장(파일 하나, 데이터 제외)",
+    "installedAppCopyTooBig": "이 페이지는 파일 하나로 만들면 25MB가 넘어 사본으로 저장할 수 없어요.",
+    "installedAppCopyFailed": "이 페이지를 파일 하나로 만들 수 없었어요.",
+    "installedAppDeleteMenu": "앱 삭제…",
+    "installedAppDelete": "삭제",
+    "installedAppDeleteQuestion": "\"{{name}}\"을(를) 삭제할까요?",
+    "installedAppDeleteDetail": "앱이 이 컴퓨터에서 삭제돼요. 데이터는 함께 삭제하지 않으면 남아요."
   },
   "channels": {
     "sidebar": {

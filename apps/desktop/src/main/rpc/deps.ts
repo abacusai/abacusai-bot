@@ -160,17 +160,21 @@ export interface AppOperations {
   takeOpenLink?(): OpenLink | null;
   /** Pages installed as apps (artifact-apps.ts); desktop only. */
   artifactApps?: {
-    list(): Array<{ id: string; title: string }>;
+    list(): Array<{ id: string; title: string; installed: boolean }>;
     status(target: string): Promise<{
       installable: boolean;
-      installedId: string | null;
+      appId: string | null;
+      installed: boolean;
       kind: "app" | "site";
     }>;
     install(
       target: string,
       sessionId: string | null
     ): Promise<{ id: string; title: string }>;
+    installKept(id: string): Promise<boolean>;
     uninstall(id: string): Promise<boolean>;
+    remove(id: string): Promise<boolean>;
+    sendCopy(target: string): Promise<boolean>;
     open(id: string): void;
   };
 }
