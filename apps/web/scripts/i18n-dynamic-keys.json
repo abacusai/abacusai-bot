@@ -375,6 +375,7 @@
       "ha_list_entities",
       "ha_list_services",
       "image_generate",
+      "install_app",
       "kill_process",
       "list_discord_chats",
       "list_telegram_chats",
@@ -1713,7 +1714,10 @@
       "installedAppTooBig",
       "installedAppCannotInstall",
       "installedAppMissing",
-      "installedAppTooBroad"
+      "installedAppTooBroad",
+      "installedAppSavedNotice",
+      "installedAppLastBackup",
+      "installedAppNoBackupYet"
     ],
     "sources": [
       "../../desktop/src/main/index.ts",

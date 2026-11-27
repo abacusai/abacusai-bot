@@ -52,26 +52,69 @@ const KEEPS_DATA = [
   "form's date may start as today.",
 ].join("\n");
 
+/**
+ * The agent offers to keep a tool or game as an app; the user says yes in
+ * chat and `install_app` does it. Sites and pitch pages keep Share.
+ */
+const OFFER_APP = [
+  "When you have presented a working tool that keeps what people enter (tracker, ledger,",
+  "planner, list) or a game, offer once, in one short line in the user's language, to keep",
+  "it on their computer as an app: its own window, opens offline, data kept. Not for a",
+  "website, landing or pitch page, a report or a one-off answer: for those Share stays",
+  "the way to show it. Call install_app only after they say yes.",
+].join("\n");
+
+const offersApp = (channel: ChannelCapabilities): boolean =>
+  channel.pane && !toChat(channel);
+
 export const DELIVERABLES_TOOLS: ToolDefinition[] = [
+  {
+    name: "install_app",
+    toolsets: "always",
+    description: [
+      "Keep a page you made in this chat on the user's computer as an app: its own window",
+      "and launcher, opening without the bot and offline, with its data kept. The same as",
+      "Install as app on the page's row.",
+      "",
+      "Call it only after the user said yes, in this chat, to keeping it as an app; never on",
+      "your own, and never for a site or pitch page. Give the page's html path or the URL",
+      "serve gave it. The result says it is installed, or why not in plain words: tell the",
+      "user that in their language.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: {
+          type: "string",
+          description: "The page's html path, or its served URL.",
+        },
+      },
+      required: ["target"],
+    },
+    offeredTo: offersApp,
+    run: (host, args, callerSession) => host.installApp(args, callerSession),
+  },
   {
     name: "artifact",
     toolsets: "always",
-    description: [
-      "Build a page people can use: a report, dashboard, one-pager, diagram or small working",
-      "tool. It opens beside the chat and the user can share it by link. A short answer stays",
-      "in the chat. Read the artifact-design skill first.",
-      "",
-      "Actions:",
-      '  "create":  a new page (title, body). `body` is what goes inside <body>; the page\'s',
-      "             head, palette and rules are added for you.",
-      '  "edit":    small changes (slug, edits). Each `old` must appear exactly once.',
-      '  "restore": go back to a saved version (slug, version).',
-      "",
-      "Every action saves a new version and returns the page's path. Hand that path to",
-      "present_deliverable to show it.",
-      "",
-      KEEPS_DATA,
-    ].join("\n"),
+    description: (channel) =>
+      [
+        "Build a page people can use: a report, dashboard, one-pager, diagram or small working",
+        "tool. It opens beside the chat and the user can share it by link. A short answer stays",
+        "in the chat. Read the artifact-design skill first.",
+        "",
+        "Actions:",
+        '  "create":  a new page (title, body). `body` is what goes inside <body>; the page\'s',
+        "             head, palette and rules are added for you.",
+        '  "edit":    small changes (slug, edits). Each `old` must appear exactly once.',
+        '  "restore": go back to a saved version (slug, version).',
+        "",
+        "Every action saves a new version and returns the page's path. Hand that path to",
+        "present_deliverable to show it.",
+        "",
+        KEEPS_DATA,
+        ...(offersApp(channel) ? ["", OFFER_APP] : []),
+      ].join("\n"),
     inputSchema: {
       type: "object",
       properties: {
@@ -128,6 +171,7 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             ]),
         "",
         KEEPS_DATA,
+        ...(offersApp(channel) ? ["", OFFER_APP] : []),
         "",
         "Actions:",
         '  "start": serve a directory (directory). Serving it again returns the same URL.',

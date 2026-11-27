@@ -381,6 +381,14 @@ export interface McpAgentToolsServerOptions {
   routineDelivery?: () => boolean;
   /** Phone fixes of what the GitHub watcher found are on (`github_fix` is listed). */
   githubFixOffered?: () => boolean;
+  /**
+   * Installs a page (path or local URL) as an app and opens its window, as
+   * the row's button does; throws the reason, in the user's words.
+   */
+  installApp?: (
+    target: string,
+    sessionId: string | null
+  ) => Promise<{ title: string }>;
   /** Start the fix of a watcher event; `ok: false` is a refusal the model words. */
   githubFix?: (
     eventId: string | null,
@@ -857,6 +865,8 @@ export class McpAgentToolsServer extends McpHttpServer {
             ? ROUTINE_EDITOR_TOOLS.has(definition.name)
             : this.isListedTool(definition, enabled, forBot, callerSession) &&
               this.reachesCaller(definition, callerSession) &&
+              (!("offeredTo" in definition) ||
+                definition.offeredTo?.(channel) !== false) &&
               // Only a bot with requests to follow up gets the follow-up
               // tools: every listed tool costs every turn.
               (!BOT_REQUEST_FOLLOW_UPS.has(definition.name) ||
@@ -2082,6 +2092,39 @@ export class McpAgentToolsServer extends McpHttpServer {
    * named and an empty result is an error: a success with nothing behind it
    * is worse than a failure the model can correct.
    */
+  /** `install_app`: only in the app's own chat, after the user said yes. */
+  async installApp(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
+    const target = String(args.target ?? "").trim();
+    if (target.length === 0)
+      return this.err("target is required: the page's html path or its URL.");
+    if (
+      this.options.installApp == null ||
+      this.options.requireSession?.() === true ||
+      !this.channelFor(callerSession).pane
+    )
+      return this.err(
+        "Installing works only in a chat in the desktop app, where the page's row has Install as app."
+      );
+    try {
+      const { title } = await this.options.installApp(
+        /^https?:\/\//i.test(target)
+          ? target
+          : this.resolveOutputPath(target, callerSession),
+        callerSession ?? null
+      );
+      return this.ok(
+        `Installed "${title}": it is open in its own window and in the computer's apps (Start menu, Applications, the app launcher). It opens without the bot, and its data stays on this computer. Tell the user in one line, in their language.`
+      );
+    } catch (error) {
+      return this.err(
+        `Not installed: ${(error as Error)?.message || "it could not be installed."} Tell the user this in their language.`
+      );
+    }
+  }
+
   async serve(
     args: Record<string, unknown>,
     callerSession?: string

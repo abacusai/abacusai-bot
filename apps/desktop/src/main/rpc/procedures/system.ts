@@ -115,6 +115,7 @@ export const systemRouter = impl.system.router({
         (await context.deps.app.artifactApps?.status(input.target)) ?? {
           installable: false,
           installedId: null,
+          kind: "site" as const,
         }
     ),
     install: impl.system.artifactApps.install.handler(

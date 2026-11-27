@@ -89,6 +89,8 @@ const MEDIA_OFF =
 
 /** The built-in tools the phone does not get, each with why. */
 export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
+  install_app:
+    "an app is kept on the desktop computer, asked for in its own chat there",
   artifact: "a page that opens beside the chat; a phone has no pane",
   vision_analyze:
     "the chat's model sees a photo itself when it reads the file; a second model call only adds a way to fail",
@@ -234,6 +236,7 @@ const NO_OUTPUT = "a run's only output is its answer to its owner";
 
 /** The built-in tools an unattended run never gets, each with why. */
 export const UNATTENDED_EXCLUDED_TOOLS: Readonly<Record<string, string>> = {
+  install_app: "only after the user says yes in the chat, never unattended",
   set_user_language:
     "only the user's own words set their language, never a routine's",
   bash: NO_CODE,

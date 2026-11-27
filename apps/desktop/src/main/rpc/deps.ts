@@ -161,9 +161,11 @@ export interface AppOperations {
   /** Pages installed as apps (artifact-apps.ts); desktop only. */
   artifactApps?: {
     list(): Array<{ id: string; title: string }>;
-    status(
-      target: string
-    ): Promise<{ installable: boolean; installedId: string | null }>;
+    status(target: string): Promise<{
+      installable: boolean;
+      installedId: string | null;
+      kind: "app" | "site";
+    }>;
     install(
       target: string,
       sessionId: string | null

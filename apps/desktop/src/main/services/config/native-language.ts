@@ -43,5 +43,8 @@ export async function setNativeLanguage(
 }
 
 /** A native word in the current language, English until it has loaded. */
+/** The language the native words are in, for dates beside them. */
+export const nativeLocaleTag = (): string => nativeLocale;
+
 export const nativeT = (key: string, values?: Record<string, string>): string =>
   loadedWords(nativeLocale).t(`native.${key}`, values);

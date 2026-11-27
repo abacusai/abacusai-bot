@@ -213,7 +213,14 @@ export const system = {
     /** Whether a presented page (URL or path) can be installed, and its app's id when it is. */
     status: query
       .input(v.object({ target: v.pipe(v.string(), v.nonEmpty()) }))
-      .output(type<{ installable: boolean; installedId: string | null }>()),
+      .output(
+        type<{
+          installable: boolean;
+          installedId: string | null;
+          /** "app": a tool or game (keeps data, draws, animates); "site": a page to read. */
+          kind: "app" | "site";
+        }>()
+      ),
     /** Installs it, or returns the app it already is. */
     install: mutation
       .input(

@@ -20,6 +20,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -81,6 +82,20 @@ const backup = (id: string): void => {
     .sort();
   for (const old of days.slice(0, Math.max(0, days.length - BACKUP_DAYS)))
     rmSync(join(dir, old), { force: true });
+};
+
+/** When the data was last backed up, or null before its first backup. */
+export const lastBackupAt = (id: string): Date | null => {
+  const dir = join(dataDir(id), "backups");
+  try {
+    const newest = readdirSync(dir)
+      .filter((name) => /^\d{4}-\d{2}-\d{2}\.json$/.test(name))
+      .sort()
+      .at(-1);
+    return newest == null ? null : statSync(join(dir, newest)).mtime;
+  } catch {
+    return null;
+  }
 };
 
 const flush = (id: string): void => {

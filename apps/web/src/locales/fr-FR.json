@@ -686,7 +686,8 @@
       "write": "Créer un fichier ou en écraser un existant.",
       "x_search": "Recherchez des publications et des discussions publiques sur X.",
       "xai_video_edit": "Modifiez une vidéo déjà générée.",
-      "xai_video_extend": "Étendez davantage une vidéo générée."
+      "xai_video_extend": "Étendez davantage une vidéo générée.",
+      "install_app": "Garder sur cet ordinateur, comme une app, une page faite dans un chat, si tu dis oui."
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "Cette app dépasse 100 Mo (ou 5 000 fichiers), elle ne peut donc pas être installée. Demande à l'agent de la réduire ou de la mettre dans son propre dossier.",
     "installedAppCannotInstall": "Cette page ne peut pas être installée comme app.",
     "installedAppMissing": "Les fichiers de cette app sont introuvables. Désinstalle-la puis réinstalle-la depuis son chat.",
-    "installedAppTooBroad": "Le dossier de cette page ne peut pas être installé : c'est ton dossier personnel, ou il est hors du dossier de ce chat. Demande à l'agent de mettre l'app dans son propre dossier dans ce chat."
+    "installedAppTooBroad": "Le dossier de cette page ne peut pas être installé : c'est ton dossier personnel, ou il est hors du dossier de ce chat. Demande à l'agent de mettre l'app dans son propre dossier dans ce chat.",
+    "installedAppSavedNotice": "Enregistré sur cet ordinateur · sauvegardé chaque jour",
+    "installedAppLastBackup": "Dernière sauvegarde : {{time}}",
+    "installedAppNoBackupYet": "Pas encore de sauvegarde : elle se fait dès qu'il y a des données"
   },
   "channels": {
     "sidebar": {

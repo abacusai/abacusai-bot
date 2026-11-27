@@ -72,7 +72,7 @@ import {
 } from "../agent-tools/served-previews";
 import { htmlPagesIn } from "../agent-tools/static-server";
 import { BROWSER_PARTITION } from "../browser/connected-sites";
-import { nativeT } from "../config/native-language";
+import { nativeLocaleTag, nativeT } from "../config/native-language";
 import {
   appUserModelId,
   iconFile,
@@ -86,6 +86,7 @@ import {
   exportJson,
   flushAllStores,
   importLocalStorage,
+  lastBackupAt,
   markImported,
   serveStore,
   setStoreRoot,
@@ -124,6 +125,8 @@ export interface InstalledApp {
   /** When the agent's last change was copied (ms). */
   updatedAt?: number;
   launchers: string[];
+  /** The first open's line that its data is kept here was shown. */
+  noticeShown?: boolean;
 }
 
 export interface AppsDeps {
@@ -525,18 +528,71 @@ const readServedLocalStorage = async (
 
 // ---- Install, update, undo, uninstall ---------------------------------------
 
+/**
+ * What a page is for people: "app" when it keeps what they enter or is a game
+ * (storage, a canvas) in the page or its scripts beside it; else "site", a
+ * page to read, where Share stays the main action. Not an animation loop:
+ * sites animate as they scroll.
+ */
+const APP_SIGNS =
+  /\b(?:localStorage|sessionStorage|indexedDB)\b|abacus\.store|<canvas\b|getContext\(/;
+const pageKind = (dir: string, entry: string): "app" | "site" => {
+  const read = (path: string): string => {
+    try {
+      return readFileSync(path, "utf8");
+    } catch {
+      return "";
+    }
+  };
+  if (APP_SIGNS.test(read(join(dir, entry)))) return "app";
+  if (!usesFilesBeside(join(dir, entry))) return "site";
+  let bytes = 0;
+  const scripts = (at: string, depth: number): boolean => {
+    let names: string[] = [];
+    try {
+      names = readdirSync(at);
+    } catch {
+      return false;
+    }
+    for (const name of names) {
+      if (name.startsWith(".") || name === "node_modules") continue;
+      const full = join(at, name);
+      if (/\.(?:m?js)$/.test(name)) {
+        const text = read(full);
+        bytes += text.length;
+        if (APP_SIGNS.test(text)) return true;
+        if (bytes > 2_000_000) return false;
+      } else if (depth > 0 && !name.includes(".") && scripts(full, depth - 1))
+        return true;
+    }
+    return false;
+  };
+  return scripts(dir, 2) ? "app" : "site";
+};
+
 export const appStatus = async (
   target: string
-): Promise<{ installable: boolean; installedId: string | null }> => {
+): Promise<{
+  installable: boolean;
+  installedId: string | null;
+  kind: "app" | "site";
+}> => {
   const source = await sourceOf(target).catch(() => null);
-  if (source == null) return { installable: false, installedId: null };
+  if (source == null)
+    return { installable: false, installedId: null, kind: "site" };
   const id = appIdFor(source.dir, source.entry);
-  return { installable: true, installedId: readRegistry()[id] ? id : null };
+  return {
+    installable: true,
+    installedId: readRegistry()[id] ? id : null,
+    kind: pageKind(source.dir, source.entry),
+  };
 };
 
 export const installApp = async (
   target: string,
-  sessionId: string | null
+  sessionId: string | null,
+  /** Who asked: the row's button, or the agent after the user said yes. */
+  by: "button" | "agent" = "button"
 ): Promise<{ id: string; title: string }> => {
   const source = await sourceOf(target);
   if (source == null)
@@ -627,6 +683,7 @@ export const installApp = async (
     "installed_app_install",
     source.artifact ? "artifact" : source.url != null ? "site" : "file"
   );
+  if (by === "agent") deps.funnel("installed_app_agent_install");
   return { id, title: entry.title };
 };
 
@@ -888,6 +945,41 @@ const handleScheme = (appSession: Electron.Session, id: string): void => {
   });
 };
 
+const NOTICE_HEIGHT = 30;
+const NOTICE_MS = 10_000;
+
+const escapeHtml = (text: string): string =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const noticeHtml = (text: string): string =>
+  [
+    "<!doctype html><meta charset=utf-8><style>",
+    ":root{color-scheme:light dark;--bg:#f4f4f5;--fg:#3f3f46;--line:#e4e4e7}",
+    "@media (prefers-color-scheme:dark){:root{--bg:#1c1c1f;--fg:#d4d4d8;--line:#2e2e33}}",
+    "html,body{margin:0;height:100%;background:var(--bg);color:var(--fg)}",
+    "body{display:flex;align-items:center;justify-content:center;gap:6px;",
+    "font:12px system-ui,sans-serif;border-top:1px solid var(--line);box-sizing:border-box}",
+    "</style><body><span aria-hidden=true>✓</span><span>",
+    escapeHtml(text),
+    "</span></body>",
+  ].join("");
+
+/** "Last backup: <when>", or that there is none yet. */
+const backupLine = (entry: InstalledApp): string => {
+  const at = lastBackupAt(dataOf(entry));
+  if (at == null) return nativeT("installedAppNoBackupYet");
+  let when: string;
+  try {
+    when = new Intl.DateTimeFormat(nativeLocaleTag(), {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(at);
+  } catch {
+    when = at.toLocaleString();
+  }
+  return nativeT("installedAppLastBackup", { time: when });
+};
+
 const menuItems = (id: string): MenuItemConstructorOptions[] => {
   const entry = readRegistry()[id];
   const window = windows.get(id);
@@ -912,6 +1004,7 @@ const menuItems = (id: string): MenuItemConstructorOptions[] => {
       label: nativeT("installedAppExport"),
       click: () => void exportData(id, window),
     },
+    { label: backupLine(entry), enabled: false },
     { label: nativeT("installedAppReload"), click: () => reloadWindow(id) },
     { type: "separator" },
     {
@@ -1037,12 +1130,46 @@ export const openInstalledAppWindow = (
     },
   });
   window.contentView.addChildView(view);
+  // The first open: a line under the page (never in it) that its data is
+  // kept on this computer, gone after a few seconds.
+  let notice: WebContentsView | null = null;
   const fit = (): void => {
-    const { width, height } = window.getContentBounds();
-    view.setBounds({ x: 0, y: 0, width, height });
+    // The content view's own size: on Linux the window's content bounds
+    // count the menu bar, which put the line below the visible area.
+    const { width, height } = window.contentView.getBounds();
+    const strip = notice == null ? 0 : NOTICE_HEIGHT;
+    view.setBounds({ x: 0, y: 0, width, height: height - strip });
+    notice?.setBounds({ x: 0, y: height - strip, width, height: strip });
   };
+  if (entry.noticeShown !== true) {
+    const shown = new WebContentsView({
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        javascript: false,
+        partition: "artifact-app-notice",
+      },
+    });
+    notice = shown;
+    void shown.webContents.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent(
+        noticeHtml(nativeT("installedAppSavedNotice"))
+      )}`
+    );
+    window.contentView.addChildView(shown);
+    setTimeout(() => {
+      if (window.isDestroyed() || notice !== shown) return;
+      window.contentView.removeChildView(shown);
+      shown.webContents.close();
+      notice = null;
+      fit();
+    }, NOTICE_MS);
+    entry.noticeShown = true;
+    saveRegistry();
+  }
   fit();
   window.on("resize", fit);
+  window.on("show", fit);
 
   const contents = view.webContents;
   views.set(id, contents);
@@ -1120,6 +1247,8 @@ export const openInstalledAppWindow = (
   });
   window.on("closed", () => {
     if (!contents.isDestroyed()) contents.close();
+    if (notice != null && !notice.webContents.isDestroyed())
+      notice.webContents.close();
     windows.delete(id);
     views.delete(id);
     flushAllStores();

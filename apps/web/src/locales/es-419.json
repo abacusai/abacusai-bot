@@ -686,7 +686,8 @@
       "write": "Crear un archivo o sobrescribir uno existente.",
       "x_search": "Buscar publicaciones e hilos públicos en X.",
       "xai_video_edit": "Editar un vídeo ya generado.",
-      "xai_video_extend": "Amplíe aún más un vídeo generado."
+      "xai_video_extend": "Amplíe aún más un vídeo generado.",
+      "install_app": "Guardar en esta computadora como app una página hecha en un chat, si dices que sí."
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "Esta app pesa más de 100 MB (o tiene más de 5.000 archivos), así que no se puede instalar. Pídele al agente que la haga más pequeña o que la ponga en una carpeta propia.",
     "installedAppCannotInstall": "Esta página no se puede instalar como app.",
     "installedAppMissing": "Faltan los archivos de esta app. Desinstálala y vuelve a instalarla desde su chat.",
-    "installedAppTooBroad": "La carpeta de esta página no se puede instalar: es tu carpeta personal o está fuera de la carpeta de este chat. Pídele al agente que ponga la app en una carpeta propia en este chat."
+    "installedAppTooBroad": "La carpeta de esta página no se puede instalar: es tu carpeta personal o está fuera de la carpeta de este chat. Pídele al agente que ponga la app en una carpeta propia en este chat.",
+    "installedAppSavedNotice": "Guardado en esta computadora · copia de seguridad diaria",
+    "installedAppLastBackup": "Última copia de seguridad: {{time}}",
+    "installedAppNoBackupYet": "Aún no hay copia de seguridad: se hace cuando haya datos"
   },
   "channels": {
     "sidebar": {

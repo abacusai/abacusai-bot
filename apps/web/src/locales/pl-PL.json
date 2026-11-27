@@ -696,7 +696,8 @@
       "write": "Utwórz plik lub nadpisz istniejący.",
       "x_search": "Przeszukuj publiczne posty i wątki na X.",
       "xai_video_edit": "Edytuj już wygenerowane wideo.",
-      "xai_video_extend": "Wydłuż wygenerowane wideo."
+      "xai_video_extend": "Wydłuż wygenerowane wideo.",
+      "install_app": "Zachowaj stronę zrobioną w czacie jako aplikację na tym komputerze, jeśli się zgodzisz."
     },
     "toolsets": {
       "a2a": {
@@ -5753,7 +5754,10 @@
     "installedAppTooBig": "Ta aplikacja ma ponad 100 MB (lub ponad 5000 plików), więc nie da się jej zainstalować. Poproś agenta, żeby ją zmniejszył albo umieścił w osobnym folderze.",
     "installedAppCannotInstall": "Tej strony nie da się zainstalować jako aplikacji.",
     "installedAppMissing": "Brakuje plików tej aplikacji. Odinstaluj ją i zainstaluj ponownie z jej czatu.",
-    "installedAppTooBroad": "Nie można zainstalować folderu tej strony: to twój folder domowy albo leży poza folderem tego czatu. Poproś agenta, żeby umieścił aplikację w osobnym folderze w tym czacie."
+    "installedAppTooBroad": "Nie można zainstalować folderu tej strony: to twój folder domowy albo leży poza folderem tego czatu. Poproś agenta, żeby umieścił aplikację w osobnym folderze w tym czacie.",
+    "installedAppSavedNotice": "Zapisane na tym komputerze · codzienna kopia zapasowa",
+    "installedAppLastBackup": "Ostatnia kopia zapasowa: {{time}}",
+    "installedAppNoBackupYet": "Brak kopii zapasowej: powstanie, gdy pojawią się dane"
   },
   "channels": {
     "sidebar": {

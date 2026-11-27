@@ -4714,7 +4714,8 @@ function compactProviderError(raw: string): string {
  * pdf/ppt/app/design tools hand the work to another model for a minute or
  * more, which belongs in the Agents pane; names arrive MCP-prefixed, so
  * matching is by suffix. Only build actions qualify: `pdf read` is a quick
- * lookup, and `deck_export_pdf` (a `_pdf` suffix collision) takes no action.
+ * lookup, and `deck_export_pdf` (a `_pdf` suffix collision) takes no action;
+ * `install_app` (an `_app` collision) installs, it builds nothing.
  */
 function componentSubtaskDescription(
   toolName: string,
@@ -4730,7 +4731,7 @@ function componentSubtaskDescription(
       ? "design"
       : is("pdf") && action === "create" && typeof args.context === "string"
         ? "document"
-        : is("app") && action === "create"
+        : is("app") && !is("install_app") && action === "create"
           ? "app"
           : null;
 

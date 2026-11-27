@@ -179,6 +179,7 @@ export const FUNNEL_STEPS = [
   // agent made seen in the window, undone, data exported (csv or json), and
   // uninstalled (keep_data or delete_data). No names, paths or data.
   "installed_app_install",
+  "installed_app_agent_install",
   "installed_app_refused",
   "installed_app_open",
   "installed_app_edit_seen",

@@ -686,7 +686,8 @@
       "write": "Een bestand aanmaken of een bestaand bestand overschrijven.",
       "x_search": "Zoeken in openbare posts en threads op X.",
       "xai_video_edit": "Een al gegenereerde video bewerken.",
-      "xai_video_extend": "Een gegenereerde video verder verlengen."
+      "xai_video_extend": "Een gegenereerde video verder verlengen.",
+      "install_app": "Een pagina uit een chat als app op deze computer bewaren, als je ja zegt."
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "Deze app is groter dan 100 MB (of heeft meer dan 5.000 bestanden) en kan dus niet worden geïnstalleerd. Vraag de agent om hem kleiner te maken of in een eigen map te zetten.",
     "installedAppCannotInstall": "Deze pagina kan niet als app worden geïnstalleerd.",
     "installedAppMissing": "De bestanden van deze app ontbreken. Verwijder hem en installeer hem opnieuw vanuit de chat.",
-    "installedAppTooBroad": "De map van deze pagina kan niet worden geïnstalleerd: het is je thuismap, of hij staat buiten de map van deze chat. Vraag de agent om de app in een eigen map in deze chat te zetten."
+    "installedAppTooBroad": "De map van deze pagina kan niet worden geïnstalleerd: het is je thuismap, of hij staat buiten de map van deze chat. Vraag de agent om de app in een eigen map in deze chat te zetten.",
+    "installedAppSavedNotice": "Opgeslagen op deze computer · dagelijks geback-upt",
+    "installedAppLastBackup": "Laatste back-up: {{time}}",
+    "installedAppNoBackupYet": "Nog geen back-up: die komt zodra er gegevens zijn"
   },
   "channels": {
     "sidebar": {

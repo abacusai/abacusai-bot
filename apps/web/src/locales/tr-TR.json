@@ -686,7 +686,8 @@
       "write": "Bir dosya oluştur veya mevcut bir dosyanın üzerine yaz.",
       "x_search": "X'teki herkese açık gönderilerde ve dizilerde ara.",
       "xai_video_edit": "Önceden üretilmiş bir videoyu düzenle.",
-      "xai_video_extend": "Üretilmiş bir videoyu daha da uzat."
+      "xai_video_extend": "Üretilmiş bir videoyu daha da uzat.",
+      "install_app": "Sohbette yapılan bir sayfayı, sen onaylarsan bu bilgisayarda uygulama olarak tutar."
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "Bu uygulama 100 MB'den (ya da 5.000 dosyadan) büyük, bu yüzden yüklenemiyor. Ajandan onu küçültmesini ya da kendi klasörüne koymasını iste.",
     "installedAppCannotInstall": "Bu sayfa uygulama olarak yüklenemez.",
     "installedAppMissing": "Bu uygulamanın dosyaları eksik. Kaldırıp sohbetinden yeniden yükle.",
-    "installedAppTooBroad": "Bu sayfanın klasörü yüklenemez: ana klasörün ya da bu sohbetin klasörünün dışında. Ajandan uygulamayı bu sohbette kendi klasörüne koymasını iste."
+    "installedAppTooBroad": "Bu sayfanın klasörü yüklenemez: ana klasörün ya da bu sohbetin klasörünün dışında. Ajandan uygulamayı bu sohbette kendi klasörüne koymasını iste.",
+    "installedAppSavedNotice": "Bu bilgisayara kaydedildi · her gün yedeklenir",
+    "installedAppLastBackup": "Son yedek: {{time}}",
+    "installedAppNoBackupYet": "Henüz yedek yok: veri olunca alınır"
   },
   "channels": {
     "sidebar": {

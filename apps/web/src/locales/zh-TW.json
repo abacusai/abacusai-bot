@@ -686,7 +686,8 @@
       "write": "建立檔案，或覆寫現有檔案。",
       "x_search": "搜尋 X 上的公開貼文和討論串。",
       "xai_video_edit": "編輯已產生的影片。",
-      "xai_video_extend": "進一步延長已產生的影片。"
+      "xai_video_extend": "進一步延長已產生的影片。",
+      "install_app": "在你同意後，把聊天中做的頁面作為應用程式保存在這台電腦上。"
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "這個應用程式超過 100 MB（或超過 5,000 個檔案），無法安裝。請讓代理把它縮小，或放進專用的資料夾。",
     "installedAppCannotInstall": "這個頁面無法安裝為應用程式。",
     "installedAppMissing": "找不到這個應用程式的檔案。請解除安裝後，從它的聊天重新安裝。",
-    "installedAppTooBroad": "無法安裝這個頁面的資料夾：它是你的主資料夾，或不在這個聊天的資料夾內。請讓代理把應用程式放進這個聊天中的專用資料夾。"
+    "installedAppTooBroad": "無法安裝這個頁面的資料夾：它是你的主資料夾，或不在這個聊天的資料夾內。請讓代理把應用程式放進這個聊天中的專用資料夾。",
+    "installedAppSavedNotice": "已儲存在這台電腦上 · 每天備份",
+    "installedAppLastBackup": "上次備份：{{time}}",
+    "installedAppNoBackupYet": "尚未備份：有資料後會自動備份"
   },
   "channels": {
     "sidebar": {

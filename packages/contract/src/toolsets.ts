@@ -317,7 +317,12 @@ export const TOOLSETS: Toolset[] = [
     labelKey: "deliverables",
     status: "ready",
     delivery: "mcp-agent-tools",
-    tools: [tool("present_deliverable"), tool("serve"), tool("artifact")],
+    tools: [
+      tool("present_deliverable"),
+      tool("serve"),
+      tool("artifact"),
+      tool("install_app"),
+    ],
     defaultEnabled: true,
     // Always on: a turn that produced files has something to hand over.
     alwaysOn: true,

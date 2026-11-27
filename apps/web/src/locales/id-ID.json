@@ -686,7 +686,8 @@
       "write": "Membuat berkas atau menimpa yang sudah ada.",
       "x_search": "Cari postingan dan topik publik di X.",
       "xai_video_edit": "Edit video yang sudah dibuat.",
-      "xai_video_extend": "Perluas video yang dihasilkan lebih jauh."
+      "xai_video_extend": "Perluas video yang dihasilkan lebih jauh.",
+      "install_app": "Simpan halaman yang dibuat di chat sebagai aplikasi di komputer ini, jika kamu setuju."
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "Aplikasi ini lebih dari 100 MB (atau lebih dari 5.000 file), jadi tidak bisa dipasang. Minta agen untuk memperkecilnya atau menaruhnya di folder sendiri.",
     "installedAppCannotInstall": "Halaman ini tidak bisa dipasang sebagai aplikasi.",
     "installedAppMissing": "File aplikasi ini tidak ada. Copot lalu pasang lagi dari chat-nya.",
-    "installedAppTooBroad": "Folder halaman ini tidak bisa dipasang: itu folder utamamu, atau berada di luar folder chat ini. Minta agen menaruh aplikasinya di folder sendiri di chat ini."
+    "installedAppTooBroad": "Folder halaman ini tidak bisa dipasang: itu folder utamamu, atau berada di luar folder chat ini. Minta agen menaruh aplikasinya di folder sendiri di chat ini.",
+    "installedAppSavedNotice": "Disimpan di komputer ini · dicadangkan setiap hari",
+    "installedAppLastBackup": "Cadangan terakhir: {{time}}",
+    "installedAppNoBackupYet": "Belum ada cadangan: dibuat setelah ada data"
   },
   "channels": {
     "sidebar": {

@@ -686,7 +686,8 @@
       "write": "创建文件，或覆盖现有文件。",
       "x_search": "搜索 X 上的公开帖子和话题串。",
       "xai_video_edit": "编辑已生成的视频。",
-      "xai_video_extend": "进一步延长已生成的视频。"
+      "xai_video_extend": "进一步延长已生成的视频。",
+      "install_app": "在你同意后，把聊天中做的页面作为应用保存在这台电脑上。"
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "这个应用超过 100 MB（或超过 5,000 个文件），无法安装。请让智能体把它变小，或放进单独的文件夹。",
     "installedAppCannotInstall": "这个页面无法安装为应用。",
     "installedAppMissing": "这个应用的文件不见了。请卸载后从它的聊天中重新安装。",
-    "installedAppTooBroad": "无法安装这个页面的文件夹：它是你的主文件夹，或不在这个聊天的文件夹里。请让智能体把应用放进这个聊天中的单独文件夹。"
+    "installedAppTooBroad": "无法安装这个页面的文件夹：它是你的主文件夹，或不在这个聊天的文件夹里。请让智能体把应用放进这个聊天中的单独文件夹。",
+    "installedAppSavedNotice": "已保存在这台电脑上 · 每天备份",
+    "installedAppLastBackup": "上次备份：{{time}}",
+    "installedAppNoBackupYet": "还没有备份：有数据后会自动备份"
   },
   "channels": {
     "sidebar": {

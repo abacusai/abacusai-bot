@@ -27,6 +27,7 @@ export type ToolHost = Pick<
   | "serve"
   | "presentDeliverable"
   | "artifact"
+  | "installApp"
   | "pollVideoJob"
   | "submitVideoJob"
   | "xSearch"
@@ -140,6 +141,8 @@ export interface ToolDefinition {
   ready?: () => boolean;
   /** Listed only when this holds for what the host offers the caller. */
   offered?: (host: HostCapabilities) => boolean;
+  /** Listed only to a chat whose channel this holds for (the app's own pane). */
+  offeredTo?: (channel: ChannelCapabilities) => boolean;
   run: (
     host: ToolHost,
     args: Record<string, unknown>,

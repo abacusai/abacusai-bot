@@ -111,8 +111,24 @@
       }
     },
     {
+      "name": "install_app",
+      "description": "Keep a page you made in this chat on the user's computer as an app: its own window\nand launcher, opening without the bot and offline, with its data kept. The same as\nInstall as app on the page's row.\n\nCall it only after the user said yes, in this chat, to keeping it as an app; never on\nyour own, and never for a site or pitch page. Give the page's html path or the URL\nserve gave it. The result says it is installed, or why not in plain words: tell the\nuser that in their language.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "The page's html path, or its served URL."
+          }
+        },
+        "required": [
+          "target"
+        ]
+      }
+    },
+    {
       "name": "artifact",
-      "description": "Build a page people can use: a report, dashboard, one-pager, diagram or small working\ntool. It opens beside the chat and the user can share it by link. A short answer stays\nin the chat. Read the artifact-design skill first.\n\nActions:\n  \"create\":  a new page (title, body). `body` is what goes inside <body>; the page's\n             head, palette and rules are added for you.\n  \"edit\":    small changes (slug, edits). Each `old` must appear exactly once.\n  \"restore\": go back to a saved version (slug, version).\n\nEvery action saves a new version and returns the page's path. Hand that path to\npresent_deliverable to show it.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.",
+      "description": "Build a page people can use: a report, dashboard, one-pager, diagram or small working\ntool. It opens beside the chat and the user can share it by link. A short answer stays\nin the chat. Read the artifact-design skill first.\n\nActions:\n  \"create\":  a new page (title, body). `body` is what goes inside <body>; the page's\n             head, palette and rules are added for you.\n  \"edit\":    small changes (slug, edits). Each `old` must appear exactly once.\n  \"restore\": go back to a saved version (slug, version).\n\nEvery action saves a new version and returns the page's path. Hand that path to\npresent_deliverable to show it.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.\n\nWhen you have presented a working tool that keeps what people enter (tracker, ledger,\nplanner, list) or a game, offer once, in one short line in the user's language, to keep\nit on their computer as an app: its own window, opens offline, data kept. Not for a\nwebsite, landing or pitch page, a report or a one-off answer: for those Share stays\nthe way to show it. Call install_app only after they say yes.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -167,7 +183,7 @@
     },
     {
       "name": "serve",
-      "description": "Serve a directory over http and get back a URL, so a web page you wrote can actually\nbe opened. Static files only: html, css, js, images.\n\nUse it the moment you have written a page the user is meant to look at. `bash` cannot\ndo this: it runs a command to completion, so a dev server started there is killed as\nsoon as it reports being ready, and the URL answers nothing.\n\nThen hand the URL to present_deliverable: that is what opens the preview pane. A URL\nin prose is not previewed and not recorded. The URL opens on this computer only. A\npage meant to be seen by others is best one html file, its styles and scripts inside.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.\n\nActions:\n  \"start\": serve a directory (directory). Serving it again returns the same URL.\n  \"stop\":  stop serving one (directory).\n  \"list\":  what is being served right now.",
+      "description": "Serve a directory over http and get back a URL, so a web page you wrote can actually\nbe opened. Static files only: html, css, js, images.\n\nUse it the moment you have written a page the user is meant to look at. `bash` cannot\ndo this: it runs a command to completion, so a dev server started there is killed as\nsoon as it reports being ready, and the URL answers nothing.\n\nThen hand the URL to present_deliverable: that is what opens the preview pane. A URL\nin prose is not previewed and not recorded. The URL opens on this computer only. A\npage meant to be seen by others is best one html file, its styles and scripts inside.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.\n\nWhen you have presented a working tool that keeps what people enter (tracker, ledger,\nplanner, list) or a game, offer once, in one short line in the user's language, to keep\nit on their computer as an app: its own window, opens offline, data kept. Not for a\nwebsite, landing or pitch page, a report or a one-off answer: for those Share stays\nthe way to show it. Call install_app only after they say yes.\n\nActions:\n  \"start\": serve a directory (directory). Serving it again returns the same URL.\n  \"stop\":  stop serving one (directory).\n  \"list\":  what is being served right now.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -391,8 +407,24 @@
       }
     },
     {
+      "name": "install_app",
+      "description": "Keep a page you made in this chat on the user's computer as an app: its own window\nand launcher, opening without the bot and offline, with its data kept. The same as\nInstall as app on the page's row.\n\nCall it only after the user said yes, in this chat, to keeping it as an app; never on\nyour own, and never for a site or pitch page. Give the page's html path or the URL\nserve gave it. The result says it is installed, or why not in plain words: tell the\nuser that in their language.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "The page's html path, or its served URL."
+          }
+        },
+        "required": [
+          "target"
+        ]
+      }
+    },
+    {
       "name": "artifact",
-      "description": "Build a page people can use: a report, dashboard, one-pager, diagram or small working\ntool. It opens beside the chat and the user can share it by link. A short answer stays\nin the chat. Read the artifact-design skill first.\n\nActions:\n  \"create\":  a new page (title, body). `body` is what goes inside <body>; the page's\n             head, palette and rules are added for you.\n  \"edit\":    small changes (slug, edits). Each `old` must appear exactly once.\n  \"restore\": go back to a saved version (slug, version).\n\nEvery action saves a new version and returns the page's path. Hand that path to\npresent_deliverable to show it.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.",
+      "description": "Build a page people can use: a report, dashboard, one-pager, diagram or small working\ntool. It opens beside the chat and the user can share it by link. A short answer stays\nin the chat. Read the artifact-design skill first.\n\nActions:\n  \"create\":  a new page (title, body). `body` is what goes inside <body>; the page's\n             head, palette and rules are added for you.\n  \"edit\":    small changes (slug, edits). Each `old` must appear exactly once.\n  \"restore\": go back to a saved version (slug, version).\n\nEvery action saves a new version and returns the page's path. Hand that path to\npresent_deliverable to show it.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.\n\nWhen you have presented a working tool that keeps what people enter (tracker, ledger,\nplanner, list) or a game, offer once, in one short line in the user's language, to keep\nit on their computer as an app: its own window, opens offline, data kept. Not for a\nwebsite, landing or pitch page, a report or a one-off answer: for those Share stays\nthe way to show it. Call install_app only after they say yes.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -447,7 +479,7 @@
     },
     {
       "name": "serve",
-      "description": "Serve a directory over http and get back a URL, so a web page you wrote can actually\nbe opened. Static files only: html, css, js, images.\n\nUse it the moment you have written a page the user is meant to look at. `bash` cannot\ndo this: it runs a command to completion, so a dev server started there is killed as\nsoon as it reports being ready, and the URL answers nothing.\n\nThen hand the URL to present_deliverable: that is what opens the preview pane. A URL\nin prose is not previewed and not recorded. The URL opens on this computer only. A\npage meant to be seen by others is best one html file, its styles and scripts inside.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.\n\nActions:\n  \"start\": serve a directory (directory). Serving it again returns the same URL.\n  \"stop\":  stop serving one (directory).\n  \"list\":  what is being served right now.",
+      "description": "Serve a directory over http and get back a URL, so a web page you wrote can actually\nbe opened. Static files only: html, css, js, images.\n\nUse it the moment you have written a page the user is meant to look at. `bash` cannot\ndo this: it runs a command to completion, so a dev server started there is killed as\nsoon as it reports being ready, and the URL answers nothing.\n\nThen hand the URL to present_deliverable: that is what opens the preview pane. A URL\nin prose is not previewed and not recorded. The URL opens on this computer only. A\npage meant to be seen by others is best one html file, its styles and scripts inside.\n\nA page that keeps what people enter (a tracker, ledger, list, planner, a game's\nprogress) saves it with localStorage: read on load, write on every change, keep the\nsame keys across edits. The app keeps it on the user's computer, the same in the\npreview and in the installed app. It starts with no rows: no sample, example or demo\nentries, not even ones dated today; the empty state says how to add the first. Only a\nform's date may start as today.\n\nWhen you have presented a working tool that keeps what people enter (tracker, ledger,\nplanner, list) or a game, offer once, in one short line in the user's language, to keep\nit on their computer as an app: its own window, opens offline, data kept. Not for a\nwebsite, landing or pitch page, a report or a one-off answer: for those Share stays\nthe way to show it. Call install_app only after they say yes.\n\nActions:\n  \"start\": serve a directory (directory). Serving it again returns the same URL.\n  \"stop\":  stop serving one (directory).\n  \"list\":  what is being served right now.",
       "inputSchema": {
         "type": "object",
         "properties": {

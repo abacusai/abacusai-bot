@@ -4,7 +4,7 @@
  * (desktop only). The host decides what can be installed; decks, PDFs, other
  * files and sites elsewhere never offer it. Once installed, the row opens it.
  */
-import { AppWindow } from "lucide-react";
+import { AppWindow, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +12,12 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#renderer/ui/dropdown-menu";
 
 const PAGE = /\.html?$/i;
 /**
@@ -35,6 +41,9 @@ const InstallApp = ({ target, sessionId }: Props) => {
   const apps = transport.client.system.artifactApps;
   const [installedId, setInstalledId] = useState<string | null>(null);
   const [installable, setInstallable] = useState(false);
+  // A page to read (a site, a pitch): Share stays the row's main action and
+  // Install waits in its ⋯ menu. A tool or game shows the button.
+  const [site, setSite] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let live = true;
@@ -45,6 +54,7 @@ const InstallApp = ({ target, sessionId }: Props) => {
           if (!live) return;
           setInstallable(status.installable);
           setInstalledId(status.installedId);
+          setSite(status.kind === "site");
         })
         .catch(() => undefined);
     refresh();
@@ -81,6 +91,31 @@ const InstallApp = ({ target, sessionId }: Props) => {
       .finally(done);
   };
   if (!installable && installedId == null) return null;
+  if (site && installedId == null)
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              data-slot="install-app-more"
+              className="ml-0.5 size-7 shrink-0"
+              disabled={busy}
+              aria-label={t("workspace.preview.moreActions")}
+            />
+          }
+        >
+          <MoreHorizontal aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem data-slot="install-app-item" onClick={run}>
+            <AppWindow aria-hidden />
+            {t("phase5.installApp")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   return (
     <Button
       variant="outline"

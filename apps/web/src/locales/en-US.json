@@ -686,7 +686,8 @@
       "write": "Create a file, or overwrite an existing one.",
       "x_search": "Search public posts and threads on X.",
       "xai_video_edit": "Edit an already generated video.",
-      "xai_video_extend": "Extend a generated video further."
+      "xai_video_extend": "Extend a generated video further.",
+      "install_app": "Keep a page made in a chat on this computer as an app, when you say yes."
     },
     "toolsets": {
       "a2a": {
@@ -5573,7 +5574,10 @@
     "installedAppTooBig": "This app is bigger than 100 MB (or over 5,000 files), so it can't be installed. Ask the agent to make it smaller, or to put it in a folder of its own.",
     "installedAppCannotInstall": "This page can't be installed as an app.",
     "installedAppMissing": "This app's files are missing. Uninstall it and install it again from its chat.",
-    "installedAppTooBroad": "This page's folder can't be installed: it is your home folder, or outside this chat's folder. Ask the agent to put the app in a folder of its own in this chat."
+    "installedAppTooBroad": "This page's folder can't be installed: it is your home folder, or outside this chat's folder. Ask the agent to put the app in a folder of its own in this chat.",
+    "installedAppSavedNotice": "Saved on this computer · backed up daily",
+    "installedAppLastBackup": "Last backup: {{time}}",
+    "installedAppNoBackupYet": "No backup yet: one is made once it has data"
   },
   "channels": {
     "sidebar": {
