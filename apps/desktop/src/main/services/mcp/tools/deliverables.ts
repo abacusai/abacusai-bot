@@ -107,8 +107,11 @@ export const DELIVERABLES_TOOLS: ToolDefinition[] = [
             ]
           : [
               "Then hand the URL to present_deliverable: that is what opens the preview pane. A URL",
-              "in prose is not previewed and not recorded. The URL opens on this computer only. A",
-              "page meant to be seen by others is best one html file, its styles and scripts inside.",
+              "in prose is not previewed and not recorded. The URL opens on this computer only, not",
+              "from a phone even on the same Wi-Fi: never offer a local IP or network link. To open",
+              "it on a phone, offer Share on its files card row (a public link), or for a one-file",
+              "page, sending the html file. A page meant to be seen by others is best one html",
+              "file, its styles and scripts inside.",
             ]),
         "",
         "Actions:",
