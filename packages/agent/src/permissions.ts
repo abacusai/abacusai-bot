@@ -154,7 +154,172 @@ export function unescapedToolPath(
     : null;
 }
 
-/** Every path argument of a call, repaired in place (see unescapedToolPath). */
+/**
+ * A Git Bash drive (`/c/`) where a word starts in a shell command. WSL's
+ * `/mnt/c/` is never touched: it is a real path inside WSL, where commands
+ * that spell it are meant to run.
+ */
+const SHELL_DRIVE = /(^|[\s'"=(<>])\/([a-zA-Z])\//g;
+
+/**
+ * Commands that hand work to another system (WSL, ssh, a container, a
+ * device): their paths are that system's, so a command that names one is left
+ * as written, whatever else it does.
+ */
+const HANDS_OFF =
+  /(?:^|[\s;&|(`$"'])(?:wsl(?:\.exe)?|ssh|scp|sftp|rsync|docker|podman|kubectl|adb)(?=$|[\s;&|)`"'])/;
+
+/**
+ * Commands whose arguments are text rather than paths busybox opens: a
+ * script handed to an interpreter or another shell, or words being printed.
+ */
+const TEXT_COMMANDS = new Set([
+  "echo",
+  "printf",
+  "python",
+  "python3",
+  "py",
+  "node",
+  "deno",
+  "bun",
+  "perl",
+  "ruby",
+  "php",
+  "powershell",
+  "powershell.exe",
+  "pwsh",
+  "cmd",
+  "cmd.exe",
+  "bash",
+  "bash.exe",
+  "sh",
+  "zsh",
+]);
+
+/**
+ * The simple commands of `text` (split at `;`, `&&`, `||`, `|` and newlines
+ * outside quotes), as [start, end) offsets.
+ */
+const simpleCommands = (text: string): Array<[number, number]> => {
+  const spans: Array<[number, number]> = [];
+  let quote: string | null = null;
+  let from = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]!;
+    if (quote != null) {
+      if (char === quote) quote = null;
+      else if (char === "\\" && quote === '"') i++;
+      continue;
+    }
+    if (char === "\\") {
+      i++;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === ";" || char === "|" || char === "&" || char === "\n") {
+      spans.push([from, i]);
+      from = i + 1;
+    }
+  }
+  spans.push([from, text.length]);
+  return spans;
+};
+
+/** The program a simple command runs: its first word after any VAR=value. */
+const programOf = (simple: string): string => {
+  const words = simple.trim().split(/\s+/);
+  const word = words.find((w) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(w)) ?? "";
+  const bare = word.replace(/^["']|["']$/g, "").toLowerCase();
+  return bare.slice(
+    Math.max(bare.lastIndexOf("/"), bare.lastIndexOf("\\")) + 1
+  );
+};
+
+/**
+ * The first path segment at `from`: up to the next `/`, and inside quotes up
+ * to the closing quote, else up to a space or shell operator (`\ ` escapes a
+ * space). Its name with escapes removed.
+ */
+const firstSegment = (
+  command: string,
+  from: number,
+  quote: string | null
+): string => {
+  let name = "";
+  for (let i = from; i < command.length; i++) {
+    const char = command[i]!;
+    if (char === "/" || char === quote) break;
+    if (quote == null) {
+      if (char === "\\" && i + 1 < command.length) {
+        name += command[++i];
+        continue;
+      }
+      if (/[\s'"\\;|&()<>$`]/.test(char)) break;
+    }
+    name += char;
+  }
+  return name;
+};
+
+/**
+ * A command whose Git Bash `/c/Users/...` paths are written `C:/Users/...`.
+ * The shell on Windows (busybox ash) reads `/c/Users` as a folder named `c`
+ * on the current drive, so the command fails, or with `2>/dev/null` finds
+ * nothing, on a path the model meant. Only the arguments of commands busybox
+ * itself runs are rewritten: never a heredoc body, a script handed to an
+ * interpreter or another shell, text being printed (TEXT_COMMANDS), or any
+ * command that hands work to WSL, ssh, a container or a device (HANDS_OFF);
+ * and only when the drive's own folder exists and no such `c` folder does.
+ * Null when nothing changed.
+ */
+export function nativeDriveCommand(
+  command: string,
+  cwd: string,
+  exists: (target: string) => boolean = fs.existsSync
+): string | null {
+  if (HANDS_OFF.test(command)) return null;
+  // A heredoc's body is data: only the text before it is the shell's.
+  const heredoc = command.search(/<<-?\s*['"]?[A-Za-z_]/);
+  const own = heredoc < 0 ? command : command.slice(0, heredoc);
+  let changed = false;
+  let repaired = "";
+  let at = 0;
+  for (const [start, end] of simpleCommands(own)) {
+    const simple = own.slice(start, end);
+    repaired += own.slice(at, start);
+    at = end;
+    if (TEXT_COMMANDS.has(programOf(simple))) {
+      repaired += simple;
+      continue;
+    }
+    repaired += simple.replace(
+      SHELL_DRIVE,
+      (whole, lead: string, drive: string, offset: number) => {
+        const quote = lead === '"' || lead === "'" ? lead : null;
+        const name = firstSegment(simple, offset + whole.length, quote);
+        if (name.length === 0) return whole;
+        const written = whole.slice(lead.length) + name;
+        if (
+          !exists(`${drive.toUpperCase()}:/${name}`) ||
+          exists(path.win32.resolve(cwd, written))
+        )
+          return whole;
+        changed = true;
+        return `${lead}${drive.toUpperCase()}:/`;
+      }
+    );
+  }
+  repaired += own.slice(at);
+  return changed ? repaired + command.slice(own.length) : null;
+}
+
+/**
+ * Every path argument of a call, repaired in place (see unescapedToolPath),
+ * and a shell command's drive paths written natively (see nativeDriveCommand).
+ */
 export function repairEscapedPaths(
   input: Record<string, unknown>,
   cwd: string,
@@ -171,6 +336,9 @@ export function repairEscapedPaths(
     if (Array.isArray(value)) input[key] = value.map(repair);
     else if (typeof value === "string") input[key] = repair(value);
   }
+  if (typeof input.command === "string")
+    input.command =
+      nativeDriveCommand(input.command, cwd, exists) ?? input.command;
 }
 
 /** Tools that change something on disk or run code. */
