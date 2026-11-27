@@ -421,8 +421,8 @@ describe("progress updates", () => {
   const round = async (
     pi: ReturnType<typeof fakePi>,
     {
-      genMs = 30_000,
-      toolMs = 30_000,
+      genMs = 15_000,
+      toolMs = 15_000,
       text = "",
       toolName = "bash",
     }: {
@@ -448,11 +448,19 @@ describe("progress updates", () => {
     });
     await pi.fire("turn_end", { toolResults: [{ toolCallId, toolName }] }, ctx);
   };
-  /** `minutes` of silent rounds, a minute each. */
+  /** `minutes` of silent rounds, half a minute each. */
   const silent = async (pi: ReturnType<typeof fakePi>, minutes: number) => {
-    for (let i = 0; i < minutes; i++) await round(pi);
+    for (let i = 0; i < minutes * 2; i++) await round(pi);
   };
-  const started = async (options = {}) => {
+  /**
+   * A run under way. By default the reply has already said a first line, so
+   * the cases below are about the silence after it; `spoke: false` starts on
+   * a reply that has said nothing yet.
+   */
+  const started = async (
+    options: Parameters<typeof createBudgets>[0] & { spoke?: boolean } = {}
+  ) => {
+    const { spoke = true, ...budgetOptions } = options;
     const pi = fakePi();
     // The governor owns the close-out; the reminders hold off while it runs.
     const governor = new SpendGovernor({
@@ -460,11 +468,18 @@ describe("progress updates", () => {
       laneOf: () => "own-key",
     });
     governor.extension(pi.api as never);
-    createBudgets({ ...options, closing: () => governor.closing() })(
+    createBudgets({ ...budgetOptions, closing: () => governor.closing() })(
       pi.api as never
     );
     await pi.fire("input", {});
     await pi.fire("agent_start", {});
+    if (spoke)
+      await pi.fire("message_end", {
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "On it." }],
+        },
+      });
     return pi;
   };
 
@@ -478,20 +493,54 @@ describe("progress updates", () => {
     delete process.env.ABACUSAI_BOT_AUDIENCE;
   });
 
-  it("asks for one line once the user has heard nothing for 3 working minutes, hidden, at the tail", async () => {
+  it("asks for one line once the user has heard nothing for 75 working seconds, hidden, at the tail", async () => {
     const pi = await started();
-    await silent(pi, 2);
-    expect(reminders(pi)).toHaveLength(0);
     await silent(pi, 1);
+    expect(reminders(pi)).toHaveLength(0);
+    await round(pi);
     expect(reminders(pi)).toHaveLength(1);
     const reminder = reminders(pi)[0]!;
     expect(String(reminder.content)).toContain(
-      "heard nothing from you for 3 minutes"
+      "heard nothing from you for 1 minute"
     );
     expect(String(reminder.content)).toContain("before your next tool call");
     expect(String(reminder.content)).toContain("in their language");
+    // It asks for a line and more work, never for wrapping up.
+    expect(String(reminder.content)).toContain("Then carry on with the work.");
+    expect(String(reminder.content)).not.toContain("final answer");
     expect((reminder as { display?: boolean }).display).toBe(false);
     expect(reminder.options?.deliverAs).toBe("steer");
+  });
+
+  it("asks for a first line sooner when the reply has said nothing since the user's message", async () => {
+    const pi = await started({ spoke: false });
+    await round(pi, { genMs: 10_000, toolMs: 10_000 });
+    expect(reminders(pi)).toHaveLength(0);
+    await round(pi, { genMs: 5_000, toolMs: 10_000 });
+    expect(reminders(pi)).toHaveLength(1);
+    expect(String(reminders(pi)[0]!.content)).toContain(
+      "has seen nothing from you since their message"
+    );
+    expect(String(reminders(pi)[0]!.content)).toContain(
+      "before your next tool call"
+    );
+  });
+
+  it("asks for the first line after 6 quick silent calls, once 15 seconds of work went by", async () => {
+    const pi = await started({ spoke: false });
+    for (let i = 0; i < 5; i++)
+      await round(pi, { genMs: 1_000, toolMs: 1_000 });
+    expect(reminders(pi)).toHaveLength(0);
+    await round(pi, { genMs: 3_000, toolMs: 3_000 });
+    expect(reminders(pi)).toHaveLength(1);
+  });
+
+  it("keeps the longer wait once the reply has said something", async () => {
+    const pi = await started({ spoke: false });
+    await round(pi, { genMs: 1_000, toolMs: 1_000, text: "Looking at it." });
+    await round(pi, { genMs: 20_000, toolMs: 15_000 });
+    await round(pi, { genMs: 20_000, toolMs: 15_000 });
+    expect(reminders(pi)).toHaveLength(0);
   });
 
   it("stays quiet while the model keeps the user posted", async () => {
@@ -503,7 +552,7 @@ describe("progress updates", () => {
 
   it("counts working time only: an approval wait is not silence", async () => {
     const pi = await started();
-    await silent(pi, 2);
+    await silent(pi, 1);
     await pi.fire("turn_start", {}, { hasUI: false, abort: () => {} });
     vi.advanceTimersByTime(1000);
     await pi.fire("message_end", {
@@ -528,9 +577,9 @@ describe("progress updates", () => {
     expect(reminders(pi)).toHaveLength(0);
   });
 
-  it("asks after 15 quick tool calls, once 90 seconds of work went by", async () => {
+  it("asks after 12 quick tool calls, once 45 seconds of work went by", async () => {
     const pi = await started();
-    for (let i = 0; i < 14; i++) await round(pi, { genMs: 3000, toolMs: 3000 });
+    for (let i = 0; i < 11; i++) await round(pi, { genMs: 3000, toolMs: 3000 });
     expect(reminders(pi)).toHaveLength(0);
     await round(pi, { genMs: 3000, toolMs: 3000 });
     expect(reminders(pi)).toHaveLength(1);
@@ -555,7 +604,7 @@ describe("progress updates", () => {
 
   it("never asks after a batch that can close the reply", async () => {
     const pi = await started();
-    await silent(pi, 2);
+    await silent(pi, 1);
     await round(pi, { toolName: "suggest_tasks" });
     expect(reminders(pi)).toHaveLength(0);
   });
@@ -573,7 +622,7 @@ describe("progress updates", () => {
 
   it("never asks a turn that ends without tools: it would reopen a finished reply", async () => {
     const pi = await started();
-    await silent(pi, 2);
+    await silent(pi, 1);
     const ctx = { hasUI: false, abort: () => {} };
     await pi.fire("turn_start", {}, ctx);
     vi.advanceTimersByTime(2 * MINUTE);
@@ -585,7 +634,7 @@ describe("progress updates", () => {
   });
 
   it("never asks while the run closes out", async () => {
-    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(2 * MINUTE);
+    process.env.ABACUSAI_BOT_RUN_CAP_MS = String(MINUTE);
     try {
       const pi = await started();
       await silent(pi, 6);
@@ -607,12 +656,12 @@ describe("progress updates", () => {
   ][] = [
     ["two ignored in a row stop it", () => false, 60, 2],
     [
-      "answered ones keep coming, at least 4 minutes apart, at most 5 a turn",
+      "answered ones keep coming, at least 90 seconds apart, at most 8 a turn",
       () => true,
       60,
-      5,
+      8,
     ],
-    ["an answer after one ignored resets the count", (n) => n % 2 === 0, 60, 5],
+    ["an answer after one ignored resets the count", (n) => n % 2 === 0, 60, 8],
   ];
   it.each(caps)("caps: %s", async (_name, answer, minutes, count) => {
     process.env.ABACUSAI_BOT_RUN_CAP_MS = String(120 * MINUTE);
@@ -633,9 +682,10 @@ describe("progress updates", () => {
         });
       }
       expect(reminders(pi)).toHaveLength(count);
-      // Answered reminders are 3 silent minutes past the answer, and never under 4 apart.
+      // Answered reminders are 75 silent seconds past the answer, and never
+      // under 90 seconds (three rounds) apart.
       for (let k = 1; k < at.length; k++)
-        expect(at[k]! - at[k - 1]!).toBeGreaterThanOrEqual(4);
+        expect(at[k]! - at[k - 1]!).toBeGreaterThanOrEqual(3);
     } finally {
       delete process.env.ABACUSAI_BOT_RUN_CAP_MS;
     }
@@ -647,7 +697,8 @@ describe("progress updates", () => {
     expect(reminders(pi)).toHaveLength(2);
     await pi.fire("input", {});
     await pi.fire("agent_start", {});
-    await silent(pi, 3);
+    await silent(pi, 1);
+    await round(pi);
     expect(reminders(pi)).toHaveLength(3);
   });
 
@@ -656,9 +707,10 @@ describe("progress updates", () => {
     const showWork = () =>
       pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
     await round(pi, { toolName: "write", text: "Writing the page." });
-    for (let i = 0; i < 6; i++) await round(pi, { text: "Styling it." });
-    await silent(pi, 3);
-    // 10 working minutes and 3 unheard land on the same turn's end.
+    for (let i = 0; i < 17; i++)
+      await round(pi, { text: `Styling part ${i}.` });
+    for (let i = 0; i < 2; i++) await round(pi);
+    // 10 working minutes and 75 seconds unheard land on the same turn's end.
     expect(reminders(pi)).toHaveLength(1);
     expect(String(reminders(pi)[0]!.content)).toContain("Show your work");
     await silent(pi, 1);
@@ -670,8 +722,9 @@ describe("progress updates", () => {
     const showWork = () =>
       pi.messages.filter((m) => m.customType === "abacusai-bot-show-work");
     await round(pi, { toolName: "write", text: "Writing the page." });
-    for (let i = 0; i < 7; i++) await round(pi, { text: "Styling it." });
-    await silent(pi, 3);
+    for (let i = 0; i < 18; i++)
+      await round(pi, { text: `Styling part ${i}.` });
+    await silent(pi, 1);
     expect(showWork()).toHaveLength(1);
     expect(reminders(pi)).toHaveLength(0);
     await silent(pi, 1);
@@ -684,13 +737,24 @@ describe("progress updates", () => {
 
     it("names the progress tool, and words that never reach the chat do not count", async () => {
       const pi = await started(phone);
-      for (let i = 0; i < 3; i++)
-        await round(pi, { text: "Thinking out loud." });
+      for (let i = 0; i < 6; i++)
+        await round(pi, { text: `Thinking out loud ${i}.` });
       expect(reminders(pi)).toHaveLength(1);
       const text = String(reminders(pi)[0]!.content);
       expect(text).toContain("send_progress");
       expect(text).toContain("present_deliverable");
       expect(text).not.toMatch(/preview|pane/i);
+    });
+
+    it("keeps the long wait: each line is a push to their phone", async () => {
+      const pi = await started({ ...phone, spoke: false });
+      for (let i = 0; i < 5; i++) await round(pi);
+      expect(reminders(pi)).toHaveLength(0);
+      await round(pi);
+      expect(reminders(pi)).toHaveLength(1);
+      expect(String(reminders(pi)[0]!.content)).toContain(
+        "heard nothing from you for 3 minutes"
+      );
     });
 
     it("counts a progress line or a file handed over as the user hearing", async () => {

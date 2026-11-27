@@ -12,9 +12,9 @@
  * files but presented nothing is told, unseen by the user, to present what it
  * has after 10 minutes of working time, and again after 20; time
  * spent waiting on an approval is not working time. Progress updates: with
- * someone in the chat, a run the user has heard nothing from for 3 working
- * minutes (or 15 tool calls) is told, unseen, to write one short line on where
- * it stands; a chat in a messaging app (BudgetOptions.checkIns) sends it with
+ * someone in the chat, a run the user has heard nothing from for a while
+ * (DESKTOP_CADENCE, or the longer MESSAGING_CADENCE in a chat app) is told, unseen, to write one short line on where it
+ * stands; a chat in a messaging app (BudgetOptions.checkIns) sends it with
  * its progress tool. Temperature (ABACUSAI_BOT_TEMPERATURE, default 0.3, "off"
  * to disable) when unset.
  */
@@ -37,14 +37,49 @@ const CONNECTOR_REMINDER_EVERY = 5;
 const PRESENT_NUDGE_MS = 10 * 60_000;
 const PRESENT_AGAIN_MS = 20 * 60_000;
 const PRESENT_TOOL = "present_deliverable";
-/** Working time the user may hear nothing before the model is asked for a line. */
-const UPDATE_AFTER_MS = 3 * 60_000;
-/** Or this many tool calls unheard, once at least UPDATE_MIN_MS went by. */
-const UPDATE_AFTER_CALLS = 15;
-const UPDATE_MIN_MS = 90_000;
-/** Reminders are spaced, capped per user turn, and stop once two in a row go unanswered. */
-const UPDATE_SPACING_MS = 4 * 60_000;
-const UPDATE_MAX_PER_TURN = 5;
+/**
+ * When the model is asked for a line, by working time the user has heard
+ * nothing (`afterMs`, or `afterCalls` tool calls once `minMs` went by), with
+ * a shorter `first` wait before a turn's first line (null for none), spaced
+ * `spacingMs` apart and at most `maxPerTurn` a turn.
+ */
+interface UpdateCadence {
+  afterMs: number;
+  afterCalls: number;
+  minMs: number;
+  first: { afterMs: number; afterCalls: number; minMs: number } | null;
+  spacingMs: number;
+  maxPerTurn: number;
+}
+
+/**
+ * The app's own chat window. Most people who press Stop on a working run have
+ * seen nothing new for a minute or more, so a line comes after about one, and
+ * before a turn's first line after 30 seconds.
+ */
+const DESKTOP_CADENCE: UpdateCadence = {
+  afterMs: 75_000,
+  afterCalls: 12,
+  minMs: 45_000,
+  first: { afterMs: 30_000, afterCalls: 6, minMs: 15_000 },
+  spacingMs: 90_000,
+  maxPerTurn: 8,
+};
+
+/**
+ * A chat in a messaging app (checkIns): each line is a push to the person's
+ * phone and an extra model call, so the wait stays long.
+ */
+const MESSAGING_CADENCE: UpdateCadence = {
+  afterMs: 3 * 60_000,
+  afterCalls: 15,
+  minMs: 90_000,
+  first: null,
+  spacingMs: 4 * 60_000,
+  maxPerTurn: 5,
+};
+
+/** Two in a row unanswered end a turn's reminders. */
 const UPDATE_MAX_IGNORED = 2;
 
 /**
@@ -117,10 +152,18 @@ const presentNudgePrompt = (minutes: number): string =>
  * A messaging chat hears only its progress tool (`tools[0]`) and files, never
  * a preview; elsewhere the model's own words reach the user.
  */
-const updatePrompt = (minutes: number, tools: readonly string[]): string => {
-  const silence = `The user has heard nothing from you for ${minutes} ${minutes === 1 ? "minute" : "minutes"} of work.`;
+const updatePrompt = (
+  minutes: number,
+  tools: readonly string[],
+  first = false
+): string => {
+  const silence = first
+    ? "The user has seen nothing from you since their message, and the work is taking a while."
+    : `The user has heard nothing from you for ${minutes} ${minutes === 1 ? "minute" : "minutes"} of work.`;
   const what = "what you found so far and what you are trying next";
-  const done = "If you are ready to give the final answer, just give it.";
+  // Not "give the final answer if ready": asked often, a cheap model reads
+  // it as leave to wrap up unfinished work.
+  const done = "Then carry on with the work.";
   return tools.length > 0
     ? `${silence} Before your next step, send them one short line in their language with ${tools[0]}: ` +
         `${what}, and any files made so far, finished or not, with ${PRESENT_TOOL}. ${done}`
@@ -173,6 +216,7 @@ export default function budgets(
   options: BudgetOptions = {}
 ): void {
   const checkInTools = options.checkIns?.tools ?? [];
+  const cadence = checkInTools.length > 0 ? MESSAGING_CADENCE : DESKTOP_CADENCE;
   const closing = options.closing ?? (() => false);
   let turns = 0;
   let connectorCalls = 0;
@@ -198,6 +242,8 @@ export default function budgets(
   let lastReminderAt: number | null = null;
   let reminders = 0;
   let unanswered = 0;
+  // Whether the user has heard anything since their message started this turn.
+  let heardThisTurn = false;
   let showWorkTurn = -1;
   // A note that only restates an earlier one is not shown, so it is not heard.
   const notes = new RunNotes();
@@ -208,6 +254,7 @@ export default function budgets(
     activeSince = generating || runningTools.size > 0 ? now : null;
   };
   const hear = (): void => {
+    heardThisTurn = true;
     workedAtHeard = workedMs;
     callsUnheard = 0;
     unanswered = 0;
@@ -230,6 +277,7 @@ export default function budgets(
       return;
     reminders = 0;
     unanswered = 0;
+    heardThisTurn = false;
   });
 
   pi.on("agent_start", async () => {
@@ -295,14 +343,19 @@ export default function budgets(
   /** Asks for one short line when the user has heard nothing for a while. */
   const remindIfDue = (): void => {
     const unheard = workedMs - workedAtHeard;
+    const first =
+      cadence.first != null && !heardThisTurn && reminders === 0
+        ? cadence.first
+        : null;
+    const wait = first ?? cadence;
     const due =
-      unheard >= UPDATE_AFTER_MS ||
-      (callsUnheard >= UPDATE_AFTER_CALLS && unheard >= UPDATE_MIN_MS);
+      unheard >= wait.afterMs ||
+      (callsUnheard >= wait.afterCalls && unheard >= wait.minMs);
     if (
       !due ||
-      reminders >= UPDATE_MAX_PER_TURN ||
+      reminders >= cadence.maxPerTurn ||
       unanswered >= UPDATE_MAX_IGNORED ||
-      (lastReminderAt != null && workedMs - lastReminderAt < UPDATE_SPACING_MS)
+      (lastReminderAt != null && workedMs - lastReminderAt < cadence.spacingMs)
     )
       return;
     // A show-work nudge queued this turn goes in the same request: one steer.
@@ -311,7 +364,7 @@ export default function budgets(
     unanswered++;
     lastReminderAt = workedMs;
     const minutes = Math.max(1, Math.floor(unheard / 60_000));
-    let content = updatePrompt(minutes, checkInTools);
+    let content = updatePrompt(minutes, checkInTools, first != null);
     const mark = showWorkDue();
     if (mark != null) {
       presentNudges = mark;
