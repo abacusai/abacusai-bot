@@ -57,6 +57,8 @@ export type SystemEvent =
       type: "notification-clicked";
       metadata: NotificationMetadata;
     }
+  /** A page was installed as an app or uninstalled: install buttons ask again. */
+  | { type: "installed-apps-changed" }
   /** An `abacusaibot://` link is waiting: `takeOpenLink` hands it over. */
   | { type: "open-link" }
   /** A quit met running work, or its wait changed; see `quitGuard`. */

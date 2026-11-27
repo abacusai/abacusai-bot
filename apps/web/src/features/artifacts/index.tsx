@@ -17,6 +17,7 @@ import { Segments } from "#renderer/components/form-kit/controls";
 import { PageToolbar } from "#renderer/components/form-kit/page";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
+import { followNotice } from "#renderer/data/queries/notices";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showInfo, showError } from "#renderer/lib/toast";
@@ -202,8 +203,24 @@ export const ArtifactsPage = ({
       })
       .catch(() => undefined);
   };
-  // oxlint-disable-next-line exhaustive-deps -- again only when the pages change.
-  useEffect(refreshInstalled, [pagePaths]);
+  // Again when the pages change, or an app is installed or uninstalled
+  // elsewhere (the app's own window).
+  const [appsChanged, setAppsChanged] = useState(0);
+  useEffect(() => {
+    const abort = new AbortController();
+    followNotice(
+      "system",
+      transport,
+      (event) => {
+        if (event.type === "installed-apps-changed")
+          setAppsChanged((n) => n + 1);
+      },
+      abort.signal
+    );
+    return () => abort.abort();
+  }, [transport]);
+  // oxlint-disable-next-line exhaustive-deps -- only the triggers above.
+  useEffect(refreshInstalled, [pagePaths, appsChanged]);
   const list = search.view === "list" || !!search.item;
   // Phone widths fit two narrower cards instead of one stretched card.
   const columns = list

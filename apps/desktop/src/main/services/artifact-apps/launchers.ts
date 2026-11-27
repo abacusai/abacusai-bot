@@ -67,8 +67,11 @@ const plistEscape = (text: string): string =>
  * Writes the app's launcher entries and icons into `dir`; returns every path
  * it made, for removal later.
  */
-export const writeLaunchers = (entry: LauncherApp, dir: string): string[] => {
-  const png = appIconPng(entry.title, entry.id);
+export const writeLaunchers = async (
+  entry: LauncherApp,
+  dir: string
+): Promise<string[]> => {
+  const png = await appIconPng(entry.title, entry.id);
   writeAtomic(join(dir, "icon.png"), png);
   const link = appLink(entry.id);
   const name = fileName(entry.title);

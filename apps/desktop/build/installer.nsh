@@ -145,8 +145,9 @@ Var abacusBaseDir
 
 ; Pages installed as apps (artifact-apps.ts): their Start menu and desktop
 ; shortcuts open abacusaibot:// links, dead once the app is gone. The app
-; lists every one in shortcuts.txt, one path per line. Their data stays, as
-; the app's own does.
+; lists every one in shortcuts.txt, one path per line, in UTF-16LE with a
+; BOM (FileReadUTF16LE skips it) so names in any script survive. Their data
+; stays, as the app's own does. The Start folder goes once it is empty.
 !macro abacusRemoveAppShortcuts
   Push $0
   Push $1
@@ -156,7 +157,7 @@ Var abacusBaseDir
   ${IfNot} ${Errors}
     ${Do}
       ClearErrors
-      FileRead $0 $1
+      FileReadUTF16LE $0 $1
       ${If} ${Errors}
         ${ExitDo}
       ${EndIf}
@@ -170,6 +171,11 @@ Var abacusBaseDir
           ${ExitDo}
         ${EndIf}
       ${Loop}
+      ; The BOM, should this NSIS hand it over on the first line.
+      StrCpy $2 $1 1
+      ${If} $2 == "${U+FEFF}"
+        StrCpy $1 $1 "" 1
+      ${EndIf}
       ; Only a shortcut: the list is the app's, but never trust it further.
       StrCpy $2 $1 4 -4
       ${If} $2 == ".lnk"

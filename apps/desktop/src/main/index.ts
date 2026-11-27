@@ -2026,6 +2026,7 @@ function startApps(): void {
       if (process.platform !== "darwin" && !aliveMainWindow()?.isVisible())
         app.quit();
     },
+    changed: () => emitBusChannel("system", { type: "installed-apps-changed" }),
   });
   app.on("will-quit", flushAllStores);
 }

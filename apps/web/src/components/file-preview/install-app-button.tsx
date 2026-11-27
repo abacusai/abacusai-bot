@@ -8,13 +8,17 @@ import { AppWindow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { followNotice } from "#renderer/data/queries/notices";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 
 const PAGE = /\.html?$/i;
-/** Every row of the same page (its URL and its file) follows an install. */
+/**
+ * Every row of the same page (its URL and its file) follows an install; an
+ * uninstall from the app's own window comes from the host.
+ */
 const CHANGED = "abacus-installed-apps-changed";
 const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i;
 
@@ -44,11 +48,21 @@ const InstallApp = ({ target, sessionId }: Props) => {
         .catch(() => undefined);
     refresh();
     window.addEventListener(CHANGED, refresh);
+    const abort = new AbortController();
+    followNotice(
+      "system",
+      transport,
+      (event) => {
+        if (event.type === "installed-apps-changed") refresh();
+      },
+      abort.signal
+    );
     return () => {
       live = false;
+      abort.abort();
       window.removeEventListener(CHANGED, refresh);
     };
-  }, [apps, target]);
+  }, [apps, target, transport]);
   const run = () => {
     setBusy(true);
     const done = () => setBusy(false);

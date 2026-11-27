@@ -130,6 +130,8 @@ export interface AppsDeps {
   openChat(sessionId: string): void;
   /** The last app window closed. */
   onAllClosed(): void;
+  /** An app was installed or uninstalled: the main window's buttons follow. */
+  changed(): void;
 }
 
 let deps: AppsDeps = {
@@ -137,6 +139,7 @@ let deps: AppsDeps = {
   funnel: () => undefined,
   openChat: () => undefined,
   onAllClosed: () => undefined,
+  changed: () => undefined,
 };
 
 const KEEP_VERSIONS = 5;
@@ -212,12 +215,17 @@ const readRegistry = (): Record<string, InstalledApp> => {
 const saveRegistry = (): void => {
   const registry = readRegistry();
   writeAtomic(registryFile(), JSON.stringify(registry, null, 2));
+  // UTF-16LE with a BOM: the uninstaller reads it with FileReadUTF16LE, so
+  // names in any script (a Hindi app's shortcut) are found.
   if (process.platform === "win32")
     writeAtomic(
       join(root(), "shortcuts.txt"),
-      `${Object.values(registry)
-        .flatMap((a) => a.launchers)
-        .join("\r\n")}\r\n`
+      Buffer.from(
+        `\ufeff${Object.values(registry)
+          .flatMap((a) => a.launchers)
+          .join("\r\n")}\r\n`,
+        "utf16le"
+      )
     );
 };
 
@@ -599,7 +607,7 @@ export const installApp = async (
     launchers: [],
   };
   try {
-    entry.launchers = writeLaunchers(entry, appDir(id));
+    entry.launchers = await writeLaunchers(entry, appDir(id));
   } catch (error) {
     rmSync(join(appDir(id), "versions"), { recursive: true, force: true });
     throw error;
@@ -610,6 +618,7 @@ export const installApp = async (
   // Previews of it open now were loaded without a store: they use it from now on.
   for (const contents of webContents.getAllWebContents())
     if (storeIdForUrl(contents.getURL()) === dataId) contents.reload();
+  deps.changed();
   deps.funnel(
     "installed_app_install",
     source.artifact ? "artifact" : source.url != null ? "site" : "file"
@@ -657,6 +666,36 @@ const updateFromSource = (id: string): boolean => {
   return true;
 };
 
+/**
+ * The chat's folder back to a version's files, so the agent's next edit and a
+ * reinstall start from it: its files written over, and files only the undone
+ * version had removed. Not a change of the agent's: no new version.
+ */
+const writeBack = (
+  entry: InstalledApp,
+  from: number,
+  dropped: number
+): void => {
+  if (!existsSync(entry.dir)) return;
+  const kept = new Set(
+    listFiles(versionDir(entry.id, from), false).map((f) => f.rel)
+  );
+  for (const rel of kept) {
+    const to = join(entry.dir, rel);
+    mkdirSync(dirname(to), { recursive: true });
+    copyFileSync(join(versionDir(entry.id, from), rel), to);
+  }
+  for (const file of listFiles(versionDir(entry.id, dropped), false))
+    if (!kept.has(file.rel)) rmSync(join(entry.dir, file.rel), { force: true });
+  entry.sourceSig = signature(
+    listFiles(
+      entry.dir,
+      entry.artifact,
+      entry.copies === "page" ? entry.entry : null
+    )
+  );
+};
+
 /** Back to the version before the current one; the newer copy goes. */
 export const undoLastChange = (id: string): boolean => {
   const entry = readRegistry()[id];
@@ -667,6 +706,11 @@ export const undoLastChange = (id: string): boolean => {
   entry.versions.splice(at, 1);
   entry.current = entry.versions[at - 1]!;
   entry.seen = entry.current;
+  try {
+    writeBack(entry, entry.current, dropped);
+  } catch (error) {
+    console.warn("[installed-app] undo not written back", id, error);
+  }
   saveRegistry();
   rmSync(versionDir(id, dropped), { recursive: true, force: true });
   reloadWindow(id);
@@ -720,6 +764,7 @@ export const uninstallApp = async (
     // Its data is still there.
   }
   saveRegistry();
+  deps.changed();
   deps.funnel(
     "installed_app_uninstall",
     answer.checkboxChecked ? "delete_data" : "keep_data"
@@ -784,6 +829,9 @@ const watchSource = (entry: InstalledApp): void => {
 export const startInstalledApps = (appDeps: AppsDeps): void => {
   deps = appDeps;
   setStoreRoot(root());
+  // An earlier build wrote the uninstaller's list as UTF-8: written again now.
+  if (process.platform === "win32" && installedApps().length > 0)
+    saveRegistry();
   for (const entry of installedApps()) {
     try {
       updateFromSource(entry.id);
