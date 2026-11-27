@@ -26,6 +26,7 @@ import {
 } from "vitest";
 
 import type { ForeverEngine } from "../forever/engine.js";
+import { midRunMessageNote } from "../mid-run-message.js";
 import type { AgentEvent, DesktopEvent } from "../protocol.js";
 import { BotSession } from "./bot-session.js";
 
@@ -245,7 +246,9 @@ describe("a bot's suggest_tasks call", () => {
     await bot!.send("hi", { messageId: "m1" });
 
     expect(provider.calls).toHaveLength(2);
-    expect(provider.calls[1]?.userText.at(-1)).toContain("Tuesday");
+    // The message, then the note to answer it at once (mid-run-message.ts).
+    expect(provider.calls[1]?.userText.at(-2)).toContain("Tuesday");
+    expect(provider.calls[1]?.userText.at(-1)).toBe(midRunMessageNote());
   }, 60_000);
 
   it("leaves a transcript the next turn can send: the call's result is in it", async () => {
