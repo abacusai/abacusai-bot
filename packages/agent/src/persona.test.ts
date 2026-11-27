@@ -129,9 +129,25 @@ describe("questions about the app itself", () => {
     // is kept for what has no sensible default and for money, sends and deletes.
     expect(FIRST_VERSION_PROMPT).toMatch(/gets a first version in this turn/);
     expect(FIRST_VERSION_PROMPT).toMatch(/say in one line what you assumed/);
-    expect(FIRST_VERSION_PROMPT).toMatch(
-      /spends money, sends or posts anything for the user, or deletes or overwrites/
+    // Destructive and outward steps are named, come before "make it now",
+    // and wait for a yes on the exact list or draft, even when asked outright.
+    for (const step of [
+      "deleting or trashing anything",
+      "overwriting, moving, renaming or reorganizing the user's files",
+      "discarding uncommitted changes (git checkout, reset, restore, clean or stash)",
+      "cancelling or deleting calendar events",
+      "unsubscribing",
+      "sending, replying, posting or messaging anyone",
+      "buying, booking or paying",
+    ])
+      expect(FIRST_VERSION_PROMPT).toContain(step);
+    expect(FIRST_VERSION_PROMPT.indexOf("never done on a guess")).toBeLessThan(
+      FIRST_VERSION_PROMPT.indexOf("gets a first version in this turn")
     );
+    expect(FIRST_VERSION_PROMPT).toMatch(
+      /their request itself is not that yes/
+    );
+    expect(ASKED_FOR_PROMPT).toMatch(/still waits for their yes, as above/);
     expect(FIRST_VERSION_PROMPT).toMatch(/a short sample of the result/);
     // One owner: the document rule points at it instead of its own copy.
     expect(DELIVERABLE_QUALITY_PROMPT).toMatch(
