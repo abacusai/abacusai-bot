@@ -119,6 +119,7 @@ import {
   MEMORY_CONTEXT_TYPE,
   MEMORY_SAVE_CHECK_TYPE,
 } from "./memory/chat.js";
+import { MidRunMessages } from "./mid-run-message.js";
 import { refreshLiveModelIds } from "./model-catalog.js";
 import { MODEL_PATH_RESOURCES, modelPath } from "./model-path.js";
 import {
@@ -649,6 +650,7 @@ const APP_SERVERS: ReadonlySet<string> = new Set([
 
 export class AbacusBotSession {
   private readonly pendingSteers = new PendingSteers();
+  private readonly midRunMessages = new MidRunMessages();
   /** What a send with an id answers (`turn_answer`, `turn_reply`), as the forever engine reports it. */
   private readonly reply = new TurnReply();
   private session: AgentSession | undefined;
@@ -1150,6 +1152,10 @@ export class AbacusBotSession {
             {
               name: "abacusai-bot-request-size",
               factory: requestSize as unknown as (pi: ExtensionAPI) => void,
+            },
+            {
+              name: "abacusai-bot-mid-run-message",
+              factory: this.midRunMessages.extension,
             },
             {
               name: "abacusai-bot-web",
@@ -2925,8 +2931,14 @@ export class AbacusBotSession {
    * Mid-turn input. pi keeps its own steering queue; the text is remembered
    * here so its arrival (a user message_start) can be reported to the desktop.
    */
-  async steer(text: string, messageId?: string): Promise<void> {
+  async steer(
+    text: string,
+    messageId?: string,
+    options: { answer?: boolean } = {}
+  ): Promise<void> {
     this.pendingSteers.add(text, messageId);
+    // Answered at once (mid-run-message.ts), unless it answers the model's own question.
+    if (options.answer !== true) this.midRunMessages.note(text);
     this.userWords.add(ownWords(text));
     userSaid.note(text);
     // The user spoke: they go first, not a test run nobody asked for.
@@ -4290,9 +4302,9 @@ export class AbacusBotSession {
         return undefined;
 
       case "question_answers":
-        void this.steer(JSON.stringify(decision.answers)).catch(
-          () => undefined
-        );
+        void this.steer(JSON.stringify(decision.answers), undefined, {
+          answer: true,
+        }).catch(() => undefined);
 
         return undefined;
 

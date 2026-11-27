@@ -100,6 +100,7 @@ import {
 } from "../mcp/index.js";
 import { McpToolSync } from "../mcp/tool-sync.js";
 import { buildMcpToolDefinitions, mcpToolCaller } from "../mcp/tools.js";
+import { MidRunMessages } from "../mid-run-message.js";
 import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
 import { refreshLiveModelIds } from "../model-catalog.js";
 import { MODEL_PATH_RESOURCES } from "../model-path.js";
@@ -280,6 +281,7 @@ function approvalTimeoutMs(): number {
 
 export class ForeverEngine {
   private readonly pendingSteers = new PendingSteers();
+  private readonly midRunMessages = new MidRunMessages();
   /** While a browser run takes the user's messages, the only place they go. */
   private readonly midTask = new MidTaskInbox((message) =>
     this.noteMidTaskRead(message)
@@ -676,6 +678,10 @@ export class ForeverEngine {
         {
           name: "abacusai-bot-request-size",
           factory: requestSize as unknown as (pi: ExtensionAPI) => void,
+        },
+        {
+          name: "abacusai-bot-mid-run-message",
+          factory: this.midRunMessages.extension,
         },
         {
           name: "abacusai-bot-web",
@@ -2137,7 +2143,11 @@ export class ForeverEngine {
    * Mid-turn input. pi delivers it at the next step boundary; the text is
    * remembered so its arrival can be reported to the desktop.
    */
-  async steer(text: string, messageId?: string): Promise<void> {
+  async steer(
+    text: string,
+    messageId?: string,
+    options: { answer?: boolean } = {}
+  ): Promise<void> {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
     this.profile.noteUserWords?.(text);
@@ -2158,6 +2168,8 @@ export class ForeverEngine {
       return;
     }
     this.pendingSteers.add(text, messageId);
+    // Answered at once (mid-run-message.ts), unless it answers the model's own question.
+    if (options.answer !== true) this.midRunMessages.note(text);
     await this.requireSession().steer(text);
   }
 
@@ -3175,9 +3187,9 @@ export class ForeverEngine {
         return undefined;
 
       case "question_answers":
-        void this.steer(JSON.stringify(decision.answers)).catch(
-          () => undefined
-        );
+        void this.steer(JSON.stringify(decision.answers), undefined, {
+          answer: true,
+        }).catch(() => undefined);
 
         return undefined;
 
