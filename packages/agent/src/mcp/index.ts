@@ -7,7 +7,10 @@
  */
 import * as fs from "node:fs";
 
-import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+import {
+  connectorById,
+  GATEWAY_SERVER_NAME,
+} from "@abacus-ai/connectors/registry";
 import {
   connectorToolMetaByName,
   gatewayToolMeta,
@@ -314,12 +317,16 @@ const RECOVERY_REPEAT_MS = 300_000;
 const KEY_REFUSED_RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
 /**
- * Waits before asking again a server that connected but listed no tools: an
- * app's own server (Roblox Studio's) answers with none until the app is open
- * and ready, and the user is usually opening it right after connecting.
+ * Waits before asking again an app's own server (Roblox Studio's) that
+ * connected but listed no tools: it serves none until the app is open and
+ * ready, and the user is usually opening it right after connecting. Each ask
+ * starts the app's launcher again, so the timed asks stop after the last of
+ * these; from then on it is asked only when a turn starts (askWaiting).
  */
-const EMPTY_RECHECK_DELAYS_MS = [5_000, 10_000, 20_000, 30_000, 60_000];
-const EMPTY_RECHECK_REPEAT_MS = 120_000;
+const EMPTY_RECHECK_DELAYS_MS = [
+  5_000, 10_000, 20_000, 30_000, 60_000, 120_000, 120_000, 120_000, 120_000,
+  120_000, 120_000, 120_000,
+];
 
 /**
  * A failure worth retrying: no answer from the network (undici's "fetch
@@ -331,8 +338,17 @@ const isTransientConnectError = (error: unknown): boolean =>
     ? [429, 502, 503, 504].includes(error.status)
     : error instanceof TypeError && error.message === "fetch failed";
 
-/** How long a turn waits on askWaiting before it goes ahead without the tools. */
-const ASK_WAITING_LIMIT_MS = 5_000;
+/**
+ * How long a turn start waits on askWaiting before it goes ahead without the
+ * tools: a launcher answers in well under this, and a hung one is not waited on.
+ */
+const ASK_WAITING_LIMIT_MS = 1_500;
+
+/** A server another app ships and serves only while that app runs. */
+const isLocalAppServer = (name: string): boolean => {
+  const connector = connectorById(name);
+  return connector?.kind === "mcp" && connector.local != null;
+};
 
 const sleep = (ms: number, options: { unref?: boolean } = {}): Promise<void> =>
   new Promise((resolve) => {
@@ -573,9 +589,9 @@ export async function connectMcpServers(
       result.statuses.push(outcome.status);
       if (outcome.client != null) {
         register(name, config, outcome.client, true);
-        // The gateway's tools follow the account's connectors, which the
-        // desktop refreshes itself; any other server may list them late.
-        if (outcome.client.tools.length === 0 && name !== GATEWAY_SERVER_NAME)
+        // An app's own server lists no tools while its app is closed; any
+        // other server with none has none to offer, and is not asked again.
+        if (outcome.client.tools.length === 0 && isLocalAppServer(name))
           stillDown.push([name, config, "empty"]);
       } else if (outcome.transient === true)
         stillDown.push([name, config, "network"]);
@@ -624,24 +640,32 @@ export async function connectMcpServers(
     return attempt;
   };
 
-  let retired = false;
-  result.retire = (): void => {
-    retired = true;
-  };
-
-  // Servers waiting on tools: a wake cuts the wait before their next ask, and
-  // `asked` settles once that ask has been answered.
-  const waiting = new Map<string, { wake: () => void; asked: Promise<void> }>();
+  // An app's own server waiting on its app: a wake cuts the wait before its
+  // next ask, and `asked` settles once that ask is answered. `idle` while it
+  // waits; an ask already under way (a launcher that hangs) is not waited on.
+  const waiting = new Map<
+    string,
+    { wake: () => void; asked: Promise<void>; idle: boolean }
+  >();
   result.askWaiting = async (): Promise<void> => {
-    if (waiting.size === 0) return;
-    const asks = [...waiting.values()].map((entry) => {
-      entry.wake();
-      return entry.asked;
-    });
+    const asks = [...waiting.values()]
+      .filter((entry) => entry.idle)
+      .map((entry) => {
+        entry.wake();
+        return entry.asked;
+      });
+    if (asks.length === 0) return;
     await Promise.race([
       Promise.all(asks),
       sleep(ASK_WAITING_LIMIT_MS, { unref: true }),
     ]);
+  };
+
+  let retired = false;
+  result.retire = (): void => {
+    retired = true;
+    // A loop waiting for a turn to start ends now.
+    for (const entry of waiting.values()) entry.wake();
   };
 
   // A server the network kept down keeps trying; one whose new key was
@@ -658,7 +682,7 @@ export async function connectMcpServers(
         why === "key"
           ? KEY_REFUSED_RETRY_DELAYS_MS[attempt]
           : why === "empty"
-            ? (EMPTY_RECHECK_DELAYS_MS[attempt] ?? EMPTY_RECHECK_REPEAT_MS)
+            ? (EMPTY_RECHECK_DELAYS_MS[attempt] ?? Number.POSITIVE_INFINITY)
             : (RECOVERY_DELAYS_MS[attempt] ?? RECOVERY_REPEAT_MS);
       if (delay == null) return;
       let answered = (): void => {};
@@ -666,8 +690,13 @@ export async function connectMcpServers(
         let wake = (): void => {};
         const woken = new Promise<void>((resolve) => (wake = resolve));
         const asked = new Promise<void>((resolve) => (answered = resolve));
-        waiting.set(name, { wake, asked });
-        await Promise.race([sleep(delay, { unref: true }), woken]);
+        const entry = { wake, asked, idle: true };
+        waiting.set(name, entry);
+        // Past the timed asks it waits for a turn to start.
+        await (Number.isFinite(delay)
+          ? Promise.race([sleep(delay, { unref: true }), woken])
+          : woken);
+        entry.idle = false;
       } else await sleep(delay, { unref: true });
       if (retired) {
         answered();

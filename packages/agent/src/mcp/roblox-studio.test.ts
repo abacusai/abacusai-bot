@@ -24,6 +24,8 @@ import { buildMcpToolDefinitions } from "./tools.js";
 /** Newline-delimited JSON-RPC over stdio, as Studio's server speaks it. */
 const STAND_IN = String.raw`
 const readline = require("node:readline");
+if (process.env.STAND_IN_STARTS != null) require("node:fs").appendFileSync(process.env.STAND_IN_STARTS, "start\n");
+const hangs = () => process.env.STAND_IN_HANG_WHEN != null && require("node:fs").existsSync(process.env.STAND_IN_HANG_WHEN);
 const studios = process.env.STAND_IN_STUDIOS === "0" ? [] : [
   { studio_id: "studio-1", name: "Obby.rbxl", place_id: 1 },
 ];
@@ -53,6 +55,7 @@ const call = (name, args) => {
 readline.createInterface({ input: process.stdin }).on("line", (line) => {
   const message = JSON.parse(line);
   if (message.id == null) return;
+  if (message.method === "tools/list" && hangs()) return;
   const result =
     message.method === "initialize"
       ? { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "Roblox_Studio", version: "1" } }
@@ -68,7 +71,10 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
 const dirs: string[] = [];
 const connected: ConnectedMcp[] = [];
 
-const configWith = (entry: Record<string, unknown>): string => {
+const configWith = (
+  entry: Record<string, unknown>,
+  name = "roblox-studio"
+): string => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-stand-in-"));
   dirs.push(dir);
   const script = path.join(dir, "studio-mcp.cjs");
@@ -78,7 +84,7 @@ const configWith = (entry: Record<string, unknown>): string => {
     file,
     JSON.stringify({
       mcpServers: {
-        "roblox-studio": {
+        [name]: {
           command: process.execPath,
           args: [script],
           ...entry,
@@ -283,6 +289,91 @@ describe("Roblox Studio over stdio", () => {
       // Served now: nothing is left waiting.
       await mcp.askWaiting?.();
       expect(added).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 60_000);
+
+  it("never holds a turn on a launcher that hangs, and does not wait on it again", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-hang-"));
+      dirs.push(dir);
+      const hang = path.join(dir, "hang");
+      const mcp = await connect(
+        configWith({
+          env: {
+            STAND_IN_OPEN_WHEN: path.join(dir, "open"),
+            STAND_IN_HANG_WHEN: hang,
+          },
+        })
+      );
+      fs.writeFileSync(hang, "");
+      const first = mcp.askWaiting?.();
+      await vi.advanceTimersByTimeAsync(1_500);
+      await first;
+      // The hung ask is still under way: the next turn does not wait on it.
+      const started = Date.now();
+      await mcp.askWaiting?.();
+      expect(Date.now() - started).toBeLessThan(200);
+      expect(mcp.tools).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 60_000);
+
+  it("stops the timed asks after a while, and then asks only when a turn starts", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "roblox-closed-"));
+      dirs.push(dir);
+      const starts = path.join(dir, "starts");
+      const mcp = await connect(
+        configWith({
+          env: {
+            STAND_IN_OPEN_WHEN: path.join(dir, "open"),
+            STAND_IN_STARTS: starts,
+          },
+        })
+      );
+      const count = () =>
+        fs.readFileSync(starts, "utf8").split("\n").length - 1;
+      for (let minute = 0; minute < 20; minute++) {
+        await vi.advanceTimersByTimeAsync(60_000);
+        await vi.waitFor(() => expect(count()).toBeGreaterThan(0));
+      }
+      const afterSchedule = count();
+      await vi.advanceTimersByTimeAsync(60 * 60_000);
+      expect(count()).toBe(afterSchedule);
+      await mcp.askWaiting?.();
+      await vi.waitFor(() => expect(count()).toBe(afterSchedule + 1));
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 120_000);
+
+  it("does not ask again a server with no tools that is not an app's own", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "empty-server-"));
+      dirs.push(dir);
+      const starts = path.join(dir, "starts");
+      const mcp = await connect(
+        configWith(
+          {
+            env: {
+              STAND_IN_OPEN_WHEN: path.join(dir, "open"),
+              STAND_IN_STARTS: starts,
+            },
+          },
+          "notes"
+        )
+      );
+      await vi.advanceTimersByTimeAsync(30 * 60_000);
+      await mcp.askWaiting?.();
+      expect(fs.readFileSync(starts, "utf8").trim().split("\n")).toHaveLength(
+        1
+      );
     } finally {
       vi.useRealTimers();
     }

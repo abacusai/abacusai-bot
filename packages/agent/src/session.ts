@@ -445,10 +445,10 @@ export function mcpPrompt(statuses: readonly McpServerStatus[]): string | null {
 
     if (connected.length > 0) lines.push("");
     lines.push(
-      `Connected, but serving no tools yet: ${described}. The app behind it is usually closed, still`,
-      "starting, or has its MCP server switched off. Its tools join your list by themselves as soon as",
-      "it serves them, so do not look for them in files, logs or settings: tell the user in one line to",
-      "open the app (and switch its MCP server on), then carry on with what does not need it."
+      `Connected, but serving no tools yet: ${described}. The app behind it is closed, still starting, or`,
+      "has its MCP server switched off. Its tools join your list by themselves once it serves them, so",
+      "never look for them in files, logs or settings. Only when what the user asks needs that app, tell",
+      "them in one line to open it (and switch its MCP server on); otherwise do not mention it."
     );
   }
 
