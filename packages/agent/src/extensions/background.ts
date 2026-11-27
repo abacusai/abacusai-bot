@@ -12,11 +12,16 @@ import { Type } from "typebox";
 
 import {
   getBackgroundJob,
+  jobPrinted,
   killAllBackgroundJobs,
   killBackgroundJob,
   listBackgroundJobs,
+  onBackgroundChunk,
   onBackgroundJobSettled,
+  onBackgroundOutput,
   onConversationQueueCleared,
+  onUserMessageWaiting,
+  outputText,
   reportBackgroundJob,
   type BackgroundJob,
   type BackgroundReport,
@@ -24,6 +29,103 @@ import {
 
 /** Trimmed before it goes into the conversation: the tail is where the verdict is. */
 const NOTIFY_OUTPUT_BYTES = 4_000;
+
+/** The longest one wait may ask for: inside the tool's call budget (tool-timeouts). */
+export const MAX_WAIT_SECONDS = 120;
+/** How often the user's view of the output is redrawn while a wait runs. */
+const WAIT_UPDATE_MS = 1_000;
+
+/** Why a wait ended. */
+type WaitEnd = "finished" | "already" | "matched" | "user" | "stopped" | "time";
+
+/**
+ * Waits on background jobs until one of them finishes, `until` appears, the
+ * user writes, the call is stopped, or `ms` pass. With `since: "start"` a
+ * job that already printed `until` ends the wait at once ("already"); with
+ * "now" only output printed from here on counts. `until` is compared as
+ * outputText (case and runs of whitespace ignored). Each redraw hands the
+ * jobs' output to `show`, which the user watches.
+ */
+const waitOn = (
+  ids: readonly string[],
+  ms: number,
+  until: string | null,
+  since: "start" | "now",
+  signal: AbortSignal | undefined,
+  show: () => void
+): Promise<WaitEnd> =>
+  new Promise((resolve) => {
+    const needle = until != null ? outputText(until) : "";
+    // What each job printed since the wait began, as printed (pieces joined
+    // as they came, so a word split across two still matches); only a tail
+    // long enough for a match split across pieces is kept.
+    const fresh = new Map<string, string>(ids.map((id) => [id, ""]));
+    let redraw: NodeJS.Timeout | null = null;
+    const cleanups: Array<() => void> = [];
+    const end = (why: WaitEnd): void => {
+      for (const cleanup of cleanups.splice(0)) cleanup();
+      if (redraw != null) clearTimeout(redraw);
+      show();
+      resolve(why);
+    };
+    if (
+      needle.length > 0 &&
+      since === "start" &&
+      ids.some((id) => jobPrinted(id, needle))
+    ) {
+      end("already");
+      return;
+    }
+    cleanups.push(
+      onBackgroundJobSettled((job) => {
+        if (ids.includes(job.id)) end("finished");
+      }),
+      onBackgroundChunk((id, text) => {
+        if (needle.length === 0 || !fresh.has(id)) return;
+        const seen = `${fresh.get(id)}${text}`;
+        if (outputText(seen).includes(needle)) {
+          end("matched");
+          return;
+        }
+        fresh.set(id, seen.slice(-Math.max(needle.length * 4, 1_024)));
+      }),
+      onBackgroundOutput(() => {
+        redraw ??= setTimeout(() => {
+          redraw = null;
+          show();
+        }, WAIT_UPDATE_MS);
+      }),
+      onUserMessageWaiting(() => end("user"))
+    );
+    const timer = setTimeout(() => end("time"), ms);
+    cleanups.push(() => clearTimeout(timer));
+    if (signal != null) {
+      const stop = (): void => end("stopped");
+      if (signal.aborted) {
+        stop();
+        return;
+      }
+      signal.addEventListener("abort", stop, { once: true });
+      cleanups.push(() => signal.removeEventListener("abort", stop));
+    }
+  });
+
+/** What the model is told about a wait that ended with the job(s) still running. */
+const STILL_RUNNING: Record<Exclude<WaitEnd, "finished">, string> = {
+  already:
+    "The text you waited for was already in its output when the wait began; it is still running. " +
+    'If that line may be from before an edit or a restart (a rebuild), wait again with since: "now" ' +
+    "for a fresh one.",
+  matched:
+    "The text you waited for was printed while you waited; it is still running.",
+  user:
+    "The user wrote while you waited: answer them now. It is still running; wait again " +
+    "afterwards if the work still needs it.",
+  stopped: "The wait was stopped; it is still running.",
+  time:
+    "Still running when the wait ran out. Tell the user in one line where it stands, then wait " +
+    "again if the next step needs it, or carry on with something that does not.",
+};
 
 const describe = (job: BackgroundJob): string => {
   const state =
@@ -58,6 +160,8 @@ export default function (pi: ExtensionAPI) {
     report: BackgroundReport;
   }> = [];
   let busy = false;
+  /** Jobs a fetch_background_output call is waiting on: its answer carries their end. */
+  const waitedOn = new Set<string>();
 
   /** Nothing running will mention these, so the person hears from the app. */
   const tellThePerson = (): void => {
@@ -122,6 +226,8 @@ export default function (pi: ExtensionAPI) {
     // on purpose: it knows, it asked.
     if (!job.notifyOnExit) return;
     if (job.exit?.killed === true) return;
+    // A wait on it answers with its end; a notice would only say it again.
+    if (waitedOn.has(job.id)) return;
 
     const seconds = Math.max(
       1,
@@ -180,17 +286,105 @@ export default function (pi: ExtensionAPI) {
       "background: true. Works while it is still running and after it has finished, so it answers " +
       'both "how far has it got" and "what did it say".\n\n' +
       "Pass an id, or leave it off to see everything that is running and what became of it.\n\n" +
+      "To wait for a background job, pass wait_seconds: the call returns as soon as the job " +
+      "finishes (or as soon as the text you pass as until appears in its output, case and spacing " +
+      "ignored), and the user watches its output meanwhile. It also returns early when the user " +
+      "writes, so you can answer them. Never wait with sleep: a sleep shows the user nothing and " +
+      "holds their messages until it ends.\n\n" +
+      'With until, since says which output counts. "start" (the default) also accepts the text if ' +
+      'the job printed it before this call: right for a server that is starting up. "now" counts ' +
+      "only what it prints from this call on: use it after you edit files or restart something a " +
+      'watch-mode server or build is running on, whose earlier "compiled" or "ready" line is ' +
+      "still in its output.\n\n" +
       "You do not need this to find out that a backgrounded command finished while you are " +
-      "working: you are told, with its output. Reach for it when you want to look before then, " +
-      "or to read something again.",
+      "working: you are told, with its output. Reach for it to wait for one, to look before " +
+      "then, or to read something again.",
     parameters: Type.Object({
       id: Type.Optional(
         Type.String({
-          description: 'The id to read, e.g. "bg-1". Omit to list everything.',
+          description:
+            'The id to read, e.g. "bg-1". Omit to list everything, or with wait_seconds to wait ' +
+            "on every job still running.",
+        })
+      ),
+      wait_seconds: Type.Optional(
+        Type.Number({
+          description: `Wait up to this many seconds (at most ${MAX_WAIT_SECONDS}) for it to finish before answering.`,
+        })
+      ),
+      until: Type.Optional(
+        Type.String({
+          description:
+            'With wait_seconds: stop waiting once this text appears in its output (e.g. "Listening on"); ' +
+            "case and spacing are ignored.",
+        })
+      ),
+      since: Type.Optional(
+        Type.Union([Type.Literal("start"), Type.Literal("now")], {
+          description:
+            'Which output until may match: "start" (default) everything the job printed, for a server ' +
+            'starting up; "now" only what it prints from this call on, for a rebuild after an edit.',
         })
       ),
     }),
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, signal, onUpdate) {
+      const waitSeconds = Math.min(
+        MAX_WAIT_SECONDS,
+        Math.max(0, Math.round(params.wait_seconds ?? 0))
+      );
+      const waitFor = (
+        params.id != null
+          ? [getBackgroundJob(params.id)].filter((job) => job != null)
+          : listBackgroundJobs()
+      ).filter((job) => job.exit == null);
+      if (waitSeconds > 0 && waitFor.length > 0) {
+        const ids = waitFor.map((job) => job.id);
+        for (const id of ids) waitedOn.add(id);
+        const startedWaiting = Date.now();
+        // Each job once: its state line, then the tail of its output.
+        const output = (): string =>
+          ids
+            .map((id) => {
+              const job = getBackgroundJob(id);
+              if (job == null) return "";
+              const printed = tail(job.output);
+              return `${describe(job)}\n${printed.length > 0 ? printed : "(nothing printed yet)"}`;
+            })
+            .join("\n\n");
+        let why: WaitEnd;
+        try {
+          why = await waitOn(
+            ids,
+            waitSeconds * 1_000,
+            params.until?.trim() || null,
+            params.since === "now" ? "now" : "start",
+            signal,
+            () =>
+              onUpdate?.({
+                content: [{ type: "text", text: output() }],
+                details: {},
+              })
+          );
+        } finally {
+          for (const id of ids) waitedOn.delete(id);
+        }
+        const waited = Math.max(
+          1,
+          Math.round((Date.now() - startedWaiting) / 1_000)
+        );
+        const done = ids.filter((id) => getBackgroundJob(id)?.exit != null);
+        const running = ids.filter((id) => !done.includes(id));
+        const outcome =
+          why !== "finished"
+            ? STILL_RUNNING[why]
+            : running.length === 0
+              ? ids.length === 1
+                ? "It finished."
+                : "They all finished."
+              : `${done.join(", ")} finished; ${running.join(", ")} ${running.length === 1 ? "is" : "are"} still running.`;
+        return text([`Waited ${waited}s. ${outcome}`, "", output()].join("\n"));
+      }
+
       if (params.id == null) {
         const jobs = listBackgroundJobs();
 

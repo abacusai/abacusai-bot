@@ -52,6 +52,10 @@ export function buildToolTitle(toolName: string, args: ToolArgs): string {
     }
     case "fetch_background_output": {
       const id = str(args.id);
+      if (typeof args.wait_seconds === "number" && args.wait_seconds > 0)
+        return id !== undefined
+          ? `Wait for ${id}`
+          : "Wait for background processes";
       return id !== undefined
         ? `Read background output ${id}`
         : "List background processes";

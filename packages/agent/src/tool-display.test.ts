@@ -98,6 +98,15 @@ describe("tool-display entry", () => {
     expect(buildToolTitle("fetch_background_output", {})).toBe(
       "List background processes"
     );
+    expect(
+      buildToolTitle("fetch_background_output", {
+        id: "bg-1",
+        wait_seconds: 60,
+      })
+    ).toBe("Wait for bg-1");
+    expect(
+      buildToolTitle("fetch_background_output", { wait_seconds: 60 })
+    ).toBe("Wait for background processes");
     expect(buildToolTitle("kill_process", { id: "bg-2" })).toBe("Stop bg-2");
     expect(buildToolTitle("read_output", { id: "out-1" })).toBe(
       "Read saved output out-1"

@@ -15,10 +15,15 @@ import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
  */
 import { afterEach, describe, expect, it } from "vitest";
 
-import { withBackgroundOption } from "./background-bash.js";
+import {
+  jobsTheCheckNames,
+  leadingSleepSeconds,
+  withBackgroundOption,
+} from "./background-bash.js";
 import {
   listBackgroundJobs,
   notifyConversationQueueCleared,
+  notifyUserMessageWaiting,
   resetBackgroundJobs,
   onBackgroundReport,
   type BackgroundReport,
@@ -632,5 +637,326 @@ describe("how a job reads at each stage", () => {
     expect((await killTool.execute("call-2", {})).content[0]?.text).toContain(
       "1 process:"
     );
+  });
+});
+
+describe("waiting on a background job", () => {
+  /** The wait's answer, its redraws, and how long it took. */
+  const wait = async (params: Record<string, unknown>) => {
+    const pi = withExtension();
+    const fetchTool = pi.tools.get("fetch_background_output") as FakeTool;
+    const shown: string[] = [];
+    const started = Date.now();
+    const result = await fetchTool.execute(
+      "call-wait",
+      params,
+      undefined,
+      (partial: { content: Array<{ text: string }> }) =>
+        shown.push(partial.content[0]?.text ?? "")
+    );
+    return {
+      pi,
+      text: result.content[0]?.text ?? "",
+      shown,
+      ms: Date.now() - started,
+    };
+  };
+
+  it("returns as soon as the job finishes, not when the wait runs out", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 1; echo built", background: true });
+    const { text, ms, pi } = await wait({ id: "bg-1", wait_seconds: 60 });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("It finished.");
+    expect(text).toContain("built");
+    // Seen in the wait: no finished notice says it again.
+    await pi.fire("agent_settled", {});
+    expect(
+      pi.messages.filter(
+        (m) => m.customType === "abacusai-bot-background-finished"
+      )
+    ).toHaveLength(0);
+  }, 20_000);
+
+  it("shows the user the job's output while it waits", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "echo step one; sleep 2; echo step two; sleep 1",
+      background: true,
+    });
+    const { shown, text } = await wait({ id: "bg-1", wait_seconds: 60 });
+
+    expect(shown.some((view) => view.includes("step one"))).toBe(true);
+    expect(text).toContain("step two");
+  }, 20_000);
+
+  it("ends early when the user writes, so they are answered now", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    setTimeout(() => notifyUserMessageWaiting(), 300);
+    const { text, ms } = await wait({ id: "bg-1", wait_seconds: 60 });
+
+    expect(ms).toBeLessThan(5_000);
+    expect(text).toContain("The user wrote while you waited");
+    expect(text).toContain("running");
+  }, 20_000);
+
+  it("stops at the text it was told to wait for", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "sleep 1; echo Listening on port 3000; sleep 30",
+      background: true,
+    });
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on",
+    });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("was printed while you waited");
+    expect(text).toContain("Listening on port 3000");
+  }, 20_000);
+
+  it("returns at once when the line it waits for was printed before the wait began", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "echo Listening on port 3000; sleep 30",
+      background: true,
+    });
+    await waitFor(() => (getFirstJobOutput() ?? "").includes("Listening"));
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on",
+    });
+
+    expect(ms).toBeLessThan(2_000);
+    expect(text).toContain("was already in its output when the wait began");
+    expect(text).toContain('since: "now"');
+  }, 20_000);
+
+  it("waits for a fresh line after a rebuild when asked for new output only", async () => {
+    const { tool } = bashTool();
+    // A watch-mode build: compiled once, then (after an edit) compiling again.
+    await run(tool, {
+      command:
+        "echo compiled successfully; sleep 1; echo compiling...; sleep 2; echo compiled  successfully; sleep 30",
+      background: true,
+    });
+    await waitFor(() => (getFirstJobOutput() ?? "").includes("compiling"));
+    const fresh = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "compiled successfully",
+      since: "now",
+    });
+
+    // Not the old line from before the edit: the new one, two seconds on.
+    expect(fresh.ms).toBeGreaterThan(1_000);
+    expect(fresh.text).toContain("was printed while you waited");
+  }, 20_000);
+
+  it("ignores case and runs of spaces in the line it waits for", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command: "sleep 1; echo Listening  ON   port 3000; sleep 30",
+      background: true,
+    });
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on port",
+    });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("was printed while you waited");
+  }, 20_000);
+
+  it("still finds a ready line after more than the kept output scrolled past it", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command:
+        "echo Ready on port 3000; i=0; while [ $i -lt 2000 ]; do echo log line $i padded with words to fill the buffer quickly; i=$((i+1)); done; sleep 30",
+      background: true,
+    });
+    await waitFor(() => (getFirstJobOutput() ?? "").includes("log line 1999"));
+    expect(getFirstJobOutput()).not.toContain("Ready on port 3000");
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "ready on port",
+    });
+
+    expect(ms).toBeLessThan(2_000);
+    expect(text).toContain("was already in its output when the wait began");
+  }, 20_000);
+
+  it("matches a line split mid-word across two pieces of output", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command:
+        "sleep 1; printf Listen; sleep 1; printf 'ing on port 3000\\n'; sleep 30",
+      background: true,
+    });
+    const { text, ms } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "listening on",
+      since: "now",
+    });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("was printed while you waited");
+  }, 20_000);
+
+  it("keeps a ready line findable when thousands of other lines came before it", async () => {
+    const { tool } = bashTool();
+    await run(tool, {
+      command:
+        "i=0; while [ $i -lt 6000 ]; do echo installing package $i; i=$((i+1)); done; echo Ready on port 3000; i=0; while [ $i -lt 1500 ]; do echo log line $i padded with words to fill the kept output; i=$((i+1)); done; sleep 30",
+      background: true,
+    });
+    await waitFor(
+      () => (getFirstJobOutput() ?? "").includes("log line 1499"),
+      15_000
+    );
+    expect(getFirstJobOutput()).not.toContain("Ready on port 3000");
+    const { text } = await wait({
+      id: "bg-1",
+      wait_seconds: 60,
+      until: "ready on port",
+    });
+
+    expect(text).toContain("was already in its output when the wait began");
+  }, 30_000);
+
+  it("stays cheap when a job prints one endless line", async () => {
+    const { tool } = bashTool();
+    const heapBefore = process.memoryUsage().heapUsed;
+    const started = Date.now();
+    // 40 MB with no line break, as a binary or a minified file sends it.
+    await run(tool, {
+      command: "head -c 40000000 /dev/zero | tr '\\0' 'a'; echo; echo done",
+      background: true,
+    });
+    await waitFor(() => listBackgroundJobs()[0]?.exit != null, 30_000);
+    const elapsed = Date.now() - started;
+    const grown = process.memoryUsage().heapUsed - heapBefore;
+
+    expect(getFirstJobOutput()?.length ?? 0).toBeLessThanOrEqual(64_000);
+    expect(elapsed).toBeLessThan(8_000);
+    expect(grown).toBeLessThan(150_000_000);
+  }, 40_000);
+
+  it("says it is still running when the wait runs out", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    const { text } = await wait({ id: "bg-1", wait_seconds: 1 });
+
+    expect(text).toContain("Still running when the wait ran out");
+  }, 20_000);
+
+  it("waits on every running job when given no id", async () => {
+    const { tool } = bashTool();
+    await run(tool, { command: "sleep 30", background: true });
+    await run(tool, { command: "sleep 1; echo second done", background: true });
+    const { text, ms } = await wait({ wait_seconds: 60 });
+
+    expect(ms).toBeLessThan(10_000);
+    expect(text).toContain("bg-2 finished; bg-1 is still running.");
+    expect(text).not.toContain("It finished.");
+    expect(text).toContain("second done");
+    // Each job's state line once.
+    expect(text.split("bg-1  running").length - 1).toBe(1);
+    expect(text.split("bg-2  exited").length - 1).toBe(1);
+  }, 20_000);
+});
+
+describe("a blind sleep while a job runs in the background", () => {
+  it("is answered with the way to wait for the job it checks, and not run", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, {
+      command: "echo installing > install.log; sleep 30",
+      background: true,
+    });
+    const result = await tool.execute("call-2", {
+      command: "sleep 90; tail -5 install.log",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Not run: bg-1 is still running");
+    expect(result.content[0]?.text).toContain('id:"bg-1" and wait_seconds:90');
+    expect(result.content[0]?.text).toContain("it waits the same time");
+    expect(result.content[0]?.text).not.toContain("up to 120");
+    expect(base.calls).toHaveLength(0);
+  });
+
+  it("names no job when the check is about none of them, and offers the plain interruptible wait", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, { command: "sleep 30; echo dev server", background: true });
+    const result = await tool.execute("call-2", {
+      command: "sleep 30; ls screenshots",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain(
+      "fetch_background_output with wait_seconds:30 and no id"
+    );
+    expect(result.content[0]?.text).not.toContain("bg-1");
+    expect(base.calls).toHaveLength(0);
+  });
+
+  it("runs a sleep when nothing runs in the background, and a short one when something does", async () => {
+    const { tool, base } = bashTool();
+    await run(tool, { command: "sleep 90; echo ok" });
+    await run(tool, { command: "sleep 30", background: true });
+    await run(tool, { command: "sleep 3; curl -s localhost:3000" });
+
+    expect(base.calls).toHaveLength(2);
+  });
+
+  const sleeps: [command: string, seconds: number | null][] = [
+    ["sleep 90; tail -5 install.log", 90],
+    ["cd 'C:/Users/x y/app' && sleep 2m && ls", 120],
+    ['cd "$TMPDIR" ; sleep 45', 45],
+    ["sleep 0.5", 0.5],
+    ["echo sleep 90", null],
+    ["sleepy 90", null],
+    ["npm run build && sleep 90", null],
+  ];
+  it.each(sleeps)("reads the leading sleep of %s", (command, seconds) => {
+    expect(leadingSleepSeconds(command)).toBe(seconds);
+  });
+});
+
+describe("which running job a check after a sleep is about", () => {
+  const job = (id: string, command: string, output = "") =>
+    ({
+      id,
+      command,
+      label: null,
+      cwd: ".",
+      startedAt: 0,
+      lastOutputAt: null,
+      output,
+      exit: null,
+      notifyOnExit: true,
+    }) as never;
+  const jobs = [
+    job("bg-1", "npm run dev", "Local: http://localhost:5173"),
+    job("bg-2", "./install.sh > install.log 2>&1"),
+  ];
+  const rows: [command: string, ids: string[]][] = [
+    ["sleep 60; tail -5 install.log", ["bg-2"]],
+    ["sleep 20; curl -s http://localhost:5173/health", ["bg-1"]],
+    ["sleep 30; ls screenshots", []],
+    ["sleep 45; echo ok", []],
+  ];
+  it.each(rows)("%s", (command, ids) => {
+    expect(
+      jobsTheCheckNames(command, jobs).map((j) => (j as { id: string }).id)
+    ).toEqual(ids);
   });
 });

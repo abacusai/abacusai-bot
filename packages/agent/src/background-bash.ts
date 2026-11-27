@@ -6,7 +6,11 @@
  */
 import { Type } from "typebox";
 
-import { startBackgroundJob } from "./background-processes.js";
+import {
+  type BackgroundJob,
+  listBackgroundJobs,
+  startBackgroundJob,
+} from "./background-processes.js";
 import { screenText } from "./terminal-progress.js";
 
 interface BashLikeDefinition {
@@ -59,7 +63,11 @@ const BACKGROUND_GUIDANCE = [
   "working you are told, with its output, without polling. Once your reply is done you do not",
   "get another turn for it: the user is told it finished, and you get its output with their",
   "next message. So do not end your reply on work that needs the result; wait for it, or say",
-  "plainly that it is still running and what they should expect.",
+  "plainly that it is still running and what they should expect. To wait for it, call",
+  "fetch_background_output with its id and wait_seconds: it returns as soon as it finishes, the",
+  "user watches its output meanwhile, and a message from the user ends the wait early. Add until",
+  'to stop at a line (a server\'s "Listening on"), with since:"now" when an earlier copy of that',
+  "line is already in its output (a watch-mode rebuild after an edit). Never wait with sleep.",
   "",
   "A background run has no deadline unless you set timeout, and a timeout stops it: never set",
   "one on a server. Stop one early with kill_process. For a static page use serve instead.",
@@ -78,6 +86,74 @@ const VISIBILITY_GUIDANCE = [
   "(curl -s, -q, --quiet, > /dev/null): its progress is how the user sees it is moving, and",
   "only each progress line's final state reaches you, so it costs you nothing.",
 ].join("\n");
+
+/**
+ * A command that opens with a sleep of this long or more, while a job of
+ * ours runs in the background, is a blind poll of that job: the user sees
+ * nothing and their messages wait behind it. It is answered with the way to
+ * wait instead (fetch_background_output's wait_seconds).
+ */
+const POLL_SLEEP_SECONDS = 15;
+
+/** A leading `sleep N` (after an optional `cd ... &&`), in seconds; null when there is none. */
+export const leadingSleepSeconds = (command: string): number | null => {
+  const match =
+    /^\s*(?:cd\s+(?:"[^"]*"|'[^']*'|[^\s;&|]+)\s*(?:&&|;)\s*)?sleep\s+(\d+(?:\.\d+)?)([smhd]?)(?=$|[\s;&|])/.exec(
+      command
+    );
+  if (match == null) return null;
+  const unit = { "": 1, s: 1, m: 60, h: 3_600, d: 86_400 }[match[2] ?? ""] ?? 1;
+  return Number(match[1]) * unit;
+};
+
+/** Words that say nothing about which job a check is for. */
+const CHECK_WORDS = new Set(
+  (
+    "sleep echo printf tail head cat grep egrep less more curl wget http https localhost " +
+    "true false done then else test ls dir find wc sed awk sort uniq cut tr xargs exit null " +
+    "dev tmp tmpdir 127.0.0.1 0.0.0.0 -s -sS -m -c -n -f -i"
+  ).split(" ")
+);
+
+/**
+ * The running jobs a check after the sleep is plausibly about: one whose
+ * command, label or recent output names a file, folder, port or word the check
+ * names (`sleep 60; tail install.log` and a job writing install.log).
+ */
+export const jobsTheCheckNames = (
+  command: string,
+  jobs: readonly BackgroundJob[]
+): BackgroundJob[] => {
+  const check = command.replace(/^[\s\S]*?sleep\s+\S+/, "");
+  const words = [...check.matchAll(/[A-Za-z0-9_.:-]{3,}/g)]
+    .map((match) => match[0]!.toLowerCase().replace(/^[.:-]+|[.:-]+$/g, ""))
+    .filter((word) => word.length >= 3 && !CHECK_WORDS.has(word));
+  return jobs.filter((job) => {
+    const seen =
+      `${job.command}\n${job.label ?? ""}\n${job.output.slice(-4_000)}`.toLowerCase();
+    return words.some((word) => seen.includes(word));
+  });
+};
+
+/** The answer to a blind poll: how to wait instead, naming the job it is plausibly for. */
+const pollRefusal = (related: BackgroundJob | null, seconds: number): string =>
+  related != null
+    ? [
+        `Not run: ${related.id} is still running in the background, and a sleep shows the user nothing`,
+        "and holds their messages until it ends. Call fetch_background_output with",
+        `id:"${related.id}" and wait_seconds:${Math.min(seconds, 120)} instead: it waits the same time, but returns as soon as`,
+        "the job finishes, shows its output to the user meanwhile, and ends early when the user writes.",
+        "To stop at a line you expect in its output, add until. If the job already printed that line",
+        'before something you just changed (a watch-mode rebuild after an edit), also pass since:"now"',
+        "so only new output counts; for a server that is starting, leave since off. Then run the check",
+        "you meant to run after the sleep.",
+      ].join("\n")
+    : [
+        "Not run: a sleep shows the user nothing and holds their messages until it ends. Call",
+        `fetch_background_output with wait_seconds:${Math.min(seconds, 120)} and no id instead: it waits the same time, but`,
+        "ends early when the user writes or a background job finishes, and shows the running jobs'",
+        "output meanwhile. Then run the check you meant to run after the sleep.",
+      ].join("\n");
 
 /** A short, plain title for the user; never the command itself. */
 const LABEL_MAX = 80;
@@ -149,6 +225,24 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
     }),
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       if (params.background !== true) {
+        const command =
+          typeof params.command === "string" ? params.command : "";
+        const sleep = leadingSleepSeconds(command);
+        const running = listBackgroundJobs().filter((job) => job.exit == null);
+        if (sleep != null && sleep >= POLL_SLEEP_SECONDS && running.length > 0)
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: pollRefusal(
+                  jobsTheCheckNames(command, running)[0] ?? null,
+                  sleep
+                ),
+              },
+            ],
+            details: {},
+            isError: true,
+          };
         // `background` and `label` are dropped, not forwarded: pi validates
         // its own schema.
         const { background: _background, label: _label, ...forwarded } = params;
@@ -191,6 +285,7 @@ export function withBackgroundOption<T extends BashLikeDefinition>(
               "",
               "Carry on with something else. If it finishes while you work you are told, with its",
               "output; after your reply the user is told, and you hear with their next message.",
+              `To wait for it, call fetch_background_output id:"${job.id}" with wait_seconds; never sleep.`,
               `Stop it early with kill_process id:"${job.id}".`,
             ].join("\n"),
           },
